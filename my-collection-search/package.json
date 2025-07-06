@@ -15,6 +15,7 @@
     "@emotion/styled": "^11.14.1",
     "@theme-ui/preset-base": "^0.17.2",
     "framer-motion": "^12.23.0",
+    "jsonwebtoken": "^9.0.2",
     "meilisearch": "^0.51.0",
     "next": "15.3.5",
     "next-themes": "^0.4.6",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/pg": "^8.15.4",
     "@types/react": "^19",

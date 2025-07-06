@@ -1,14 +1,38 @@
 import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+import jwt from "jsonwebtoken";
 
 const APPLE_MUSIC_API_URL = "https://api.music.apple.com/v1/catalog/us/search";
+
+function generateAppleMusicDeveloperToken() {
+  const teamId = process.env.APPLE_MUSIC_TEAM_ID;
+  const keyId = process.env.APPLE_MUSIC_KEY_ID;
+  const privateKeyPath = process.env.APPLE_MUSIC_PRIVATE_KEY_PATH || path.resolve(process.cwd(), `AuthKey_${keyId}.p8`);
+  if (!teamId || !keyId || !privateKeyPath) {
+    throw new Error("Missing Apple Music credentials (TEAM_ID, KEY_ID, or PRIVATE_KEY_PATH)");
+  }
+  const privateKey = fs.readFileSync(privateKeyPath, "utf8");
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: teamId,
+    iat: now,
+    exp: now + 60 * 60 * 24 * 180, // 6 months
+  };
+  const header = {
+    alg: "ES256",
+    kid: keyId,
+  };
+  return jwt.sign(payload, privateKey, {
+    algorithm: "ES256",
+    header,
+  });
+}
 
 export async function POST(req: Request) {
   try {
     const { title, artist } = await req.json();
-    const developerToken = process.env.APPLE_MUSIC_DEVELOPER_TOKEN;
-    if (!developerToken) {
-      return NextResponse.json({ error: "Missing Apple Music developer token" }, { status: 500 });
-    }
+    const developerToken = generateAppleMusicDeveloperToken();
     const query = encodeURIComponent(`${title} ${artist}`);
     const url = `${APPLE_MUSIC_API_URL}?term=${query}&types=songs&limit=5`;
     const res = await fetch(url, {

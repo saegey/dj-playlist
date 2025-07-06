@@ -57,6 +57,7 @@ export default function TrackEditForm({
           key: data.key || prev.key,
           bpm: data.bpm || prev.bpm,
           notes: data.notes || prev.notes,
+          local_tags: data.genre || prev.local_tags,
         }));
       } else {
         alert("Failed to fetch from AI");
@@ -94,7 +95,9 @@ export default function TrackEditForm({
     setForm((prev) => ({
       ...prev,
       apple_music_url: song.url,
-      duration_seconds: song.duration ? Math.round(song.duration / 1000) : undefined,
+      duration_seconds: song.duration
+        ? Math.round(song.duration / 1000)
+        : undefined,
     }));
     setShowAppleModal(false);
   };
@@ -123,32 +126,82 @@ export default function TrackEditForm({
       <Stack spacing={3}>
         <Text fontWeight="bold">Edit Track Metadata</Text>
         <Box>
-          <Text mb={1} fontSize="sm">Title</Text>
-          <Input name="title" value={form.title} onChange={handleChange} isReadOnly />
+          <Text mb={1} fontSize="sm">
+            Title
+          </Text>
+          <Input
+            name="title"
+            value={form.title}
+            onChange={handleChange}
+            isReadOnly
+          />
         </Box>
         <Box>
-          <Text mb={1} fontSize="sm">Artist</Text>
-          <Input name="artist" value={form.artist} onChange={handleChange} isReadOnly />
+          <Text mb={1} fontSize="sm">
+            Artist
+          </Text>
+          <Input
+            name="artist"
+            value={form.artist}
+            onChange={handleChange}
+            isReadOnly
+          />
         </Box>
         <Box>
-          <Text mb={1} fontSize="sm">Album</Text>
-          <Input name="album" value={form.album} onChange={handleChange} isReadOnly />
+          <Text mb={1} fontSize="sm">
+            Album
+          </Text>
+          <Input
+            name="album"
+            value={form.album}
+            onChange={handleChange}
+            isReadOnly
+          />
         </Box>
         <Box>
-          <Text mb={1} fontSize="sm">BPM</Text>
-          <Input name="bpm" value={form.bpm} onChange={handleChange} type="number" min="0" />
+          <Text mb={1} fontSize="sm">
+            BPM
+          </Text>
+          <Input
+            name="bpm"
+            value={form.bpm}
+            onChange={handleChange}
+            type="number"
+            min="0"
+          />
         </Box>
         <Box>
-          <Text mb={1} fontSize="sm">Key</Text>
+          <Text mb={1} fontSize="sm">
+            Key
+          </Text>
           <Input name="key" value={form.key} onChange={handleChange} />
         </Box>
         <Box>
-          <Text mb={1} fontSize="sm">Genre (comma separated)</Text>
-          <Input name="local_tags" value={form.local_tags} onChange={handleChange} />
+          <Text mb={1} fontSize="sm">
+            Genre (comma separated)
+          </Text>
+          <Input
+            name="local_tags"
+            value={form.local_tags}
+            onChange={handleChange}
+          />
         </Box>
         <Box>
-          <Text mb={1} fontSize="sm">Notes</Text>
+          <Text mb={1} fontSize="sm">
+            Notes
+          </Text>
           <Textarea name="notes" value={form.notes} onChange={handleChange} />
+        </Box>
+        <Box>
+          <Text mb={1} fontSize="sm">
+            Apple Music URL
+          </Text>
+          <Input
+            name="apple_music_url"
+            value={form.apple_music_url || ""}
+            isReadOnly
+            placeholder="Apple Music URL will appear here"
+          />
         </Box>
         <Flex gap={2}>
           <Button
@@ -169,7 +222,12 @@ export default function TrackEditForm({
           </Button>
         </Flex>
 
-        <Modal isOpen={showAppleModal} onClose={() => setShowAppleModal(false)} isCentered size="xl">
+        <Modal
+          isOpen={showAppleModal}
+          onClose={() => setShowAppleModal(false)}
+          isCentered
+          size="xl"
+        >
           <ModalOverlay />
           <ModalContent>
             <ModalHeader>Select Apple Music Track</ModalHeader>
@@ -206,7 +264,9 @@ export default function TrackEditForm({
                           {song.artist} — {song.album}
                         </Text>
                         <Text fontSize="sm" color="blue.600" isTruncated>
-                          {song.url}
+                          {song.url.length > 20
+                            ? song.url.slice(0, 20) + "…"
+                            : song.url}
                         </Text>
                       </Box>
                       <Button
