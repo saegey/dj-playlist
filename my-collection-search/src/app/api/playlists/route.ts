@@ -17,6 +17,7 @@ export async function POST(req: Request) {
     const playlist = await createPlaylist(data);
     return NextResponse.json(playlist, { status: 201 });
   } catch (error) {
+    console.error('Error creating playlist:', error);
     return NextResponse.json({ error: 'Failed to create playlist' }, { status: 500 });
   }
 }

@@ -144,7 +144,6 @@ export default function TrackEditForm({
             name="artist"
             value={form.artist}
             onChange={handleChange}
-            isReadOnly
           />
         </Box>
         <Box>
@@ -155,7 +154,6 @@ export default function TrackEditForm({
             name="album"
             value={form.album}
             onChange={handleChange}
-            isReadOnly
           />
         </Box>
         <Box>

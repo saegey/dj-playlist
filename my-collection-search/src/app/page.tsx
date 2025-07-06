@@ -77,7 +77,77 @@ function formatSeconds(seconds: number): string {
   }
 }
 
-function TrackResult({ track, buttons }: TrackResultProps) {
+import { useState as useLocalState } from "react";
+function TrackResult({
+  track,
+  buttons,
+  minimized = false,
+}: TrackResultProps & { minimized?: boolean }) {
+  const [expanded, setExpanded] = useLocalState(false);
+  if (minimized && !expanded) {
+    return (
+      <Box borderWidth="1px" borderRadius="md" p={2} mb={2} bg="gray.50">
+        <Flex alignItems="center" gap={2}>
+          <Box>
+            <Text fontWeight="bold">{track.title}</Text>
+            <Text fontSize="sm">{track.artist}</Text>
+            <Text fontSize="sm" color="gray.600">
+              {track.album}
+            </Text>
+            <Flex direction="row" fontSize="sm" color="gray.600" gap={2}>
+              <Text fontSize="sm" fontWeight="bold">
+                Key:
+              </Text>{" "}
+              <Text fontSize="sm"> {track.key}</Text>
+              <Text fontSize="sm" fontWeight="bold">
+                BPM:{" "}
+              </Text>
+              <Text fontSize="sm">{track.bpm}</Text>
+              <Text fontSize="sm" fontWeight="bold">
+                Pos:
+              </Text>
+              <Text fontSize="sm">{track.position}</Text>
+              <Text fontSize="sm" fontWeight="bold">
+                Dur:
+              </Text>
+              <Text fontSize="sm"> {track.duration}</Text>
+              <Text fontSize="sm" fontWeight="bold">
+                AM Dur:{" "}
+              </Text>
+              <Text fontSize="sm">
+                {formatSeconds(
+                  track.duration_seconds ? track.duration_seconds : 0
+                )}
+              </Text>
+            </Flex>
+            {track.apple_music_url && (
+              <Link
+                href={track.apple_music_url}
+                color="blue.500"
+                target="_blank"
+                rel="noopener noreferrer"
+                fontSize="sm"
+              >
+                Apple Music
+              </Link>
+            )}
+          </Box>
+
+          <Flex flexGrow={1} justifyContent="flex-end">
+            <Button
+              size="xs"
+              variant="outline"
+              ml={2}
+              onClick={() => setExpanded(true)}
+            >
+              More
+            </Button>
+            {buttons}
+          </Flex>
+        </Flex>
+      </Box>
+    );
+  }
   return (
     <Box borderWidth="1px" borderRadius="md" p={3} mb={2}>
       <Flex alignItems="center" gap={3} width="100%" minHeight="180px">
@@ -133,6 +203,13 @@ function TrackResult({ track, buttons }: TrackResultProps) {
           </Flex>
           <br />
           <Flex alignItems="flex-end" flexShrink={0} gap={2}>
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setExpanded(false)}
+            >
+              Less
+            </Button>
             {buttons}
           </Flex>
         </Flex>
@@ -155,7 +232,7 @@ export default function SearchPage() {
   const [hasMore, setHasMore] = useState<boolean>(false);
   const limit = 20;
   const [estimatedResults, setEstimatedResults] = useState<number>(0);
-  
+
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const { onOpen, onClose } = useDisclosure();
 
@@ -357,6 +434,7 @@ export default function SearchPage() {
               <TrackResult
                 key={track.track_id}
                 track={track}
+                minimized
                 buttons={
                   <Flex alignItems="center" gap={1}>
                     <Button

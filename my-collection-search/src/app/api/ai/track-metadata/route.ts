@@ -47,6 +47,7 @@ Provide no explanation or extra text — only the JSON object.
 
     return NextResponse.json({ key, bpm, notes, genre });
   } catch (error) {
+    console.error("Error fetching AI metadata:", error);
     return NextResponse.json(
       { error: "Failed to fetch AI metadata" },
       { status: 500 }
