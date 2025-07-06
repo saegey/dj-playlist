@@ -131,9 +131,10 @@ function TrackResult({ track, buttons }: TrackResultProps) {
               </Link>
             )}
           </Flex>
-        </Flex>
-        <Flex alignItems="flex-end" flexShrink={0} gap={2}>
-          {buttons}
+          <br />
+          <Flex alignItems="flex-end" flexShrink={0} gap={2}>
+            {buttons}
+          </Flex>
         </Flex>
       </Flex>
     </Box>
@@ -154,8 +155,7 @@ export default function SearchPage() {
   const [hasMore, setHasMore] = useState<boolean>(false);
   const limit = 20;
   const [estimatedResults, setEstimatedResults] = useState<number>(0);
-  const [isOpen, setIsOpen] = useState<boolean>(false);
-
+  
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const { onOpen, onClose } = useDisclosure();
 
