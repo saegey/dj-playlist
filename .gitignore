@@ -1,0 +1,8 @@
+AuthKey*
+all_tracks.json
+all_tracks_cleaned.json
+data.ms/
+meilisearch
+node_modules/
+discogs_exports/
+.env

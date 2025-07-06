@@ -1,0 +1,23 @@
+{
+  "name": "dj-playlist",
+  "version": "1.0.0",
+  "description": "A web application for managing DJ playlists and searching music collections.",
+  "main": "index.js",
+  "scripts": {
+    "start": "next run dev",
+    "search": "meilisearch --master-key=masterKey"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/saegey/dj-playlist.git"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "^3.21.1",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "dotenv": "^17.0.1",
+    "framer-motion": "^12.23.0",
+    "meilisearch": "^0.51.0",
+    "pg": "^8.16.3"
+  }
+}
