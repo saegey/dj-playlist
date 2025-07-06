@@ -25,7 +25,7 @@ export default function TrackEditForm({
     setFetching(true);
     try {
       // Compose a prompt using track info
-      const prompt = `Given the following track details, suggest the musical key, BPM, and a short DJ note.\nTitle: ${form.title}\nArtist: ${form.artist}\nAlbum: ${form.album}`;
+      const prompt = `Given the following track details, suggest the musical key, BPM, genre or style of track, and a short DJ note.\nTitle: ${form.title}\nArtist: ${form.artist}\nAlbum: ${form.album}`;
       // Call your backend endpoint that talks to OpenAI/ChatGPT (replace with your actual endpoint)
       const res = await fetch("/api/ai/track-metadata", {
         method: "POST",
@@ -39,7 +39,7 @@ export default function TrackEditForm({
           key: data.key || prev.key,
           bpm: data.bpm || prev.bpm,
           notes: data.notes || prev.notes,
-          local_tags: data.local_tags || prev.local_tags,
+          local_tags: data.genre || prev.local_tags,
         }));
       } else {
         alert("Failed to fetch from AI");

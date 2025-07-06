@@ -1,33 +1,55 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 // Uncomment and configure if you want to use OpenAI API
-// import { Configuration, OpenAIApi } from 'openai';
-// const openai = new OpenAIApi(new Configuration({ apiKey: process.env.OPENAI_API_KEY }));
+import OpenAI from "openai";
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: Request) {
   try {
     const { prompt } = await req.json();
 
-    // --- Real OpenAI implementation ---
-    // const completion = await openai.createChatCompletion({
-    //   model: 'gpt-3.5-turbo',
-    //   messages: [{ role: 'user', content: prompt }],
-    //   max_tokens: 100,
-    // });
-    // const aiText = completion.data.choices[0].message?.content || '';
-    // // Parse aiText for key, bpm, notes (you may want to use regex or instruct GPT to return JSON)
-    // return NextResponse.json({ key, bpm, notes });
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: `
+${prompt}
 
-    // --- Mocked response for now ---
-    // Simulate AI response (replace with real call above)
-    const mock = {
-      key: 'C Minor',
-      bpm: '124',
-      notes: 'Great for deep house sets, smooth breakdown, works well in warmups.',
-      local_tags: 'Deep House',
-    };
-    return NextResponse.json(mock);
+Please analyze this track and return a JSON object **only**, in the following format:
+
+{
+  "key": "string",
+  "bpm": "string",
+  "genre": "string",
+  "notes": "string"
+}
+
+Provide no explanation or extra text — only the JSON object.
+`,
+        },
+      ],
+      max_tokens: 300, // adjust if needed
+    });
+
+    const aiText = completion.choices[0].message?.content || "";
+
+    // Remove code fences and trim whitespace
+    const cleaned = aiText.replace(/```json|```/gi, "").trim();
+    let extracted = { key: "", bpm: "", notes: "", genre: "" };
+    try {
+      extracted = JSON.parse(cleaned);
+    } catch (err) {
+      console.error("Failed to parse JSON from AI response", err, { aiText });
+    }
+
+    const { key, bpm, notes, genre } = extracted;
+
+    return NextResponse.json({ key, bpm, notes, genre });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch AI metadata' }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch AI metadata" },
+      { status: 500 }
+    );
   }
 }
