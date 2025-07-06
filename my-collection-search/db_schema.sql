@@ -14,7 +14,12 @@ CREATE TABLE IF NOT EXISTS tracks (
   position VARCHAR(20),
   discogs_url TEXT,
   apple_music_url TEXT,
-  album_thumbnail TEXT
+  album_thumbnail TEXT,
+  local_tags TEXT,
+  bpm VARCHAR(10) DEFAULT NULL,
+  key VARCHAR(10) DEFAULT NULL,
+  duration_seconds INTEGER,
+  notes TEXT DEFAULT ''
 );
 
 -- SQL for playlists table

@@ -19,7 +19,6 @@ import {
   ModalHeader,
   ModalBody,
   ModalCloseButton,
-  ModalFooter,
 } from "@chakra-ui/modal";
 import dynamic from "next/dynamic";
 
@@ -27,7 +26,7 @@ const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
 });
 
-type Track = {
+export type Track = {
   track_id: string;
   title: string;
   artist: string;
@@ -41,6 +40,10 @@ type Track = {
   discogs_url: string;
   apple_music_url: string;
   album_thumbnail?: string;
+  local_tags?: string;
+  bpm?: string | null;
+  key?: string | null;
+  notes?: string;
 };
 
 type TrackResultProps = {
@@ -104,6 +107,10 @@ function TrackResult({ track, buttons }: TrackResultProps) {
           </Text>
           <Text fontSize="sm">Styles: {track.styles?.join(", ")}</Text>
           <Text fontSize="sm">Genres: {track.genres?.join(", ")}</Text>
+          <Text fontSize="sm">Local Tags: {track.local_tags}</Text>
+          <Text fontSize="sm">BPM: {track.bpm}</Text>
+          <Text fontSize="sm">Key: {track.key}</Text>
+          <Text fontSize="sm">Notes: {track.notes}</Text>
           <Flex alignItems="center" gap={2} mt={1}>
             <Link
               href={track.discogs_url}
