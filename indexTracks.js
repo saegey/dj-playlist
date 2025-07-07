@@ -50,7 +50,15 @@ async function indexTracks() {
   // Index in MeiliSearch
   const index = client.index('tracks', { primaryKey: 'track_id' });
   await index.updateSearchableAttributes(['title', 'artist', 'album', 'local_tags', 'styles', 'genres']);
-  await index.updateFilterableAttributes(['year', 'styles', 'genres', 'local_tags', 'bpm', 'key']);
+  await index.updateFilterableAttributes(['title',
+    'artist',
+    'album',
+    'bpm',
+    'genres',
+    'key',
+    'local_tags',
+    'styles',
+    'year']);
   const { taskUid } = await index.addDocuments(tracks);
   console.log(`🚀 Added ${tracks.length} tracks to MeiliSearch (task UID: ${taskUid})`);
 

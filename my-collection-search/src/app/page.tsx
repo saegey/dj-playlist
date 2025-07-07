@@ -6,9 +6,7 @@ import {
   Box,
   Flex,
   Input,
-  Link,
   Text,
-  Image,
   Button,
   useDisclosure,
 } from "@chakra-ui/react";
@@ -47,11 +45,6 @@ export type Track = {
   bpm?: string | null;
   key?: string | null;
   notes?: string;
-};
-
-type TrackResultProps = {
-  track: Track;
-  buttons?: React.ReactNode;
 };
 
 function parseDurationToSeconds(duration: string): number {
