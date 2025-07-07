@@ -322,8 +322,8 @@ export default function SearchPage() {
                   </Box>
                   <Button
                     size="xs"
-                    colorScheme="green"
-                    variant="outline"
+                    colorScheme="blue"
+                    // variant="outline"
                     mr={1}
                     onClick={() => handleLoadPlaylist(pl.tracks)}
                   >
@@ -331,8 +331,8 @@ export default function SearchPage() {
                   </Button>
                   <Button
                     size="xs"
-                    colorScheme="red"
-                    variant="ghost"
+                    colorScheme="gray"
+                    // variant="ghost"
                     onClick={() => handleDeletePlaylist(pl.id)}
                   >
                     Delete
@@ -362,18 +362,16 @@ export default function SearchPage() {
               buttons={
                 <>
                   <Button
-                    colorScheme="green"
+                    colorScheme="blue"
                     onClick={() => addToPlaylist(track)}
                     size="sm"
-                    variant="ghost"
                   >
-                    + Add
+                    Add
                   </Button>
                   <Button
-                    colorScheme="blue"
+                    colorScheme="gray"
                     onClick={() => handleEditClick(track)}
                     size="sm"
-                    variant="ghost"
                   >
                     Edit
                   </Button>

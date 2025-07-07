@@ -42,7 +42,7 @@ export default function TrackResult({
               {track.album}
             </Text>
             <Flex direction="row" fontSize="sm" color="gray.600" gap={2}>
-              <Text fontSize="sm" fontWeight="bold">
+              {/* <Text fontSize="sm" fontWeight="bold">
                 Key:
               </Text>{" "}
               <Text fontSize="sm"> {track.key}</Text>
@@ -60,7 +60,7 @@ export default function TrackResult({
               <Text fontSize="sm"> {track.duration}</Text>
               <Text fontSize="sm" fontWeight="bold">
                 AM Dur:{" "}
-              </Text>
+              </Text> */}
               <Text fontSize="sm">
                 {formatSeconds(
                   track.duration_seconds ? track.duration_seconds : 0
@@ -101,7 +101,7 @@ export default function TrackResult({
     <Box borderWidth="1px" borderRadius="md" p={3} mb={2}>
       <Flex alignItems="center" gap={3} width="100%" minHeight="180px">
         <Flex direction="column" flex={1}>
-          <Flex gap={4}>
+          <Flex gap={4} alignItems="center">
             <Image
               src={track.album_thumbnail}
               alt={track.title}
@@ -110,35 +110,88 @@ export default function TrackResult({
               borderRadius="md"
             />
             <Box>
-              <Text as="strong">{track.title}</Text> — {track.artist}
-              <Text fontSize="sm">
-                {track.album} ({track.year})
-              </Text>
+              <Flex flexDirection={"column"} gap={2}>
+                <Flex>
+                  <Text as="strong" fontSize="lg">
+                    {track.title}
+                  </Text>
+                  <Text fontSize="md">— {track.artist}</Text>
+                </Flex>
+                <Text fontSize="sm" color="gray.600">
+                  {track.album} ({track.year})
+                </Text>
+              </Flex>
             </Box>
           </Flex>
 
-          <Text fontSize="sm">Track ID: {track.track_id}</Text>
-          <Text fontSize="sm">Position: {track.position}</Text>
-          <Text fontSize="sm">
-            Duration:{" "}
-            {track.duration
-              ? track.duration
-              : typeof track.duration_seconds === "number"
-              ? formatSeconds(track.duration_seconds)
-              : ""}
-          </Text>
-          <Text fontSize="sm">Styles: {track.styles?.join(", ")}</Text>
-          <Text fontSize="sm">Genres: {track.genres?.join(", ")}</Text>
-          <Text fontSize="sm">Local Tags: {track.local_tags}</Text>
-          <Text fontSize="sm">BPM: {track.bpm}</Text>
-          <Text fontSize="sm">Key: {track.key}</Text>
-          <Text fontSize="sm">Notes: {track.notes}</Text>
-          <Flex alignItems="center" gap={2} mt={1}>
+          <Flex flexDirection={"column"} gap={2} mt={2}>
+            {track.styles && track.styles.length > 0 && (
+              <Flex color="purple.600">
+                <Text fontSize="sm" fontWeight={"bold"} color="purple.600">
+                  Styles:{" "}
+                </Text>
+                <Text fontSize="sm" color="purple.600" ml={2}>
+                  {track.styles.join(", ")}
+                </Text>
+              </Flex>
+            )}
+            {track.genres && track.genres.length > 0 && (
+              <Flex gap={2} color="teal.600">
+                <Text fontSize="sm" fontWeight={"bold"} color="teal.600">
+                  Genres:{" "}
+                </Text>
+                <Text fontSize="sm" color="teal.600">
+                  {track.genres.join(", ")}
+                </Text>
+              </Flex>
+            )}
+            {track.local_tags && track.local_tags.length > 0 && (
+              <Flex gap={2} color="orange.600">
+                <Text fontSize="sm" fontWeight={"bold"} color="orange.600">
+                  Local Tags:{" "}
+                </Text>
+                <Text fontSize="sm" color="orange.600">
+                  {Array.isArray(track.local_tags)
+                    ? track.local_tags.join(", ")
+                    : track.local_tags}
+                </Text>
+              </Flex>
+            )}
+            <Flex gap={2}>
+              {/* <Text fontSize="sm">Track ID: {track.track_id}</Text> */}
+              <Text fontSize="sm" fontWeight="bold">
+                Position:{}
+              </Text>
+              <Text fontSize="sm">{track.position}</Text>
+              <Text fontSize="sm" fontWeight="bold">
+                Duration:{" "}
+              </Text>
+              <Text fontSize="sm">
+                {track.duration
+                  ? track.duration
+                  : typeof track.duration_seconds === "number"
+                  ? formatSeconds(track.duration_seconds)
+                  : ""}
+              </Text>
+              {track.bpm && (
+                <Flex gap={2}>
+                  <Text fontSize="sm" fontWeight="bold">
+                    BPM:{" "}
+                  </Text>
+                  <Text fontSize="sm">{track.bpm}</Text>
+                </Flex>
+              )}
+            </Flex>
+            {track.notes && <Text fontSize="sm">Notes: {track.notes}</Text>}
+          </Flex>
+
+          <Flex alignItems="center" gap={2} mt={2}>
             <Link
               href={track.discogs_url}
               color="blue.500"
               target="_blank"
               rel="noopener noreferrer"
+              fontSize="sm"
             >
               Discogs
             </Link>
@@ -148,13 +201,14 @@ export default function TrackResult({
                 color="blue.500"
                 target="_blank"
                 rel="noopener noreferrer"
+                fontSize="sm"
               >
                 Apple Music
               </Link>
             )}
           </Flex>
-          <br />
-          <Flex alignItems="flex-end" flexShrink={0} gap={2}>
+
+          <Flex alignItems="flex-end" flexShrink={0} gap={2} mt={2}>
             {allowMinimize && (
               <Button
                 size="xs"
