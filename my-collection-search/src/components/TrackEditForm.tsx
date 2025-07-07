@@ -133,7 +133,6 @@ export default function TrackEditForm({
             name="title"
             value={form.title}
             onChange={handleChange}
-            isReadOnly
           />
         </Box>
         <Box>
@@ -197,8 +196,8 @@ export default function TrackEditForm({
           <Input
             name="apple_music_url"
             value={form.apple_music_url || ""}
-            isReadOnly
             placeholder="Apple Music URL will appear here"
+            onChange={handleChange}
           />
         </Box>
         <Flex gap={2}>
