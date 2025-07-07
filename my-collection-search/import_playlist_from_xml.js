@@ -3,12 +3,21 @@
 
 const fs = require("fs");
 const plist = require("plist");
-const { Pool } = require("pg");
-const dotenv = require('dotenv');
 
+const dotenv = require('dotenv');
 dotenv.config();
 
+const { MeiliSearch } = require('meilisearch');
+
+// Optionally keep Postgres for playlist insert, but not for track lookup
+const { Pool } = require("pg");
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+const meiliClient = new MeiliSearch({
+  host: process.env.MEILISEARCH_HOST || 'http://127.0.0.1:7700',
+  apiKey: process.env.MEILISEARCH_API_KEY || undefined,
+});
+const tracksIndex = meiliClient.index('tracks');
 
 async function importAppleMusicPlaylist(xmlPath, playlistName) {
   const xml = fs.readFileSync(xmlPath, "utf-8");
@@ -78,16 +87,17 @@ async function importAppleMusicPlaylist(xmlPath, playlistName) {
   console.log(`📋 Found ${playlistTrackIds.length} tracks in playlist '${playlistName}'.`);
 
 
-  // Try to match by Persistent ID, but if not available, fall back to metadata matching
+
+  // Try to match by Persistent ID, but if not available, fall back to metadata matching using MeiliSearch
   const foundTracks = [];
   for (const tid of playlistTrackIds) {
     let trackRow = null;
     // const persistentId = trackIdToPersistentId[tid];
     // if (persistentId) {
-    //   // Try persistent ID match
-    //   const { rows } = await pool.query("SELECT * FROM tracks WHERE apple_music_persistent_id = $1", [persistentId]);
-    //   if (rows.length) {
-    //     trackRow = rows[0];
+    //   // Try persistent ID match in MeiliSearch (if indexed)
+    //   const search = await tracksIndex.search(persistentId, { filter: `apple_music_persistent_id = \"${persistentId}\"` });
+    //   if (search.hits && search.hits.length) {
+    //     trackRow = search.hits[0];
     //   }
     // }
     if (!trackRow) {
@@ -99,15 +109,31 @@ async function importAppleMusicPlaylist(xmlPath, playlistName) {
         const artist = trackEntry["Artist"] || null;
         const album = trackEntry["Album"] || null;
         if (title && artist) {
-          // Try to match in DB (case-insensitive)
-          console.log(`🔍 Matching track: Title=\"${title}\", Artist=\"${artist}\", Album=\"${album || 'N/A'}\"`);
-          const { rows } = await pool.query(
-            "SELECT * FROM tracks WHERE LOWER(title) = LOWER($1) AND LOWER(artist) = LOWER($2)",
-            [title, artist]
-          );
-          console.log(`🔍 Found ${rows.length} matching tracks in database.`);
-          if (rows.length) {
-            trackRow = rows[0];
+          // Build MeiliSearch query string
+          let query = `${title} ${artist}`;
+          if (album) query += ` ${album}`;
+          try {
+            const search = await tracksIndex.search(query, {
+              limit: 5
+            });
+            console.log(`🔍 MeiliSearch found ${search.hits.length} possible tracks.`);
+            // Find best match by comparing fields (case-insensitive, trimmed)
+            const norm = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+            const normTitle = norm(title);
+            const normArtist = norm(artist);
+            const normAlbum = album ? norm(album) : null;
+            trackRow = search.hits.find(hit => {
+              if (norm(hit.title) !== normTitle) return false;
+              if (norm(hit.artist) !== normArtist) return false;
+              if (normAlbum && hit.album && norm(hit.album) !== normAlbum) return false;
+              return true;
+            }) || null;
+            if (!trackRow && search.hits.length) {
+              // fallback: take first hit if nothing matches exactly
+              trackRow = search.hits[0];
+            }
+          } catch (err) {
+            console.error('MeiliSearch error:', err.message);
           }
         }
       }
