@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS tracks (
   bpm VARCHAR(10) DEFAULT NULL,
   key VARCHAR(10) DEFAULT NULL,
   duration_seconds INTEGER,
-  notes TEXT DEFAULT ''
+  notes TEXT DEFAULT '',
+  apple_music_persistent_id VARCHAR(32) UNIQUE DEFAULT NULL
 );
 
 -- SQL for playlists table

@@ -31,10 +31,16 @@ function generateAppleMusicDeveloperToken() {
 
 export async function POST(req: Request) {
   try {
-    const { title, artist } = await req.json();
+    const { title, artist, album, isrc } = await req.json();
     const developerToken = generateAppleMusicDeveloperToken();
-    const query = encodeURIComponent(`${title} ${artist}`);
-    const url = `${APPLE_MUSIC_API_URL}?term=${query}&types=songs&limit=5`;
+    // Build a query string with as much info as possible
+    let query = `${title || ''} ${artist || ''}`.trim();
+    if (album) query += ` ${album}`;
+    let url = `${APPLE_MUSIC_API_URL}?term=${encodeURIComponent(query)}&types=songs&limit=10`;
+    if (isrc) {
+      // Try ISRC search first (if provided)
+      url = `${APPLE_MUSIC_API_URL}?term=${encodeURIComponent(isrc)}&types=songs&limit=5`;
+    }
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${developerToken}` },
     });
@@ -43,15 +49,21 @@ export async function POST(req: Request) {
     }
     const data = await res.json();
     const songs = data?.results?.songs?.data || [];
+    // Optionally, filter by ISRC if provided
+    let filtered = songs;
+    if (isrc) {
+      filtered = songs.filter((song: any) => song.attributes?.isrc?.toUpperCase() === isrc.toUpperCase());
+    }
     // Map to a simple structure for the UI
-    const results = songs.map((song: any) => ({
+    const results = filtered.map((song: any) => ({
       id: song.id,
       title: song.attributes?.name,
       artist: song.attributes?.artistName,
       album: song.attributes?.albumName,
       url: song.attributes?.url,
       artwork: song.attributes?.artwork?.url,
-      duration: song.attributes?.durationInMillis
+      duration: song.attributes?.durationInMillis,
+      isrc: song.attributes?.isrc
     }));
     return NextResponse.json({ results });
   } catch (error) {

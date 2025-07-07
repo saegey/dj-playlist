@@ -98,6 +98,7 @@ export default function TrackEditForm({
       duration_seconds: song.duration
         ? Math.round(song.duration / 1000)
         : undefined,
+      apple_music_persistent_id: song.id
     }));
     setShowAppleModal(false);
   };
