@@ -95,8 +95,62 @@ export default function SearchPage() {
   const limit = 20;
   const [estimatedResults, setEstimatedResults] = useState<number>(0);
 
+  // Playlist management state
+  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [playlistName, setPlaylistName] = useState("");
+  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const { onOpen, onClose } = useDisclosure();
+
+  // Fetch playlists from backend
+  const fetchPlaylists = async () => {
+    setLoadingPlaylists(true);
+    try {
+      const res = await fetch("/api/playlists");
+      if (res.ok) {
+        const data = await res.json();
+        setPlaylists(data);
+      }
+    } finally {
+      setLoadingPlaylists(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPlaylists();
+  }, []);
+
+  // Create a new playlist
+  const handleCreatePlaylist = async () => {
+    if (!playlistName.trim() || playlist.length === 0) return;
+    const res = await fetch("/api/playlists", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: playlistName, tracks: playlist }),
+    });
+    if (res.ok) {
+      setPlaylistName("");
+      fetchPlaylists();
+    } else {
+      alert("Failed to create playlist");
+    }
+  };
+
+  // Load a playlist (replace current playlist)
+  const handleLoadPlaylist = (tracks: any[]) => {
+    setPlaylist(tracks);
+  };
+
+  // Delete a playlist
+  const handleDeletePlaylist = async (id: number) => {
+    if (!window.confirm("Delete this playlist?")) return;
+    const res = await fetch(`/api/playlists?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      fetchPlaylists();
+    } else {
+      alert("Failed to delete playlist");
+    }
+  };
 
   const handleEditClick = (track: Track) => {
     setEditTrack(track);
@@ -171,7 +225,8 @@ export default function SearchPage() {
     setPlaylist((prev) => prev.filter((t) => t.track_id !== trackId));
   };
 
-  const savePlaylist = () => {
+  // Export playlist as JSON file
+  const exportPlaylist = () => {
     const dataStr =
       "data:text/json;charset=utf-8," +
       encodeURIComponent(JSON.stringify(playlist, null, 2));
@@ -181,6 +236,25 @@ export default function SearchPage() {
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
+  };
+
+  // Save playlist to backend (update or create)
+  const savePlaylist = async () => {
+    if (!playlistName.trim() || playlist.length === 0) {
+      alert("Please enter a playlist name and add tracks.");
+      return;
+    }
+    const res = await fetch("/api/playlists", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: playlistName, tracks: playlist }),
+    });
+    if (res.ok) {
+      fetchPlaylists();
+      alert("Playlist saved!");
+    } else {
+      alert("Failed to save playlist");
+    }
   };
 
   const moveTrack = (fromIdx: number, toIdx: number) => {
@@ -210,7 +284,72 @@ export default function SearchPage() {
   return (
     <>
       <Flex p={4} gap={4} direction="row">
-        <Box width="50%">
+        {/* Playlist Management Section */}
+        <Box width="20%" minWidth="220px" mr={4}>
+          <Text fontWeight="bold" mb={2}>
+            Manage Playlists
+          </Text>
+          <Flex mb={2} gap={2}>
+            <Input
+              size="sm"
+              placeholder="New playlist name"
+              value={playlistName}
+              onChange={(e) => setPlaylistName(e.target.value)}
+            />
+            <Button
+              size="sm"
+              colorScheme="blue"
+              onClick={handleCreatePlaylist}
+              isDisabled={!playlistName.trim() || playlist.length === 0}
+            >
+              Save
+            </Button>
+          </Flex>
+          <Box
+            maxHeight="300px"
+            overflowY="auto"
+            borderWidth="1px"
+            borderRadius="md"
+            p={2}
+            bg="gray.50"
+          >
+            {loadingPlaylists ? (
+              <Text fontSize="sm">Loading...</Text>
+            ) : playlists.length === 0 ? (
+              <Text fontSize="sm" color="gray.500">
+                No saved playlists.
+              </Text>
+            ) : (
+              playlists.map((pl: any) => (
+                <Flex key={pl.id} align="center" justify="space-between" mb={1}>
+                  <Box flex={1}>
+                    <Text fontSize="sm" fontWeight="bold" isTruncated>
+                      {pl.name}
+                    </Text>
+                  </Box>
+                  <Button
+                    size="xs"
+                    colorScheme="green"
+                    variant="outline"
+                    mr={1}
+                    onClick={() => handleLoadPlaylist(pl.tracks)}
+                  >
+                    Load
+                  </Button>
+                  <Button
+                    size="xs"
+                    colorScheme="red"
+                    variant="ghost"
+                    onClick={() => handleDeletePlaylist(pl.id)}
+                  >
+                    Delete
+                  </Button>
+                </Flex>
+              ))
+            )}
+          </Box>
+        </Box>
+        <Box width="40%">
           <Input
             type="text"
             placeholder="Search tracks..."
@@ -260,11 +399,8 @@ export default function SearchPage() {
           borderWidth="2px"
           borderRadius="lg"
           p={4}
-          width="50%"
-          // maxHeight="80vh"
+          width="40%"
           overflowY="auto"
-          // position="sticky"
-          // top="24px"
         >
           <Flex alignItems="center" justifyContent="space-between" mb={3}>
             <Box>
@@ -275,20 +411,24 @@ export default function SearchPage() {
                 Total Playtime: {totalPlaytimeFormatted}
               </Text>
             </Box>
-            <Link
-              as="button"
-              color="blue.600"
-              fontWeight="bold"
-              onClick={playlist.length === 0 ? undefined : savePlaylist}
-              aria-disabled={playlist.length === 0}
-              style={
-                playlist.length === 0
-                  ? { pointerEvents: "none", opacity: 0.5 }
-                  : {}
-              }
-            >
-              Save
-            </Link>
+            <Flex gap={2} alignItems="center">
+              <Button
+                colorScheme="blue"
+                size="sm"
+                onClick={savePlaylist}
+                isDisabled={playlist.length === 0}
+              >
+                Save
+              </Button>
+              <Button
+                colorScheme="gray"
+                size="sm"
+                onClick={exportPlaylist}
+                isDisabled={playlist.length === 0}
+              >
+                Export
+              </Button>
+            </Flex>
           </Flex>
           {playlist.length === 0 ? (
             <Text color="gray.500">No tracks in playlist yet.</Text>
