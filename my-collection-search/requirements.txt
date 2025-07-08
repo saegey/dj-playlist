@@ -1,0 +1,2 @@
+essentia
+numpy<2

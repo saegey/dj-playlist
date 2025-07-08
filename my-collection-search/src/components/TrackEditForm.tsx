@@ -39,6 +39,48 @@ export default function TrackEditForm({
   const [showAppleModal, setShowAppleModal] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // For analysis modal
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<any | null>(null);
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
+  // Analyze Audio handler
+  const handleAnalyzeAudio = async () => {
+    if (!form.apple_music_url) {
+      alert("Apple Music URL is required for analysis.");
+      return;
+    }
+    setAnalyzing(true);
+    setAnalysisResult(null);
+    try {
+      const res = await fetch("/api/tracks/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apple_music_url: form.apple_music_url,
+          track_id: form.id || form.track_id || "unknown"
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAnalysisResult(data);
+        // Optionally update form fields with results
+        setForm((prev) => ({
+          ...prev,
+          bpm: data.bpm ? String(data.bpm) : prev.bpm,
+          key: data.key || prev.key,
+          // Add more fields if desired
+        }));
+        setShowAnalysisModal(true);
+      } else {
+        const err = await res.json();
+        alert("Analysis failed: " + (err.error || "Unknown error"));
+      }
+    } catch (err: any) {
+      alert("Error analyzing audio: " + (err.message || err));
+    }
+    setAnalyzing(false);
+  };
+
   // Fetch from ChatGPT
   const fetchFromChatGPT = async () => {
     setFetching(true);
@@ -218,7 +260,53 @@ export default function TrackEditForm({
           >
             Search Apple Music
           </Button>
+          <Button
+            type="button"
+            colorScheme="teal"
+            isLoading={analyzing}
+            onClick={handleAnalyzeAudio}
+            isDisabled={!form.apple_music_url}
+            title={form.apple_music_url ? "Analyze audio features from Apple Music" : "Add an Apple Music URL first"}
+          >
+            Analyze Audio
+          </Button>
         </Flex>
+        {/* Analysis Result Modal */}
+        <Modal
+          isOpen={showAnalysisModal}
+          onClose={() => setShowAnalysisModal(false)}
+          isCentered
+        >
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Audio Analysis Result</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              {analysisResult ? (
+                <Stack spacing={2}>
+                  {analysisResult.error ? (
+                    <Text color="red.500">{analysisResult.error}</Text>
+                  ) : (
+                    <>
+                      <Text><b>BPM:</b> {analysisResult.bpm}</Text>
+                      <Text><b>Key:</b> {analysisResult.key} {analysisResult.scale}</Text>
+                      <Text><b>Danceability:</b> {analysisResult.danceability}</Text>
+                      <Text><b>Mood:</b></Text>
+                      <Box pl={4}>
+                        <Text>Happy: {analysisResult.mood_happy}</Text>
+                        <Text>Sad: {analysisResult.mood_sad}</Text>
+                        <Text>Relaxed: {analysisResult.mood_relaxed}</Text>
+                        <Text>Aggressive: {analysisResult.mood_aggressive}</Text>
+                      </Box>
+                    </>
+                  )}
+                </Stack>
+              ) : (
+                <Text>Analyzing...</Text>
+              )}
+            </ModalBody>
+          </ModalContent>
+        </Modal>
 
         <Modal
           isOpen={showAppleModal}

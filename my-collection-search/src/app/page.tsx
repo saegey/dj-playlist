@@ -613,6 +613,7 @@ export default function SearchPage() {
           setEditTrack(null);
           onClose();
         }}
+        size={"2xl"}
       >
         <ModalOverlay bg="blackAlpha.600" />
         <ModalContent bg="white">
