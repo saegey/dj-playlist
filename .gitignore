@@ -6,3 +6,4 @@ meilisearch
 node_modules/
 discogs_exports/
 .env
+.DS_Store

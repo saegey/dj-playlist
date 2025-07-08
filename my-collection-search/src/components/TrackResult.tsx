@@ -22,6 +22,7 @@ export type TrackResultProps = {
   buttons?: React.ReactNode;
   minimized?: boolean;
   allowMinimize?: boolean;
+  footer?: React.ReactNode;
 };
 
 export default function TrackResult({
@@ -29,6 +30,7 @@ export default function TrackResult({
   buttons,
   minimized = false,
   allowMinimize = true,
+  footer,
 }: TrackResultProps) {
   const [expanded, setExpanded] = useLocalState(false);
   if (minimized && !expanded) {
@@ -222,6 +224,7 @@ export default function TrackResult({
           </Flex>
         </Flex>
       </Flex>
+      {footer && <Box mt={2}>{footer}</Box>}
     </Box>
   );
 }

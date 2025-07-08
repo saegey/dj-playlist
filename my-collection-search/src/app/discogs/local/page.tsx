@@ -1,7 +1,35 @@
 import fs from 'fs';
 import path from 'path';
+import { notFound } from 'next/navigation';
 
-export default function DiscogsLocalReleasesPage({ releases }) {
+export const dynamic = 'force-dynamic';
+
+async function getLocalReleases() {
+  const dir = path.resolve(process.cwd(), 'discogs_exports');
+  let releases = [];
+  if (fs.existsSync(dir)) {
+    const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
+    releases = files.map(f => {
+      try {
+        const data = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8'));
+        return {
+          id: data.id,
+          title: data.title,
+          year: data.year,
+          artists: data.artists,
+          labels: data.labels
+        };
+      } catch {
+        return null;
+      }
+    }).filter(Boolean);
+  }
+  return releases;
+}
+
+export default async function DiscogsLocalReleasesPage() {
+  const releases = await getLocalReleases();
+  if (!releases) return notFound();
   return (
     <div style={{ maxWidth: 900, margin: '2rem auto', padding: 24 }}>
       <h1>Local Discogs Releases</h1>
@@ -30,27 +58,4 @@ export default function DiscogsLocalReleasesPage({ releases }) {
       </table>
     </div>
   );
-}
-
-export async function getServerSideProps() {
-  const dir = path.resolve(process.cwd(), 'discogs_exports');
-  let releases = [];
-  if (fs.existsSync(dir)) {
-    const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
-    releases = files.map(f => {
-      try {
-        const data = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8'));
-        return {
-          id: data.id,
-          title: data.title,
-          year: data.year,
-          artists: data.artists,
-          labels: data.labels
-        };
-      } catch {
-        return null;
-      }
-    }).filter(Boolean);
-  }
-  return { props: { releases } };
 }
