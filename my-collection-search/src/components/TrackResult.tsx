@@ -210,11 +210,11 @@ export default function TrackResult({
             <Flex gap={2}>
               {/* <Text fontSize="sm">Track ID: {track.track_id}</Text> */}
               <Text fontSize="sm" fontWeight="bold">
-                Position:{}
+                Pos{}
               </Text>
               <Text fontSize="sm">{track.position}</Text>
               <Text fontSize="sm" fontWeight="bold">
-                Duration:{" "}
+                Dur{" "}
               </Text>
               <Text fontSize="sm">
                 {track.duration
@@ -226,9 +226,41 @@ export default function TrackResult({
               {track.bpm && (
                 <Flex gap={2}>
                   <Text fontSize="sm" fontWeight="bold">
-                    BPM:{" "}
+                    BPM{" "}
                   </Text>
                   <Text fontSize="sm">{track.bpm}</Text>
+                </Flex>
+              )}
+               {track.key && (
+                <Flex gap={2}>
+                  <Text fontSize="sm" fontWeight="bold">
+                    Key{" "}
+                  </Text>
+                  <Text fontSize="sm">{track.key}</Text>
+                </Flex>
+              )}
+               {track.danceability && (
+                <Flex gap={2}>
+                  <Text fontSize="sm" fontWeight="bold">
+                    Dance{" "}
+                  </Text>
+                  <Text fontSize="sm">{track.danceability}</Text>
+                </Flex>
+              )}
+              {track.mood_happy && (
+                <Flex gap={2}>
+                  <Text fontSize="sm" fontWeight="bold">
+                    Happy{" "}
+                  </Text>
+                  <Text fontSize="sm">{track.mood_happy}</Text>
+                </Flex>
+              )}
+              {track.mood_aggressive && (
+                <Flex gap={2}>
+                  <Text fontSize="sm" fontWeight="bold">
+                    Agg{" "}
+                  </Text>
+                  <Text fontSize="sm">{track.mood_aggressive}</Text>
                 </Flex>
               )}
             </Flex>
