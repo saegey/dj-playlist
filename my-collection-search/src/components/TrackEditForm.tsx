@@ -57,8 +57,8 @@ export default function TrackEditForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           apple_music_url: form.apple_music_url,
-          track_id: form.id || form.track_id || "unknown"
-        })
+          track_id: form.id || form.track_id || "unknown",
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -68,6 +68,11 @@ export default function TrackEditForm({
           ...prev,
           bpm: data.bpm ? String(data.bpm) : prev.bpm,
           key: data.key || prev.key,
+          danceability: data.danceability || prev.danceability,
+          mood_happy: data.mood_happy || prev.mood_happy,
+          mood_sad: data.mood_sad || prev.mood_sad,
+          mood_relaxed: data.mood_relaxed || prev.mood_relaxed,
+          mood_aggressive: data.mood_aggressive || prev.mood_aggressive,
           // Add more fields if desired
         }));
         setShowAnalysisModal(true);
@@ -85,7 +90,7 @@ export default function TrackEditForm({
   const fetchFromChatGPT = async () => {
     setFetching(true);
     try {
-      const prompt = `Given the following track details, suggest the musical key, BPM, genre or style of track, and a short DJ note.\nTitle: ${form.title}\nArtist: ${form.artist}\nAlbum: ${form.album}\n\nReturn JSON only like:\n{"key":"", "bpm":"", "notes":""}`;
+      const prompt = `Given the following track details, suggest the genre or style of the track, and detailed DJ-focused notes with vibe, energy, suggested set placement, transition ideas, and any cultural or emotional context.\nTitle: ${form.title}\nArtist: ${form.artist}\nAlbum: ${form.album}\nDiscogs URL: ${track.discogs_url}\n\nReturn JSON only like:\n{"genre":"", "notes":""}`;
 
       const res = await fetch("/api/ai/track-metadata", {
         method: "POST",
@@ -96,10 +101,8 @@ export default function TrackEditForm({
         const data = await res.json();
         setForm((prev) => ({
           ...prev,
-          key: data.key || prev.key,
-          bpm: data.bpm || prev.bpm,
-          notes: data.notes || prev.notes,
           local_tags: data.genre || prev.local_tags,
+          notes: data.notes || prev.notes,
         }));
       } else {
         alert("Failed to fetch from AI");
@@ -140,7 +143,7 @@ export default function TrackEditForm({
       duration_seconds: song.duration
         ? Math.round(song.duration / 1000)
         : undefined,
-      apple_music_persistent_id: song.id
+      apple_music_persistent_id: song.id,
     }));
     setShowAppleModal(false);
   };
@@ -172,31 +175,19 @@ export default function TrackEditForm({
           <Text mb={1} fontSize="sm">
             Title
           </Text>
-          <Input
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-          />
+          <Input name="title" value={form.title} onChange={handleChange} />
         </Box>
         <Box>
           <Text mb={1} fontSize="sm">
             Artist
           </Text>
-          <Input
-            name="artist"
-            value={form.artist}
-            onChange={handleChange}
-          />
+          <Input name="artist" value={form.artist} onChange={handleChange} />
         </Box>
         <Box>
           <Text mb={1} fontSize="sm">
             Album
           </Text>
-          <Input
-            name="album"
-            value={form.album}
-            onChange={handleChange}
-          />
+          <Input name="album" value={form.album} onChange={handleChange} />
         </Box>
         <Box>
           <Text mb={1} fontSize="sm">
@@ -215,6 +206,86 @@ export default function TrackEditForm({
             Key
           </Text>
           <Input name="key" value={form.key} onChange={handleChange} />
+        </Box>
+        <Box>
+          <Text mb={1} fontSize="sm">
+            Scale
+          </Text>
+          <Input
+            name="scale"
+            value={form.scale || ""}
+            onChange={handleChange}
+          />
+        </Box>
+        <Box>
+          <Text mb={1} fontSize="sm">
+            Danceability
+          </Text>
+          <Input
+            name="danceability"
+            value={form.danceability ?? ""}
+            onChange={handleChange}
+            type="number"
+            min="0"
+            max="3"
+            step="0.01"
+          />
+        </Box>
+        <Box>
+          <Text mb={1} fontSize="sm">
+            Mood Happy
+          </Text>
+          <Input
+            name="mood_happy"
+            value={form.mood_happy ?? ""}
+            onChange={handleChange}
+            type="number"
+            min="0"
+            max="1"
+            step="0.01"
+          />
+        </Box>
+        <Box>
+          <Text mb={1} fontSize="sm">
+            Mood Sad
+          </Text>
+          <Input
+            name="mood_sad"
+            value={form.mood_sad ?? ""}
+            onChange={handleChange}
+            type="number"
+            min="0"
+            max="1"
+            step="0.01"
+          />
+        </Box>
+        <Box>
+          <Text mb={1} fontSize="sm">
+            Mood Relaxed
+          </Text>
+          <Input
+            name="mood_relaxed"
+            value={form.mood_relaxed ?? ""}
+            onChange={handleChange}
+            type="number"
+            min="0"
+            max="1"
+            step="0.01"
+          />
+        </Box>
+        <Box>
+          <Text mb={1} fontSize="sm">
+            Mood Aggressive
+          </Text>
+          <Input
+            name="mood_aggressive"
+            value={form.mood_aggressive ?? ""}
+            onChange={handleChange}
+            type="number"
+            min="0"
+            max="1"
+            step="0.01"
+          />
         </Box>
         <Box>
           <Text mb={1} fontSize="sm">
@@ -266,7 +337,11 @@ export default function TrackEditForm({
             isLoading={analyzing}
             onClick={handleAnalyzeAudio}
             isDisabled={!form.apple_music_url}
-            title={form.apple_music_url ? "Analyze audio features from Apple Music" : "Add an Apple Music URL first"}
+            title={
+              form.apple_music_url
+                ? "Analyze audio features from Apple Music"
+                : "Add an Apple Music URL first"
+            }
           >
             Analyze Audio
           </Button>
@@ -288,15 +363,25 @@ export default function TrackEditForm({
                     <Text color="red.500">{analysisResult.error}</Text>
                   ) : (
                     <>
-                      <Text><b>BPM:</b> {analysisResult.bpm}</Text>
-                      <Text><b>Key:</b> {analysisResult.key} {analysisResult.scale}</Text>
-                      <Text><b>Danceability:</b> {analysisResult.danceability}</Text>
-                      <Text><b>Mood:</b></Text>
+                      <Text>
+                        <b>BPM:</b> {analysisResult.bpm}
+                      </Text>
+                      <Text>
+                        <b>Key:</b> {analysisResult.key} {analysisResult.scale}
+                      </Text>
+                      <Text>
+                        <b>Danceability:</b> {analysisResult.danceability}
+                      </Text>
+                      <Text>
+                        <b>Mood:</b>
+                      </Text>
                       <Box pl={4}>
                         <Text>Happy: {analysisResult.mood_happy}</Text>
                         <Text>Sad: {analysisResult.mood_sad}</Text>
                         <Text>Relaxed: {analysisResult.mood_relaxed}</Text>
-                        <Text>Aggressive: {analysisResult.mood_aggressive}</Text>
+                        <Text>
+                          Aggressive: {analysisResult.mood_aggressive}
+                        </Text>
                       </Box>
                     </>
                   )}

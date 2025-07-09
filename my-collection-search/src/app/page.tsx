@@ -42,6 +42,12 @@ export type Track = {
   local_tags?: string;
   bpm?: string | null;
   key?: string | null;
+  scale?: string | null;
+  danceability?: number | null;
+  mood_happy?: number | null;
+  mood_sad?: number | null;
+  mood_relaxed?: number | null;
+  mood_aggressive?: number | null;
   notes?: string;
 };
 
