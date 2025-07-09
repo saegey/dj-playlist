@@ -1,7 +1,35 @@
 "use client";
 
 import { useState as useLocalState } from "react";
+// ExpandableMarkdown component for markdown notes with expand/collapse
+interface ExpandableMarkdownProps {
+  text: string;
+  maxLength?: number;
+}
+
+function ExpandableMarkdown({ text, maxLength = 100 }: ExpandableMarkdownProps) {
+  const [expanded, setExpanded] = useLocalState(false);
+  const isLong = text.length > maxLength;
+  const displayText = !expanded && isLong ? text.slice(0, maxLength) + "..." : text;
+  return (
+    <Box>
+      <ReactMarkdown>{displayText}</ReactMarkdown>
+      {isLong && (
+        <Button
+          size="xs"
+          variant="link"
+          colorScheme="blue"
+          onClick={() => setExpanded((e) => !e)}
+          mt={1}
+        >
+          {expanded ? "Show less" : "Show more"}
+        </Button>
+      )}
+    </Box>
+  );
+}
 import { Box, Flex, Text, Link, Image, Button } from "@chakra-ui/react";
+import ReactMarkdown from "react-markdown";
 import { Track } from "@/app/page";
 
 function formatSeconds(seconds: number): string {
@@ -44,25 +72,6 @@ export default function TrackResult({
               {track.album}
             </Text>
             <Flex direction="row" fontSize="sm" color="gray.600" gap={2}>
-              {/* <Text fontSize="sm" fontWeight="bold">
-                Key:
-              </Text>{" "}
-              <Text fontSize="sm"> {track.key}</Text>
-              <Text fontSize="sm" fontWeight="bold">
-                BPM:{" "}
-              </Text>
-              <Text fontSize="sm">{track.bpm}</Text>
-              <Text fontSize="sm" fontWeight="bold">
-                Pos:
-              </Text>
-              <Text fontSize="sm">{track.position}</Text>
-              <Text fontSize="sm" fontWeight="bold">
-                Dur:
-              </Text>
-              <Text fontSize="sm"> {track.duration}</Text>
-              <Text fontSize="sm" fontWeight="bold">
-                AM Dur:{" "}
-              </Text> */}
               <Text fontSize="sm">
                 {formatSeconds(
                   track.duration_seconds ? track.duration_seconds : 0
@@ -184,10 +193,12 @@ export default function TrackResult({
                 </Flex>
               )}
             </Flex>
-            {track.notes && <Text fontSize="sm">Notes: {track.notes}</Text>}
-          </Flex>
-
-          <Flex alignItems="center" gap={2} mt={2}>
+            {track.notes && (
+              <Box mt={1}>
+                <ExpandableMarkdown text={track.notes} maxLength={100} />
+              </Box>
+            )}
+            <Flex alignItems="center" gap={2} mt={2}>
             <Link
               href={track.discogs_url}
               color="blue.500"
@@ -221,6 +232,7 @@ export default function TrackResult({
               </Button>
             )}
             {buttons}
+          </Flex>
           </Flex>
         </Flex>
       </Flex>

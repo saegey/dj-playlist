@@ -207,7 +207,7 @@ export default function TrackEditForm({
           </Text>
           <Input name="key" value={form.key} onChange={handleChange} />
         </Box>
-        <Box>
+        {/* <Box>
           <Text mb={1} fontSize="sm">
             Scale
           </Text>
@@ -216,7 +216,7 @@ export default function TrackEditForm({
             value={form.scale || ""}
             onChange={handleChange}
           />
-        </Box>
+        </Box> */}
         <Box>
           <Text mb={1} fontSize="sm">
             Danceability

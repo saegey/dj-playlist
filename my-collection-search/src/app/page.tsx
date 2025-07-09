@@ -42,7 +42,6 @@ export type Track = {
   local_tags?: string;
   bpm?: string | null;
   key?: string | null;
-  scale?: string | null;
   danceability?: number | null;
   mood_happy?: number | null;
   mood_sad?: number | null;
@@ -485,20 +484,20 @@ export default function SearchPage() {
                   >
                     Edit
                   </Button>
-                  <Button
+                  {/* <Button
                     colorScheme="purple"
                     onClick={() => recommendSimilar(track)}
                     size="sm"
                   >
                     More Like This
-                  </Button>
-                  <Button
+                  </Button> */}
+                  {/* <Button
                     colorScheme="teal"
                     onClick={() => moreFromArtist(track.artist)}
                     size="sm"
                   >
                     More from Artist
-                  </Button>
+                  </Button> */}
                 </>
               }
               footer={
