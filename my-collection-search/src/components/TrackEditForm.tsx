@@ -86,6 +86,7 @@ export default function TrackEditForm({
       }
     } catch (err) {
       alert("YouTube search error");
+      console.error("YouTube search error:", err);
     }
     setYoutubeLoading(false);
   };
@@ -109,10 +110,10 @@ export default function TrackEditForm({
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   // Analyze Audio handler
   const handleAnalyzeAudio = async () => {
-    if (!form.apple_music_url) {
-      alert("Apple Music URL is required for analysis.");
-      return;
-    }
+    // if (!form.apple_music_url) {
+    //   alert("Apple Music URL is required for analysis.");
+    //   return;
+    // }
     setAnalyzing(true);
     setAnalysisResult(null);
     try {
@@ -140,13 +141,17 @@ export default function TrackEditForm({
           mood_aggressive: data.mood_aggressive || prev.mood_aggressive,
           // Add more fields if desired
         }));
-        setShowAnalysisModal(true);
+        // setShowAnalysisModal(true);
       } else {
         const err = await res.json();
         alert("Analysis failed: " + (err.error || "Unknown error"));
       }
-    } catch (err: any) {
-      alert("Error analyzing audio: " + (err.message || err));
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        alert("Error analyzing audio: " + err.message);
+      } else {
+        alert("Error analyzing audio: " + String(err));
+      }
     }
     setAnalyzing(false);
   };
@@ -378,7 +383,7 @@ export default function TrackEditForm({
             colorScheme="teal"
             isLoading={analyzing}
             onClick={handleAnalyzeAudio}
-            isDisabled={!form.apple_music_url}
+            isDisabled={!form.apple_music_url && !form.youtube_url}
             title={
               form.apple_music_url
                 ? "Analyze audio features from Apple Music"
@@ -427,6 +432,7 @@ export default function TrackEditForm({
                       )}
                       <Box flex={1}>
                         <Text fontWeight="bold">{video.title}</Text>
+                        <Text fontSize="sm">{video.channel}</Text>
                         <Text fontSize="sm" color="blue.600" isTruncated>
                           {video.url.length > 30
                             ? video.url.slice(0, 30) + "…"

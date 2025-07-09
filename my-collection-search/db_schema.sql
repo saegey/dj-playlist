@@ -23,10 +23,9 @@ CREATE TABLE IF NOT EXISTS tracks (
   apple_music_persistent_id VARCHAR(32) UNIQUE DEFAULT NULL
 );
 
--- SQL for playlists table
 CREATE TABLE IF NOT EXISTS playlists (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  tracks JSONB NOT NULL,
+  tracks TEXT[] NOT NULL, -- now stores array of track_id
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

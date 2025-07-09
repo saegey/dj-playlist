@@ -101,7 +101,9 @@ export default function SearchPage() {
 
   // Filter state
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [activeFilterType, setActiveFilterType] = useState<'genre' | 'style' | 'artist' | null>(null);
+  const [activeFilterType, setActiveFilterType] = useState<
+    "genre" | "style" | "artist" | null
+  >(null);
 
   // Fetch playlists from backend
   const fetchPlaylists = async () => {
@@ -127,7 +129,10 @@ export default function SearchPage() {
     const res = await fetch("/api/playlists", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: playlistName, tracks: playlist }),
+      body: JSON.stringify({
+        name: playlistName,
+        tracks: playlist.map((t) => t.track_id),
+      }),
     });
     if (res.ok) {
       setPlaylistName("");
@@ -138,8 +143,27 @@ export default function SearchPage() {
   };
 
   // Load a playlist (replace current playlist)
-  const handleLoadPlaylist = (tracks: any[]) => {
-    setPlaylist(tracks);
+  const handleLoadPlaylist = async (trackIds: Array<string>) => {
+    if (!trackIds || trackIds.length === 0) {
+      setPlaylist([]);
+      return;
+    }
+    try {
+      // Fetch full track objects from backend by IDs
+      const res = await fetch("/api/tracks/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ track_ids: trackIds }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlaylist(data);
+      } else {
+        alert("Failed to load playlist tracks");
+      }
+    } catch (e) {
+      alert("Error loading playlist tracks");
+    }
   };
 
   // Delete a playlist
@@ -176,32 +200,39 @@ export default function SearchPage() {
   };
 
   // Memoize MeiliSearch client
-  const client = useMemo(() => new MeiliSearch({
-    host: "http://127.0.0.1:7700",
-    apiKey: "masterKey",
-  }), []);
+  const client = useMemo(
+    () =>
+      new MeiliSearch({
+        host: "http://127.0.0.1:7700",
+        apiKey: "masterKey",
+      }),
+    []
+  );
 
   // Recommend similar tracks based on genre, style, or artist
-  const recommendSimilar = useCallback(async (track: Track) => {
-    const index = client.index<Track>("tracks");
-    const filter = [];
-    // if (track.genres && track.genres.length > 0) {
-    //   filter.push(`genres = \"${track.genres[0]}\"`);
-    // } else 
-    if (track.styles && track.styles.length > 0) {
-      filter.push(`styles = \"${track.styles[0]}\"`);
-    } else if (track.artist) {
-      filter.push(`artist = \"${track.artist}\"`);
-    }
-    // Exclude the current track
-    filter.push(`track_id != \"${track.track_id}\"`);
-    const res = await index.search("", {
-      filter,
-      limit: 100,
-    });
-    setResults(res.hits);
-    // setQuery(""); // Clear search box to show recommendations
-  }, [client, setResults]);
+  const recommendSimilar = useCallback(
+    async (track: Track) => {
+      const index = client.index<Track>("tracks");
+      const filter = [];
+      // if (track.genres && track.genres.length > 0) {
+      //   filter.push(`genres = \"${track.genres[0]}\"`);
+      // } else
+      if (track.styles && track.styles.length > 0) {
+        filter.push(`styles = \"${track.styles[0]}\"`);
+      } else if (track.artist) {
+        filter.push(`artist = \"${track.artist}\"`);
+      }
+      // Exclude the current track
+      filter.push(`track_id != \"${track.track_id}\"`);
+      const res = await index.search("", {
+        filter,
+        limit: 100,
+      });
+      setResults(res.hits);
+      // setQuery(""); // Clear search box to show recommendations
+    },
+    [client, setResults]
+  );
 
   // Show recommended tracks on page load (random or trending)
   useEffect(() => {
@@ -212,7 +243,8 @@ export default function SearchPage() {
         // Use a blank query and a random offset for variety
         const stats = await index.getStats();
         const total = stats.numberOfDocuments || 0;
-        const randomOffset = total > 10 ? Math.floor(Math.random() * (total - 10)) : 0;
+        const randomOffset =
+          total > 10 ? Math.floor(Math.random() * (total - 10)) : 0;
         const res = await index.search("", { limit: 10, offset: randomOffset });
         setResults(res.hits);
         setEstimatedResults(total);
@@ -233,32 +265,36 @@ export default function SearchPage() {
   }, [query]);
 
   // Show more tracks by the same artist
-  const moreFromArtist = useCallback(async (artist: string) => {
-    const index = client.index<Track>("tracks");
-    const res = await index.search("", {
-      filter: [`artist = \"${artist}\"`],
-      limit: 20,
-    });
-    setResults(res.hits);
-    setQuery("");
-    setActiveFilter(artist);
-    setActiveFilterType('artist');
-    setOffset(20);
-    setHasMore(res.hits.length === 20);
-  }, [client]);
+  // const moreFromArtist = useCallback(async (artist: string) => {
+  //   const index = client.index<Track>("tracks");
+  //   const res = await index.search("", {
+  //     filter: [`artist = \"${artist}\"`],
+  //     limit: 20,
+  //   });
+  //   setResults(res.hits);
+  //   setQuery("");
+  //   setActiveFilter(artist);
+  //   setActiveFilterType('artist');
+  //   setOffset(20);
+  //   setHasMore(res.hits.length === 20);
+  // }, [client]);
 
   // Show tracks by genre or style
-  const filterByTag = useCallback(async (tag: string, type: 'genre' | 'style') => {
-    const index = client.index<Track>("tracks");
-    const filter = type === 'genre' ? [`genres = \"${tag}\"`] : [`styles = \"${tag}\"`];
-    const res = await index.search("", { filter, limit: 20 });
-    setResults(res.hits);
-    setQuery("");
-    setActiveFilter(tag);
-    setActiveFilterType(type);
-    setOffset(20);
-    setHasMore(res.hits.length === 20);
-  }, [client]);
+  const filterByTag = useCallback(
+    async (tag: string, type: "genre" | "style") => {
+      const index = client.index<Track>("tracks");
+      const filter =
+        type === "genre" ? [`genres = \"${tag}\"`] : [`styles = \"${tag}\"`];
+      const res = await index.search("", { filter, limit: 20 });
+      setResults(res.hits);
+      setQuery("");
+      setActiveFilter(tag);
+      setActiveFilterType(type);
+      setOffset(20);
+      setHasMore(res.hits.length === 20);
+    },
+    [client]
+  );
 
   // Clear filter
   const clearFilter = () => {
@@ -272,7 +308,8 @@ export default function SearchPage() {
       const index = client.index<Track>("tracks");
       const stats = await index.getStats();
       const total = stats.numberOfDocuments || 0;
-      const randomOffset = total > 10 ? Math.floor(Math.random() * (total - 10)) : 0;
+      const randomOffset =
+        total > 10 ? Math.floor(Math.random() * (total - 10)) : 0;
       const res = await index.search("", { limit: 10, offset: randomOffset });
       setResults(res.hits);
       setEstimatedResults(total);
@@ -286,9 +323,12 @@ export default function SearchPage() {
     let res;
     if (activeFilter && activeFilterType) {
       let filter;
-      if (activeFilterType === 'genre') filter = [`genres = \"${activeFilter}\"`];
-      else if (activeFilterType === 'style') filter = [`styles = \"${activeFilter}\"`];
-      else if (activeFilterType === 'artist') filter = [`artist = \"${activeFilter}\"`];
+      if (activeFilterType === "genre")
+        filter = [`genres = \"${activeFilter}\"`];
+      else if (activeFilterType === "style")
+        filter = [`styles = \"${activeFilter}\"`];
+      else if (activeFilterType === "artist")
+        filter = [`artist = \"${activeFilter}\"`];
       res = await index.search("", { filter, limit, offset });
     } else {
       res = await index.search(query, { limit, offset });
@@ -340,7 +380,10 @@ export default function SearchPage() {
     const res = await fetch("/api/playlists", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: playlistName, tracks: playlist }),
+      body: JSON.stringify({
+        name: playlistName,
+        tracks: playlist.map((t) => t.track_id),
+      }),
     });
     if (res.ok) {
       fetchPlaylists();
@@ -456,9 +499,18 @@ export default function SearchPage() {
             {activeFilter && activeFilterType && (
               <>
                 <Text as="span" color="purple.600" ml={2}>
-                  Filtered by {activeFilterType.charAt(0).toUpperCase() + activeFilterType.slice(1)}: <b>{activeFilter}</b>
+                  Filtered by{" "}
+                  {activeFilterType.charAt(0).toUpperCase() +
+                    activeFilterType.slice(1)}
+                  : <b>{activeFilter}</b>
                 </Text>
-                <Button size="xs" ml={2} onClick={clearFilter} colorScheme="gray" variant="outline">
+                <Button
+                  size="xs"
+                  ml={2}
+                  onClick={clearFilter}
+                  colorScheme="gray"
+                  variant="outline"
+                >
                   Clear Filter
                 </Button>
               </>
@@ -501,32 +553,32 @@ export default function SearchPage() {
                   </Button> */}
                 </>
               }
-              footer={
-                <Flex gap={2} mt={1} wrap="wrap">
-                  {track.genres && track.genres.map((g) => (
-                    <Button
-                      key={g}
-                      size="xs"
-                      colorScheme="pink"
-                      variant="outline"
-                      onClick={() => filterByTag(g, 'genre')}
-                    >
-                      {g}
-                    </Button>
-                  ))}
-                  {track.styles && track.styles.map((s) => (
-                    <Button
-                      key={s}
-                      size="xs"
-                      colorScheme="orange"
-                      variant="outline"
-                      onClick={() => filterByTag(s, 'style')}
-                    >
-                      {s}
-                    </Button>
-                  ))}
-                </Flex>
-              }
+              // footer={
+              //   <Flex gap={2} mt={1} wrap="wrap">
+              //     {track.genres && track.genres.map((g) => (
+              //       <Button
+              //         key={g}
+              //         size="xs"
+              //         colorScheme="pink"
+              //         variant="outline"
+              //         onClick={() => filterByTag(g, 'genre')}
+              //       >
+              //         {g}
+              //       </Button>
+              //     ))}
+              //     {track.styles && track.styles.map((s) => (
+              //       <Button
+              //         key={s}
+              //         size="xs"
+              //         colorScheme="orange"
+              //         variant="outline"
+              //         onClick={() => filterByTag(s, 'style')}
+              //       >
+              //         {s}
+              //       </Button>
+              //     ))}
+              //   </Flex>
+              // }
             />
           ))}
 

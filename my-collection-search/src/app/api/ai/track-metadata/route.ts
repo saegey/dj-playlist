@@ -47,13 +47,8 @@ In \"notes\", include a longer DJ-focused description with vibe, energy, suggest
       extracted = JSON.parse(cleaned);
     } catch (err) {
       // Attempt to repair common JSON issues (unescaped quotes, unterminated strings, stray newlines)
-      const repaired = cleaned
-        // Escape unescaped double quotes inside string values
-        .replace(/: "([^"]*?)(?<!\\)"([^"]*?)"/g, (m) => m.replace(/"/g, '\\"'))
-        // Remove any stray newlines inside string values
-        .replace(/\r?\n/g, ' ')
-        // Remove unterminated string at end
-        .replace(/"([^"\\]*(\\.[^"\\]*)*)$/, '"');
+      // Remove backslashes before quotes that are not escaping another backslash
+      const repaired = cleaned.replace(/\\+"/g, '"');
       try {
         extracted = JSON.parse(repaired);
       } catch (err2) {

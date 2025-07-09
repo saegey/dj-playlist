@@ -21,7 +21,8 @@
     "framer-motion": "^12.23.0",
     "meilisearch": "^0.51.0",
     "pg": "^8.16.3",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+    "youtube-dl": "^3.5.0"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10"

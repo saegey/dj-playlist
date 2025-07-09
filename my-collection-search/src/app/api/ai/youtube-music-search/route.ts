@@ -1,3 +1,4 @@
+import { channel } from "diagnostics_channel";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
@@ -15,6 +16,7 @@ export async function POST(req: Request) {
       id: item.id.videoId,
       title: item.snippet.title,
       url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+      channel: item.snippet.channelTitle,
       thumbnail: item.snippet.thumbnails?.default?.url,
     }));
     return NextResponse.json({ results: videos });
