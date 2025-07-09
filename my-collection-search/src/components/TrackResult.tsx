@@ -7,10 +7,14 @@ interface ExpandableMarkdownProps {
   maxLength?: number;
 }
 
-function ExpandableMarkdown({ text, maxLength = 100 }: ExpandableMarkdownProps) {
+function ExpandableMarkdown({
+  text,
+  maxLength = 100,
+}: ExpandableMarkdownProps) {
   const [expanded, setExpanded] = useLocalState(false);
   const isLong = text.length > maxLength;
-  const displayText = !expanded && isLong ? text.slice(0, maxLength) + "..." : text;
+  const displayText =
+    !expanded && isLong ? text.slice(0, maxLength) + "..." : text;
   return (
     <Box>
       <ReactMarkdown>{displayText}</ReactMarkdown>
@@ -68,27 +72,62 @@ export default function TrackResult({
           <Box>
             <Text fontWeight="bold">{track.title}</Text>
             <Text fontSize="sm">{track.artist}</Text>
-            <Text fontSize="sm" color="gray.600">
+            {/* <Text fontSize="sm" color="gray.600">
               {track.album}
-            </Text>
+            </Text> */}
             <Flex direction="row" fontSize="sm" color="gray.600" gap={2}>
               <Text fontSize="sm">
-                {formatSeconds(
-                  track.duration_seconds ? track.duration_seconds : 0
-                )}
+                {track.duration_seconds
+                  ? formatSeconds(track.duration_seconds)
+                  : track.duration}
               </Text>
+              <Text fontSize="sm">
+                {track.position}
+              </Text>
+              {track.bpm && (
+                <Text fontSize="sm">{track.bpm}bpm</Text>
+              )}
+              <Text fontSize="sm">
+                {track.key}
+              </Text>
+              {track.danceability && (
+                <Text fontSize="sm">{track.danceability} DANCE</Text>
+              )}
             </Flex>
-            {track.apple_music_url && (
+
+            <Flex direction="row" fontSize="sm" color="gray.600" gap={2}>
               <Link
-                href={track.apple_music_url}
+                href={track.discogs_url}
                 color="blue.500"
                 target="_blank"
                 rel="noopener noreferrer"
                 fontSize="sm"
               >
-                Apple Music
+                Discogs
               </Link>
-            )}
+              {track.apple_music_url && (
+                <Link
+                  href={track.apple_music_url}
+                  color="blue.500"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  fontSize="sm"
+                >
+                  Apple Music
+                </Link>
+              )}
+              {track.youtube_url && (
+                <Link
+                  href={track.youtube_url}
+                  color="blue.500"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  fontSize="sm"
+                >
+                  Youtube
+                </Link>
+              )}
+            </Flex>
           </Box>
 
           <Flex flexGrow={1} justifyContent="flex-end">
@@ -199,51 +238,51 @@ export default function TrackResult({
               </Box>
             )}
             <Flex alignItems="center" gap={2} mt={2}>
-            <Link
-              href={track.discogs_url}
-              color="blue.500"
-              target="_blank"
-              rel="noopener noreferrer"
-              fontSize="sm"
-            >
-              Discogs
-            </Link>
-            {track.apple_music_url && (
               <Link
-                href={track.apple_music_url}
+                href={track.discogs_url}
                 color="blue.500"
                 target="_blank"
                 rel="noopener noreferrer"
                 fontSize="sm"
               >
-                Apple Music
+                Discogs
               </Link>
-            )}
-            {track.youtube_url && (
-              <Link
-                href={track.youtube_url}
-                color="blue.500"
-                target="_blank"
-                rel="noopener noreferrer"
-                fontSize="sm"
-              >
-                Youtube
-              </Link>
-            )}
-          </Flex>
+              {track.apple_music_url && (
+                <Link
+                  href={track.apple_music_url}
+                  color="blue.500"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  fontSize="sm"
+                >
+                  Apple Music
+                </Link>
+              )}
+              {track.youtube_url && (
+                <Link
+                  href={track.youtube_url}
+                  color="blue.500"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  fontSize="sm"
+                >
+                  Youtube
+                </Link>
+              )}
+            </Flex>
 
-          <Flex alignItems="flex-end" flexShrink={0} gap={2} mt={2}>
-            {allowMinimize && (
-              <Button
-                size="xs"
-                variant="outline"
-                onClick={() => setExpanded(false)}
-              >
-                Less
-              </Button>
-            )}
-            {buttons}
-          </Flex>
+            <Flex alignItems="flex-end" flexShrink={0} gap={2} mt={2}>
+              {allowMinimize && (
+                <Button
+                  size="xs"
+                  variant="outline"
+                  onClick={() => setExpanded(false)}
+                >
+                  Less
+                </Button>
+              )}
+              {buttons}
+            </Flex>
           </Flex>
         </Flex>
       </Flex>
