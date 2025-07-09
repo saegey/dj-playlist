@@ -38,6 +38,7 @@ export type Track = {
   position: number;
   discogs_url: string;
   apple_music_url: string;
+  youtube_url?: string;
   album_thumbnail?: string;
   local_tags?: string;
   bpm?: string | null;

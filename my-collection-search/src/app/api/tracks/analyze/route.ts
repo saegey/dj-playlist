@@ -15,7 +15,7 @@ if (!fs.existsSync(tmpDir)) {
 
 export async function POST(request: Request) {
   try {
-    const { apple_music_url } = await request.json();
+    const { apple_music_url, youtube_url } = await request.json();
 
     if (!apple_music_url) {
       return NextResponse.json(

@@ -219,6 +219,17 @@ export default function TrackResult({
                 Apple Music
               </Link>
             )}
+            {track.youtube_url && (
+              <Link
+                href={track.youtube_url}
+                color="blue.500"
+                target="_blank"
+                rel="noopener noreferrer"
+                fontSize="sm"
+              >
+                Youtube
+              </Link>
+            )}
           </Flex>
 
           <Flex alignItems="flex-end" flexShrink={0} gap={2} mt={2}>

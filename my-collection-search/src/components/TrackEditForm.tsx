@@ -17,6 +17,36 @@ import {
   Image,
   Flex,
 } from "@chakra-ui/react";
+
+// Labeled input for text/number fields
+function LabeledInput({
+  label,
+  ...props
+}: { label: string } & React.ComponentProps<typeof Input>) {
+  return (
+    <Box>
+      <Text mb={1} fontSize="sm">
+        {label}
+      </Text>
+      <Input {...props} />
+    </Box>
+  );
+}
+
+// Labeled textarea for notes
+function LabeledTextarea({
+  label,
+  ...props
+}: { label: string } & React.ComponentProps<typeof Textarea>) {
+  return (
+    <Box>
+      <Text mb={1} fontSize="sm">
+        {label}
+      </Text>
+      <Textarea {...props} />
+    </Box>
+  );
+}
 import { Track } from "@/app/page";
 
 export default function TrackEditForm({
@@ -32,7 +62,41 @@ export default function TrackEditForm({
     notes: track.notes || "",
     bpm: track.bpm || "",
     key: track.key || "",
+    youtube_url: track.youtube_url || "",
   });
+  const [youtubeResults, setYoutubeResults] = useState<any[]>([]);
+  const [youtubeLoading, setYoutubeLoading] = useState(false);
+  const [showYoutubeModal, setShowYoutubeModal] = useState(false);
+  // YouTube search
+  const searchYouTube = async () => {
+    setYoutubeLoading(true);
+    setShowYoutubeModal(true);
+    setYoutubeResults([]);
+    try {
+      const res = await fetch("/api/ai/youtube-music-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: form.title, artist: form.artist }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setYoutubeResults(data.results || []);
+      } else {
+        alert("YouTube search failed");
+      }
+    } catch (err) {
+      alert("YouTube search error");
+    }
+    setYoutubeLoading(false);
+  };
+
+  const handleYoutubeSelect = (video: any) => {
+    setForm((prev) => ({
+      ...prev,
+      youtube_url: video.url,
+    }));
+    setShowYoutubeModal(false);
+  };
   const [fetching, setFetching] = useState(false);
   const [appleResults, setAppleResults] = useState<any[]>([]);
   const [appleLoading, setAppleLoading] = useState(false);
@@ -57,7 +121,8 @@ export default function TrackEditForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           apple_music_url: form.apple_music_url,
-          track_id: form.id || form.track_id || "unknown",
+          youtube_url: form.youtube_url,
+          track_id: form.track_id || "unknown",
         }),
       });
       if (res.ok) {
@@ -67,7 +132,7 @@ export default function TrackEditForm({
         setForm((prev) => ({
           ...prev,
           bpm: data.bpm ? String(data.bpm) : prev.bpm,
-          key: data.key || prev.key,
+          key: `${data.key} ${data.scale}` || prev.key,
           danceability: data.danceability || prev.danceability,
           mood_happy: data.mood_happy || prev.mood_happy,
           mood_sad: data.mood_sad || prev.mood_sad,
@@ -171,57 +236,41 @@ export default function TrackEditForm({
     >
       <Stack spacing={3}>
         <Text fontWeight="bold">Edit Track Metadata</Text>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Title
-          </Text>
-          <Input name="title" value={form.title} onChange={handleChange} />
-        </Box>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Artist
-          </Text>
-          <Input name="artist" value={form.artist} onChange={handleChange} />
-        </Box>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Album
-          </Text>
-          <Input name="album" value={form.album} onChange={handleChange} />
-        </Box>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            BPM
-          </Text>
-          <Input
+        <LabeledInput
+          label="Title"
+          name="title"
+          value={form.title}
+          onChange={handleChange}
+        />
+        <LabeledInput
+          label="Artist"
+          name="artist"
+          value={form.artist}
+          onChange={handleChange}
+        />
+        <LabeledInput
+          label="Album"
+          name="album"
+          value={form.album}
+          onChange={handleChange}
+        />
+        <Flex gap={2}>
+          <LabeledInput
+            label="BPM"
             name="bpm"
             value={form.bpm}
             onChange={handleChange}
             type="number"
             min="0"
           />
-        </Box>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Key
-          </Text>
-          <Input name="key" value={form.key} onChange={handleChange} />
-        </Box>
-        {/* <Box>
-          <Text mb={1} fontSize="sm">
-            Scale
-          </Text>
-          <Input
-            name="scale"
-            value={form.scale || ""}
+          <LabeledInput
+            label="Key"
+            name="key"
+            value={form.key}
             onChange={handleChange}
           />
-        </Box> */}
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Danceability
-          </Text>
-          <Input
+          <LabeledInput
+            label="Danceability"
             name="danceability"
             value={form.danceability ?? ""}
             onChange={handleChange}
@@ -230,12 +279,10 @@ export default function TrackEditForm({
             max="3"
             step="0.01"
           />
-        </Box>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Mood Happy
-          </Text>
-          <Input
+        </Flex>
+        <Flex gap={2}>
+          <LabeledInput
+            label="Mood Happy"
             name="mood_happy"
             value={form.mood_happy ?? ""}
             onChange={handleChange}
@@ -244,12 +291,8 @@ export default function TrackEditForm({
             max="1"
             step="0.01"
           />
-        </Box>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Mood Sad
-          </Text>
-          <Input
+          <LabeledInput
+            label="Mood Sad"
             name="mood_sad"
             value={form.mood_sad ?? ""}
             onChange={handleChange}
@@ -258,12 +301,8 @@ export default function TrackEditForm({
             max="1"
             step="0.01"
           />
-        </Box>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Mood Relaxed
-          </Text>
-          <Input
+          <LabeledInput
+            label="Mood Relaxed"
             name="mood_relaxed"
             value={form.mood_relaxed ?? ""}
             onChange={handleChange}
@@ -272,12 +311,8 @@ export default function TrackEditForm({
             max="1"
             step="0.01"
           />
-        </Box>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Mood Aggressive
-          </Text>
-          <Input
+          <LabeledInput
+            label="Mood Aggressive"
             name="mood_aggressive"
             value={form.mood_aggressive ?? ""}
             onChange={handleChange}
@@ -286,34 +321,33 @@ export default function TrackEditForm({
             max="1"
             step="0.01"
           />
-        </Box>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Genre (comma separated)
-          </Text>
-          <Input
-            name="local_tags"
-            value={form.local_tags}
-            onChange={handleChange}
-          />
-        </Box>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Notes
-          </Text>
-          <Textarea name="notes" value={form.notes} onChange={handleChange} />
-        </Box>
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Apple Music URL
-          </Text>
-          <Input
-            name="apple_music_url"
-            value={form.apple_music_url || ""}
-            placeholder="Apple Music URL will appear here"
-            onChange={handleChange}
-          />
-        </Box>
+        </Flex>
+        <LabeledInput
+          label="Genre (comma separated)"
+          name="local_tags"
+          value={form.local_tags}
+          onChange={handleChange}
+        />
+        <LabeledTextarea
+          label="Notes"
+          name="notes"
+          value={form.notes}
+          onChange={handleChange}
+        />
+        <LabeledInput
+          label="Apple Music URL"
+          name="apple_music_url"
+          value={form.apple_music_url || ""}
+          placeholder="Apple Music URL will appear here"
+          onChange={handleChange}
+        />
+        <LabeledInput
+          label="YouTube URL"
+          name="youtube_url"
+          value={form.youtube_url || ""}
+          placeholder="YouTube URL will appear here"
+          onChange={handleChange}
+        />
         <Flex gap={2}>
           <Button
             type="button"
@@ -333,6 +367,14 @@ export default function TrackEditForm({
           </Button>
           <Button
             type="button"
+            colorScheme="gray"
+            isLoading={youtubeLoading}
+            onClick={searchYouTube}
+          >
+            Search YouTube
+          </Button>
+          <Button
+            type="button"
             colorScheme="teal"
             isLoading={analyzing}
             onClick={handleAnalyzeAudio}
@@ -346,6 +388,68 @@ export default function TrackEditForm({
             Analyze Audio
           </Button>
         </Flex>
+        {/* YouTube Result Modal */}
+        <Modal
+          isOpen={showYoutubeModal}
+          onClose={() => setShowYoutubeModal(false)}
+          isCentered
+          size="xl"
+        >
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Select YouTube Video</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              {youtubeLoading ? (
+                <Text>Loading...</Text>
+              ) : youtubeResults.length === 0 ? (
+                <Text>No results found.</Text>
+              ) : (
+                <Stack spacing={3}>
+                  {youtubeResults.map((video) => (
+                    <Flex
+                      key={video.id}
+                      align="center"
+                      gap={3}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      p={2}
+                      _hover={{ bg: "gray.50", cursor: "pointer" }}
+                      onClick={() => handleYoutubeSelect(video)}
+                    >
+                      {video.thumbnail && (
+                        <Image
+                          src={video.thumbnail}
+                          alt={video.title}
+                          boxSize="60px"
+                          borderRadius="md"
+                        />
+                      )}
+                      <Box flex={1}>
+                        <Text fontWeight="bold">{video.title}</Text>
+                        <Text fontSize="sm" color="blue.600" isTruncated>
+                          {video.url.length > 30
+                            ? video.url.slice(0, 30) + "…"
+                            : video.url}
+                        </Text>
+                      </Box>
+                      <Button
+                        colorScheme="blue"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleYoutubeSelect(video);
+                        }}
+                      >
+                        Select
+                      </Button>
+                    </Flex>
+                  ))}
+                </Stack>
+              )}
+            </ModalBody>
+          </ModalContent>
+        </Modal>
         {/* Analysis Result Modal */}
         <Modal
           isOpen={showAnalysisModal}
