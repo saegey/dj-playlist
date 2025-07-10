@@ -20,6 +20,9 @@ import {
 } from "@chakra-ui/modal";
 import dynamic from "next/dynamic";
 import TrackResult from "@/components/TrackResult";
+// --- Playlist Count State ---
+import { useRef } from "react";
+
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
@@ -106,6 +109,29 @@ export default function SearchPage() {
   const [activeFilterType, setActiveFilterType] = useState<
     "genre" | "style" | "artist" | null
   >(null);
+
+
+  // Holds playlist counts for current results
+// Use Record<string, number> for type safety and clarity
+const [playlistCounts, setPlaylistCounts] = useState<Record<string, number>>({});
+
+  // Helper to fetch playlist counts for a list of track IDs
+  const fetchPlaylistCounts = useCallback(async (trackIds: string[]) => {
+    if (!trackIds || trackIds.length === 0) return;
+    try {
+      const res = await fetch("/api/tracks/playlist_counts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ track_ids: trackIds }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlaylistCounts((prev) => ({ ...prev, ...data }));
+      }
+    } catch (e) {
+      // Ignore errors for now
+    }
+  }, []);
 
   // Fetch playlists from backend
   const fetchPlaylists = async () => {
@@ -252,6 +278,8 @@ export default function SearchPage() {
         setEstimatedResults(total);
         setOffset(10);
         setHasMore(total > 10);
+        // Fetch playlist counts for these tracks
+        fetchPlaylistCounts(res.hits.map((t) => t.track_id));
       })();
       return;
     }
@@ -262,9 +290,11 @@ export default function SearchPage() {
       setOffset(limit);
       setHasMore(res.hits.length === limit);
       setEstimatedResults(res.estimatedTotalHits || 0);
+      // Fetch playlist counts for these tracks
+      fetchPlaylistCounts(res.hits.map((t) => t.track_id));
     };
     search();
-  }, [query]);
+  }, [query, fetchPlaylistCounts]);
 
   // Show more tracks by the same artist
   // const moreFromArtist = useCallback(async (artist: string) => {
@@ -335,7 +365,12 @@ export default function SearchPage() {
     } else {
       res = await index.search(query, { limit, offset });
     }
-    setResults((prev) => [...prev, ...res.hits]);
+    setResults((prev) => {
+      // Fetch playlist counts for new tracks only
+      const newTracks = res.hits.filter((t) => !(t.track_id in playlistCounts));
+      if (newTracks.length > 0) fetchPlaylistCounts(newTracks.map((t) => t.track_id));
+      return [...prev, ...res.hits];
+    });
     setOffset(offset + limit);
     setHasMore(res.hits.length === limit);
   };
@@ -418,6 +453,15 @@ export default function SearchPage() {
   }, 0);
 
   const totalPlaytimeFormatted = formatSeconds(totalPlaytimeSeconds);
+
+  // Fetch playlist counts for playlist sidebar tracks
+  useEffect(() => {
+    if (playlist.length > 0) {
+      const ids = playlist.map((t) => t.track_id);
+      fetchPlaylistCounts(ids);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playlist]);
 
   return (
     <>
@@ -523,6 +567,7 @@ export default function SearchPage() {
               key={track.track_id}
               track={track}
               allowMinimize={false}
+              playlistCount={playlistCounts[track.track_id]}
               buttons={
                 <>
                   <Button
@@ -539,48 +584,8 @@ export default function SearchPage() {
                   >
                     Edit
                   </Button>
-                  {/* <Button
-                    colorScheme="purple"
-                    onClick={() => recommendSimilar(track)}
-                    size="sm"
-                  >
-                    More Like This
-                  </Button> */}
-                  {/* <Button
-                    colorScheme="teal"
-                    onClick={() => moreFromArtist(track.artist)}
-                    size="sm"
-                  >
-                    More from Artist
-                  </Button> */}
                 </>
               }
-              // footer={
-              //   <Flex gap={2} mt={1} wrap="wrap">
-              //     {track.genres && track.genres.map((g) => (
-              //       <Button
-              //         key={g}
-              //         size="xs"
-              //         colorScheme="pink"
-              //         variant="outline"
-              //         onClick={() => filterByTag(g, 'genre')}
-              //       >
-              //         {g}
-              //       </Button>
-              //     ))}
-              //     {track.styles && track.styles.map((s) => (
-              //       <Button
-              //         key={s}
-              //         size="xs"
-              //         colorScheme="orange"
-              //         variant="outline"
-              //         onClick={() => filterByTag(s, 'style')}
-              //       >
-              //         {s}
-              //       </Button>
-              //     ))}
-              //   </Flex>
-              // }
             />
           ))}
 
@@ -633,6 +638,7 @@ export default function SearchPage() {
                 key={track.track_id}
                 track={track}
                 minimized
+                playlistCount={playlistCounts[track.track_id]}
                 buttons={
                   <Flex alignItems="center" gap={1}>
                     <Button

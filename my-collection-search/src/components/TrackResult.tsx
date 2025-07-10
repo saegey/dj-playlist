@@ -49,12 +49,14 @@ function formatSeconds(seconds: number): string {
   }
 }
 
+
 export type TrackResultProps = {
   track: Track;
   buttons?: React.ReactNode;
   minimized?: boolean;
   allowMinimize?: boolean;
   footer?: React.ReactNode;
+  playlistCount?: number; // Number of playlists this track appears in
 };
 
 export default function TrackResult({
@@ -63,6 +65,7 @@ export default function TrackResult({
   minimized = false,
   allowMinimize = true,
   footer,
+  playlistCount,
 }: TrackResultProps) {
   const [expanded, setExpanded] = useLocalState(false);
   if (minimized && !expanded) {
@@ -86,6 +89,11 @@ export default function TrackResult({
               <Text fontSize="sm">{track.key}</Text>
               {track.danceability && (
                 <Text fontSize="sm">{track.danceability} DANCE</Text>
+              )}
+              {typeof playlistCount === 'number' && (
+                <Text fontSize="sm" color="purple.600">
+                  In {playlistCount} playlist{playlistCount === 1 ? '' : 's'}
+                </Text>
               )}
             </Flex>
 
@@ -181,6 +189,11 @@ export default function TrackResult({
                 </Flex>
               </Flex>
             </Box>
+            {typeof playlistCount === 'number' && (
+              <Text fontSize="sm" color="purple.600" mt={1}>
+                In {playlistCount} playlist{playlistCount === 1 ? '' : 's'}
+              </Text>
+            )}
           </Flex>
 
           <Flex flexDirection={"column"} gap={2} mt={2}>

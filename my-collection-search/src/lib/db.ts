@@ -1,3 +1,24 @@
+// Get the number of playlists each track appears in
+// Returns: { [track_id: string]: number }
+export async function getPlaylistCountsForTracks(trackIds: string[]): Promise<Record<string, number>> {
+  if (!trackIds || trackIds.length === 0) return {};
+  const { rows } = await pool.query(
+    `SELECT track_id, COUNT(DISTINCT playlist_id) as count
+     FROM playlist_tracks
+     WHERE track_id = ANY($1)
+     GROUP BY track_id`,
+    [trackIds]
+  );
+  const result: Record<string, number> = {};
+  for (const row of rows) {
+    result[row.track_id] = Number(row.count);
+  }
+  // Ensure all requested trackIds are present (default 0)
+  for (const id of trackIds) {
+    if (!(id in result)) result[id] = 0;
+  }
+  return result;
+}
 // Update a track by track_id, allowing partial updates (e.g. tags, metadata)
 export async function updateTrack(data: { track_id: string; [key: string]: any }) {
   const { track_id, ...fields } = data;
