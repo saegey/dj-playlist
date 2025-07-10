@@ -81,15 +81,9 @@ export default function TrackResult({
                   ? formatSeconds(track.duration_seconds)
                   : track.duration}
               </Text>
-              <Text fontSize="sm">
-                {track.position}
-              </Text>
-              {track.bpm && (
-                <Text fontSize="sm">{track.bpm}bpm</Text>
-              )}
-              <Text fontSize="sm">
-                {track.key}
-              </Text>
+              <Text fontSize="sm">{track.position}</Text>
+              {track.bpm && <Text fontSize="sm">{track.bpm}bpm</Text>}
+              <Text fontSize="sm">{track.key}</Text>
               {track.danceability && (
                 <Text fontSize="sm">{track.danceability} DANCE</Text>
               )}
@@ -231,7 +225,7 @@ export default function TrackResult({
                   <Text fontSize="sm">{track.bpm}</Text>
                 </Flex>
               )}
-               {track.key && (
+              {track.key && (
                 <Flex gap={2}>
                   <Text fontSize="sm" fontWeight="bold">
                     Key{" "}
@@ -239,7 +233,7 @@ export default function TrackResult({
                   <Text fontSize="sm">{track.key}</Text>
                 </Flex>
               )}
-               {track.danceability && (
+              {track.danceability && (
                 <Flex gap={2}>
                   <Text fontSize="sm" fontWeight="bold">
                     Dance{" "}
@@ -269,6 +263,7 @@ export default function TrackResult({
                 <ExpandableMarkdown text={track.notes} maxLength={100} />
               </Box>
             )}
+
             <Flex alignItems="center" gap={2} mt={2}>
               <Link
                 href={track.discogs_url}
@@ -300,6 +295,17 @@ export default function TrackResult({
                 >
                   Youtube
                 </Link>
+              )}
+              {/* Audio player for local file */}
+            </Flex>
+            <Flex width="100%" mt={2}>
+              {track.local_audio_url && (
+                <Box flex={1}>
+                  <audio controls style={{ width: '100%' }}>
+                    <source src={track.local_audio_url} type="audio/mp4" />
+                    Your browser does not support the audio element.
+                  </audio>
+                </Box>
               )}
             </Flex>
 

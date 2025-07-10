@@ -15,7 +15,8 @@ if (!fs.existsSync(tmpDir)) {
 
 export async function POST(request: Request) {
   try {
-    const { apple_music_url, youtube_url } = await request.json();
+    const body = await request.json();
+    const { apple_music_url, youtube_url, track_id } = body;
 
     let filePath: string | null = null;
     let wavPath: string | null = null;
@@ -92,12 +93,31 @@ export async function POST(request: Request) {
         throw new Error("Python analysis failed: " + (err && err.message ? err.message : err));
       }
 
-      // Clean up - delete the downloaded files
+      // Move the .m4a file to public/audio/ and keep it for playback
+      const audioDir = path.join(process.cwd(), "public", "audio");
+      if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
+      // Use a unique filename: audio_{timestamp}_{Math.random()}.m4a
+      const audioFileName = `audio_${Date.now()}_${Math.floor(Math.random()*1e6)}.m4a`;
+      const audioDest = path.join(audioDir, audioFileName);
+      fs.copyFileSync(filePath, audioDest);
+      // Clean up temp files
       if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
       if (wavPath && fs.existsSync(wavPath)) fs.unlinkSync(wavPath);
-      console.log("Temporary files deleted");
+      console.log("Temporary files deleted, audio saved to:", audioDest);
 
-      return NextResponse.json(analysisResult);
+      // Save the audio URL to the track record (requires track_id in request)
+      const local_audio_url = `/audio/${audioFileName}`;
+      if (track_id) {
+        try {
+          const { Pool } = await import('pg');
+          const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+          await pool.query('UPDATE tracks SET local_audio_url = $1 WHERE track_id = $2', [local_audio_url, track_id]);
+        } catch (err) {
+          console.warn('Could not update track with local_audio_url:', err);
+        }
+      }
+
+      return NextResponse.json({ ...analysisResult, local_audio_url });
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       console.error("Error during processing:", err);
