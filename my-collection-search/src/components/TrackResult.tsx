@@ -154,7 +154,7 @@ export default function TrackResult({
               borderRadius="md"
             />
             <Box>
-              <Flex flexDirection={"column"} gap={2}>
+              <Flex flexDirection={"column"} gap={0}>
                 <Flex>
                   <Text as="strong" fontSize="lg">
                     {track.title}
@@ -164,6 +164,21 @@ export default function TrackResult({
                 <Text fontSize="sm" color="gray.600">
                   {track.album} ({track.year})
                 </Text>
+                <Flex color={"black.600"} alignItems="center">
+                  {[...Array(5)].map((_, i) => (
+                    <Box
+                      as="span"
+                      key={i}
+                      color={
+                        i < (track.star_rating || 0) ? "black.500" : "gray.300"
+                      }
+                      fontSize="md"
+                      ml={0}
+                    >
+                      ★
+                    </Box>
+                  ))}
+                </Flex>
               </Flex>
             </Box>
           </Flex>
@@ -301,7 +316,7 @@ export default function TrackResult({
             <Flex width="100%" mt={2}>
               {track.local_audio_url && (
                 <Box flex={1}>
-                  <audio controls style={{ width: '100%' }}>
+                  <audio controls style={{ width: "100%" }}>
                     <source src={track.local_audio_url} type="audio/mp4" />
                     Your browser does not support the audio element.
                   </audio>

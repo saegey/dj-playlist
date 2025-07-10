@@ -63,7 +63,12 @@ export default function TrackEditForm({
     bpm: track.bpm || "",
     key: track.key || "",
     youtube_url: track.youtube_url || "",
+    star_rating: typeof track.star_rating === "number" ? track.star_rating : 0,
   });
+  // Star rating handler
+  const handleStarRating = (rating: number) => {
+    setForm((prev) => ({ ...prev, star_rating: rating }));
+  };
   const [youtubeResults, setYoutubeResults] = useState<any[]>([]);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
@@ -353,6 +358,25 @@ export default function TrackEditForm({
           placeholder="YouTube URL will appear here"
           onChange={handleChange}
         />
+        <Box>
+          <Text mb={1} fontSize="sm">
+            Star Rating
+          </Text>
+          <Flex gap={1}>
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Button
+                key={star}
+                size="xs"
+                colorScheme={form.star_rating >= star ? "yellow" : "gray"}
+                variant={form.star_rating >= star ? "solid" : "outline"}
+                onClick={() => handleStarRating(star)}
+                aria-label={`Set rating to ${star}`}
+              >
+                ★
+              </Button>
+            ))}
+          </Flex>
+        </Box>
         <Flex gap={2}>
           <Button
             type="button"

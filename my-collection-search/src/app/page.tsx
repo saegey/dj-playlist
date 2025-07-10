@@ -50,6 +50,7 @@ export type Track = {
   mood_aggressive?: number | null;
   notes?: string;
   local_audio_url?: string;
+  star_rating?: number;
 };
 
 function parseDurationToSeconds(duration: string): number {

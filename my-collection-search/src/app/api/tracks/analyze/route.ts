@@ -107,11 +107,27 @@ export async function POST(request: Request) {
 
       // Save the audio URL to the track record (requires track_id in request)
       const local_audio_url = `/audio/${audioFileName}`;
+
       if (track_id) {
         try {
           const { Pool } = await import('pg');
           const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+          console.debug('Updating track with local_audio_url:', { local_audio_url, track_id });
           await pool.query('UPDATE tracks SET local_audio_url = $1 WHERE track_id = $2', [local_audio_url, track_id]);
+
+          // Fetch the updated track for MeiliSearch
+          const { rows } = await pool.query('SELECT * FROM tracks WHERE track_id = $1', [track_id]);
+          if (rows && rows[0]) {
+            console.debug('Track updated successfully:', rows[0]);
+            try {
+              const { MeiliSearch } = await import('meilisearch');
+              const client = new MeiliSearch({ host: process.env.MEILISEARCH_HOST || 'http://127.0.0.1:7700', apiKey: process.env.MEILISEARCH_API_KEY || 'masterKey' });
+              const index = client.index('tracks');
+              await index.updateDocuments([rows[0]]);
+            } catch (meiliError) {
+              console.error('Failed to update MeiliSearch:', meiliError);
+            }
+          }
         } catch (err) {
           console.warn('Could not update track with local_audio_url:', err);
         }
