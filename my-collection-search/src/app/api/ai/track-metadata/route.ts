@@ -42,7 +42,7 @@ In \"notes\", include a longer DJ-focused description with vibe, energy, suggest
     if (match) cleaned = match[0];
     // Remove any trailing commas before closing braces
     cleaned = cleaned.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
-    let extracted = { key: "", bpm: "", notes: "", genre: "" };
+    let extracted = { notes: "", genre: "" };
     try {
       extracted = JSON.parse(cleaned);
     } catch (err) {
@@ -57,7 +57,7 @@ In \"notes\", include a longer DJ-focused description with vibe, energy, suggest
     }
 
     const { key, bpm, notes, genre } = extracted;
-    return NextResponse.json({ key, bpm, notes, genre });
+    return NextResponse.json({ notes, genre });
   } catch (error) {
     console.error("Error fetching AI metadata:", error);
     return NextResponse.json(
