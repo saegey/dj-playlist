@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent, useCallback, useMemo } from "react";
 import { MeiliSearch } from "meilisearch";
 import {
   Box,
@@ -9,7 +8,11 @@ import {
   Text,
   Button,
   useDisclosure,
+  MenuItem,
+  Menu,
+  Icon,
 } from "@chakra-ui/react";
+import { FiTrash2 } from "react-icons/fi";
 import {
   Modal,
   ModalOverlay,
@@ -21,8 +24,7 @@ import {
 import dynamic from "next/dynamic";
 import TrackResult from "@/components/TrackResult";
 // --- Playlist Count State ---
-import { useRef } from "react";
-
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
@@ -110,10 +112,11 @@ export default function SearchPage() {
     "genre" | "style" | "artist" | null
   >(null);
 
-
   // Holds playlist counts for current results
-// Use Record<string, number> for type safety and clarity
-const [playlistCounts, setPlaylistCounts] = useState<Record<string, number>>({});
+  // Use Record<string, number> for type safety and clarity
+  const [playlistCounts, setPlaylistCounts] = useState<Record<string, number>>(
+    {}
+  );
 
   // Helper to fetch playlist counts for a list of track IDs
   const fetchPlaylistCounts = useCallback(async (trackIds: string[]) => {
@@ -368,7 +371,8 @@ const [playlistCounts, setPlaylistCounts] = useState<Record<string, number>>({})
     setResults((prev) => {
       // Fetch playlist counts for new tracks only
       const newTracks = res.hits.filter((t) => !(t.track_id in playlistCounts));
-      if (newTracks.length > 0) fetchPlaylistCounts(newTracks.map((t) => t.track_id));
+      if (newTracks.length > 0)
+        fetchPlaylistCounts(newTracks.map((t) => t.track_id));
       return [...prev, ...res.hits];
     });
     setOffset(offset + limit);
@@ -568,24 +572,22 @@ const [playlistCounts, setPlaylistCounts] = useState<Record<string, number>>({})
               track={track}
               allowMinimize={false}
               playlistCount={playlistCounts[track.track_id]}
-              buttons={
-                <>
-                  <Button
-                    colorScheme="blue"
-                    onClick={() => addToPlaylist(track)}
-                    size="sm"
-                  >
-                    Add
-                  </Button>
-                  <Button
-                    colorScheme="gray"
-                    onClick={() => handleEditClick(track)}
-                    size="sm"
-                  >
-                    Edit
-                  </Button>
-                </>
-              }
+              buttons={[
+                <MenuItem
+                  key="add"
+                  onClick={() => addToPlaylist(track)}
+                  color="#3182ce"
+                >
+                  Add to Playlist
+                </MenuItem>,
+                <MenuItem
+                  key="edit"
+                  onClick={() => handleEditClick(track)}
+                  color="#4A5568"
+                >
+                  Edit Track
+                </MenuItem>,
+              ]}
             />
           ))}
 
@@ -639,35 +641,53 @@ const [playlistCounts, setPlaylistCounts] = useState<Record<string, number>>({})
                 track={track}
                 minimized
                 playlistCount={playlistCounts[track.track_id]}
-                buttons={
-                  <Flex alignItems="center" gap={1}>
-                    <Button
-                      onClick={() => moveTrack(idx, idx - 1)}
-                      disabled={idx === 0}
-                      size="xs"
-                      variant="ghost"
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      onClick={() => moveTrack(idx, idx + 1)}
-                      disabled={idx === playlist.length - 1}
-                      size="xs"
-                      variant="ghost"
-                    >
-                      ↓
-                    </Button>
-                    <Button
-                      colorScheme="red"
-                      onClick={() => removeFromPlaylist(track.track_id)}
-                      ml={2}
-                      size="sm"
-                      variant="ghost"
-                    >
-                      Remove
-                    </Button>
-                  </Flex>
-                }
+                // buttons={
+                //   <Flex alignItems="center" gap={1}>
+                //     <Button
+                //       onClick={() => moveTrack(idx, idx - 1)}
+                //       disabled={idx === 0}
+                //       size="xs"
+                //       variant="ghost"
+                //     >
+                //       ↑
+                //     </Button>
+                //     <Button
+                //       onClick={() => moveTrack(idx, idx + 1)}
+                //       disabled={idx === playlist.length - 1}
+                //       size="xs"
+                //       variant="ghost"
+                //     >
+                //       ↓
+                //     </Button>
+
+                //   </Flex>
+                // }
+                buttons={[
+                  <MenuItem
+                    key="up"
+                    onClick={() => moveTrack(idx, idx - 1)}
+                    disabled={idx === 0}
+                    color="#3182ce"
+                  >
+                    ↑
+                  </MenuItem>,
+                  <MenuItem
+                    key="down"
+                    onClick={() => moveTrack(idx, idx + 1)}
+                    disabled={idx === playlist.length - 1}
+                    color="#4A5568"
+                  >
+                    ↓
+                  </MenuItem>,
+                  <MenuItem
+                    key="remove"
+                    onClick={() => removeFromPlaylist(track.track_id)}
+                    icon={<Icon as={FiTrash2} color="red.500" boxSize={4} />}
+                    color="red.500"
+                  >
+                    Remove
+                  </MenuItem>,
+                ]}
               />
             ))
           )}

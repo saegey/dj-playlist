@@ -244,8 +244,52 @@ export default function TrackEditForm({
       borderWidth="1px"
       borderRadius="md"
     >
+      <Flex gap={2}>
+        <Button
+          type="button"
+          colorScheme="purple"
+          isLoading={fetching}
+          size={"sm"}
+          onClick={fetchFromChatGPT}
+        >
+          Fetch from AI
+        </Button>
+        <Button
+          type="button"
+          colorScheme="red"
+          isLoading={appleLoading}
+          onClick={searchAppleMusic}
+          size={"sm"}
+        >
+          Search Apple Music
+        </Button>
+        <Button
+          type="button"
+          colorScheme="gray"
+          isLoading={youtubeLoading}
+          onClick={searchYouTube}
+          size={"sm"}
+        >
+          Search YouTube
+        </Button>
+        <Button
+          type="button"
+          size={"sm"}
+          colorScheme="teal"
+          isLoading={analyzing}
+          onClick={handleAnalyzeAudio}
+          isDisabled={!form.apple_music_url && !form.youtube_url}
+          title={
+            form.apple_music_url
+              ? "Analyze audio features from Apple Music"
+              : "Add an Apple Music URL first"
+          }
+        >
+          Analyze Audio
+        </Button>
+      </Flex>
+      <br />
       <Stack spacing={3}>
-        <Text fontWeight="bold">Edit Track Metadata</Text>
         <LabeledInput
           label="Title"
           name="title"
@@ -366,9 +410,9 @@ export default function TrackEditForm({
             {[1, 2, 3, 4, 5].map((star) => (
               <Button
                 key={star}
-                size="xs"
-                colorScheme={form.star_rating >= star ? "yellow" : "gray"}
-                variant={form.star_rating >= star ? "solid" : "outline"}
+                size="sm"
+                colorScheme={form.star_rating >= star ? "blue" : "gray"}
+                variant={form.star_rating >= star ? "solid" : "solid"}
                 onClick={() => handleStarRating(star)}
                 aria-label={`Set rating to ${star}`}
               >
@@ -377,46 +421,7 @@ export default function TrackEditForm({
             ))}
           </Flex>
         </Box>
-        <Flex gap={2}>
-          <Button
-            type="button"
-            colorScheme="purple"
-            isLoading={fetching}
-            onClick={fetchFromChatGPT}
-          >
-            Fetch from AI
-          </Button>
-          <Button
-            type="button"
-            colorScheme="red"
-            isLoading={appleLoading}
-            onClick={searchAppleMusic}
-          >
-            Search Apple Music
-          </Button>
-          <Button
-            type="button"
-            colorScheme="gray"
-            isLoading={youtubeLoading}
-            onClick={searchYouTube}
-          >
-            Search YouTube
-          </Button>
-          <Button
-            type="button"
-            colorScheme="teal"
-            isLoading={analyzing}
-            onClick={handleAnalyzeAudio}
-            isDisabled={!form.apple_music_url && !form.youtube_url}
-            title={
-              form.apple_music_url
-                ? "Analyze audio features from Apple Music"
-                : "Add an Apple Music URL first"
-            }
-          >
-            Analyze Audio
-          </Button>
-        </Flex>
+
         {/* YouTube Result Modal */}
         <Modal
           isOpen={showYoutubeModal}

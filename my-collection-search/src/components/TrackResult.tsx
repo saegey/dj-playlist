@@ -32,7 +32,20 @@ function ExpandableMarkdown({
     </Box>
   );
 }
-import { Box, Flex, Text, Link, Image, Button } from "@chakra-ui/react";
+import {
+  Box,
+  Flex,
+  Text,
+  Link,
+  Image,
+  Button,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  IconButton,
+} from "@chakra-ui/react";
+import { FiMoreVertical } from "react-icons/fi";
 import ReactMarkdown from "react-markdown";
 import { Track } from "@/app/page";
 
@@ -48,7 +61,6 @@ function formatSeconds(seconds: number): string {
     return `${m}:${s.toString().padStart(2, "0")}`;
   }
 }
-
 
 export type TrackResultProps = {
   track: Track;
@@ -90,9 +102,9 @@ export default function TrackResult({
               {track.danceability && (
                 <Text fontSize="sm">{track.danceability} DANCE</Text>
               )}
-              {typeof playlistCount === 'number' && (
+              {typeof playlistCount === "number" && (
                 <Text fontSize="sm" color="purple.600">
-                  In {playlistCount} playlist{playlistCount === 1 ? '' : 's'}
+                  In {playlistCount} playlist{playlistCount === 1 ? "" : "s"}
                 </Text>
               )}
             </Flex>
@@ -143,7 +155,19 @@ export default function TrackResult({
                 More
               </Button>
             )}
-            {buttons}
+            {buttons && (
+              <Menu placement="bottom-end">
+                <MenuButton
+                  as={IconButton}
+                  aria-label="Actions"
+                  icon={<FiMoreVertical size={"20px"} />}
+                  size="sm"
+                  variant="ghost"
+                  ml={2}
+                />
+                <MenuList minW="120px">{buttons}</MenuList>
+              </Menu>
+            )}
           </Flex>
         </Flex>
       </Box>
@@ -153,47 +177,74 @@ export default function TrackResult({
     <Box borderWidth="1px" borderRadius="md" p={3} mb={2}>
       <Flex alignItems="center" gap={3} width="100%" minHeight="180px">
         <Flex direction="column" flex={1}>
-          <Flex gap={4} alignItems="center">
+          <Flex gap={4} alignItems="top">
             <Image
               src={track.album_thumbnail}
               alt={track.title}
-              boxSize="50px"
+              boxSize="100px"
               objectFit="cover"
               borderRadius="md"
             />
             <Box>
               <Flex flexDirection={"column"} gap={0}>
-                <Flex>
-                  <Text as="strong" fontSize="lg">
-                    {track.title}
-                  </Text>
-                  <Text fontSize="md">— {track.artist}</Text>
-                </Flex>
+                <Text as="strong" fontSize="lg">
+                  {track.title}
+                </Text>
+                <Text fontSize="md">{track.artist}</Text>
                 <Text fontSize="sm" color="gray.600">
                   {track.album} ({track.year})
                 </Text>
-                <Flex color={"black.600"} alignItems="center">
-                  {[...Array(5)].map((_, i) => (
-                    <Box
-                      as="span"
-                      key={i}
-                      color={
-                        i < (track.star_rating || 0) ? "black.500" : "gray.300"
-                      }
-                      fontSize="md"
-                      ml={0}
-                    >
-                      ★
-                    </Box>
-                  ))}
+                <Flex gap={2} alignItems="center" mt={1}>
+                  <Flex color={"black.600"} alignItems="center">
+                    {[...Array(5)].map((_, i) => (
+                      <Box
+                        as="span"
+                        key={i}
+                        color={
+                          i < (track.star_rating || 0)
+                            ? "black.500"
+                            : "gray.300"
+                        }
+                        fontSize="md"
+                        ml={0}
+                      >
+                        ★
+                      </Box>
+                    ))}
+                  </Flex>
+                  {typeof playlistCount === "number" && (
+                    <Text fontSize="sm" color="purple.600" mt={1}>
+                      In {playlistCount} playlist
+                      {playlistCount === 1 ? "" : "s"}
+                    </Text>
+                  )}
                 </Flex>
               </Flex>
             </Box>
-            {typeof playlistCount === 'number' && (
-              <Text fontSize="sm" color="purple.600" mt={1}>
-                In {playlistCount} playlist{playlistCount === 1 ? '' : 's'}
-              </Text>
-            )}
+            <Box flexGrow={1} textAlign="right">
+              {buttons && (
+                <Menu placement="bottom-end">
+                  <MenuButton
+                    as={IconButton}
+                    aria-label="Actions"
+                    icon={<FiMoreVertical size={"20px"} />}
+                    size="sm"
+                    variant="ghost"
+                  />
+                  <MenuList minW="120px">
+                    {Array.isArray(buttons) ? (
+                      buttons.map((btn, idx) => (
+                        <MenuItem as="div" key={idx} px={1} py={1}>
+                          {btn}
+                        </MenuItem>
+                      ))
+                    ) : (
+                      <MenuItem as="div">{buttons}</MenuItem>
+                    )}
+                  </MenuList>
+                </Menu>
+              )}
+            </Box>
           </Flex>
 
           <Flex flexDirection={"column"} gap={2} mt={2}>
@@ -347,7 +398,6 @@ export default function TrackResult({
                   Less
                 </Button>
               )}
-              {buttons}
             </Flex>
           </Flex>
         </Flex>

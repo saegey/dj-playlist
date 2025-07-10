@@ -8,3 +8,4 @@ discogs_exports/
 .env
 .DS_Store
 tmp/
+my-collection-search/public/audio*
