@@ -23,6 +23,15 @@ export async function getPlaylistCountsForTracks(trackIds: string[]): Promise<Re
 export async function updateTrack(data: { track_id: string; [key: string]: any }) {
   const { track_id, ...fields } = data;
   if (!track_id || Object.keys(fields).length === 0) return null;
+  // Fetch current track to preserve local_audio_url
+  const currentRes = await pool.query('SELECT local_audio_url FROM tracks WHERE track_id = $1', [track_id]);
+  const current = currentRes.rows[0];
+  if (current && current.local_audio_url !== undefined) {
+    // Remove local_audio_url from update fields if present
+    if ('local_audio_url' in fields) {
+      delete fields.local_audio_url;
+    }
+  }
   // Build dynamic SET clause
   const setClauses = [];
   const values = [];
@@ -33,9 +42,10 @@ export async function updateTrack(data: { track_id: string; [key: string]: any }
     idx++;
   }
   values.push(track_id);
+  if (setClauses.length === 0) return current || null;
   const query = `UPDATE tracks SET ${setClauses.join(", ")} WHERE track_id = $${idx} RETURNING *`;
   const { rows } = await pool.query(query, values);
-  return rows[0] || null;
+  return rows[0] || current || null;
 }
 import { Pool } from 'pg';
 

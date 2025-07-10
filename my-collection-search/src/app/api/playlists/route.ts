@@ -9,8 +9,9 @@ async function getAllPlaylistsWithTracks() {
   const playlists = playlistsRes.rows;
   if (playlists.length === 0) return [];
   const playlistIds = playlists.map((p: any) => p.id);
+  // Fetch tracks with position, order by position
   const tracksRes = await pool.query(
-    'SELECT playlist_id, track_id FROM playlist_tracks WHERE playlist_id = ANY($1)',
+    'SELECT playlist_id, track_id FROM playlist_tracks WHERE playlist_id = ANY($1) ORDER BY position ASC',
     [playlistIds]
   );
   const tracksByPlaylist: Record<number, string[]> = {};
@@ -30,8 +31,9 @@ async function createPlaylistWithTracks(data: { name: string; tracks: string[] }
   );
   const playlist = playlistRes.rows[0];
   if (tracks && tracks.length > 0) {
-    const values = tracks.map((trackId, i) => `($1, $${i + 2})`).join(',');
-    const query = `INSERT INTO playlist_tracks (playlist_id, track_id) VALUES ${values} ON CONFLICT DO NOTHING`;
+    // Insert with position
+    const values = tracks.map((trackId, i) => `($1, $${i + 2}, ${i})`).join(',');
+    const query = `INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES ${values} ON CONFLICT DO NOTHING`;
     console.debug('Executing query:', query, [playlist.id, ...tracks]);
     await pool.query(
       query,

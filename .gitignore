@@ -9,3 +9,4 @@ discogs_exports/
 .DS_Store
 tmp/
 my-collection-search/public/audio*
+djplaylist_backup_*

@@ -9,10 +9,9 @@ import {
   Button,
   useDisclosure,
   MenuItem,
-  Menu,
   Icon,
 } from "@chakra-ui/react";
-import { FiTrash2 } from "react-icons/fi";
+import { FiArrowDown, FiArrowUp, FiEdit, FiTrash2 } from "react-icons/fi";
 import {
   Modal,
   ModalOverlay,
@@ -24,7 +23,7 @@ import {
 import dynamic from "next/dynamic";
 import TrackResult from "@/components/TrackResult";
 // --- Playlist Count State ---
-import { useRef, useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 // Use dynamic import for fast-xml-parser in browser only
 
 // --- Apple Music XML Import Types ---
@@ -234,9 +233,18 @@ export default function SearchPage() {
       body: JSON.stringify(data),
     });
     if (res.ok) {
-      setResults((prev) =>
-        prev.map((t) => (t.track_id === data.track_id ? { ...t, ...data } : t))
-      );
+      // Refresh search results after update
+      const index = client.index<Track>("tracks");
+      let refreshed;
+      if (query) {
+        refreshed = await index.search(query, { limit, offset: 0 });
+      } else {
+        const stats = await index.getStats();
+        const total = stats.numberOfDocuments || 0;
+        const randomOffset = total > 10 ? Math.floor(Math.random() * (total - 10)) : 0;
+        refreshed = await index.search("", { limit: 10, offset: randomOffset });
+      }
+      setResults(refreshed.hits);
       setEditTrack(null);
       onClose();
     } else {
@@ -501,7 +509,12 @@ export default function SearchPage() {
       const plist = await import("plist");
       const text = await xmlImportFile.text();
       const parsed: any = plist.parse(text);
-      if (!parsed || typeof parsed !== "object" || !parsed.Tracks || typeof parsed.Tracks !== "object") {
+      if (
+        !parsed ||
+        typeof parsed !== "object" ||
+        !parsed.Tracks ||
+        typeof parsed.Tracks !== "object"
+      ) {
         throw new Error("Could not locate <Tracks> section");
       }
       type AppleTrack = {
@@ -521,7 +534,9 @@ export default function SearchPage() {
           name: entry.Name || "",
           artist: entry.Artist || "",
           album: entry.Album || "",
-          duration: entry["Total Time"] ? Math.round(entry["Total Time"] / 1000) : undefined,
+          duration: entry["Total Time"]
+            ? Math.round(entry["Total Time"] / 1000)
+            : undefined,
         });
       }
       setXmlImportTracks(tracks);
@@ -815,14 +830,14 @@ export default function SearchPage() {
                     >
                       Match Tracks
                     </Button>
-                    <Button
+                    {/* <Button
                       size="sm"
                       ml={2}
                       mt={2}
                       onClick={() => setXmlImportModalOpen(false)}
                     >
                       Cancel
-                    </Button>
+                    </Button> */}
                     {xmlImportError && (
                       <Text color="red.500" fontSize="xs">
                         {xmlImportError}
@@ -872,6 +887,21 @@ export default function SearchPage() {
                                 <span style={{ color: "#888" }}>
                                   {xmlMatchedTracks[idx]?.album}
                                 </span>
+                                <Button
+                                  size="xs"
+                                  ml={2}
+                                  colorScheme="red"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setXmlMatchedTracks((prev) => {
+                                      const updated = [...prev];
+                                      updated[idx] = null;
+                                      return updated;
+                                    });
+                                  }}
+                                >
+                                  Clear Match
+                                </Button>
                               </span>
                             ) : (
                               <span style={{ color: "red" }}>No match</span>
@@ -1054,17 +1084,27 @@ export default function SearchPage() {
                     key="up"
                     onClick={() => moveTrack(idx, idx - 1)}
                     disabled={idx === 0}
+                    icon={<Icon as={FiArrowUp} color="#3182ce" boxSize={4} />}
                     color="#3182ce"
                   >
-                    ↑
+                    Move Up
                   </MenuItem>,
                   <MenuItem
                     key="down"
                     onClick={() => moveTrack(idx, idx + 1)}
                     disabled={idx === playlist.length - 1}
+                    icon={<Icon as={FiArrowDown} color="#4A5568" boxSize={4} />}
                     color="#4A5568"
                   >
-                    ↓
+                    Move Down
+                  </MenuItem>,
+                  <MenuItem
+                    key="edit"
+                    onClick={() => setEditTrack(track)}
+                    icon={<Icon as={FiEdit} color="black" boxSize={4} />}
+                    color="black"
+                  >
+                    Edit
                   </MenuItem>,
                   <MenuItem
                     key="remove"

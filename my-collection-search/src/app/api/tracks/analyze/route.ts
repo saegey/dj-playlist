@@ -123,7 +123,8 @@ export async function POST(request: Request) {
               const { MeiliSearch } = await import('meilisearch');
               const client = new MeiliSearch({ host: process.env.MEILISEARCH_HOST || 'http://127.0.0.1:7700', apiKey: process.env.MEILISEARCH_API_KEY || 'masterKey' });
               const index = client.index('tracks');
-              await index.updateDocuments([rows[0]]);
+              const res = await index.updateDocuments([rows[0]]);
+              console.debug('MeiliSearch index updated successfully', res);
             } catch (meiliError) {
               console.error('Failed to update MeiliSearch:', meiliError);
             }
