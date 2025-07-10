@@ -27,8 +27,6 @@ import TrackResult from "@/components/TrackResult";
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 // Use dynamic import for fast-xml-parser in browser only
 
-
-
 // --- Apple Music XML Import Types ---
 type ImportedTrack = {
   name: string;
@@ -37,7 +35,6 @@ type ImportedTrack = {
   duration?: number;
 };
 type MatchedTrack = Track | null;
-
 
 // (All XML import state and handlers are now inside the SearchPage component below)
 
@@ -100,6 +97,8 @@ function formatSeconds(seconds: number): string {
 }
 
 export default function SearchPage() {
+  // --- Apple Music XML Import Modal State ---
+  const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
   const [query, setQuery] = useState<string>("");
   const [results, setResults] = useState<Track[]>([]);
   const [playlist, setPlaylist] = useState<Track[]>(() => {
@@ -473,14 +472,15 @@ export default function SearchPage() {
 
   const totalPlaytimeFormatted = formatSeconds(totalPlaytimeSeconds);
 
-
   // --- Apple Music XML Import State ---
   const [xmlImportName, setXmlImportName] = useState("");
   const [xmlImportFile, setXmlImportFile] = useState<File | null>(null);
   const [xmlImportTracks, setXmlImportTracks] = useState<any[]>([]); // Parsed tracks from XML
   const [xmlImportError, setXmlImportError] = useState<string | null>(null);
   const [xmlImportLoading, setXmlImportLoading] = useState(false);
-  const [xmlImportStep, setXmlImportStep] = useState<"idle" | "parsed" | "review">("idle");
+  const [xmlImportStep, setXmlImportStep] = useState<
+    "idle" | "parsed" | "review"
+  >("idle");
   const [xmlMatchedTracks, setXmlMatchedTracks] = useState<MatchedTrack[]>([]);
 
   // Handle XML file selection
@@ -496,49 +496,38 @@ export default function SearchPage() {
     if (!xmlImportFile) return;
     setXmlImportLoading(true);
     setXmlImportError(null);
+
     try {
-      // Dynamically import fast-xml-parser (avoid SSR issues)
-      const { XMLParser } = await import("fast-xml-parser");
+      const plist = await import("plist");
       const text = await xmlImportFile.text();
-      const parser = new XMLParser({ ignoreAttributes: false });
-      const xml = parser.parse(text);
-      // Apple Music XML structure: plist > dict > key:Tracks > dict > trackId:dict
-      let tracks: any[] = [];
-      try {
-        const dict = xml.plist.dict;
-        const keys = dict.key;
-        const values = dict.dict;
-        // Find the index of "Tracks" key
-        let tracksIdx = Array.isArray(keys) ? keys.findIndex((k: string) => k === "Tracks") : -1;
-        if (tracksIdx === -1) throw new Error("No Tracks section found in XML");
-        const tracksDict = Array.isArray(values) ? values[tracksIdx] : values;
-        // Each track is a key (trackId) and dict (track info)
-        const trackKeys = tracksDict.key;
-        const trackDicts = tracksDict.dict;
-        if (Array.isArray(trackKeys) && Array.isArray(trackDicts)) {
-          for (let i = 0; i < trackKeys.length; i++) {
-            const tDict = trackDicts[i];
-            let t: any = {};
-            if (tDict && tDict.key && tDict.string) {
-              for (let j = 0; j < tDict.key.length; j++) {
-                t[tDict.key[j]] = Array.isArray(tDict.string) ? tDict.string[j] : tDict.string;
-              }
-            }
-            tracks.push({
-              trackId: trackKeys[i],
-              name: t["Name"] || "",
-              artist: t["Artist"] || "",
-              album: t["Album"] || "",
-              duration: t["Total Time"] ? Math.round(Number(t["Total Time"]) / 1000) : undefined, // ms to s
-            });
-          }
-        }
-      } catch (err) {
-        throw new Error("Failed to parse tracks from XML");
+      const parsed: any = plist.parse(text);
+      if (!parsed || typeof parsed !== "object" || !parsed.Tracks || typeof parsed.Tracks !== "object") {
+        throw new Error("Could not locate <Tracks> section");
+      }
+      type AppleTrack = {
+        Name?: string;
+        Artist?: string;
+        Album?: string;
+        [key: string]: any;
+      };
+      interface ParsedPlist {
+        Tracks: Record<string, AppleTrack>;
+      }
+      const tracks: ImportedTrack[] = [];
+      const tracksObj = (parsed as ParsedPlist).Tracks;
+      for (const trackId in tracksObj) {
+        const entry = tracksObj[trackId];
+        tracks.push({
+          name: entry.Name || "",
+          artist: entry.Artist || "",
+          album: entry.Album || "",
+          duration: entry["Total Time"] ? Math.round(entry["Total Time"] / 1000) : undefined,
+        });
       }
       setXmlImportTracks(tracks);
       setXmlImportStep("parsed");
     } catch (err: any) {
+      console.error(err);
       setXmlImportError(err.message || "Failed to parse XML");
       setXmlImportTracks([]);
       setXmlImportStep("idle");
@@ -546,6 +535,7 @@ export default function SearchPage() {
       setXmlImportLoading(false);
     }
   };
+
   // Match imported tracks to DB (MeiliSearch)
   const matchImportedTracks = async () => {
     setXmlImportLoading(true);
@@ -690,112 +680,247 @@ export default function SearchPage() {
 
           {/* --- Apple Music XML Import UI --- */}
           {/** Apple Music XML Import UI is now inside SearchPage and uses component state/handlers **/}
-          <Box mt={6} p={2} borderWidth="1px" borderRadius="md" bg="gray.50">
-            <Text fontWeight="bold" mb={2} fontSize="sm">
-              Import Apple Music XML
-            </Text>
-            {/* Step 1: Upload XML and enter playlist name */}
-            {xmlImportStep === "idle" && (
-              <>
-                <Input
-                  type="file"
-                  accept=".xml"
-                  size="sm"
-                  onChange={handleXmlFileChange}
-                  mb={2}
-                />
-                <Input
-                  size="sm"
-                  placeholder="Imported playlist name"
-                  value={xmlImportName}
-                  onChange={e => setXmlImportName(e.target.value)}
-                  mb={2}
-                />
-                <Button
-                  size="sm"
-                  colorScheme="purple"
-                  onClick={handleParseXml}
-                  isDisabled={!xmlImportFile || !xmlImportName || xmlImportLoading}
-                  mb={2}
-                >
-                  Parse Tracks
-                </Button>
-                {xmlImportLoading && <Text fontSize="xs">Parsing XML...</Text>}
-                {xmlImportError && <Text color="red.500" fontSize="xs">{xmlImportError}</Text>}
-              </>
-            )}
-            {/* Step 2: Parsed, show preview and match button */}
-            {xmlImportStep === "parsed" && (
-              <>
-                <Text fontSize="xs" color="gray.600" mb={1}>
-                  Parsed {xmlImportTracks.length} tracks from XML.
-                </Text>
-                {xmlImportTracks.slice(0, 5).map((t, i) => (
-                  <Text key={i} fontSize="xs" isTruncated>
-                    {t.name} – {t.artist} {t.album ? `(${t.album})` : ""}
-                  </Text>
-                ))}
-                {xmlImportTracks.length > 5 && (
-                  <Text fontSize="xs" color="gray.400">...and more</Text>
+          <Button
+            mt={6}
+            colorScheme="purple"
+            size="sm"
+            width="100%"
+            onClick={() => {
+              setXmlImportModalOpen(true);
+              setXmlImportStep("idle");
+              setXmlImportName("");
+              setXmlImportFile(null);
+              setXmlImportTracks([]);
+              setXmlMatchedTracks([]);
+              setXmlImportError(null);
+            }}
+          >
+            Import Apple Music XML
+          </Button>
+
+          {/* --- Apple Music XML Import Modal --- */}
+          <Modal
+            isOpen={
+              xmlImportModalOpen ||
+              xmlImportStep === "parsed" ||
+              xmlImportStep === "review"
+            }
+            onClose={() => {
+              setXmlImportModalOpen(false);
+              setXmlImportStep("idle");
+              setXmlImportName("");
+              setXmlImportFile(null);
+              setXmlImportTracks([]);
+              setXmlMatchedTracks([]);
+              setXmlImportError(null);
+            }}
+            size="3xl"
+          >
+            <ModalOverlay />
+            <ModalContent>
+              <ModalHeader>Import Apple Music XML Playlist</ModalHeader>
+              <ModalCloseButton />
+              <ModalBody>
+                {/* Step 1: Upload XML and enter playlist name */}
+                {xmlImportStep === "idle" && (
+                  <Box>
+                    <Input
+                      type="file"
+                      accept=".xml"
+                      size="sm"
+                      onChange={handleXmlFileChange}
+                      mb={2}
+                    />
+                    <Input
+                      size="sm"
+                      placeholder="Imported playlist name"
+                      value={xmlImportName}
+                      onChange={(e) => setXmlImportName(e.target.value)}
+                      mb={2}
+                    />
+                    <Button
+                      size="sm"
+                      colorScheme="purple"
+                      onClick={handleParseXml}
+                      isDisabled={
+                        !xmlImportFile || !xmlImportName || xmlImportLoading
+                      }
+                      mb={2}
+                    >
+                      Parse Tracks
+                    </Button>
+                    {xmlImportLoading && (
+                      <Text fontSize="xs">Parsing XML...</Text>
+                    )}
+                    {xmlImportError && (
+                      <Text color="red.500" fontSize="xs">
+                        {xmlImportError}
+                      </Text>
+                    )}
+                  </Box>
                 )}
-                <Button
-                  size="sm"
-                  colorScheme="blue"
-                  onClick={matchImportedTracks}
-                  isLoading={xmlImportLoading}
-                  mt={2}
-                >
-                  Match Tracks
-                </Button>
-                <Button size="sm" ml={2} mt={2} onClick={() => setXmlImportStep("idle")}>Cancel</Button>
-                {xmlImportError && <Text color="red.500" fontSize="xs">{xmlImportError}</Text>}
-              </>
-            )}
-            {/* Step 3: Review and confirm matches */}
-            {xmlImportStep === "review" && (
-              <Box>
-                <Text mb={2} fontSize="sm">Review and confirm matched tracks. You can search for a better match if needed.</Text>
-                <Box maxHeight="200px" overflowY="auto" borderWidth="1px" borderRadius="md" p={2} bg="white">
-                  {xmlImportTracks.map((imp, idx) => (
-                    <Flex key={idx} align="center" borderBottom="1px solid #eee" py={1} gap={2}>
-                      <Box flex={2} fontSize="xs">
-                        <b>{imp.name}</b> <span style={{ color: '#888' }}>by {imp.artist}</span>
-                        <br />
-                        <span style={{ color: '#888' }}>{imp.album}</span>
-                      </Box>
-                      <Box flex={3} fontSize="xs">
-                        {xmlMatchedTracks[idx] ? (
-                          <span>
-                            <b>{xmlMatchedTracks[idx]?.title}</b> <span style={{ color: '#3182ce' }}>by {xmlMatchedTracks[idx]?.artist}</span>
+                {/* Step 2: Parsed, show preview and match button */}
+                {xmlImportStep === "parsed" && (
+                  <Box>
+                    <Text fontSize="xs" color="gray.600" mb={1}>
+                      Parsed {xmlImportTracks.length} tracks from XML.
+                    </Text>
+                    <Box
+                      maxHeight="300px"
+                      overflowY="auto"
+                      borderWidth="1px"
+                      borderRadius="md"
+                      p={2}
+                      bg="white"
+                      mb={2}
+                    >
+                      {xmlImportTracks.length === 0 ? (
+                        <Text fontSize="xs" color="gray.400">
+                          No tracks parsed.
+                        </Text>
+                      ) : (
+                        xmlImportTracks.map((t, i) => (
+                          <Flex
+                            key={i}
+                            fontSize="xs"
+                            borderBottom="1px solid #eee"
+                            py={1}
+                            align="center"
+                            gap={2}
+                          >
+                            <Box flex={2}>
+                              <b>{t.name}</b>
+                            </Box>
+                            <Box flex={2} color="#888">
+                              {t.artist}
+                            </Box>
+                            <Box flex={2} color="#888">
+                              {t.album}
+                            </Box>
+                            {typeof t.duration === "number" && (
+                              <Box flex={1} color="#888">
+                                {t.duration}s
+                              </Box>
+                            )}
+                          </Flex>
+                        ))
+                      )}
+                    </Box>
+                    <Button
+                      size="sm"
+                      colorScheme="blue"
+                      onClick={matchImportedTracks}
+                      isLoading={xmlImportLoading}
+                      mt={2}
+                    >
+                      Match Tracks
+                    </Button>
+                    <Button
+                      size="sm"
+                      ml={2}
+                      mt={2}
+                      onClick={() => setXmlImportModalOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    {xmlImportError && (
+                      <Text color="red.500" fontSize="xs">
+                        {xmlImportError}
+                      </Text>
+                    )}
+                  </Box>
+                )}
+                {/* Step 3: Review and confirm matches */}
+                {xmlImportStep === "review" && (
+                  <Box>
+                    <Text mb={2} fontSize="sm">
+                      Review and confirm matched tracks. You can search for a
+                      better match if needed.
+                    </Text>
+                    <Box
+                      maxHeight="400px"
+                      overflowY="auto"
+                      borderWidth="1px"
+                      borderRadius="md"
+                      p={2}
+                      bg="white"
+                    >
+                      {xmlImportTracks.map((imp, idx) => (
+                        <Flex
+                          key={idx}
+                          align="center"
+                          borderBottom="1px solid #eee"
+                          py={1}
+                          gap={2}
+                        >
+                          <Box flex={2} fontSize="xs">
+                            <b>{imp.name}</b>{" "}
+                            <span style={{ color: "#888" }}>
+                              by {imp.artist}
+                            </span>
                             <br />
-                            <span style={{ color: '#888' }}>{xmlMatchedTracks[idx]?.album}</span>
-                          </span>
-                        ) : (
-                          <span style={{ color: 'red' }}>No match</span>
-                        )}
-                      </Box>
-                      <Box flex={2}>
-                        <Input
-                          size="xs"
-                          placeholder="Search manually..."
-                          onKeyDown={e => {
-                            if (e.key === "Enter") {
-                              handleManualMatch(idx, (e.target as HTMLInputElement).value);
-                            }
-                          }}
-                        />
-                      </Box>
-                    </Flex>
-                  ))}
-                </Box>
-                <Button colorScheme="blue" size="sm" mt={2} onClick={handleSaveImportedPlaylist} isLoading={xmlImportLoading}>
-                  Save Playlist
-                </Button>
-                <Button size="sm" ml={2} mt={2} onClick={() => setXmlImportStep("idle")}>Cancel</Button>
-                {xmlImportError && <Text color="red.500" fontSize="xs">{xmlImportError}</Text>}
-              </Box>
-            )}
-          </Box>
+                            <span style={{ color: "#888" }}>{imp.album}</span>
+                          </Box>
+                          <Box flex={3} fontSize="xs">
+                            {xmlMatchedTracks[idx] ? (
+                              <span>
+                                <b>{xmlMatchedTracks[idx]?.title}</b>{" "}
+                                <span style={{ color: "#3182ce" }}>
+                                  by {xmlMatchedTracks[idx]?.artist}
+                                </span>
+                                <br />
+                                <span style={{ color: "#888" }}>
+                                  {xmlMatchedTracks[idx]?.album}
+                                </span>
+                              </span>
+                            ) : (
+                              <span style={{ color: "red" }}>No match</span>
+                            )}
+                          </Box>
+                          <Box flex={2}>
+                            <Input
+                              size="xs"
+                              placeholder="Search manually..."
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleManualMatch(
+                                    idx,
+                                    (e.target as HTMLInputElement).value
+                                  );
+                                }
+                              }}
+                            />
+                          </Box>
+                        </Flex>
+                      ))}
+                    </Box>
+                    <Button
+                      colorScheme="blue"
+                      size="sm"
+                      mt={2}
+                      onClick={handleSaveImportedPlaylist}
+                      isLoading={xmlImportLoading}
+                    >
+                      Save Playlist
+                    </Button>
+                    <Button
+                      size="sm"
+                      ml={2}
+                      mt={2}
+                      onClick={() => setXmlImportModalOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    {xmlImportError && (
+                      <Text color="red.500" fontSize="xs">
+                        {xmlImportError}
+                      </Text>
+                    )}
+                  </Box>
+                )}
+              </ModalBody>
+            </ModalContent>
+          </Modal>
         </Box>
         <Box width="40%">
           <Input
