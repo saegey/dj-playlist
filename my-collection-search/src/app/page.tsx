@@ -500,57 +500,95 @@ export default function SearchPage() {
   };
 
   // Parse Apple Music XML in browser and extract tracks
-  const handleParseXml = async () => {
-    if (!xmlImportFile) return;
-    setXmlImportLoading(true);
-    setXmlImportError(null);
+const handleParseXml = async () => {
+  if (!xmlImportFile) return;
+  setXmlImportLoading(true);
+  setXmlImportError(null);
 
-    try {
-      const plist = await import("plist");
-      const text = await xmlImportFile.text();
-      const parsed: any = plist.parse(text);
-      if (
-        !parsed ||
-        typeof parsed !== "object" ||
-        !parsed.Tracks ||
-        typeof parsed.Tracks !== "object"
-      ) {
-        throw new Error("Could not locate <Tracks> section");
-      }
-      type AppleTrack = {
-        Name?: string;
-        Artist?: string;
-        Album?: string;
-        [key: string]: any;
-      };
-      interface ParsedPlist {
-        Tracks: Record<string, AppleTrack>;
-      }
-      const tracks: ImportedTrack[] = [];
-      const tracksObj = (parsed as ParsedPlist).Tracks;
-      for (const trackId in tracksObj) {
-        const entry = tracksObj[trackId];
-        tracks.push({
-          name: entry.Name || "",
-          artist: entry.Artist || "",
-          album: entry.Album || "",
-          duration: entry["Total Time"]
-            ? Math.round(entry["Total Time"] / 1000)
-            : undefined,
-        });
-      }
-      setXmlImportTracks(tracks);
-      setXmlImportStep("parsed");
-    } catch (err: any) {
-      console.error(err);
-      setXmlImportError(err.message || "Failed to parse XML");
-      setXmlImportTracks([]);
-      setXmlImportStep("idle");
-    } finally {
-      setXmlImportLoading(false);
+  try {
+    // 1) load & parse with the plist package
+    const plist = await import("plist");
+    const text = await xmlImportFile.text();
+    const parsed: any = plist.parse(text);
+
+    // sanity checks
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !parsed.Tracks ||
+      !parsed.Playlists ||
+      !Array.isArray(parsed.Playlists)
+    ) {
+      throw new Error("Could not locate Tracks or Playlists in your XML");
     }
-  };
 
+    // 2) flatten your Tracks into a map: trackId → entry
+    type AppleTrack = Record<string, any> & {
+      Name?: string;
+      Artist?: string;
+      Album?: string;
+      "Total Time"?: number;
+    };
+    const tracksObj: Record<string, AppleTrack> = parsed.Tracks;
+    const trackMap = new Map<string, AppleTrack>();
+    for (const [id, entry] of Object.entries(tracksObj)) {
+      trackMap.set(id, entry);
+    }
+
+    // 3) pick your playlist (e.g. first one; or find by name: .find(pl => pl.Name === someName))
+    const rawPlaylists = parsed.Playlists as any[];
+    const playlist = rawPlaylists[0]; 
+    if (
+      !playlist ||
+      typeof playlist !== "object" ||
+      !Array.isArray(playlist["Playlist Items"])
+    ) {
+      throw new Error("No Playlist Items found in the chosen playlist");
+    }
+
+    // 4) iterate in exact XML order, build ImportedTrack[]
+    type ImportedTrack = {
+      name: string;
+      artist: string;
+      album: string;
+      duration?: number;
+    };
+    const imported: ImportedTrack[] = [];
+
+    for (const item of playlist["Playlist Items"]) {
+      // each item is a { "Track ID": number }
+      const rawId = item["Track ID"];
+      const id = String(rawId);
+
+      const entry = trackMap.get(id);
+      if (!entry) {
+        console.warn(`Track ID ${id} not in Tracks section`);
+        continue;
+      }
+
+      imported.push({
+        name:   entry.Name || "",
+        artist: entry.Artist || "",
+        album:  entry.Album || "",
+        duration: typeof entry["Total Time"] === "number"
+          ? Math.round(entry["Total Time"] / 1000)
+          : undefined,
+      });
+    }
+
+    // 5) hand it off to state
+    setXmlImportTracks(imported);
+    setXmlImportStep("parsed");
+
+  } catch (err: any) {
+    console.error(err);
+    setXmlImportError(err.message || "Failed to parse XML");
+    setXmlImportTracks([]);
+    setXmlImportStep("idle");
+  } finally {
+    setXmlImportLoading(false);
+  }
+};
   // Match imported tracks to DB (MeiliSearch)
   const matchImportedTracks = async () => {
     setXmlImportLoading(true);
