@@ -16,11 +16,11 @@ if (!fs.existsSync(tmpDir)) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { apple_music_url, youtube_url, track_id } = body;
+    const { apple_music_url, youtube_url, soundcloud_url, track_id } = body;
 
     let filePath: string | null = null;
     let wavPath: string | null = null;
-    let downloadedType: 'apple' | 'youtube' | null = null;
+    let downloadedType: 'apple' | 'youtube' | 'soundcloud' | null = null;
     try {
       // Try Apple Music first
       if (apple_music_url) {
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
           if (!filePath) throw new Error("Downloaded .m4a file not found");
           downloadedType = 'apple';
         } catch (appleErr) {
-          console.warn("Apple Music download failed, will try YouTube if available.", appleErr);
+          console.warn("Apple Music download failed, will try YouTube or SoundCloud if available.", appleErr);
         }
       }
       // Fallback to YouTube if Apple failed and youtube_url is present
@@ -71,15 +71,54 @@ export async function POST(request: Request) {
             throw new Error("Downloaded .m4a file from YouTube not found");
           }
         } catch (ytErr) {
-          throw new Error("YouTube download failed: " + (ytErr && ytErr.message ? ytErr.message : ytErr));
+          console.warn("YouTube download failed, will try SoundCloud if available.", ytErr);
+        }
+      }
+      // Fallback to SoundCloud if Apple and YouTube failed and soundcloud_url is present
+      if (!filePath && soundcloud_url) {
+        console.log(`Downloading from SoundCloud: ${soundcloud_url}`);
+        try {
+          // Download audio as .mp3 using scdl
+          // Output file: tmp/scdl_{timestamp}.mp3
+          const scdlOutDir = path.join(tmpDir, `scdl_${Date.now()}`);
+          fs.mkdirSync(scdlOutDir, { recursive: true });
+          await execAsync(`scdl -l "${soundcloud_url}" --path "${scdlOutDir}" --onlymp3 --addtofile`);
+          // Find the most recent .mp3 file in scdlOutDir
+          function findLatestMp3File(dir: string): string | null {
+            let latest: { path: string; mtime: number } | null = null;
+            function walk(currentDir: string) {
+              const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+              for (const entry of entries) {
+                const fullPath = path.join(currentDir, entry.name);
+                if (entry.isDirectory()) {
+                  walk(fullPath);
+                } else if (entry.isFile() && fullPath.endsWith(".mp3")) {
+                  const stat = fs.statSync(fullPath);
+                  if (stat.size > 0) {
+                    if (!latest || stat.mtime.getTime() > latest.mtime) {
+                      latest = { path: fullPath, mtime: stat.mtime.getTime() };
+                    }
+                  }
+                }
+              }
+            }
+            walk(dir);
+            return latest ? latest.path : null;
+          }
+          filePath = findLatestMp3File(scdlOutDir);
+          if (!filePath) throw new Error("Downloaded .mp3 file from SoundCloud not found");
+          downloadedType = 'soundcloud';
+        } catch (scErr) {
+          throw new Error("SoundCloud download failed: " + (scErr && scErr.message ? scErr.message : scErr));
         }
       }
       if (!filePath) {
-        throw new Error("No valid audio file could be downloaded from Apple Music or YouTube.");
+        throw new Error("No valid audio file could be downloaded from Apple Music, YouTube, or SoundCloud.");
       }
       console.log(`File downloaded to: ${filePath}`);
-      // Convert .m4a to .wav using ffmpeg
-      wavPath = filePath.replace(/\.m4a$/, `_${Date.now()}.wav`);
+      // Convert audio to .wav using ffmpeg
+      let ext = path.extname(filePath).toLowerCase();
+      wavPath = filePath.replace(new RegExp(`${ext}$`), `_${Date.now()}.wav`);
       await execAsync(`ffmpeg -y -i "${filePath}" "${wavPath}"`);
       console.log("Converted to wav:", wavPath);
 
@@ -93,11 +132,11 @@ export async function POST(request: Request) {
         throw new Error("Python analysis failed: " + (err && err.message ? err.message : err));
       }
 
-      // Move the .m4a file to public/audio/ and keep it for playback
+      // Move the audio file to public/audio/ and keep it for playback
       const audioDir = path.join(process.cwd(), "public", "audio");
       if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
-      // Use a unique filename: audio_{timestamp}_{Math.random()}.m4a
-      const audioFileName = `audio_${Date.now()}_${Math.floor(Math.random()*1e6)}.m4a`;
+      // Use a unique filename: audio_{timestamp}_{Math.random()}.{ext}
+      const audioFileName = `audio_${Date.now()}_${Math.floor(Math.random()*1e6)}${ext}`;
       const audioDest = path.join(audioDir, audioFileName);
       fs.copyFileSync(filePath, audioDest);
       // Clean up temp files

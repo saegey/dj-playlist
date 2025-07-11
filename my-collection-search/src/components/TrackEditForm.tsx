@@ -63,6 +63,7 @@ export default function TrackEditForm({
     bpm: track.bpm || "",
     key: track.key || "",
     youtube_url: track.youtube_url || "",
+    soundcloud_url: track.soundcloud_url || "",
     star_rating: typeof track.star_rating === "number" ? track.star_rating : 0,
   });
   // Star rating handler
@@ -128,6 +129,7 @@ export default function TrackEditForm({
         body: JSON.stringify({
           apple_music_url: form.apple_music_url,
           youtube_url: form.youtube_url,
+          soundcloud_url: form.soundcloud_url,
           track_id: form.track_id || "unknown",
         }),
       });
@@ -278,7 +280,7 @@ export default function TrackEditForm({
           colorScheme="teal"
           isLoading={analyzing}
           onClick={handleAnalyzeAudio}
-          isDisabled={!form.apple_music_url && !form.youtube_url}
+          isDisabled={!form.apple_music_url && !form.youtube_url && !form.soundcloud_url}
           title={
             form.apple_music_url
               ? "Analyze audio features from Apple Music"
@@ -400,6 +402,13 @@ export default function TrackEditForm({
           name="youtube_url"
           value={form.youtube_url || ""}
           placeholder="YouTube URL will appear here"
+          onChange={handleChange}
+        />
+        <LabeledInput
+          label="SoundCloud URL"
+          name="soundcloud_url"
+          value={form.soundcloud_url || ""}
+          placeholder="SoundCloud URL will appear here"
           onChange={handleChange}
         />
         <Box>
