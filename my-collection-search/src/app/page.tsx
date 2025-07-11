@@ -16,13 +16,6 @@ import {
   ModalHeader,
   ModalBody,
   ModalCloseButton,
-  AlertDialog,
-  AlertDialogOverlay,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogBody,
-  AlertDialogFooter,
-  Button as ChakraButton,
 } from "@chakra-ui/react";
 import { FiArrowDown, FiArrowUp, FiEdit, FiTrash2 } from "react-icons/fi";
 
@@ -106,26 +99,7 @@ export default function SearchPage() {
     }
   }, []);
 
-  // Delete dialog state (kept local, not in hook)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [playlistToDelete, setPlaylistToDelete] = useState<number | null>(null);
-  const cancelRef = React.useRef<HTMLButtonElement>(null);
-
   // Delete handler for dialog
-  const handleDeletePlaylistWithDialog = (id: number) => {
-    setPlaylistToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDeletePlaylist = async () => {
-    if (playlistToDelete == null) return;
-    // Use API directly, then refresh
-    await fetch(`/api/playlists?id=${playlistToDelete}`, { method: "DELETE" });
-    fetchPlaylists();
-    setPlaylistToDelete(null);
-    setDeleteDialogOpen(false);
-  };
-
   const handleEditClick = (track: Track) => {
     setEditTrack(track);
     onOpen();
@@ -272,43 +246,6 @@ export default function SearchPage() {
 
   return (
     <>
-      <AlertDialog
-        isOpen={deleteDialogOpen}
-        leastDestructiveRef={cancelRef}
-        onClose={() => {
-          setDeleteDialogOpen(false);
-          setPlaylistToDelete(null);
-        }}
-      >
-        <AlertDialogOverlay />
-        <AlertDialogContent>
-          <AlertDialogHeader fontSize="lg" fontWeight="bold">
-            Delete Playlist
-          </AlertDialogHeader>
-          <AlertDialogBody>
-            Are you sure you want to delete this playlist? This action cannot be
-            undone.
-          </AlertDialogBody>
-          <AlertDialogFooter>
-            <ChakraButton
-              ref={cancelRef}
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setPlaylistToDelete(null);
-              }}
-            >
-              Cancel
-            </ChakraButton>
-            <ChakraButton
-              colorScheme="red"
-              onClick={confirmDeletePlaylist}
-              ml={3}
-            >
-              Delete
-            </ChakraButton>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       <Flex p={4} gap={4} direction="row">
         {/* Playlist Management Section */}
         {/* Minimizable PlaylistManager sidebar */}
@@ -334,7 +271,6 @@ export default function SearchPage() {
               setPlaylistName={setPlaylistName}
               handleCreatePlaylist={handleCreatePlaylist}
               handleLoadPlaylist={handleLoadPlaylist}
-              handleDeletePlaylist={handleDeletePlaylistWithDialog}
               xmlImportModalOpen={xmlImportModalOpen}
               setXmlImportModalOpen={setXmlImportModalOpen}
               client={client}

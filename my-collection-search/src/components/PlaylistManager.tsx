@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Box, Flex, Input, Text, Button } from "@chakra-ui/react";
+import { Box, Flex, Input, Text, Button, AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter } from "@chakra-ui/react";
 import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
 
 export type Playlist = {
@@ -17,7 +17,6 @@ type PlaylistManagerProps = {
   setPlaylistName: (name: string) => void;
   handleCreatePlaylist: () => void;
   handleLoadPlaylist: (trackIds: string[]) => void;
-  handleDeletePlaylist: (id: number) => void;
   xmlImportModalOpen: boolean;
   setXmlImportModalOpen: (open: boolean) => void;
   client: unknown;
@@ -31,12 +30,31 @@ const PlaylistManager: React.FC<PlaylistManagerProps> = ({
   setPlaylistName,
   handleCreatePlaylist,
   handleLoadPlaylist,
-  handleDeletePlaylist,
   xmlImportModalOpen,
   setXmlImportModalOpen,
   client,
   fetchPlaylists,
 }) => {
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [playlistToDelete, setPlaylistToDelete] = React.useState<number | null>(null);
+  const cancelRef = React.useRef<HTMLButtonElement>(null);
+
+  // Handler to open dialog
+  const handleDeletePlaylist = (id: number) => {
+    setPlaylistToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  // Confirm delete
+  const confirmDeletePlaylist = async () => {
+    if (playlistToDelete == null) return;
+    await fetch(`/api/playlists?id=${playlistToDelete}`, { method: "DELETE" });
+    fetchPlaylists();
+    setPlaylistToDelete(null);
+    setDeleteDialogOpen(false);
+  };
+
   return (
     <Box minWidth="220px" mr={4}>
       <Text fontSize={"lg"} fontWeight="bold" mb={4}>
@@ -107,6 +125,39 @@ const PlaylistManager: React.FC<PlaylistManagerProps> = ({
           )}
         </Box>
       </Box>
+      {/* Playlist Delete Confirmation Dialog */}
+      <AlertDialog
+        isOpen={deleteDialogOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setPlaylistToDelete(null);
+        }}
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader fontSize="lg" fontWeight="bold">
+            Delete Playlist
+          </AlertDialogHeader>
+          <AlertDialogBody>
+            Are you sure you want to delete this playlist? This action cannot be undone.
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <Button
+              ref={cancelRef}
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setPlaylistToDelete(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button colorScheme="red" onClick={confirmDeletePlaylist} ml={3}>
+              Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Button
         mt={6}
         colorScheme="purple"
