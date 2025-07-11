@@ -74,7 +74,6 @@ export async function POST() {
           key: null,
           notes: null,
           local_tags: [],
-          apple_music_url: track["apple_music_url"] || null,
         });
         console.log(
           `[Discogs Index] Prepared track: ${track_id} - ${track["title"]}`
@@ -109,6 +108,7 @@ export async function POST() {
           "notes",
           "local_tags",
           "apple_music_url",
+          "local_audio_url",
         ]) {
           if (rows[0][field] !== undefined && rows[0][field] !== null) {
             merged[field] = rows[0][field];
@@ -136,10 +136,10 @@ export async function POST() {
           album_thumbnail=EXCLUDED.album_thumbnail,
           bpm=COALESCE(tracks.bpm, EXCLUDED.bpm),
           key=COALESCE(tracks.key, EXCLUDED.key),
-          notes=COALESCE(tracks.notes, EXCLUDED.notes),
+          notes=tracks.notes,
           local_tags=COALESCE(tracks.local_tags, EXCLUDED.local_tags),
-          apple_music_url=COALESCE(tracks.apple_music_url, EXCLUDED.apple_music_url),
-          duration_seconds=COALESCE(tracks.duration_seconds, EXCLUDED.duration_seconds)
+          apple_music_url=tracks.apple_music_url,
+          duration_seconds=tracks.duration_seconds
       `,
         [
           merged.track_id,
@@ -171,6 +171,7 @@ export async function POST() {
       "local_tags",
       "styles",
       "genres",
+      "local_audio_url",
     ]);
     await index.updateFilterableAttributes([
       "title",
@@ -183,6 +184,7 @@ export async function POST() {
       "styles",
       "year",
       "track_id",
+      "local_audio_url",
     ]);
     console.log(
       `[Discogs Index] Adding ${upserted.length} tracks to MeiliSearch index...`

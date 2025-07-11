@@ -1085,6 +1085,14 @@ const handleParseXml = async () => {
               >
                 Export
               </Button>
+              <Button
+                colorScheme="red"
+                size="sm"
+                onClick={() => setPlaylist([])}
+                isDisabled={playlist.length === 0}
+              >
+                Clear
+              </Button>
             </Flex>
           </Flex>
           {playlist.length === 0 ? (
