@@ -42,6 +42,8 @@ import { parseDurationToSeconds, formatSeconds } from "@/lib/trackUtils";
 import React from "react";
 
 export default function SearchPage() {
+  // Sidebar minimized state for PlaylistManager
+  const [playlistSidebarMinimized, setPlaylistSidebarMinimized] = useState(false);
   // --- Apple Music XML Import Modal State ---
   const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
   const [query, setQuery] = useState<string>("");
@@ -123,17 +125,13 @@ export default function SearchPage() {
     setPlaylistToDelete(null);
     setDeleteDialogOpen(false);
   };
-  // ...existing code...
-
-  // Render AlertDialog in the return block so it is part of the React tree
-
 
   const handleEditClick = (track: Track) => {
     setEditTrack(track);
     onOpen();
   };
 
-  const handleSaveTrack = async (data: any) => {
+  const handleSaveTrack = async (data: Track) => {
     const res = await fetch("/api/tracks/update", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -256,10 +254,7 @@ export default function SearchPage() {
     setQuery(e.target.value);
   };
 
-
   // (addToPlaylist and removeFromPlaylist are now only from the hook)
-
-
 
   const totalPlaytimeSeconds = playlist.reduce((sum, track) => {
     if (!track.duration) {
@@ -291,7 +286,8 @@ export default function SearchPage() {
             Delete Playlist
           </AlertDialogHeader>
           <AlertDialogBody>
-            Are you sure you want to delete this playlist? This action cannot be undone.
+            Are you sure you want to delete this playlist? This action cannot be
+            undone.
           </AlertDialogBody>
           <AlertDialogFooter>
             <ChakraButton
@@ -303,7 +299,11 @@ export default function SearchPage() {
             >
               Cancel
             </ChakraButton>
-            <ChakraButton colorScheme="red" onClick={confirmDeletePlaylist} ml={3}>
+            <ChakraButton
+              colorScheme="red"
+              onClick={confirmDeletePlaylist}
+              ml={3}
+            >
               Delete
             </ChakraButton>
           </AlertDialogFooter>
@@ -311,19 +311,37 @@ export default function SearchPage() {
       </AlertDialog>
       <Flex p={4} gap={4} direction="row">
         {/* Playlist Management Section */}
-        <PlaylistManager
-          playlists={playlists}
-          loadingPlaylists={loadingPlaylists}
-          playlistName={playlistName}
-          setPlaylistName={setPlaylistName}
-          handleCreatePlaylist={handleCreatePlaylist}
-          handleLoadPlaylist={handleLoadPlaylist}
-          handleDeletePlaylist={handleDeletePlaylistWithDialog}
-          xmlImportModalOpen={xmlImportModalOpen}
-          setXmlImportModalOpen={setXmlImportModalOpen}
-          client={client}
-          fetchPlaylists={fetchPlaylists}
-        />
+        {/* Minimizable PlaylistManager sidebar */}
+        <Box position="relative" width={playlistSidebarMinimized ? "40px" : "300px"} minWidth={playlistSidebarMinimized ? "40px" : "300px"} transition="width 0.2s" mr={2}>
+          <Button
+            aria-label={playlistSidebarMinimized ? "Expand" : "Minimize"}
+            size="xs"
+            position="absolute"
+            top={2}
+            right={playlistSidebarMinimized ? 0 : -4}
+            zIndex={1}
+            onClick={() => setPlaylistSidebarMinimized((m) => !m)}
+            variant="ghost"
+            px={1}
+          >
+            {playlistSidebarMinimized ? "▶" : "◀"}
+          </Button>
+          {!playlistSidebarMinimized && (
+            <PlaylistManager
+              playlists={playlists}
+              loadingPlaylists={loadingPlaylists}
+              playlistName={playlistName}
+              setPlaylistName={setPlaylistName}
+              handleCreatePlaylist={handleCreatePlaylist}
+              handleLoadPlaylist={handleLoadPlaylist}
+              handleDeletePlaylist={handleDeletePlaylistWithDialog}
+              xmlImportModalOpen={xmlImportModalOpen}
+              setXmlImportModalOpen={setXmlImportModalOpen}
+              client={client}
+              fetchPlaylists={fetchPlaylists}
+            />
+          )}
+        </Box>
         <Box width="40%">
           <Input
             type="text"

@@ -1,13 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  Box,
-  Flex,
-  Input,
-  Text,
-  Button,
-} from "@chakra-ui/react";
+import { Box, Flex, Input, Text, Button } from "@chakra-ui/react";
 import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
 
 export type Playlist = {
@@ -44,9 +38,9 @@ const PlaylistManager: React.FC<PlaylistManagerProps> = ({
   fetchPlaylists,
 }) => {
   return (
-    <Box width="20%" minWidth="220px" mr={4}>
-      <Text fontWeight="bold" mb={2}>
-        Manage Playlists
+    <Box minWidth="220px" mr={4}>
+      <Text fontSize={"lg"} fontWeight="bold" mb={4}>
+        Playlist Maker Pro Edition
       </Text>
       <Flex mb={2} gap={2}>
         <Input
@@ -65,45 +59,53 @@ const PlaylistManager: React.FC<PlaylistManagerProps> = ({
         </Button>
       </Flex>
       <Box
-        maxHeight="300px"
         overflowY="auto"
         borderWidth="1px"
         borderRadius="md"
         p={2}
         bg="gray.50"
       >
-        {loadingPlaylists ? (
-          <Text fontSize="sm">Loading...</Text>
-        ) : playlists.length === 0 ? (
-          <Text fontSize="sm" color="gray.500">
-            No saved playlists.
-          </Text>
-        ) : (
-          playlists.map((pl: Playlist) => (
-            <Flex key={pl.id} align="center" justify="space-between" mb={1}>
-              <Box flex={1}>
-                <Text fontSize="sm" fontWeight="bold" isTruncated>
-                  {pl.name}
-                </Text>
-              </Box>
-              <Button
-                size="xs"
-                colorScheme="blue"
-                mr={1}
-                onClick={() => handleLoadPlaylist(pl.tracks)}
+        <Box>
+          {loadingPlaylists ? (
+            <Text fontSize="sm">Loading...</Text>
+          ) : playlists.length === 0 ? (
+            <Text fontSize="sm" color="gray.500">
+              No saved playlists.
+            </Text>
+          ) : (
+            playlists.map((pl: Playlist) => (
+              <Flex
+                key={pl.id}
+                justify="space-between"
+                mb={1}
+                flexDirection={"column"}
               >
-                Load
-              </Button>
-              <Button
-                size="xs"
-                colorScheme="gray"
-                onClick={() => handleDeletePlaylist(pl.id)}
-              >
-                Delete
-              </Button>
-            </Flex>
-          ))
-        )}
+                <Box flex={1}>
+                  <Text fontSize="sm" fontWeight="bold" isTruncated>
+                    {pl.name}
+                  </Text>
+                </Box>
+                <Flex>
+                  <Button
+                    size="xs"
+                    colorScheme="blue"
+                    mr={1}
+                    onClick={() => handleLoadPlaylist(pl.tracks)}
+                  >
+                    Load
+                  </Button>
+                  <Button
+                    size="xs"
+                    colorScheme="gray"
+                    onClick={() => handleDeletePlaylist(pl.id)}
+                  >
+                    Delete
+                  </Button>
+                </Flex>
+              </Flex>
+            ))
+          )}
+        </Box>
       </Box>
       <Button
         mt={6}
