@@ -1,5 +1,6 @@
 "use client";
 
+import { Track } from "@/types/track";
 import {
   Box,
   Button,
@@ -14,7 +15,6 @@ import {
   Flex,
 } from "@chakra-ui/react";
 import { useState } from "react";
-import { Track } from "@/app/page";
 
 type ImportedTrack = {
   name: string;

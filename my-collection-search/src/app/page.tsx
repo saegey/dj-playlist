@@ -29,40 +29,14 @@ import { FiArrowDown, FiArrowUp, FiEdit, FiTrash2 } from "react-icons/fi";
 import dynamic from "next/dynamic";
 import TrackResult from "@/components/TrackResult";
 import { useState, useCallback, useEffect, useMemo, ChangeEvent } from "react";
+import { usePlaylists } from "@/hooks/usePlaylists";
 import PlaylistManager from "@/components/PlaylistManager";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
 });
 
-export type Track = {
-  track_id: string;
-  title: string;
-  artist: string;
-  album: string;
-  year: string | number;
-  styles?: string[];
-  genres?: string[];
-  duration: string;
-  duration_seconds?: number;
-  position: number;
-  discogs_url: string;
-  apple_music_url: string;
-  youtube_url?: string;
-  soundcloud_url?: string;
-  album_thumbnail?: string;
-  local_tags?: string;
-  bpm?: string | null;
-  key?: string | null;
-  danceability?: number | null;
-  mood_happy?: number | null;
-  mood_sad?: number | null;
-  mood_relaxed?: number | null;
-  mood_aggressive?: number | null;
-  notes?: string;
-  local_audio_url?: string;
-  star_rating?: number;
-};
+import type { Track } from "@/types/track";
 
 import { parseDurationToSeconds, formatSeconds } from "@/lib/trackUtils";
 import React from "react";
@@ -72,27 +46,25 @@ export default function SearchPage() {
   const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
   const [query, setQuery] = useState<string>("");
   const [results, setResults] = useState<Track[]>([]);
-  const [playlist, setPlaylist] = useState<Track[]>(() => {
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("playlist");
-      return stored ? JSON.parse(stored) : [];
-    }
-    return [];
-  });
-  // Store playlist info (id, name) for export and UI
-  const [playlistInfo, setPlaylistInfo] = useState<{
-    id?: number;
-    name: string;
-  }>({ name: "" });
-  const [offset, setOffset] = useState<number>(0);
-  const [hasMore, setHasMore] = useState<boolean>(false);
-  const limit = 20;
-  const [estimatedResults, setEstimatedResults] = useState<number>(0);
 
-  // Playlist management state
-  const [playlists, setPlaylists] = useState<any[]>([]);
-  const [playlistName, setPlaylistName] = useState("");
-  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+  // --- Playlist state/logic via usePlaylists hook ---
+  const {
+    playlists,
+    loadingPlaylists,
+    playlistName,
+    setPlaylistName,
+    playlist,
+    setPlaylist,
+    fetchPlaylists,
+    handleCreatePlaylist,
+    handleLoadPlaylist,
+    savePlaylist,
+    exportPlaylist,
+    addToPlaylist,
+    removeFromPlaylist,
+    moveTrack,
+  } = usePlaylists();
+
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const { onOpen, onClose } = useDisclosure();
 
@@ -107,6 +79,12 @@ export default function SearchPage() {
   const [playlistCounts, setPlaylistCounts] = useState<Record<string, number>>(
     {}
   );
+
+  // Pagination and search state
+  const [offset, setOffset] = useState<number>(0);
+  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [estimatedResults, setEstimatedResults] = useState<number>(0);
+  const limit = 20;
 
   // Helper to fetch playlist counts for a list of track IDs
   const fetchPlaylistCounts = useCallback(async (trackIds: string[]) => {
@@ -126,103 +104,24 @@ export default function SearchPage() {
     }
   }, []);
 
-  // Fetch playlists from backend
-  const fetchPlaylists = async () => {
-    setLoadingPlaylists(true);
-    try {
-      const res = await fetch("/api/playlists");
-      if (res.ok) {
-        const data = await res.json();
-        setPlaylists(data);
-      }
-    } finally {
-      setLoadingPlaylists(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchPlaylists();
-  }, []);
-
-  // Create a new playlist
-  const handleCreatePlaylist = async () => {
-    if (!playlistName.trim() || playlist.length === 0) return;
-    const res = await fetch("/api/playlists", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: playlistName,
-        tracks: playlist.map((t) => t.track_id),
-      }),
-    });
-    if (res.ok) {
-      setPlaylistName("");
-      setPlaylistInfo({ name: playlistName });
-      fetchPlaylists();
-    } else {
-      alert("Failed to create playlist");
-    }
-  };
-
-  // Load a playlist (replace current playlist)
-  const handleLoadPlaylist = async (trackIds: Array<string>) => {
-    if (!trackIds || trackIds.length === 0) {
-      setPlaylist([]);
-      setPlaylistInfo({ name: "" });
-      return;
-    }
-    try {
-      // Fetch full track objects from backend by IDs
-      const res = await fetch("/api/tracks/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ track_ids: trackIds }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPlaylist(data);
-        // Try to find the playlist name from loaded playlists
-        const loaded = playlists.find(
-          (pl) =>
-            Array.isArray(pl.tracks) &&
-            pl.tracks.length === trackIds.length &&
-            pl.tracks.every((id: string, i: number) => id === trackIds[i])
-        );
-        if (loaded) {
-          setPlaylistInfo({ id: loaded.id, name: loaded.name });
-        } else {
-          setPlaylistInfo({ name: "" });
-        }
-      } else {
-        alert("Failed to load playlist tracks");
-      }
-    } catch (e) {
-      alert("Error loading playlist tracks");
-    }
-  };
-
-  // Delete a playlist with confirmation dialog
+  // Delete dialog state (kept local, not in hook)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<number | null>(null);
   const cancelRef = React.useRef<HTMLButtonElement>(null);
 
-  const handleDeletePlaylist = (id: number) => {
+  // Delete handler for dialog
+  const handleDeletePlaylistWithDialog = (id: number) => {
     setPlaylistToDelete(id);
     setDeleteDialogOpen(true);
   };
 
   const confirmDeletePlaylist = async () => {
     if (playlistToDelete == null) return;
-    const res = await fetch(`/api/playlists?id=${playlistToDelete}`, {
-      method: "DELETE",
-    });
-    if (res.ok) {
-      fetchPlaylists();
-      setPlaylistToDelete(null);
-      setDeleteDialogOpen(false);
-    } else {
-      alert("Failed to delete playlist");
-    }
+    // Use API directly, then refresh
+    await fetch(`/api/playlists?id=${playlistToDelete}`, { method: "DELETE" });
+    fetchPlaylists();
+    setPlaylistToDelete(null);
+    setDeleteDialogOpen(false);
   };
   // ...existing code...
 
@@ -357,69 +256,10 @@ export default function SearchPage() {
     setQuery(e.target.value);
   };
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("playlist", JSON.stringify(playlist));
-    }
-  }, [playlist]);
 
-  const addToPlaylist = (track: Track) => {
-    if (!playlist.some((t) => t.track_id === track.track_id)) {
-      setPlaylist((prev) => [...prev, track]);
-    }
-  };
+  // (addToPlaylist and removeFromPlaylist are now only from the hook)
 
-  const removeFromPlaylist = (trackId: string) => {
-    setPlaylist((prev) => prev.filter((t) => t.track_id !== trackId));
-  };
 
-  // Export playlist as JSON file
-  const exportPlaylist = () => {
-    const dataStr =
-      "data:text/json;charset=utf-8," +
-      encodeURIComponent(JSON.stringify(playlist, null, 2));
-    const downloadAnchorNode = document.createElement("a");
-    downloadAnchorNode.setAttribute("href", dataStr);
-    const filename = playlistInfo.name
-      ? `${playlistInfo.name}.json`
-      : "playlist.json";
-    downloadAnchorNode.setAttribute("download", filename);
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  };
-
-  // Save playlist to backend (update or create)
-  const savePlaylist = async () => {
-    if (!playlistName.trim() || playlist.length === 0) {
-      alert("Please enter a playlist name and add tracks.");
-      return;
-    }
-    const res = await fetch("/api/playlists", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: playlistName,
-        tracks: playlist.map((t) => t.track_id),
-      }),
-    });
-    if (res.ok) {
-      fetchPlaylists();
-      alert("Playlist saved!");
-    } else {
-      alert("Failed to save playlist");
-    }
-  };
-
-  const moveTrack = (fromIdx: number, toIdx: number) => {
-    setPlaylist((prev) => {
-      if (toIdx < 0 || toIdx >= prev.length) return prev;
-      const updated = [...prev];
-      const [removed] = updated.splice(fromIdx, 1);
-      updated.splice(toIdx, 0, removed);
-      return updated;
-    });
-  };
 
   const totalPlaytimeSeconds = playlist.reduce((sum, track) => {
     if (!track.duration) {
@@ -478,7 +318,7 @@ export default function SearchPage() {
           setPlaylistName={setPlaylistName}
           handleCreatePlaylist={handleCreatePlaylist}
           handleLoadPlaylist={handleLoadPlaylist}
-          handleDeletePlaylist={handleDeletePlaylist}
+          handleDeletePlaylist={handleDeletePlaylistWithDialog}
           xmlImportModalOpen={xmlImportModalOpen}
           setXmlImportModalOpen={setXmlImportModalOpen}
           client={client}
