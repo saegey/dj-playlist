@@ -224,42 +224,10 @@ export default function SearchPage() {
       alert("Failed to delete playlist");
     }
   };
-  {
-    /* Playlist Delete Confirmation Dialog */
-  }
-  <AlertDialog
-    isOpen={deleteDialogOpen}
-    leastDestructiveRef={cancelRef}
-    onClose={() => {
-      setDeleteDialogOpen(false);
-      setPlaylistToDelete(null);
-    }}
-  >
-    <AlertDialogOverlay />
-    <AlertDialogContent>
-      <AlertDialogHeader fontSize="lg" fontWeight="bold">
-        Delete Playlist
-      </AlertDialogHeader>
-      <AlertDialogBody>
-        Are you sure you want to delete this playlist? This action cannot be
-        undone.
-      </AlertDialogBody>
-      <AlertDialogFooter>
-        <ChakraButton
-          ref={cancelRef}
-          onClick={() => {
-            setDeleteDialogOpen(false);
-            setPlaylistToDelete(null);
-          }}
-        >
-          Cancel
-        </ChakraButton>
-        <ChakraButton colorScheme="red" onClick={confirmDeletePlaylist} ml={3}>
-          Delete
-        </ChakraButton>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>;
+  // ...existing code...
+
+  // Render AlertDialog in the return block so it is part of the React tree
+
 
   const handleEditClick = (track: Track) => {
     setEditTrack(track);
@@ -469,6 +437,38 @@ export default function SearchPage() {
 
   return (
     <>
+      <AlertDialog
+        isOpen={deleteDialogOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setPlaylistToDelete(null);
+        }}
+      >
+        <AlertDialogOverlay />
+        <AlertDialogContent>
+          <AlertDialogHeader fontSize="lg" fontWeight="bold">
+            Delete Playlist
+          </AlertDialogHeader>
+          <AlertDialogBody>
+            Are you sure you want to delete this playlist? This action cannot be undone.
+          </AlertDialogBody>
+          <AlertDialogFooter>
+            <ChakraButton
+              ref={cancelRef}
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setPlaylistToDelete(null);
+              }}
+            >
+              Cancel
+            </ChakraButton>
+            <ChakraButton colorScheme="red" onClick={confirmDeletePlaylist} ml={3}>
+              Delete
+            </ChakraButton>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Flex p={4} gap={4} direction="row">
         {/* Playlist Management Section */}
         <PlaylistManager
