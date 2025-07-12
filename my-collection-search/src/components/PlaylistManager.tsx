@@ -1,7 +1,13 @@
 "use client";
 
 import React from "react";
-import { Box, Flex, Input, Text, Button, AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter } from "@chakra-ui/react";
+import { Box, Flex, Input, Text, Button, AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader, AlertDialogBody, AlertDialogFooter, useToast } from "@chakra-ui/react";
+// Example playlist import format:
+// {
+//   "name": "My Playlist",
+//   "tracks": ["track_id1", "track_id2", ...]
+// }
+
 import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
 
 export type Playlist = {
@@ -53,6 +59,54 @@ const PlaylistManager: React.FC<PlaylistManagerProps> = ({
     fetchPlaylists();
     setPlaylistToDelete(null);
     setDeleteDialogOpen(false);
+  };
+
+  const toast = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Import playlist JSON, supporting both array of tracks and playlist object
+  const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      console.debug("Importing playlist data:", data);
+      let name = "Imported Playlist";
+      let tracks: string[] = [];
+      if (Array.isArray(data)) {
+        // Array of track objects
+        tracks = data.map((t) => t.track_id).filter(Boolean);
+        name = window.prompt("Enter a name for the imported playlist:", "Imported Playlist") || "Imported Playlist";
+        if (!tracks.length) {
+          toast({ title: "No valid tracks found in import.", status: "error" });
+          return;
+        }
+      } else if (data && data.name && Array.isArray(data.tracks)) {
+        // Playlist object
+        name = data.name;
+        tracks = data.tracks;
+      } else {
+        toast({ title: "Invalid playlist format", status: "error" });
+        return;
+      }
+      // Create playlist via API
+      const res = await fetch("/api/playlists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, tracks }),
+      });
+      if (res.ok) {
+        toast({ title: `Playlist '${name}' imported!`, status: "success" });
+        fetchPlaylists();
+      } else {
+        toast({ title: "Failed to import playlist", status: "error" });
+      }
+    } catch {
+      toast({ title: "Error importing playlist", status: "error" });
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   return (
@@ -167,6 +221,22 @@ const PlaylistManager: React.FC<PlaylistManagerProps> = ({
       >
         Import Apple Music XML
       </Button>
+      <Button
+        mt={2}
+        colorScheme="teal"
+        size="sm"
+        width="100%"
+        onClick={() => fileInputRef.current?.click()}
+      >
+        Import Playlist JSON
+      </Button>
+      <input
+        type="file"
+        accept="application/json"
+        ref={fileInputRef}
+        style={{ display: "none" }}
+        onChange={handleImportJson}
+      />
       <AppleMusicXmlImport
         isOpen={xmlImportModalOpen}
         onClose={() => setXmlImportModalOpen(false)}

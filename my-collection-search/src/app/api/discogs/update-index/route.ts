@@ -22,146 +22,128 @@ export async function POST() {
         { status: 404 }
       );
     }
-    // Gather all release_*.json and release_*_updated.json files
-    const files = fs
+    // Gather all manifest_*.json files to get per-user releases
+    const manifestFiles = fs
       .readdirSync(DISCOGS_EXPORTS_DIR)
-      .filter((f) => /^release_\d+(?:_updated)?\.json$/.test(f));
-    console.log(
-      `[Discogs Index] Found ${files.length} release JSON files in discogs_exports.`
-    );
-    if (!files.length) {
+      .filter((f) => /^manifest_.+\.json$/.test(f));
+    if (!manifestFiles.length) {
       return NextResponse.json(
-        { error: "No release JSON files found in discogs_exports" },
+        { error: "No manifest JSON files found in discogs_exports" },
         { status: 404 }
       );
     }
-    let allTracks = [];
-    for (const file of files) {
-      console.log(`[Discogs Index] Processing album file: ${file}`);
-      const album = JSON.parse(
-        fs.readFileSync(path.join(DISCOGS_EXPORTS_DIR, file), "utf-8")
+    let allTracks: Record<string, any>[] = [];
+    for (const manifestFile of manifestFiles) {
+      const manifest = JSON.parse(
+        fs.readFileSync(path.join(DISCOGS_EXPORTS_DIR, manifestFile), "utf-8")
       );
-      const artist_name =
-        album["artists_sort"] ||
-        (album.artists && album.artists[0] && album.artists[0].name) ||
-        "Unknown Artist";
-      const album_title = album["title"];
-      const album_year = album["year"];
-      const album_styles = album["styles"] || [];
-      const album_genres = album["genres"] || [];
-      const discogs_url = album["uri"];
-      const thumbnail = album["thumb"];
-      (album["tracklist"] || []).forEach((track) => {
-        let track_id = `${album["id"]}-${track["position"]}`;
-        // Clean track_id: remove spaces and enforce valid characters only
-        track_id = track_id.trim().replace(/[^a-zA-Z0-9\-_]/g, "");
-        allTracks.push({
-          track_id,
-          title: track["title"],
-          artist: track["artists"]
-            ? track["artists"].map((a) => a.name).join(", ")
-            : artist_name,
-          album: album_title,
-          year: album_year,
-          styles: album_styles,
-          genres: album_genres,
-          duration: track["duration"],
-          discogs_url: discogs_url,
-          album_thumbnail: thumbnail,
-          position: track["position"] || "",
-          duration_seconds: track["duration_seconds"] || null,
-          bpm: null,
-          key: null,
-          notes: null,
-          local_tags: [],
-        });
+      const username =
+        manifest.username || manifestFile.replace(/^manifest_|\.json$/g, "");
+      console.log(
+        `[Discogs Index] Processing manifest for user: ${username} (${manifestFile})`
+      );
+      // console.log(`[Discogs Index] Manifest content: ${JSON.stringify(manifest, null, 2)}`);
+      // Ensure manifest has releases
+      const releaseFiles = manifest.releaseIds || [];
+      console.log(
+        `[Discogs Index] Found ${releaseFiles.length} release files for user: ${username}`
+      );
+      for (const releaseFile of releaseFiles) {
         console.log(
-          `[Discogs Index] Prepared track: ${track_id} - ${track["title"]}`
+          `[Discogs Index] Processing release file: ${releaseFile} for user: ${username}`
         );
-      });
+        const releasePath = path.join(
+          DISCOGS_EXPORTS_DIR,
+          `release_${releaseFile}.json`
+        );
+        console.log(`[Discogs Index] Checking release path: ${releasePath}`);
+        if (!fs.existsSync(releasePath)) continue;
+        const album = JSON.parse(fs.readFileSync(releasePath, "utf-8"));
+        const artist_name =
+          album["artists_sort"] ||
+          (album.artists && album.artists[0] && album.artists[0].name) ||
+          "Unknown Artist";
+        const album_title = album["title"];
+        const album_year = album["year"];
+        const album_styles = album["styles"] || [];
+        const album_genres = album["genres"] || [];
+        const discogs_url = album["uri"];
+        const thumbnail = album["thumb"];
+        (album["tracklist"] || []).forEach((track) => {
+          let track_id = `${album["id"]}-${track["position"]}`;
+          // Clean track_id: remove spaces and enforce valid characters only
+          track_id = track_id.trim().replace(/[^a-zA-Z0-9\-_]/g, "");
+          allTracks.push({
+            track_id,
+            title: track["title"],
+            artist: track["artists"]
+              ? track["artists"].map((a) => a.name).join(", ")
+              : artist_name,
+            album: album_title,
+            year: album_year,
+            styles: album_styles,
+            genres: album_genres,
+            duration: track["duration"],
+            discogs_url: discogs_url,
+            album_thumbnail: thumbnail,
+            position: track["position"] || "",
+            duration_seconds: track["duration_seconds"] || null,
+            bpm: null,
+            key: null,
+            notes: null,
+            local_tags: [],
+            apple_music_url: track["apple_music_url"] || null,
+            local_audio_url: track["local_audio_url"] || null,
+            username,
+          });
+          console.log(
+            `[Discogs Index] Prepared track: ${track_id} - ${track["title"]} (user: ${username})`
+          );
+        });
+      }
     }
     console.log(`[Discogs Index] Total tracks to upsert: ${allTracks.length}`);
-    let index;
-    try {
-      index = await client.getIndex("tracks");
-    } catch {
-      index = await client.createIndex("tracks", { primaryKey: "track_id" });
-    }
+    // Always get or create the index using .index(), which is safe and idempotent
+    const index = client.index("tracks");
 
-    let upserted = [];
+    const upserted: Record<string, any>[] = [];
     for (const [i, track] of allTracks.entries()) {
       if (i % 100 === 0)
         console.log(
           `[Discogs Index] Upserting track ${i + 1}/${allTracks.length}`
         );
-      // Query DB for existing record and merge custom fields before adding to upserted
-      const { rows } = await pool.query(
-        "SELECT * FROM tracks WHERE track_id = $1",
-        [track.track_id]
-      );
-      let merged = { ...track };
-      if (rows.length) {
-        // Merge custom fields from DB
-        for (const field of [
-          "bpm",
-          "key",
-          "notes",
-          "local_tags",
-          "apple_music_url",
-          "local_audio_url",
-        ]) {
-          if (rows[0][field] !== undefined && rows[0][field] !== null) {
-            merged[field] = rows[0][field];
-          }
-        }
-      }
-      // Upsert in DB
       await pool.query(
         `
-        INSERT INTO tracks (
-          track_id, title, artist, album, year, styles, genres, duration, position, discogs_url, album_thumbnail, bpm, key, notes, local_tags, apple_music_url, duration_seconds
-        ) VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17
-        )
-        ON CONFLICT (track_id) DO UPDATE SET
-          title=EXCLUDED.title,
-          artist=EXCLUDED.artist,
-          album=EXCLUDED.album,
-          year=EXCLUDED.year,
-          styles=EXCLUDED.styles,
-          genres=EXCLUDED.genres,
-          duration=EXCLUDED.duration,
-          position=EXCLUDED.position,
-          discogs_url=EXCLUDED.discogs_url,
-          album_thumbnail=EXCLUDED.album_thumbnail,
-          bpm=COALESCE(tracks.bpm, EXCLUDED.bpm),
-          key=COALESCE(tracks.key, EXCLUDED.key),
-          notes=tracks.notes,
-          local_tags=COALESCE(tracks.local_tags, EXCLUDED.local_tags),
-          apple_music_url=tracks.apple_music_url,
-          duration_seconds=tracks.duration_seconds
+      INSERT INTO tracks (
+        track_id, title, artist, album, year, styles, genres, duration, position, discogs_url, album_thumbnail, bpm, key, notes, local_tags, apple_music_url, duration_seconds, username
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18
+      )
+      ON CONFLICT (track_id) DO UPDATE SET
+        username = EXCLUDED.username
       `,
         [
-          merged.track_id,
-          merged.title,
-          merged.artist,
-          merged.album,
-          merged.year,
-          merged.styles,
-          merged.genres,
-          merged.duration,
-          merged.position,
-          merged.discogs_url,
-          merged.album_thumbnail,
-          merged.bpm,
-          merged.key,
-          merged.notes,
-          merged.local_tags,
-          merged.apple_music_url,
-          merged.duration_seconds,
+          track.track_id,
+          track.title,
+          track.artist,
+          track.album,
+          track.year,
+          track.styles,
+          track.genres,
+          track.duration,
+          track.position,
+          track.discogs_url,
+          track.album_thumbnail,
+          track.bpm,
+          track.key,
+          track.notes,
+          track.local_tags,
+          track.apple_music_url,
+          track.duration_seconds,
+          track.username,
         ]
       );
-      upserted.push(merged);
+      upserted.push(track);
     }
 
     await index.updateSearchableAttributes([
@@ -171,7 +153,8 @@ export async function POST() {
       "local_tags",
       "styles",
       "genres",
-      "local_audio_url",
+      "notes",
+      "username",
     ]);
     await index.updateFilterableAttributes([
       "title",
@@ -185,6 +168,7 @@ export async function POST() {
       "year",
       "track_id",
       "local_audio_url",
+      "username",
     ]);
     console.log(
       `[Discogs Index] Adding ${upserted.length} tracks to MeiliSearch index...`
@@ -225,6 +209,7 @@ export async function POST() {
       message: `Upserted and indexed ${upserted.length} tracks from discogs_exports.`,
     });
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    const err = e instanceof Error ? e : new Error(String(e));
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -5,14 +5,23 @@ import fs from 'fs';
 import path from 'path';
 
 const OUTPUT_DIR = path.resolve(process.cwd(), 'discogs_exports');
-const MANIFEST_PATH = path.join(OUTPUT_DIR, 'manifest.json');
+
+function getManifestPath(username) {
+  // Use a different manifest for each username
+  return path.join(OUTPUT_DIR, `manifest_${username}.json`);
+}
 
 const DISCOGS_USER_TOKEN = process.env.DISCOGS_USER_TOKEN;
-const USERNAME = process.env.DISCOGS_USERNAME;
+// Username can be passed as a param or defaults to env
+function getUsernameFromRequest(request) {
+  const url = new URL(request.url);
+  const params = url.searchParams;
+  return params.get('username') || process.env.DISCOGS_USERNAME;
+}
 const FOLDER_ID = process.env.DISCOGS_FOLDER_ID || 0; // 0 means "All" folder
 
-async function getCollectionPage(page, perPage = 100) {
-  const url = `https://api.discogs.com/users/${USERNAME}/collection/folders/${FOLDER_ID}/releases?page=${page}&per_page=${perPage}`;
+async function getCollectionPage(page, perPage = 100, username) {
+  const url = `https://api.discogs.com/users/${username}/collection/folders/${FOLDER_ID}/releases?page=${page}&per_page=${perPage}`;
   const res = await fetch(url, {
     headers: { 'Authorization': `Discogs token=${DISCOGS_USER_TOKEN}` }
   });
@@ -29,25 +38,26 @@ async function getReleaseDetails(releaseId) {
   return res.json();
 }
 
-function loadManifest() {
-  if (fs.existsSync(MANIFEST_PATH)) {
-    const data = fs.readFileSync(MANIFEST_PATH, 'utf-8');
+function loadManifest(manifestPath) {
+  if (fs.existsSync(manifestPath)) {
+    const data = fs.readFileSync(manifestPath, 'utf-8');
     const manifest = JSON.parse(data);
     return manifest.releaseIds || [];
   }
   return [];
 }
 
-function saveManifest(releaseIds) {
+function saveManifest(manifestPath, releaseIds) {
   const manifest = {
     releaseIds: Array.from(new Set(releaseIds)),
     lastSynced: new Date().toISOString(),
   };
-  fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 }
 
 export async function POST(request) {
-  if (!DISCOGS_USER_TOKEN || !USERNAME) {
+  const username = getUsernameFromRequest(request);
+  if (!DISCOGS_USER_TOKEN || !username) {
     return new Response(JSON.stringify({ error: 'Discogs credentials not set in environment' }), { status: 500 });
   }
   if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR);
@@ -58,15 +68,16 @@ export async function POST(request) {
   let newReleases = [];
   let errors = [];
 
-  // Load existing manifest
-  let manifestIds = loadManifest();
-  console.log('[Discogs Sync] Loaded manifest IDs:', manifestIds.length);
+  // Use a manifest per username
+  const manifestPath = getManifestPath(username);
+  let manifestIds = loadManifest(manifestPath);
+  console.log(`[Discogs Sync] Loaded manifest IDs for ${username}:`, manifestIds.length);
 
   try {
     // Step 1: Collect all collection release IDs
     while (true) {
-      console.log(`[Discogs Sync] Fetching collection page ${page}...`);
-      const collectionPage = await getCollectionPage(page, perPage);
+      console.log(`[Discogs Sync] Fetching collection page ${page} for user ${username}...`);
+      const collectionPage = await getCollectionPage(page, perPage, username);
       const releases = collectionPage.releases || [];
       console.log(`[Discogs Sync] Page ${page} - releases found: ${releases.length}`);
       if (releases.length === 0) break;
@@ -93,7 +104,9 @@ export async function POST(request) {
       console.log(`[Discogs Sync] Fetching details for release ID: ${releaseId}`);
       try {
         const details = await getReleaseDetails(releaseId);
-        const filePath = path.join(OUTPUT_DIR, `release_${releaseId}.json`);
+        // Prefix files with username if not default
+        const filePrefix = username === process.env.DISCOGS_USERNAME ? '' : `${username}_`;
+        const filePath = path.join(OUTPUT_DIR, `${filePrefix}release_${releaseId}.json`);
         fs.writeFileSync(filePath, JSON.stringify(details, null, 2));
         newReleases.push(releaseId);
         console.log(`[Discogs Sync] Saved release ID: ${releaseId}`);
@@ -107,8 +120,8 @@ export async function POST(request) {
     }
 
     // Step 4: Update and save manifest
-    saveManifest([...manifestIds, ...newIds]);
-    console.log(`[Discogs Sync] Manifest updated. Total IDs: ${manifestIds.length + newIds.length}`);
+    saveManifest(manifestPath, [...manifestIds, ...newIds]);
+    console.log(`[Discogs Sync] Manifest updated for ${username}. Total IDs: ${manifestIds.length + newIds.length}`);
 
     return new Response(JSON.stringify({
       message: 'Sync complete',

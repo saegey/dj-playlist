@@ -1,54 +1,114 @@
 import { useState, useCallback } from "react";
 import type { Track } from "@/types/track";
 
+
+import { useEffect } from "react";
+import type { MeiliSearch } from "meilisearch";
+
 interface UseSearchResultsOptions {
-  initialQuery?: string;
-  initialResults?: Track[];
-  initialEstimatedResults?: number;
-  initialFilter?: string | null;
-  initialFilterType?: "genre" | "style" | "artist" | null;
+  client: MeiliSearch;
 }
 
-export function useSearchResults({
-  initialQuery = "",
-  initialResults = [],
-  initialEstimatedResults = 0,
-  initialFilter = null,
-  initialFilterType = null,
-}: UseSearchResultsOptions = {}) {
-  const [query, setQuery] = useState(initialQuery);
-  const [results, setResults] = useState<Track[]>(initialResults);
-  const [estimatedResults, setEstimatedResults] = useState(initialEstimatedResults);
-  const [activeFilter, setActiveFilter] = useState<string | null>(initialFilter);
-  const [activeFilterType, setActiveFilterType] = useState<"genre" | "style" | "artist" | null>(initialFilterType);
+export function useSearchResults({ client }: UseSearchResultsOptions) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Track[]>([]);
+  const [estimatedResults, setEstimatedResults] = useState(0);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [activeFilterType, setActiveFilterType] = useState<"genre" | "style" | "artist" | null>(null);
   const [hasMore, setHasMore] = useState(false);
-
-  // Example: playlistCounts could be fetched or passed in
+  const [offset, setOffset] = useState(0);
   const [playlistCounts, setPlaylistCounts] = useState<Record<string, number>>({});
+  const limit = 20;
 
-  // Handlers
-  const onQueryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value);
-    // TODO: trigger search
+  // Helper to fetch playlist counts for a list of track IDs
+  const fetchPlaylistCounts = useCallback(async (trackIds: string[]) => {
+    if (!trackIds || trackIds.length === 0) return;
+    try {
+      const res = await fetch("/api/tracks/playlist_counts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ track_ids: trackIds }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPlaylistCounts((prev) => ({ ...prev, ...data }));
+      }
+    } catch {
+      // Ignore errors for now
+    }
   }, []);
+
+  // Search logic
+  useEffect(() => {
+    if (!query) {
+      (async () => {
+        const index = client.index<Track>("tracks");
+        const stats = await index.getStats();
+        const total = stats.numberOfDocuments || 0;
+        const randomOffset = total > 10 ? Math.floor(Math.random() * (total - 10)) : 0;
+        const res = await index.search("", { limit: 10, offset: randomOffset });
+        setResults(res.hits);
+        setEstimatedResults(total);
+        setOffset(10);
+        setHasMore(total > 10);
+        fetchPlaylistCounts(res.hits.map((t) => t.track_id));
+      })();
+      return;
+    }
+    const search = async () => {
+      const index = client.index<Track>("tracks");
+      const res = await index.search(query, { limit, offset: 0 });
+      setResults(res.hits);
+      setOffset(limit);
+      setHasMore(res.hits.length === limit);
+      setEstimatedResults(res.estimatedTotalHits || 0);
+      fetchPlaylistCounts(res.hits.map((t) => t.track_id));
+    };
+    search();
+  }, [query, fetchPlaylistCounts, client]);
 
   const clearFilter = useCallback(() => {
     setActiveFilter(null);
     setActiveFilterType(null);
-    // TODO: trigger search without filter
-  }, []);
+    setQuery("");
+    setOffset(0);
+    setHasMore(false);
+    (async () => {
+      const index = client.index<Track>("tracks");
+      const stats = await index.getStats();
+      const total = stats.numberOfDocuments || 0;
+      const randomOffset = total > 10 ? Math.floor(Math.random() * (total - 10)) : 0;
+      const res = await index.search("", { limit: 10, offset: randomOffset });
+      setResults(res.hits);
+      setEstimatedResults(total);
+      setOffset(10);
+      setHasMore(total > 10);
+    })();
+  }, [client]);
 
-  const loadMore = useCallback(() => {
-    // TODO: fetch more results and append
-  }, []);
+  const loadMore = useCallback(async () => {
+    const index = client.index<Track>("tracks");
+    let res;
+    if (activeFilter && activeFilterType) {
+      let filter;
+      if (activeFilterType === "genre") filter = [`genres = \"${activeFilter}\"`];
+      else if (activeFilterType === "style") filter = [`styles = \"${activeFilter}\"`];
+      else if (activeFilterType === "artist") filter = [`artist = \"${activeFilter}\"`];
+      res = await index.search("", { filter, limit, offset });
+    } else {
+      res = await index.search(query, { limit, offset });
+    }
+    setResults((prev) => {
+      const newTracks = res.hits.filter((t) => !(t.track_id in playlistCounts));
+      if (newTracks.length > 0) fetchPlaylistCounts(newTracks.map((t) => t.track_id));
+      return [...prev, ...res.hits];
+    });
+    setOffset(offset + limit);
+    setHasMore(res.hits.length === limit);
+  }, [client, activeFilter, activeFilterType, offset, query, playlistCounts, fetchPlaylistCounts]);
 
-  // These should be passed in or handled by parent
-  const addToPlaylist = useCallback((track: Track) => {
-    // TODO: implement add to playlist
-  }, []);
-
-  const handleEditClick = useCallback((track: Track) => {
-    // TODO: implement edit track
+  const onQueryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
   }, []);
 
   return {
@@ -60,15 +120,7 @@ export function useSearchResults({
     clearFilter,
     results,
     playlistCounts,
-    addToPlaylist,
-    handleEditClick,
     hasMore,
     loadMore,
-    setResults,
-    setEstimatedResults,
-    setActiveFilter,
-    setActiveFilterType,
-    setHasMore,
-    setPlaylistCounts,
   };
 }

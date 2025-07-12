@@ -9,4 +9,5 @@ discogs_exports/
 .DS_Store
 tmp/
 my-collection-search/public/audio*
+my-collection-search/dumps/*
 djplaylist_backup_*

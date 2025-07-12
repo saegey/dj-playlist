@@ -4,11 +4,9 @@ import { MeiliSearch } from "meilisearch";
 import {
   Box,
   Flex,
-  Input,
   Text,
   Button,
   useDisclosure,
-  MenuItem,
   Modal,
   ModalOverlay,
   ModalContent,
@@ -20,8 +18,9 @@ import PlaylistViewer from "@/components/PlaylistViewer";
 import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
 
 import dynamic from "next/dynamic";
-import TrackResult from "@/components/TrackResult";
-import { useState, useCallback, useEffect, useMemo, ChangeEvent } from "react";
+import SearchResults from "@/components/SearchResults";
+import { useState, useCallback, useMemo } from "react";
+import { useSearchResults } from "@/hooks/useSearchResults";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import PlaylistManager from "@/components/PlaylistManager";
 
@@ -35,10 +34,30 @@ import { parseDurationToSeconds, formatSeconds } from "@/lib/trackUtils";
 import React from "react";
 
 export default function SearchPage() {
-  const [playlistSidebarMinimized, setPlaylistSidebarMinimized] = useState(false);
+  const [playlistSidebarMinimized, setPlaylistSidebarMinimized] =
+    useState(false);
   const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
-  const [query, setQuery] = useState<string>("");
-  const [results, setResults] = useState<Track[]>([]);
+  // Search results state/logic now handled by useSearchResults
+  const client = useMemo(
+    () =>
+      new MeiliSearch({
+        host: "http://127.0.0.1:7700",
+        apiKey: "masterKey",
+      }),
+    []
+  );
+  const {
+    query,
+    onQueryChange,
+    estimatedResults,
+    activeFilter,
+    activeFilterType,
+    clearFilter,
+    results,
+    playlistCounts,
+    hasMore,
+    loadMore,
+  } = useSearchResults({ client });
 
   const {
     playlists,
@@ -60,43 +79,7 @@ export default function SearchPage() {
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const { onOpen, onClose } = useDisclosure();
 
-  // Filter state
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [activeFilterType, setActiveFilterType] = useState<
-    "genre" | "style" | "artist" | null
-  >(null);
-
-  // Holds playlist counts for current results
-  // Use Record<string, number> for type safety and clarity
-  const [playlistCounts, setPlaylistCounts] = useState<Record<string, number>>(
-    {}
-  );
-
-  // Pagination and search state
-  const [offset, setOffset] = useState<number>(0);
-  const [hasMore, setHasMore] = useState<boolean>(false);
-  const [estimatedResults, setEstimatedResults] = useState<number>(0);
-  const limit = 20;
-
-  // Helper to fetch playlist counts for a list of track IDs
-  const fetchPlaylistCounts = useCallback(async (trackIds: string[]) => {
-    if (!trackIds || trackIds.length === 0) return;
-    try {
-      const res = await fetch("/api/tracks/playlist_counts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ track_ids: trackIds }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPlaylistCounts((prev) => ({ ...prev, ...data }));
-      }
-    } catch (e) {
-      // Ignore errors for now
-    }
-  }, []);
-
-  // Delete handler for dialog
+  // Delete handler for dialog (still local, but can be passed to SearchResults)
   const handleEditClick = (track: Track) => {
     setEditTrack(track);
     onOpen();
@@ -110,119 +93,12 @@ export default function SearchPage() {
     });
     if (res.ok) {
       // Refresh search results after update
-      const index = client.index<Track>("tracks");
-      let refreshed;
-      if (query) {
-        refreshed = await index.search(query, { limit, offset: 0 });
-      } else {
-        const stats = await index.getStats();
-        const total = stats.numberOfDocuments || 0;
-        const randomOffset =
-          total > 10 ? Math.floor(Math.random() * (total - 10)) : 0;
-        refreshed = await index.search("", { limit: 10, offset: randomOffset });
-      }
-      setResults(refreshed.hits);
+      // After saving, just close the modal and let the search hook handle refresh
       setEditTrack(null);
       onClose();
     } else {
       alert("Failed to update track");
     }
-  };
-
-  // Memoize MeiliSearch client
-  const client = useMemo(
-    () =>
-      new MeiliSearch({
-        host: "http://127.0.0.1:7700",
-        apiKey: "masterKey",
-      }),
-    []
-  );
-
-  // Show recommended tracks on page load (random or trending)
-  useEffect(() => {
-    if (!query) {
-      // Show 10 random tracks as recommendations
-      (async () => {
-        const index = client.index<Track>("tracks");
-        // Use a blank query and a random offset for variety
-        const stats = await index.getStats();
-        const total = stats.numberOfDocuments || 0;
-        const randomOffset =
-          total > 10 ? Math.floor(Math.random() * (total - 10)) : 0;
-        const res = await index.search("", { limit: 10, offset: randomOffset });
-        setResults(res.hits);
-        setEstimatedResults(total);
-        setOffset(10);
-        setHasMore(total > 10);
-        // Fetch playlist counts for these tracks
-        fetchPlaylistCounts(res.hits.map((t) => t.track_id));
-      })();
-      return;
-    }
-    const search = async () => {
-      const index = client.index<Track>("tracks");
-      const res = await index.search(query, { limit, offset: 0 });
-      setResults(res.hits);
-      setOffset(limit);
-      setHasMore(res.hits.length === limit);
-      setEstimatedResults(res.estimatedTotalHits || 0);
-      // Fetch playlist counts for these tracks
-      fetchPlaylistCounts(res.hits.map((t) => t.track_id));
-    };
-    search();
-  }, [query, fetchPlaylistCounts, client]);
-
-  // Clear filter
-  const clearFilter = () => {
-    setActiveFilter(null);
-    setActiveFilterType(null);
-    setQuery("");
-    setOffset(0);
-    setHasMore(false);
-    // Show recommendations again
-    (async () => {
-      const index = client.index<Track>("tracks");
-      const stats = await index.getStats();
-      const total = stats.numberOfDocuments || 0;
-      const randomOffset =
-        total > 10 ? Math.floor(Math.random() * (total - 10)) : 0;
-      const res = await index.search("", { limit: 10, offset: randomOffset });
-      setResults(res.hits);
-      setEstimatedResults(total);
-      setOffset(10);
-      setHasMore(total > 10);
-    })();
-  };
-
-  const loadMore = async () => {
-    const index = client.index<Track>("tracks");
-    let res;
-    if (activeFilter && activeFilterType) {
-      let filter;
-      if (activeFilterType === "genre")
-        filter = [`genres = \"${activeFilter}\"`];
-      else if (activeFilterType === "style")
-        filter = [`styles = \"${activeFilter}\"`];
-      else if (activeFilterType === "artist")
-        filter = [`artist = \"${activeFilter}\"`];
-      res = await index.search("", { filter, limit, offset });
-    } else {
-      res = await index.search(query, { limit, offset });
-    }
-    setResults((prev) => {
-      // Fetch playlist counts for new tracks only
-      const newTracks = res.hits.filter((t) => !(t.track_id in playlistCounts));
-      if (newTracks.length > 0)
-        fetchPlaylistCounts(newTracks.map((t) => t.track_id));
-      return [...prev, ...res.hits];
-    });
-    setOffset(offset + limit);
-    setHasMore(res.hits.length === limit);
-  };
-
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value);
   };
 
   // (addToPlaylist and removeFromPlaylist are now only from the hook)
@@ -246,7 +122,13 @@ export default function SearchPage() {
       <Flex p={4} gap={4} direction="row">
         {/* Playlist Management Section */}
         {/* Minimizable PlaylistManager sidebar */}
-        <Box position="relative" width={playlistSidebarMinimized ? "40px" : "300px"} minWidth={playlistSidebarMinimized ? "40px" : "300px"} transition="width 0.2s" mr={2}>
+        <Box
+          position="relative"
+          width={playlistSidebarMinimized ? "40px" : "300px"}
+          minWidth={playlistSidebarMinimized ? "40px" : "300px"}
+          transition="width 0.2s"
+          mr={2}
+        >
           <Button
             aria-label={playlistSidebarMinimized ? "Expand" : "Minimize"}
             size="xs"
@@ -275,68 +157,21 @@ export default function SearchPage() {
             />
           )}
         </Box>
-        <Box width="40%">
-          <Input
-            type="text"
-            placeholder="Search tracks..."
-            value={query}
-            onChange={handleInputChange}
-            width="100%"
-            mb={3}
-          />
-          <Text fontSize="sm" color="gray.500" mb={2}>
-            {estimatedResults.toLocaleString()} results found
-            {activeFilter && activeFilterType && (
-              <>
-                <Text as="span" color="purple.600" ml={2}>
-                  Filtered by{" "}
-                  {activeFilterType.charAt(0).toUpperCase() +
-                    activeFilterType.slice(1)}
-                  : <b>{activeFilter}</b>
-                </Text>
-                <Button
-                  size="xs"
-                  ml={2}
-                  onClick={clearFilter}
-                  colorScheme="gray"
-                  variant="outline"
-                >
-                  Clear Filter
-                </Button>
-              </>
-            )}
-          </Text>
-          {results.map((track) => (
-            <TrackResult
-              key={track.track_id}
-              track={track}
-              allowMinimize={false}
-              playlistCount={playlistCounts[track.track_id]}
-              buttons={[
-                <MenuItem
-                  key="add"
-                  onClick={() => addToPlaylist(track)}
-                  color="#3182ce"
-                >
-                  Add to Playlist
-                </MenuItem>,
-                <MenuItem
-                  key="edit"
-                  onClick={() => handleEditClick(track)}
-                  color="#4A5568"
-                >
-                  Edit Track
-                </MenuItem>,
-              ]}
-            />
-          ))}
-
-          {hasMore && (
-            <Box textAlign="center" mt={4}>
-              <Button onClick={loadMore}>Load More</Button>
-            </Box>
-          )}
-        </Box>
+        {/* Search Results Section */}
+        <SearchResults
+          query={query}
+          onQueryChange={onQueryChange}
+          estimatedResults={estimatedResults}
+          activeFilter={activeFilter}
+          activeFilterType={activeFilterType}
+          clearFilter={clearFilter}
+          results={results}
+          playlistCounts={playlistCounts}
+          addToPlaylist={addToPlaylist}
+          handleEditClick={handleEditClick}
+          hasMore={hasMore}
+          loadMore={loadMore}
+        />
         <Box
           borderWidth="2px"
           borderRadius="lg"
