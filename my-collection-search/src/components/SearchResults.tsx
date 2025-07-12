@@ -1,7 +1,7 @@
 import React from "react";
-import { Box, Input, Text, Button, MenuItem } from "@chakra-ui/react";
+import { Box, Input, Text, Button, MenuItem, Select, HStack } from "@chakra-ui/react";
 import TrackResult from "@/components/TrackResult";
-import type { Track } from "@/types/track";
+import { Track } from "@/types/track";
 
 interface SearchResultsProps {
   query: string;
@@ -16,6 +16,9 @@ interface SearchResultsProps {
   handleEditClick: (track: Track) => void;
   hasMore: boolean;
   loadMore: () => void;
+  usernames?: string[];
+  selectedUsername?: string;
+  onUsernameChange?: (username: string) => void;
 }
 
 const SearchResults: React.FC<SearchResultsProps> = ({
@@ -31,17 +34,35 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   handleEditClick,
   hasMore,
   loadMore,
+  usernames = [],
+  selectedUsername = '',
+  onUsernameChange,
 }) => {
   return (
     <Box width="40%">
-      <Input
-        type="text"
-        placeholder="Search tracks..."
-        value={query}
-        onChange={onQueryChange}
-        width="100%"
-        mb={3}
-      />
+      <HStack mb={3} spacing={3} align="flex-end">
+        <Input
+          type="text"
+          placeholder="Search tracks..."
+          value={query}
+          onChange={onQueryChange}
+          width="100%"
+        />
+        {usernames.length > 0 && onUsernameChange && (
+          <Select
+            value={selectedUsername}
+            onChange={e => onUsernameChange(e.target.value)}
+            width="auto"
+            minW="140px"
+            placeholder="All Users"
+          >
+            {/* <option value="">All Users</option> */}
+            {usernames.map(u => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </Select>
+        )}
+      </HStack>
       <Text fontSize="sm" color="gray.500" mb={2}>
         {estimatedResults.toLocaleString()} results found
         {activeFilter && activeFilterType && (

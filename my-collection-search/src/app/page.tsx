@@ -19,7 +19,7 @@ import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
 
 import dynamic from "next/dynamic";
 import SearchResults from "@/components/SearchResults";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import PlaylistManager from "@/components/PlaylistManager";
@@ -46,6 +46,7 @@ export default function SearchPage() {
       }),
     []
   );
+  const [selectedUsername, setSelectedUsername] = useState<string>("");
   const {
     query,
     onQueryChange,
@@ -57,7 +58,7 @@ export default function SearchPage() {
     playlistCounts,
     hasMore,
     loadMore,
-  } = useSearchResults({ client });
+  } = useSearchResults({ client, username: selectedUsername });
 
   const {
     playlists,
@@ -171,6 +172,12 @@ export default function SearchPage() {
           handleEditClick={handleEditClick}
           hasMore={hasMore}
           loadMore={loadMore}
+          usernames={['saegey', 'Cdsmooth']}
+          selectedUsername={selectedUsername}
+          onUsernameChange={(username) => {
+            setSelectedUsername(username);
+            // Optionally reset query or filters here if desired
+          }}
         />
         <Box
           borderWidth="2px"
