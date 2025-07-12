@@ -47,7 +47,7 @@ import {
 } from "@chakra-ui/react";
 import { FiMoreVertical } from "react-icons/fi";
 import ReactMarkdown from "react-markdown";
-import { Track } from "@/app/page";
+import { Track } from "@/types/track";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -140,6 +140,11 @@ export default function TrackResult({
                 >
                   Youtube
                 </Link>
+              )}
+              {track.username && (
+                <Text fontSize="sm" color="gray.500" ml={2}>
+                  User: {track.username}
+                </Text>
               )}
             </Flex>
           </Box>
@@ -374,6 +379,11 @@ export default function TrackResult({
                 >
                   Youtube
                 </Link>
+              )}
+              {track.username && (
+                <Text fontSize="sm" color="gray.500" ml={2}>
+                  User: {track.username}
+                </Text>
               )}
               {/* Audio player for local file */}
             </Flex>

@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Text, Flex, MenuItem, Icon } from "@chakra-ui/react";
+import { Box, Text, MenuItem, Icon } from "@chakra-ui/react";
 import { FiArrowUp, FiArrowDown, FiEdit, FiTrash2 } from "react-icons/fi";
 import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
@@ -10,7 +10,6 @@ interface PlaylistViewerProps {
   moveTrack: (fromIdx: number, toIdx: number) => void;
   setEditTrack: (track: Track) => void;
   removeFromPlaylist: (trackId: string) => void;
-  totalPlaytimeFormatted: string;
 }
 
 const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
@@ -19,27 +18,8 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
   moveTrack,
   setEditTrack,
   removeFromPlaylist,
-  totalPlaytimeFormatted,
 }) => (
-  <Box
-    borderWidth="2px"
-    borderRadius="lg"
-    p={4}
-    overflowY="auto"
-  >
-    <Flex alignItems="center" justifyContent="space-between" mb={3}>
-      <Box>
-        <Text fontSize="xl" fontWeight="bold">
-          Playlist ({playlist.length})
-        </Text>
-        <Text fontSize="sm" color="gray.500">
-          Total Playtime: {totalPlaytimeFormatted}
-        </Text>
-      </Box>
-      <Flex gap={2} alignItems="center">
-        {/* Save, Export, Clear buttons should be rendered by parent */}
-      </Flex>
-    </Flex>
+  <Box overflowY="auto">
     {playlist.length === 0 ? (
       <Text color="gray.500">No tracks in playlist yet.</Text>
     ) : (

@@ -25,4 +25,5 @@ export type Track = {
   notes?: string;
   local_audio_url?: string;
   star_rating?: number;
+  username?: string; // Username of the user who added this track
 };

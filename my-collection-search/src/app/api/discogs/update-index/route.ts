@@ -52,10 +52,21 @@ export async function POST() {
         console.log(
           `[Discogs Index] Processing release file: ${releaseFile} for user: ${username}`
         );
-        const releasePath = path.join(
+        // Support username-prefixed files for friends' collections
+        let releasePath = path.join(
           DISCOGS_EXPORTS_DIR,
           `release_${releaseFile}.json`
         );
+        if (!fs.existsSync(releasePath) && username && process.env.DISCOGS_USERNAME && username !== process.env.DISCOGS_USERNAME) {
+          // Try username-prefixed file if not the main user
+          const altPath = path.join(
+            DISCOGS_EXPORTS_DIR,
+            `${username}_release_${releaseFile}.json`
+          );
+          if (fs.existsSync(altPath)) {
+            releasePath = altPath;
+          }
+        }
         console.log(`[Discogs Index] Checking release path: ${releasePath}`);
         if (!fs.existsSync(releasePath)) continue;
         const album = JSON.parse(fs.readFileSync(releasePath, "utf-8"));

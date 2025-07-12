@@ -1,6 +1,14 @@
 "use client";
 
 import { useState } from 'react';
+type Friend = {
+  username: string;
+};
+
+// You could load this from a config, DB, or user profile in a real app
+const DEFAULT_FRIENDS: Friend[] = [
+  // Example: { username: 'friend1' },
+];
 import {
   Box,
   Button,
@@ -31,16 +39,19 @@ type SyncResult = {
 type IndexResult = { message?: string };
 
 export default function DiscogsSyncPage() {
+  const [friends, setFriends] = useState<Friend[]>(DEFAULT_FRIENDS);
+  const [newFriend, setNewFriend] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState<SyncResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSync = async () => {
+  const handleSync = async (username?: string) => {
     setSyncing(true);
     setResult(null);
     setError(null);
     try {
-      const res = await fetch('/api/discogs', { method: 'POST' });
+      const url = username ? `/api/discogs?username=${encodeURIComponent(username)}` : '/api/discogs';
+      const res = await fetch(url, { method: 'POST' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Unknown error');
       setResult(data);
@@ -49,6 +60,17 @@ export default function DiscogsSyncPage() {
     } finally {
       setSyncing(false);
     }
+  };
+  const handleAddFriend = () => {
+    const username = newFriend.trim();
+    if (username && !friends.some(f => f.username === username)) {
+      setFriends([...friends, { username }]);
+      setNewFriend('');
+    }
+  };
+
+  const handleRemoveFriend = (username: string) => {
+    setFriends(friends.filter(f => f.username !== username));
   };
 
   const [indexing, setIndexing] = useState(false);
@@ -96,15 +118,15 @@ export default function DiscogsSyncPage() {
 
   return (
     <Box maxW="700px" mx="auto" p={8}>
-      <Heading mb={6} size="lg">Discogs Collection Sync</Heading>
+      <Heading mb={6} size="lg">Vinyl Playlist Maker Pro Edition Settings</Heading>
       <HStack spacing={4} mb={6}>
         <Button
           colorScheme="blue"
-          onClick={handleSync}
+          onClick={() => handleSync()}
           isLoading={syncing}
           isDisabled={syncing || indexing}
         >
-          Sync Now
+          Sync My Collection
         </Button>
         <Button
           colorScheme="purple"
@@ -123,6 +145,38 @@ export default function DiscogsSyncPage() {
           Backup Database
         </Button>
       </HStack>
+
+      <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md" bg={cardBg}>
+        <Heading size="md" mb={2}>Friends' Discogs Collections</Heading>
+        <Text mb={2} color="gray.500">
+          Add friends' Discogs usernames to sync or browse their collections for playlist collaboration or borrowing albums.
+        </Text>
+        <HStack mb={4}>
+          <input
+            type="text"
+            placeholder="Add friend's username"
+            value={newFriend}
+            onChange={e => setNewFriend(e.target.value)}
+            style={{ padding: 8, borderRadius: 4, border: '1px solid #ccc', flex: 1 }}
+            onKeyDown={e => { if (e.key === 'Enter') handleAddFriend(); }}
+          />
+          <Button colorScheme="green" onClick={handleAddFriend} isDisabled={!newFriend.trim()}>Add</Button>
+        </HStack>
+        <VStack align="stretch" spacing={2}>
+          {friends.length === 0 && <Text color="gray.400">No friends added yet.</Text>}
+          {friends.map(friend => (
+            <HStack key={friend.username} spacing={3}>
+              <Text fontWeight="medium">{friend.username}</Text>
+              <Button size="xs" colorScheme="blue" onClick={() => handleSync(friend.username)} isLoading={syncing} isDisabled={syncing || indexing}>
+                Sync
+              </Button>
+              <Button size="xs" colorScheme="red" variant="outline" onClick={() => handleRemoveFriend(friend.username)}>
+                Remove
+              </Button>
+            </HStack>
+          ))}
+        </VStack>
+      </Box>
 
       {indexError && (
         <Alert status="error" mb={4}>
