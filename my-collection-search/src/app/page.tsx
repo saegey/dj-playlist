@@ -32,6 +32,7 @@ import type { Track } from "@/types/track";
 
 import { parseDurationToSeconds, formatSeconds } from "@/lib/trackUtils";
 import React from "react";
+import TopMenuBar from "@/components/MenuBar";
 
 export default function SearchPage() {
   const [playlistSidebarMinimized, setPlaylistSidebarMinimized] =
@@ -120,6 +121,7 @@ export default function SearchPage() {
 
   return (
     <>
+      <TopMenuBar current="/" />
       <Flex p={4} gap={4} direction="row">
         {/* Playlist Management Section */}
         {/* Minimizable PlaylistManager sidebar */}
@@ -172,7 +174,7 @@ export default function SearchPage() {
           handleEditClick={handleEditClick}
           hasMore={hasMore}
           loadMore={loadMore}
-          usernames={['saegey', 'Cdsmooth']}
+          usernames={["saegey", "Cdsmooth"]}
           selectedUsername={selectedUsername}
           onUsernameChange={(username) => {
             setSelectedUsername(username);

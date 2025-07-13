@@ -111,9 +111,9 @@ const PlaylistManager: React.FC<PlaylistManagerProps> = ({
 
   return (
     <Box minWidth="220px" mr={4}>
-      <Text fontSize={"lg"} fontWeight="bold" mb={4}>
+      {/* <Text fontSize={"lg"} fontWeight="bold" mb={4}>
         Playlist Maker Pro Edition
-      </Text>
+      </Text> */}
       <Flex mb={2} gap={2}>
         <Input
           size="sm"

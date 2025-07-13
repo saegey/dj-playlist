@@ -18,6 +18,7 @@ import {
   Progress,
 } from "@chakra-ui/react";
 import { Track } from "../../types/track";
+import TopMenuBar from "@/components/MenuBar";
 
 interface BackfillTrack extends Track {
   status?: "pending" | "analyzing" | "success" | "error";
@@ -29,6 +30,7 @@ export default function BackfillAudioPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [usernames, setUsernames] = useState<string[]>([]);
   const [selectedUsername, setSelectedUsername] = useState<string>("");
+  const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -39,7 +41,8 @@ export default function BackfillAudioPage() {
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setUsernames(data);
-        else if (data && Array.isArray(data.usernames)) setUsernames(data.usernames);
+        else if (data && Array.isArray(data.usernames))
+          setUsernames(data.usernames);
       });
   }, []);
 
@@ -47,7 +50,12 @@ export default function BackfillAudioPage() {
   useEffect(() => {
     setLoading(true);
     let url = "/api/tracks/backfill-audio";
-    if (selectedUsername) url += `?username=${encodeURIComponent(selectedUsername)}`;
+    const params = [];
+    if (selectedUsername)
+      params.push(`username=${encodeURIComponent(selectedUsername)}`);
+    if (artistSearch.trim())
+      params.push(`artist=${encodeURIComponent(artistSearch.trim())}`);
+    if (params.length) url += `?${params.join("&")}`;
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
@@ -55,7 +63,7 @@ export default function BackfillAudioPage() {
         setSelected(new Set());
         setLoading(false);
       });
-  }, [selectedUsername]);
+  }, [selectedUsername, artistSearch]);
 
   const toggleSelect = (trackId: string) => {
     setSelected((prev) => {
@@ -130,93 +138,125 @@ export default function BackfillAudioPage() {
   };
 
   return (
-    <Box p={6}>
-      <Text fontSize="2xl" fontWeight="bold" mb={4}>
-        Backfill Audio Analysis
-      </Text>
-      <HStack mb={4}>
-        <Select
-          placeholder="All Users"
-          value={selectedUsername}
-          onChange={(e) => setSelectedUsername(e.target.value)}
-          minW="160px"
-        >
-          {usernames.map((u) => (
-            <option key={u} value={u}>
-              {u}
-            </option>
-          ))}
-        </Select>
-        <Button onClick={selectAll} size="sm">Select All</Button>
-        <Button onClick={deselectAll} size="sm">Deselect All</Button>
-        <Button
-          colorScheme="teal"
-          onClick={handleAnalyzeSelected}
-          isDisabled={selected.size === 0 || analyzing}
-          isLoading={analyzing}
-        >
-          Analyze Selected
-        </Button>
-        {analyzing && <Progress value={progress} w="120px" />}
-      </HStack>
-      {loading ? (
-        <Spinner />
-      ) : tracks.length === 0 ? (
-        <Text color="gray.500">No tracks to backfill.</Text>
-      ) : (
-        <Table size="sm" variant="simple">
-          <Thead>
-            <Tr>
-              <Th></Th>
-              <Th>Title</Th>
-              <Th>Artist</Th>
-              <Th>Apple Music</Th>
-              <Th>YouTube</Th>
-              <Th>Status</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {tracks.map((track) => (
-              <Tr key={track.track_id}>
-                <Td>
-                  <Checkbox
-                    isChecked={selected.has(track.track_id)}
-                    onChange={() => toggleSelect(track.track_id)}
-                    isDisabled={analyzing}
-                  />
-                </Td>
-                <Td>{track.title}</Td>
-                <Td>{track.artist}</Td>
-                <Td>
-                  {track.apple_music_url ? (
-                    <a href={track.apple_music_url} target="_blank" rel="noopener noreferrer">Apple</a>
-                  ) : (
-                    <Text color="gray.400">—</Text>
-                  )}
-                </Td>
-                <Td>
-                  {track.youtube_url ? (
-                    <a href={track.youtube_url} target="_blank" rel="noopener noreferrer">YouTube</a>
-                  ) : (
-                    <Text color="gray.400">—</Text>
-                  )}
-                </Td>
-                <Td>
-                  {track.status === "analyzing" ? (
-                    <Spinner size="xs" />
-                  ) : track.status === "success" ? (
-                    <Text color="green.500">✓</Text>
-                  ) : track.status === "error" ? (
-                    <Text color="red.500">{track.errorMsg || "Error"}</Text>
-                  ) : (
-                    <Text color="gray.400">—</Text>
-                  )}
-                </Td>
-              </Tr>
+    <>
+      <TopMenuBar current="/backfill-audio" />
+      <Box p={6}>
+        <HStack mb={4}>
+          <Select
+            placeholder="All Users"
+            value={selectedUsername}
+            onChange={(e) => setSelectedUsername(e.target.value)}
+            minW="160px"
+          >
+            {usernames.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
             ))}
-          </Tbody>
-        </Table>
-      )}
-    </Box>
+          </Select>
+          <Box minW="320px">
+            <input
+              type="text"
+              placeholder="Search by artist name..."
+              value={artistSearch}
+              onChange={(e) => setArtistSearch(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "4px 8px",
+                borderRadius: 4,
+                border: "1px solid #ccc",
+              }}
+              disabled={analyzing}
+            />
+          </Box>
+          <Button onClick={selectAll} size="lg">
+            <Text fontSize={"sm"}>Select All</Text>
+          </Button>
+          <Button onClick={deselectAll} size="lg">
+            <Text fontSize={"sm"}>Deselect All</Text>
+          </Button>
+          <Button
+            colorScheme="teal"
+            onClick={handleAnalyzeSelected}
+            isDisabled={selected.size === 0 || analyzing}
+            isLoading={analyzing}
+            size={"lg"}
+          >
+            <Text fontSize={"sm"}>Analyze</Text>
+          </Button>
+          {analyzing && <Progress value={progress} w="120px" />}
+        </HStack>
+        {loading ? (
+          <Spinner />
+        ) : tracks.length === 0 ? (
+          <Text color="gray.500">No tracks to backfill.</Text>
+        ) : (
+          <Table size="sm" variant="simple">
+            <Thead>
+              <Tr>
+                <Th></Th>
+                <Th>Title</Th>
+                <Th>Artist</Th>
+                <Th>Apple Music</Th>
+                <Th>YouTube</Th>
+                <Th>Status</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {tracks.map((track) => (
+                <Tr key={track.track_id}>
+                  <Td>
+                    <Checkbox
+                      isChecked={selected.has(track.track_id)}
+                      onChange={() => toggleSelect(track.track_id)}
+                      isDisabled={analyzing}
+                    />
+                  </Td>
+                  <Td>{track.title}</Td>
+                  <Td>{track.artist}</Td>
+                  <Td>
+                    {track.apple_music_url ? (
+                      <a
+                        href={track.apple_music_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Apple
+                      </a>
+                    ) : (
+                      <Text color="gray.400">—</Text>
+                    )}
+                  </Td>
+                  <Td>
+                    {track.youtube_url ? (
+                      <a
+                        href={track.youtube_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        YouTube
+                      </a>
+                    ) : (
+                      <Text color="gray.400">—</Text>
+                    )}
+                  </Td>
+                  <Td>
+                    {track.status === "analyzing" ? (
+                      <Spinner size="xs" />
+                    ) : track.status === "success" ? (
+                      <Text color="green.500">✓</Text>
+                    ) : track.status === "error" ? (
+                      <Text color="red.500">{track.errorMsg || "Error"}</Text>
+                    ) : (
+                      <Text color="gray.400">—</Text>
+                    )}
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        )}
+      </Box>
+    </>
   );
 }

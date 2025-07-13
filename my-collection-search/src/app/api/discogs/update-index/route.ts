@@ -186,6 +186,9 @@ export async function POST() {
       "track_id",
       "local_audio_url",
       "username",
+      "notes",
+      "apple_music_url",
+      "youtube_url",
     ]);
     console.log(
       `[Discogs Index] Adding ${upserted.length} tracks to MeiliSearch index...`
@@ -211,7 +214,15 @@ export async function POST() {
       "utf-8"
     );
 
-    const { taskUid } = await index.addDocuments(upserted);
+    const { taskUid } = await index.addDocuments(
+      upserted.map((t) => ({
+        ...t,
+        // Ensure all fields are present, even if null
+        notes: t.notes ? t.notes : null,
+        local_tags: t.local_tags ? t.local_tags : [],
+      }))
+    );
+
     console.log(
       `🚀 Added ${upserted.length} tracks to MeiliSearch (task UID: ${taskUid})`
     );

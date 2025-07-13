@@ -24,6 +24,7 @@ import {
 } from "@chakra-ui/modal";
 import TrackResult from "../../components/TrackResult";
 import dynamic from "next/dynamic";
+import TopMenuBar from "@/components/MenuBar";
 
 interface AppleMusicResult {
   id: string;
@@ -133,7 +134,11 @@ export default function MissingAppleMusicPage() {
       }
     };
     setAppleResults({});
-    if (tracks.length > 0 && tracks[currentIndex] && tracks[currentIndex].track_id) {
+    if (
+      tracks.length > 0 &&
+      tracks[currentIndex] &&
+      tracks[currentIndex].track_id
+    ) {
       searchAppleMusic(tracks[currentIndex]);
     }
   }, [tracks, currentIndex]);
@@ -170,69 +175,69 @@ export default function MissingAppleMusicPage() {
     }
   };
   return (
-    <Box p={6}>
-      <Text fontSize="2xl" fontWeight="bold" mb={2}>
-        Tracks Missing Apple Music URL
-      </Text>
-      <HStack mb={4} spacing={4} align="flex-end">
-        <Select
-          placeholder="All Users"
-          value={selectedUsername}
-          onChange={(e) => setSelectedUsername(e.target.value)}
-          minW="160px"
-        >
-          {usernames.map((u) => (
-            <option key={u} value={u}>
-              {u}
-            </option>
-          ))}
-        </Select>
-      </HStack>
-      {typeof total === "number" && (
-        <Text fontSize="md" color="gray.600" mb={4}>
-          {total} track{total === 1 ? "" : "s"} missing Apple Music URL
-        </Text>
-      )}
-      {loading ? (
-        <Spinner />
-      ) : tracks.length === 0 ? (
-        <Text color="gray.500">All tracks have Apple Music URLs!</Text>
-      ) : (
-        <SingleTrackUI
-          tracks={tracks}
-          currentIndex={currentIndex}
-          appleResults={appleResults}
-          overrideTrackId={overrideTrackId}
-          overrideQuery={overrideQuery}
-          setOverrideTrackId={setOverrideTrackId}
-          setOverrideQuery={setOverrideQuery}
-          handleEditClick={handleEditClick}
-          handleSaveTrack={handleSaveTrack}
-          setCurrentIndex={setCurrentIndex}
-        />
-      )}
+    <>
+      <TopMenuBar current="/missing-apple-music" />
+      <Box p={6}>
+        <HStack mb={4} spacing={4} align="flex-end">
+          <Select
+            placeholder="All Users"
+            value={selectedUsername}
+            onChange={(e) => setSelectedUsername(e.target.value)}
+            minW="160px"
+          >
+            {usernames.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </Select>
+        </HStack>
+        {typeof total === "number" && (
+          <Text fontSize="md" color="gray.600" mb={4}>
+            {total} track{total === 1 ? "" : "s"} missing a music URL (Apple Music, SoundCloud, YouTube)
+          </Text>
+        )}
+        {loading ? (
+          <Spinner />
+        ) : tracks.length === 0 ? (
+          <Text color="gray.500">All tracks have Apple Music URLs!</Text>
+        ) : (
+          <SingleTrackUI
+            tracks={tracks}
+            currentIndex={currentIndex}
+            appleResults={appleResults}
+            overrideTrackId={overrideTrackId}
+            overrideQuery={overrideQuery}
+            setOverrideTrackId={setOverrideTrackId}
+            setOverrideQuery={setOverrideQuery}
+            handleEditClick={handleEditClick}
+            handleSaveTrack={handleSaveTrack}
+            setCurrentIndex={setCurrentIndex}
+          />
+        )}
 
-      <Modal
-        isOpen={!!editTrack && isOpen}
-        onClose={() => {
-          setEditTrack(null);
-          onClose();
-        }}
-        isCentered
-        size="xl"
-      >
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Edit Track</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {editTrack && (
-              <TrackEditForm track={editTrack} onSave={handleSaveTrack} />
-            )}
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-    </Box>
+        <Modal
+          isOpen={!!editTrack && isOpen}
+          onClose={() => {
+            setEditTrack(null);
+            onClose();
+          }}
+          isCentered
+          size="xl"
+        >
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Edit Track</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              {editTrack && (
+                <TrackEditForm track={editTrack} onSave={handleSaveTrack} />
+              )}
+            </ModalBody>
+          </ModalContent>
+        </Modal>
+      </Box>
+    </>
   );
 }
 
@@ -264,9 +269,10 @@ function SingleTrackUI({
   handleSaveTrack,
   setCurrentIndex,
 }: SingleTrackUIProps) {
-
   const track = tracks[currentIndex];
-  const [overrideResults, setOverrideResults] = React.useState<AppleMusicResult[] | null>(null);
+  const [overrideResults, setOverrideResults] = React.useState<
+    AppleMusicResult[] | null
+  >(null);
   // Reset overrideResults when override mode or track changes
   React.useEffect(() => {
     setOverrideResults(null);
@@ -297,22 +303,33 @@ function SingleTrackUI({
         <Box minW="180px" textAlign="center">
           {isOverride ? (
             overrideResults === null ? (
-              <Text color="gray.500" fontSize="sm">Enter a query and search</Text>
+              <Text color="gray.500" fontSize="sm">
+                Enter a query and search
+              </Text>
             ) : overrideResults.length === 0 ? (
-              <Text color="red.500" fontSize="sm">No match</Text>
+              <Text color="red.500" fontSize="sm">
+                No match
+              </Text>
             ) : (
               <Box>
                 <Image
-                  src={overrideResults[0].artwork?.replace("{w}x{h}bb", "200x200bb")}
+                  src={overrideResults[0].artwork?.replace(
+                    "{w}x{h}bb",
+                    "200x200bb"
+                  )}
                   alt={overrideResults[0].title}
                   boxSize="80px"
                   borderRadius="md"
                   mx="auto"
                   mb={1}
                 />
-                <Text fontWeight="bold" fontSize="sm">{overrideResults[0].title}</Text>
+                <Text fontWeight="bold" fontSize="sm">
+                  {overrideResults[0].title}
+                </Text>
                 <Text fontSize="xs">{overrideResults[0].artist}</Text>
-                <Text fontSize="xs" color="gray.500">{overrideResults[0].album}</Text>
+                <Text fontSize="xs" color="gray.500">
+                  {overrideResults[0].album}
+                </Text>
                 <Button
                   colorScheme="green"
                   size="xs"
@@ -332,7 +349,9 @@ function SingleTrackUI({
           ) : apple === undefined ? (
             <Spinner size="sm" />
           ) : apple === null ? (
-            <Text color="red.500" fontSize="sm">No match</Text>
+            <Text color="red.500" fontSize="sm">
+              No match
+            </Text>
           ) : (
             <Box>
               <Image
@@ -343,9 +362,13 @@ function SingleTrackUI({
                 mx="auto"
                 mb={1}
               />
-              <Text fontWeight="bold" fontSize="sm">{apple.title}</Text>
+              <Text fontWeight="bold" fontSize="sm">
+                {apple.title}
+              </Text>
               <Text fontSize="xs">{apple.artist}</Text>
-              <Text fontSize="xs" color="gray.500">{apple.album}</Text>
+              <Text fontSize="xs" color="gray.500">
+                {apple.album}
+              </Text>
               <Button
                 colorScheme="green"
                 size="xs"
@@ -398,7 +421,13 @@ function SingleTrackUI({
                 });
                 if (res.ok) {
                   const data = await res.json();
-                  setOverrideResults(Array.isArray(data.results) ? data.results : data.results ? [data.results[0]] : []);
+                  setOverrideResults(
+                    Array.isArray(data.results)
+                      ? data.results
+                      : data.results
+                      ? [data.results[0]]
+                      : []
+                  );
                 } else {
                   setOverrideResults([]);
                 }
