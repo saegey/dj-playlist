@@ -1,5 +1,6 @@
 export type Track = {
   track_id: string;
+  isrc?: string;
   title: string;
   artist: string;
   album: string;

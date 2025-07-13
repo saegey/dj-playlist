@@ -17,6 +17,7 @@ import {
   Image,
   Flex,
 } from "@chakra-ui/react";
+import { Track } from "@/types/track";
 
 // Labeled input for text/number fields
 function LabeledInput({
@@ -47,7 +48,6 @@ function LabeledTextarea({
     </Box>
   );
 }
-import { Track } from "@/app/page";
 
 export default function TrackEditForm({
   track,
@@ -280,7 +280,9 @@ export default function TrackEditForm({
           colorScheme="teal"
           isLoading={analyzing}
           onClick={handleAnalyzeAudio}
-          isDisabled={!form.apple_music_url && !form.youtube_url && !form.soundcloud_url}
+          isDisabled={
+            !form.apple_music_url && !form.youtube_url && !form.soundcloud_url
+          }
           title={
             form.apple_music_url
               ? "Analyze audio features from Apple Music"

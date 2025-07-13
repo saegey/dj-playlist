@@ -1,37 +1,6 @@
 "use client";
 
-import { useState as useLocalState } from "react";
-// ExpandableMarkdown component for markdown notes with expand/collapse
-interface ExpandableMarkdownProps {
-  text: string;
-  maxLength?: number;
-}
 
-function ExpandableMarkdown({
-  text,
-  maxLength = 100,
-}: ExpandableMarkdownProps) {
-  const [expanded, setExpanded] = useLocalState(false);
-  const isLong = text.length > maxLength;
-  const displayText =
-    !expanded && isLong ? text.slice(0, maxLength) + "..." : text;
-  return (
-    <Box>
-      <ReactMarkdown>{displayText}</ReactMarkdown>
-      {isLong && (
-        <Button
-          size="xs"
-          variant="link"
-          colorScheme="blue"
-          onClick={() => setExpanded((e) => !e)}
-          mt={1}
-        >
-          {expanded ? "Show less" : "Show more"}
-        </Button>
-      )}
-    </Box>
-  );
-}
 import {
   Box,
   Flex,
@@ -48,6 +17,8 @@ import {
 import { FiMoreVertical } from "react-icons/fi";
 import ReactMarkdown from "react-markdown";
 import { Track } from "@/types/track";
+import { useState } from "react";
+import ExpandableMarkdown from "./ExpandableMarkdown";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -79,7 +50,7 @@ export default function TrackResult({
   footer,
   playlistCount,
 }: TrackResultProps) {
-  const [expanded, setExpanded] = useLocalState(false);
+  const [expanded, setExpanded] = useState(false);
   if (minimized && !expanded) {
     return (
       <Box borderWidth="1px" borderRadius="md" p={2} mb={2} bg="gray.50">

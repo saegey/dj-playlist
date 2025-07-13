@@ -123,6 +123,7 @@ export async function POST() {
         console.log(
           `[Discogs Index] Upserting track ${i + 1}/${allTracks.length}`
         );
+      // Upsert track, but only update username on conflict
       await pool.query(
         `
       INSERT INTO tracks (
@@ -132,6 +133,7 @@ export async function POST() {
       )
       ON CONFLICT (track_id) DO UPDATE SET
         username = EXCLUDED.username
+      RETURNING *
       `,
         [
           track.track_id,
@@ -154,7 +156,11 @@ export async function POST() {
           track.username,
         ]
       );
-      upserted.push(track);
+      // Fetch the full row from the DB to get all fields (including custom fields)
+      const { rows } = await pool.query('SELECT * FROM tracks WHERE track_id = $1', [track.track_id]);
+      if (rows && rows[0]) {
+        upserted.push(rows[0]);
+      }
     }
 
     await index.updateSearchableAttributes([

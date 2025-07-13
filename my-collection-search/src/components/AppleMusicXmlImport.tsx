@@ -14,6 +14,7 @@ import {
   ModalCloseButton,
   Flex,
 } from "@chakra-ui/react";
+import { MeiliSearch } from "meilisearch";
 import { useState } from "react";
 
 type ImportedTrack = {
@@ -27,7 +28,7 @@ type MatchedTrack = Track | null;
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  client: any;
+  client: MeiliSearch;
   fetchPlaylists: () => void;
 }
 
@@ -235,9 +236,7 @@ export default function AppleMusicXmlImport({
               >
                 Parse Tracks
               </Button>
-              {xmlImportLoading && (
-                <Text fontSize="xs">Parsing XML...</Text>
-              )}
+              {xmlImportLoading && <Text fontSize="xs">Parsing XML...</Text>}
               {xmlImportError && (
                 <Text color="red.500" fontSize="xs">
                   {xmlImportError}
@@ -310,7 +309,8 @@ export default function AppleMusicXmlImport({
           {xmlImportStep === "review" && (
             <Box>
               <Text mb={2} fontSize="sm">
-                Review and confirm matched tracks. You can search for a better match if needed.
+                Review and confirm matched tracks. You can search for a better
+                match if needed.
               </Text>
               <Box
                 maxHeight="400px"
@@ -330,9 +330,7 @@ export default function AppleMusicXmlImport({
                   >
                     <Box flex={2} fontSize="xs">
                       <b>{imp.name}</b>{" "}
-                      <span style={{ color: "#888" }}>
-                        by {imp.artist}
-                      </span>
+                      <span style={{ color: "#888" }}>by {imp.artist}</span>
                       <br />
                       <span style={{ color: "#888" }}>{imp.album}</span>
                     </Box>
@@ -393,12 +391,7 @@ export default function AppleMusicXmlImport({
               >
                 Save Playlist
               </Button>
-              <Button
-                size="sm"
-                ml={2}
-                mt={2}
-                onClick={onClose}
-              >
+              <Button size="sm" ml={2} mt={2} onClick={onClose}>
                 Cancel
               </Button>
               {xmlImportError && (
