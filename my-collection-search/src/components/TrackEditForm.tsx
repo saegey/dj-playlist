@@ -114,12 +114,8 @@ export default function TrackEditForm({
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any | null>(null);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
-  // Analyze Audio handler
+
   const handleAnalyzeAudio = async () => {
-    // if (!form.apple_music_url) {
-    //   alert("Apple Music URL is required for analysis.");
-    //   return;
-    // }
     setAnalyzing(true);
     setAnalysisResult(null);
     try {
@@ -146,9 +142,7 @@ export default function TrackEditForm({
           mood_sad: data.mood_sad || prev.mood_sad,
           mood_relaxed: data.mood_relaxed || prev.mood_relaxed,
           mood_aggressive: data.mood_aggressive || prev.mood_aggressive,
-          // Add more fields if desired
         }));
-        // setShowAnalysisModal(true);
       } else {
         const err = await res.json();
         alert("Analysis failed: " + (err.error || "Unknown error"));
