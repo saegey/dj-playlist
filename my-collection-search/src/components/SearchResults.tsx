@@ -1,5 +1,14 @@
 import React from "react";
-import { Box, Input, Text, Button, MenuItem, Select, HStack } from "@chakra-ui/react";
+import {
+  Box,
+  Input,
+  Text,
+  Button,
+  Portal,
+  Select,
+  createListCollection,
+  Menu,
+} from "@chakra-ui/react";
 import TrackResult from "@/components/TrackResult";
 import { Track } from "@/types/track";
 
@@ -35,53 +44,82 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   hasMore,
   loadMore,
   usernames = [],
-  selectedUsername = '',
+  selectedUsername = "",
   onUsernameChange,
 }) => {
+  const usernameCollection = createListCollection({
+    items: usernames.map((u) => ({ label: u, value: u })),
+  });
+
   return (
     <Box width="40%">
-      <HStack mb={3} spacing={3} align="flex-end">
+      <Box display="flex" gap={3} mb={3} alignItems="flex-end">
         <Input
-          type="text"
           placeholder="Search tracks..."
           value={query}
           onChange={onQueryChange}
-          width="100%"
+          flex="1"
         />
         {usernames.length > 0 && onUsernameChange && (
-          <Select
-            value={selectedUsername}
-            onChange={e => onUsernameChange(e.target.value)}
+          <Select.Root
+            collection={usernameCollection}
+            value={selectedUsername ? [selectedUsername] : []}
+            onValueChange={(vals) =>
+              onUsernameChange(vals.length ? vals[0] : "")
+            }
+            placeholder="All Users"
+            size="md"
             width="auto"
             minW="140px"
-            placeholder="All Users"
           >
-            {/* <option value="">All Users</option> */}
-            {usernames.map(u => (
-              <option key={u} value={u}>{u}</option>
-            ))}
-          </Select>
+            <Select.HiddenSelect />
+            <Select.Control>
+              <Select.Trigger />
+              <Select.Indicator />
+            </Select.Control>
+            <Portal>
+              <Select.Positioner>
+                <Select.Content>
+                  {usernames.map((u) => (
+                    <Select.Item
+                      item={{ label: u, value: u }}
+                      key={u}
+                      value={u}
+                    >
+                      {u}
+                      <Select.ItemIndicator />
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Positioner>
+            </Portal>
+          </Select.Root>
         )}
-      </HStack>
+      </Box>
+
       <Text fontSize="sm" color="gray.500" mb={2}>
         {estimatedResults.toLocaleString()} results found
         {activeFilter && activeFilterType && (
           <>
             <Text as="span" color="purple.600" ml={2}>
-              Filtered by {activeFilterType.charAt(0).toUpperCase() + activeFilterType.slice(1)}: <b>{activeFilter}</b>
+              Filtered by{" "}
+              {activeFilterType.charAt(0).toUpperCase() +
+                activeFilterType.slice(1)}
+              : <b>{activeFilter}</b>
             </Text>
             <Button
               size="xs"
               ml={2}
-              onClick={clearFilter}
-              colorScheme="gray"
               variant="outline"
+              colorScheme="gray"
+              onClick={clearFilter}
             >
               Clear Filter
             </Button>
           </>
         )}
       </Text>
+
       {results.map((track) => (
         <TrackResult
           key={track.track_id}
@@ -89,26 +127,40 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           allowMinimize={false}
           playlistCount={playlistCounts[track.track_id]}
           buttons={[
-            <MenuItem
-              key="add"
-              onClick={() => addToPlaylist(track)}
-              color="#3182ce"
-            >
-              Add to Playlist
-            </MenuItem>,
-            <MenuItem
-              key="edit"
-              onClick={() => handleEditClick(track)}
-              color="#4A5568"
-            >
-              Edit Track
-            </MenuItem>,
+            <Menu.Root key="menu">
+              <Menu.Trigger asChild>
+                <Button size="xs" colorScheme="blue">
+                  Actions
+                </Button>
+              </Menu.Trigger>
+              <Portal>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    <Menu.Item
+                      onSelect={() => addToPlaylist(track)}
+                      value="add"
+                    >
+                      Add to Playlist
+                    </Menu.Item>
+                    <Menu.Item
+                      onSelect={() => handleEditClick(track)}
+                      value="edit"
+                    >
+                      Edit Track
+                    </Menu.Item>
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Portal>
+            </Menu.Root>,
           ]}
         />
       ))}
+
       {hasMore && (
         <Box textAlign="center" mt={4}>
-          <Button onClick={loadMore}>Load More</Button>
+          <Button onClick={loadMore} colorScheme="purple">
+            Load More
+          </Button>
         </Box>
       )}
     </Box>

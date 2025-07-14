@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useMemo, useRef } from "react";
 import { MeiliSearch } from "meilisearch";
 import {
   Box,
@@ -7,38 +8,31 @@ import {
   Text,
   Button,
   useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
+  Portal,
+  Dialog,
 } from "@chakra-ui/react";
 import PlaylistViewer from "@/components/PlaylistViewer";
 import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
-
 import dynamic from "next/dynamic";
 import SearchResults from "@/components/SearchResults";
-import { useState, useMemo } from "react";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import PlaylistManager from "@/components/PlaylistManager";
+import type { Track } from "@/types/track";
+import { parseDurationToSeconds, formatSeconds } from "@/lib/trackUtils";
+import TopMenuBar from "@/components/MenuBar";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
 });
 
-import type { Track } from "@/types/track";
-
-import { parseDurationToSeconds, formatSeconds } from "@/lib/trackUtils";
-import React from "react";
-import TopMenuBar from "@/components/MenuBar";
-
 export default function SearchPage() {
-  const [playlistSidebarMinimized, setPlaylistSidebarMinimized] =
-    useState(false);
+  const [playlistSidebarMinimized, setPlaylistSidebarMinimized] = useState(false);
   const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
-  // Search results state/logic now handled by useSearchResults
+  // Prevent hydration mismatch for playlist count and playtime
+  const [hasMounted, setHasMounted] = React.useState(false);
+  React.useEffect(() => { setHasMounted(true); }, []);
+
   const client = useMemo(
     () =>
       new MeiliSearch({
@@ -47,6 +41,7 @@ export default function SearchPage() {
       }),
     []
   );
+
   const [selectedUsername, setSelectedUsername] = useState<string>("");
   const {
     query,
@@ -79,12 +74,12 @@ export default function SearchPage() {
   } = usePlaylists();
 
   const [editTrack, setEditTrack] = useState<Track | null>(null);
-  const { onOpen, onClose } = useDisclosure();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const initialFocusRef = useRef<HTMLButtonElement | null>(null);
 
-  // Delete handler for dialog (still local, but can be passed to SearchResults)
   const handleEditClick = (track: Track) => {
     setEditTrack(track);
-    onOpen();
+    setDialogOpen(true);
   };
 
   const handleSaveTrack = async (data: Track) => {
@@ -93,38 +88,28 @@ export default function SearchPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+
     if (res.ok) {
-      // Refresh search results after update
-      // After saving, just close the modal and let the search hook handle refresh
       setEditTrack(null);
-      onClose();
+      setDialogOpen(false);
     } else {
       alert("Failed to update track");
     }
   };
 
-  // (addToPlaylist and removeFromPlaylist are now only from the hook)
-
   const totalPlaytimeSeconds = playlist.reduce((sum, track) => {
-    if (!track.duration) {
-      return (
-        sum +
-        (typeof track.duration_seconds === "number"
-          ? track.duration_seconds
-          : 0)
-      );
+    if (!track.duration && typeof track.duration_seconds === "number") {
+      return sum + track.duration_seconds;
     }
     return sum + parseDurationToSeconds(track.duration);
   }, 0);
-
   const totalPlaytimeFormatted = formatSeconds(totalPlaytimeSeconds);
 
   return (
     <>
       <TopMenuBar current="/" />
       <Flex p={4} gap={4} direction="row">
-        {/* Playlist Management Section */}
-        {/* Minimizable PlaylistManager sidebar */}
+        {/* Playlist Sidebar */}
         <Box
           position="relative"
           width={playlistSidebarMinimized ? "40px" : "300px"}
@@ -160,7 +145,8 @@ export default function SearchPage() {
             />
           )}
         </Box>
-        {/* Search Results Section */}
+
+        {/* Search Results */}
         <SearchResults
           query={query}
           onQueryChange={onQueryChange}
@@ -178,9 +164,10 @@ export default function SearchPage() {
           selectedUsername={selectedUsername}
           onUsernameChange={(username) => {
             setSelectedUsername(username);
-            // Optionally reset query or filters here if desired
           }}
         />
+
+        {/* Playlist Panel */}
         <Box
           borderWidth="2px"
           borderRadius="lg"
@@ -191,34 +178,34 @@ export default function SearchPage() {
           <Flex alignItems="center" justifyContent="space-between" mb={3}>
             <Box>
               <Text fontSize="xl" fontWeight="bold">
-                Playlist ({playlist.length})
+                Playlist ({hasMounted ? playlist.length : 0})
               </Text>
               <Text fontSize="sm" color="gray.500">
-                Total Playtime: {totalPlaytimeFormatted}
+                Total Playtime: {hasMounted ? totalPlaytimeFormatted : "--:--"}
               </Text>
             </Box>
             <Flex gap={2} alignItems="center">
               <Button
-                colorScheme="blue"
+                colorPalette="blue"
                 size="sm"
                 onClick={savePlaylist}
-                isDisabled={playlist.length === 0}
+                disabled={!hasMounted || playlist.length === 0}
               >
                 Save
               </Button>
               <Button
-                colorScheme="gray"
+                colorPalette="gray"
                 size="sm"
                 onClick={exportPlaylist}
-                isDisabled={playlist.length === 0}
+                disabled={!hasMounted || playlist.length === 0}
               >
                 Export
               </Button>
               <Button
-                colorScheme="red"
+                colorPalette="red"
                 size="sm"
                 onClick={() => setPlaylist([])}
-                isDisabled={playlist.length === 0}
+                disabled={!hasMounted || playlist.length === 0}
               >
                 Clear
               </Button>
@@ -229,37 +216,41 @@ export default function SearchPage() {
               playlist,
               playlistCounts,
               moveTrack,
-              setEditTrack,
+              setEditTrack: handleEditClick,
               removeFromPlaylist,
             })}
           />
         </Box>
       </Flex>
-      <Modal
-        isOpen={!!editTrack}
-        onClose={() => {
-          setEditTrack(null);
-          onClose();
-        }}
-        size={"2xl"}
+
+      {/* Dialog replacing Modal */}
+      <Dialog.Root
+        open={dialogOpen}
+        onOpenChange={details => setDialogOpen(details.open)}
+        initialFocusEl={() => initialFocusRef.current}
+        role="dialog"
       >
-        <ModalOverlay bg="blackAlpha.600" />
-        <ModalContent bg="white">
-          <ModalHeader>Edit Track</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {editTrack && (
-              <TrackEditForm track={editTrack} onSave={handleSaveTrack} />
-            )}
-          </ModalBody>
-          {/* <ModalFooter>
-            <Button colorScheme='blue' mr={3} onClick={onClose}>
-              Close
-            </Button>
-            <Button variant='ghost'>Secondary Action</Button>
-          </ModalFooter> */}
-        </ModalContent>
-      </Modal>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Edit Track</Dialog.Title>
+                <Dialog.CloseTrigger asChild>
+                  <Button ref={initialFocusRef} size="sm">
+                    Close
+                  </Button>
+                </Dialog.CloseTrigger>
+              </Dialog.Header>
+              <Dialog.Body>
+                {editTrack && (
+                  <TrackEditForm track={editTrack} onSave={handleSaveTrack} />
+                )}
+              </Dialog.Body>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </>
   );
 }
