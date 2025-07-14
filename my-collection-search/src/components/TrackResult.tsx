@@ -52,7 +52,7 @@ export default function TrackResult({
         borderRadius="md"
         p={2}
         mb={2}
-        bg={{ base: "gray.50", _dark: "gray.800" }}
+        // bg={{ base: "gray.50", _dark: "gray.800" }}
       >
         <Flex alignItems="center" gap={2}>
           {/* Track summary */}
@@ -72,28 +72,22 @@ export default function TrackResult({
                 </Text>
               )}
             </Flex>
-            <Flex fontSize="sm" color="gray.600" gap={2}>
-              <Link href={track.discogs_url} color="blue.500" target="_blank">
+            <Flex fontSize="sm" gap={2}>
+              <Link href={track.discogs_url} target="_blank">
                 Discogs
               </Link>
               {track.apple_music_url && (
-                <Link
-                  href={track.apple_music_url}
-                  color="blue.500"
-                  target="_blank"
-                >
+                <Link href={track.apple_music_url} target="_blank">
                   Apple Music
                 </Link>
               )}
               {track.youtube_url && (
-                <Link href={track.youtube_url} color="blue.500" target="_blank">
+                <Link href={track.youtube_url} target="_blank">
                   YouTube
                 </Link>
               )}
               {track.username && (
-                <Text fontSize="sm" color="gray.500">
-                  User: {track.username}
-                </Text>
+                <Text fontSize="sm">User: {track.username}</Text>
               )}
             </Flex>
           </Box>
@@ -104,7 +98,7 @@ export default function TrackResult({
               <Button
                 size="xs"
                 variant="outline"
-                ml={2}
+                mr={2}
                 onClick={() => setExpanded(true)}
               >
                 More

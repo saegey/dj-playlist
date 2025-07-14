@@ -196,7 +196,7 @@ export default function BackfillAudioPage() {
         ) : (
           <Table.Root
             size="sm"
-            variant="line"
+            variant="outline"
             striped
             showColumnBorder
             interactive

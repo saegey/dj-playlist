@@ -5,18 +5,16 @@ import {
   Box,
   Button,
   Text,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
   HStack,
-  Select,
   Textarea,
   Input,
-  useToast,
+  Portal,
+  createListCollection,
+  Select,
+  Table,
+  Checkbox,
 } from "@chakra-ui/react";
+import { toaster, Toaster } from "@/components/ui/toaster";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
 
@@ -29,86 +27,68 @@ export default function BulkNotesPage() {
   const [loading, setLoading] = useState(false);
   const [bulkPrompt, setBulkPrompt] = useState("");
   const [bulkJson, setBulkJson] = useState("");
-  const toast = useToast();
 
-  // Fetch usernames for filter
   useEffect(() => {
     fetch("/api/tracks/usernames")
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setUsernames(data);
-        else if (data && Array.isArray(data.usernames))
-          setUsernames(data.usernames);
-      });
+      .then((r) => r.json())
+      .then((data) =>
+        setUsernames(Array.isArray(data) ? data : data.usernames || [])
+      );
   }, []);
 
-  // Fetch tracks missing notes or local_tags, with fuzzy artist search
   useEffect(() => {
     setLoading(true);
-    let url = "/api/tracks/bulk-notes";
-    // If artist search, use MeiliSearch API
-    if (artistSearch.trim() !== "") {
-      url =
-        "/api/tracks/bulk-notes-search?artist=" +
-        encodeURIComponent(artistSearch);
-      if (selectedUsername)
-        url += `&username=${encodeURIComponent(selectedUsername)}`;
-    } else {
-      if (selectedUsername)
-        url += `?username=${encodeURIComponent(selectedUsername)}`;
-    }
+    let url = artistSearch.trim()
+      ? `/api/tracks/bulk-notes-search?artist=${encodeURIComponent(
+          artistSearch
+        )}`
+      : "/api/tracks/bulk-notes";
+    if (selectedUsername)
+      url +=
+        (url.includes("?") ? "&" : "?") +
+        `username=${encodeURIComponent(selectedUsername)}`;
     fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        setTracks(data.tracks || []);
-        setLoading(false);
-      });
+      .then((r) => r.json())
+      .then((data) => setTracks(data.tracks || []))
+      .finally(() => setLoading(false));
   }, [selectedUsername, artistSearch]);
 
-  // Checkbox logic
-  const toggleSelect = (trackId: string) => {
+  const toggleSelect = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(trackId)) next.delete(trackId);
-      else next.add(trackId);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
-  };
-  const selectAll = () => {
-    setSelected(new Set(tracks.map((t) => t.track_id)));
-  };
-  const deselectAll = () => {
-    setSelected(new Set());
-  };
-  const selectFirst10 = () => {
+  const selectAll = () => setSelected(new Set(tracks.map((t) => t.track_id)));
+  const deselectAll = () => setSelected(new Set());
+  const selectFirst10 = () =>
     setSelected(new Set(tracks.slice(0, 10).map((t) => t.track_id)));
-  };
 
-  // Generate bulk prompt for selected
   const handleGeneratePrompt = () => {
-    const prompt = tracks
+    const promptTracks = tracks
       .filter((t) => selected.has(t.track_id))
       .map(
-        (track) =>
-          `Track ID: ${track.track_id}\nTitle: ${track.title}\nArtist: ${track.artist}\nAlbum: ${track.album}\nDiscogs URL: ${track.discogs_url}\n---`
+        (t) =>
+          `Track ID: ${t.track_id}\nTitle: ${t.title}\nArtist: ${t.artist}\nAlbum: ${t.album}\nDiscogs URL: ${t.discogs_url}\n---`
       )
       .join("\n");
-    const fullPrompt = `You are a DJ music metadata assistant. For each track below, return a JSON object with the following fields: track_id, local tags, notes.\nExample:\n{"track_id":"123","local_tags":"House","notes":"Great for warmup sets, uplifting vibe."}. In "notes", include a longer DJ-focused description with vibe, energy, suggested set placement, transition tips, and any emotional or cultural context. In local_tags, it is the genre or style of the actual track and not the album. \nTracks:\n${prompt}`;
+    const fullPrompt = `You are a DJ music metadata assistant. For each track below, return a JSON object... Tracks:\n${promptTracks}`;
     setBulkPrompt(fullPrompt);
-    if (navigator && navigator.clipboard) {
-      navigator.clipboard.writeText(fullPrompt);
-      toast({ status: "success", title: "Prompt copied to clipboard" });
-    }
+    navigator.clipboard.writeText(fullPrompt);
+    toaster.create({ title: "Prompt copied", type: "success" });
   };
 
-  // Upload JSON results
   const handleUpload = async () => {
-    let parsed: any[] = [];
+    let parsed;
     try {
       parsed = JSON.parse(bulkJson);
-      if (!Array.isArray(parsed)) throw new Error("JSON must be an array");
-    } catch (err) {
-      toast({ status: "error", title: "Invalid JSON" });
+      if (!Array.isArray(parsed)) throw new Error();
+    } catch {
+      toaster.create({ title: "Invalid JSON", type: "error" });
       return;
     }
     setLoading(true);
@@ -118,84 +98,118 @@ export default function BulkNotesPage() {
       body: JSON.stringify({ updates: parsed }),
     });
     setLoading(false);
-    if (res.ok) {
-      toast({ status: "success", title: "Tracks updated" });
-    } else {
-      toast({ status: "error", title: "Update failed" });
-    }
+    toaster.create({
+      title: res.ok ? "Tracks updated" : "Update failed",
+      type: res.ok ? "success" : "error",
+    });
   };
+
+  const userCollection = createListCollection({
+    items: usernames.map((u) => ({ label: u, value: u })),
+  });
 
   return (
     <>
-      <TopMenuBar current={'/bulk-notes'} />
+      <Toaster />
+      <TopMenuBar current="/bulk-notes" />
       <Box p={6} pb={80}>
-        <HStack mb={4}>
-          <Select
-            placeholder="All Users"
-            value={selectedUsername}
-            onChange={(e) => setSelectedUsername(e.target.value)}
-            minW="160px"
+        <HStack mb={4} gap={2}>
+          <Select.Root
+            collection={userCollection}
+            value={selectedUsername ? [selectedUsername] : []}
+            onValueChange={(v) => setSelectedUsername(v.value[0] || "")}
+            width="160px"
           >
-            {usernames.map((u) => (
-              <option key={u} value={u}>
-                {u}
-              </option>
-            ))}
-          </Select>
-          <Button onClick={selectAll} size="lg">
-            <Text fontSize="sm">Select All</Text>
+            <Select.HiddenSelect />
+            <Select.Control>
+              <Select.Trigger>
+                <Select.ValueText placeholder="All Users" />
+              </Select.Trigger>
+              <Select.IndicatorGroup>
+                <Select.Indicator />
+              </Select.IndicatorGroup>
+            </Select.Control>
+            <Portal>
+              <Select.Positioner>
+                <Select.Content>
+                  {usernames.map((u) => (
+                    <Select.Item key={u} item={{ label: u, value: u }}>
+                      {u}
+                      <Select.ItemIndicator />
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Positioner>
+            </Portal>
+          </Select.Root>
+          <Button onClick={selectAll} size="sm">
+            Select All
           </Button>
-          <Button onClick={selectFirst10} size="lg">
-            <Text fontSize="sm">Select First 10</Text>
+          <Button onClick={selectFirst10} size="sm">
+            Select First 10
           </Button>
-          <Button onClick={deselectAll} size="lg">
-            <Text fontSize="sm">Deselect All</Text>
+          <Button onClick={deselectAll} size="sm">
+            Deselect All
           </Button>
           <Button
             onClick={handleGeneratePrompt}
-            isDisabled={selected.size === 0}
+            size="sm"
+            disabled={!selected.size}
           >
-            <Text fontSize="sm">Copy Prompt</Text>
+            Copy Prompt
           </Button>
         </HStack>
-        <Box mb={2}>
-          <Input
-            placeholder="Search by artist name..."
-            value={artistSearch}
-            onChange={(e) => setArtistSearch(e.target.value)}
-            size="sm"
-            maxW="320px"
-          />
-        </Box>
+
+        <Input
+          placeholder="Search by artist..."
+          value={artistSearch}
+          onChange={(e) => setArtistSearch(e.target.value)}
+          size="sm"
+          maxW="320px"
+          mb={4}
+        />
+
         {loading ? (
           <Text>Loading…</Text>
         ) : tracks.length === 0 ? (
           <Text color="gray.500">No tracks missing notes or genre.</Text>
         ) : (
-          <Table size="sm" variant="simple" mb={4}>
-            <Thead>
-              <Tr>
-                <Th></Th>
-                <Th>Title</Th>
-                <Th>Artist</Th>
-                <Th>Album</Th>
-                <Th>Discogs</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
+          <Table.Root
+            size="sm"
+            variant="outline"
+            striped
+            showColumnBorder
+            interactive
+            mb={4}
+          >
+            <Table.Header>
+              <Table.Row>
+                <Table.ColumnHeader />
+                <Table.ColumnHeader>Title</Table.ColumnHeader>
+                <Table.ColumnHeader>Artist</Table.ColumnHeader>
+                <Table.ColumnHeader>Album</Table.ColumnHeader>
+                <Table.ColumnHeader>Discogs</Table.ColumnHeader>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
               {tracks.map((track) => (
-                <Tr key={track.track_id}>
-                  <Td>
-                    <input
-                      type="checkbox"
+                <Table.Row
+                  key={track.track_id}
+                  data-selected={selected.has(track.track_id) ? "" : undefined}
+                >
+                  <Table.Cell>
+                    <Checkbox.Root
                       checked={selected.has(track.track_id)}
-                      onChange={() => toggleSelect(track.track_id)}
-                    />
-                  </Td>
-                  <Td>{track.title}</Td>
-                  <Td>{track.artist}</Td>
-                  <Td>{track.album}</Td>
-                  <Td>
+                      onCheckedChange={() => toggleSelect(track.track_id)}
+                    >
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control />
+                    </Checkbox.Root>
+                  </Table.Cell>
+                  <Table.Cell>{track.title}</Table.Cell>
+                  <Table.Cell>{track.artist}</Table.Cell>
+                  <Table.Cell>{track.album}</Table.Cell>
+                  <Table.Cell>
                     {track.discogs_url ? (
                       <a
                         href={track.discogs_url}
@@ -205,46 +219,41 @@ export default function BulkNotesPage() {
                         Discogs
                       </a>
                     ) : (
-                      <Text color="gray.400">—</Text>
+                      <Text>—</Text>
                     )}
-                  </Td>
-                </Tr>
+                  </Table.Cell>
+                </Table.Row>
               ))}
-            </Tbody>
-          </Table>
+            </Table.Body>
+          </Table.Root>
         )}
+
         <Box mb={4}>
-          <Text fontWeight="bold" mb={1}>
-            Bulk Prompt for ChatGPT
-          </Text>
+          <Text fontWeight="bold">Bulk Prompt for ChatGPT</Text>
           <Textarea value={bulkPrompt} rows={10} readOnly fontSize="sm" />
         </Box>
+
         <Box
           position="fixed"
+          bottom={0}
           left={0}
           right={0}
-          bottom={0}
-          bg="white"
-          boxShadow="0 -2px 8px rgba(0,0,0,0.08)"
-          zIndex={100}
+          bg="bg.subtle"
           px={6}
           py={4}
+          boxShadow="0 -2px 8px rgba(0,0,0,0.08)"
+          zIndex={100}
         >
-          <Text fontWeight="bold" mb={1}>
-            Paste Bulk JSON Results
-          </Text>
+          <Text fontWeight="bold">Paste Bulk JSON Results</Text>
           <Textarea
             value={bulkJson}
             onChange={(e) => setBulkJson(e.target.value)}
             rows={6}
             fontSize="sm"
-            placeholder='[
-  {"track_id": "123", "genre": "House", "notes": "Great for warmup sets."},
-  ...
-]'
+            placeholder='[{"track_id":"123","genre":"House","notes":"..."}]'
             mb={2}
           />
-          <Button colorScheme="blue" onClick={handleUpload} isLoading={loading}>
+          <Button colorPalette="blue" onClick={handleUpload} loading={loading}>
             Upload Results
           </Button>
         </Box>
