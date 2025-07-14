@@ -216,16 +216,16 @@ export default function TrackResult({
 
           {/* Links and audio */}
           <Flex gap={2} mt={2}>
-            <Link href={track.discogs_url} color="blue.500" target="_blank">
-              Discogs
+            <Link href={track.discogs_url} target="_blank">
+              <Text fontSize="sm">Discogs</Text>
             </Link>
             {track.apple_music_url && (
               <Link
                 href={track.apple_music_url}
-                color="blue.500"
+                // color="blue.500"
                 target="_blank"
               >
-                Apple Music
+                <Text fontSize="sm">Apple Music</Text>
               </Link>
             )}
             {track.youtube_url && (

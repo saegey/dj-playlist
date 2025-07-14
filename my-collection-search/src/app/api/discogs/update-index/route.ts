@@ -165,9 +165,7 @@ export async function POST() {
       );
       if (rows && rows[0]) {
         upserted.push(rows[0]);
-        console.debug(
-          `[Discogs Index] Upserted track: ${track.track_id} - ${track.title} (user: ${track.username}) ${track.local_tags}`
-        );
+        console.debug(JSON.stringify(rows[0], null, 2));
       }
     }
 
@@ -201,19 +199,6 @@ export async function POST() {
     console.log(
       `[Discogs Index] Adding ${upserted.length} tracks to MeiliSearch index...`
     );
-
-    for (const t of upserted) {
-      if (!Array.isArray(t.local_tags)) {
-        delete t.local_tags; // Remove if not an array
-      }
-      if (t.bpm === null || t.bpm === undefined) delete t.bpm;
-      if (t.key === null || t.key === "") delete t.key;
-      if (t.notes === null || t.notes === "") delete t.notes;
-      if (t.apple_music_url === null || t.apple_music_url === undefined)
-        delete t.apple_music_url;
-      if (t.duration_seconds === null || t.duration_seconds === undefined)
-        delete t.duration_seconds;
-    }
 
     // Write upserted tracks to a JSON file for debugging
     fs.writeFileSync(

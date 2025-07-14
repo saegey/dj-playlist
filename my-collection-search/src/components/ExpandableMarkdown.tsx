@@ -21,7 +21,7 @@ export default function ExpandableMarkdown({
       {isLong && (
         <Button
           size="xs"
-          variant="link"
+          variant="outline"
           colorScheme="blue"
           onClick={() => setExpanded((e) => !e)}
           mt={1}
