@@ -7,13 +7,15 @@ import {
   Flex,
   Text,
   Button,
-  useDisclosure,
   Portal,
   Dialog,
+  CloseButton,
 } from "@chakra-ui/react";
+import dynamic from "next/dynamic";
+
 import PlaylistViewer from "@/components/PlaylistViewer";
 import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
-import dynamic from "next/dynamic";
+
 import SearchResults from "@/components/SearchResults";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { usePlaylists } from "@/hooks/usePlaylists";
@@ -27,11 +29,14 @@ const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
 });
 
 export default function SearchPage() {
-  const [playlistSidebarMinimized, setPlaylistSidebarMinimized] = useState(false);
+  const [playlistSidebarMinimized, setPlaylistSidebarMinimized] =
+    useState(false);
   const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
   // Prevent hydration mismatch for playlist count and playtime
   const [hasMounted, setHasMounted] = React.useState(false);
-  React.useEffect(() => { setHasMounted(true); }, []);
+  React.useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const client = useMemo(
     () =>
@@ -226,9 +231,10 @@ export default function SearchPage() {
       {/* Dialog replacing Modal */}
       <Dialog.Root
         open={dialogOpen}
-        onOpenChange={details => setDialogOpen(details.open)}
+        onOpenChange={(details) => setDialogOpen(details.open)}
         initialFocusEl={() => initialFocusRef.current}
         role="dialog"
+        size="lg"
       >
         <Portal>
           <Dialog.Backdrop />
@@ -237,9 +243,7 @@ export default function SearchPage() {
               <Dialog.Header>
                 <Dialog.Title>Edit Track</Dialog.Title>
                 <Dialog.CloseTrigger asChild>
-                  <Button ref={initialFocusRef} size="sm">
-                    Close
-                  </Button>
+                  <CloseButton ref={initialFocusRef} size="sm" />
                 </Dialog.CloseTrigger>
               </Dialog.Header>
               <Dialog.Body>

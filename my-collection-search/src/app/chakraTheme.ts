@@ -2,7 +2,7 @@ import { defineConfig, createSystem, defaultConfig } from "@chakra-ui/react";
 const config = defineConfig({
   globalCss: {
     html: {
-      colorPalette: "blue", // Change this to any color palette you prefer
+      // colorPalette: "black", // Change this to any color palette you prefer
     },
   },
 });
