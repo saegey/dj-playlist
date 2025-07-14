@@ -191,7 +191,7 @@ export default function SearchPage() {
             </Box>
             <Flex gap={2} alignItems="center">
               <Button
-                colorPalette="blue"
+                variant="solid"
                 size="sm"
                 onClick={savePlaylist}
                 disabled={!hasMounted || playlist.length === 0}
@@ -199,15 +199,15 @@ export default function SearchPage() {
                 Save
               </Button>
               <Button
-                colorPalette="gray"
                 size="sm"
+                variant={"outline"}
                 onClick={exportPlaylist}
                 disabled={!hasMounted || playlist.length === 0}
               >
                 Export
               </Button>
               <Button
-                colorPalette="red"
+                variant="ghost"
                 size="sm"
                 onClick={() => setPlaylist([])}
                 disabled={!hasMounted || playlist.length === 0}

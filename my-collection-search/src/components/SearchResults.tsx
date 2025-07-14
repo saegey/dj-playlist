@@ -131,7 +131,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           buttons={[
             <Menu.Root key="menu">
               <Menu.Trigger asChild>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="xs">
                   <FiMoreVertical />
                 </Button>
               </Menu.Trigger>

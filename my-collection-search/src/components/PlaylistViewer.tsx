@@ -38,8 +38,8 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
           buttons={[
             <Menu.Root key="menu">
               <Menu.Trigger asChild>
-                <Button variant="outline" size="sm">
-                  <FiMoreVertical />
+                <Button variant="outline" size="xs">
+                  <FiMoreVertical size={16} />
                 </Button>
               </Menu.Trigger>
               <Portal>
@@ -49,9 +49,9 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
                       onSelect={() => moveTrack(idx, idx - 1)}
                       value="up"
                       disabled={idx === 0}
-                      _icon={
-                        <Icon as={FiArrowUp} color="#3182ce" boxSize={4} />
-                      }
+                    //   icon={
+                    //     <Icon as={FiArrowUp} color="#3182ce" boxSize={4} />
+                    //   }
                     >
                       Move Up
                     </Menu.Item>
@@ -59,23 +59,23 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
                       onSelect={() => moveTrack(idx, idx + 1)}
                       value="down"
                       disabled={idx === playlist.length - 1}
-                      _icon={
-                        <Icon as={FiArrowDown} color="#4A5568" boxSize={4} />
-                      }
+                    //   icon={
+                    //     <Icon as={FiArrowDown} color="#4A5568" boxSize={4} />
+                    //   }
                     >
                       Move Down
                     </Menu.Item>
                     <Menu.Item
                       onSelect={() => setEditTrack(track)}
                       value="edit"
-                      _icon={<Icon as={FiEdit} color="black" boxSize={4} />}
+                    //   icon={<Icon as={FiEdit} color="black" boxSize={4} />}
                     >
                       Edit
                     </Menu.Item>
                     <Menu.Item
                       onSelect={() => removeFromPlaylist(track.track_id)}
                       value="remove"
-                      _icon={<Icon as={FiTrash2} color="red.500" boxSize={4} />}
+                    //   icon={<Icon as={FiTrash2} color="red.500" boxSize={4} />}
                     >
                       Remove
                     </Menu.Item>
