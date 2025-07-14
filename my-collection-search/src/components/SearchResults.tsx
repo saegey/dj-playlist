@@ -11,6 +11,7 @@ import {
 } from "@chakra-ui/react";
 import TrackResult from "@/components/TrackResult";
 import { Track } from "@/types/track";
+import { FiMoreVertical } from "react-icons/fi";
 
 interface SearchResultsProps {
   query: string;
@@ -129,8 +130,8 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           buttons={[
             <Menu.Root key="menu">
               <Menu.Trigger asChild>
-                <Button size="xs" colorScheme="blue">
-                  Actions
+                <Button variant="outline" size="sm">
+                  <FiMoreVertical />
                 </Button>
               </Menu.Trigger>
               <Portal>

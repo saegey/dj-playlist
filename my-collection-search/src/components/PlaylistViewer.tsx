@@ -1,6 +1,12 @@
 import React from "react";
-import { Box, Text, MenuItem, Icon } from "@chakra-ui/react";
-import { FiArrowUp, FiArrowDown, FiEdit, FiTrash2 } from "react-icons/fi";
+import { Box, Text, Button, Portal, Menu, Icon } from "@chakra-ui/react";
+import {
+  FiArrowUp,
+  FiArrowDown,
+  FiEdit,
+  FiTrash2,
+  FiMoreVertical,
+} from "react-icons/fi";
 import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
 
@@ -30,40 +36,53 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
           minimized
           playlistCount={playlistCounts[track.track_id]}
           buttons={[
-            <MenuItem
-              key="up"
-              onClick={() => moveTrack(idx, idx - 1)}
-              disabled={idx === 0}
-              icon={<Icon as={FiArrowUp} color="#3182ce" boxSize={4} />}
-              color="#3182ce"
-            >
-              Move Up
-            </MenuItem>,
-            <MenuItem
-              key="down"
-              onClick={() => moveTrack(idx, idx + 1)}
-              disabled={idx === playlist.length - 1}
-              icon={<Icon as={FiArrowDown} color="#4A5568" boxSize={4} />}
-              color="#4A5568"
-            >
-              Move Down
-            </MenuItem>,
-            <MenuItem
-              key="edit"
-              onClick={() => setEditTrack(track)}
-              icon={<Icon as={FiEdit} color="black" boxSize={4} />}
-              color="black"
-            >
-              Edit
-            </MenuItem>,
-            <MenuItem
-              key="remove"
-              onClick={() => removeFromPlaylist(track.track_id)}
-              icon={<Icon as={FiTrash2} color="red.500" boxSize={4} />}
-              color="red.500"
-            >
-              Remove
-            </MenuItem>,
+            <Menu.Root key="menu">
+              <Menu.Trigger asChild>
+                <Button variant="outline" size="sm">
+                  <FiMoreVertical />
+                </Button>
+              </Menu.Trigger>
+              <Portal>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    <Menu.Item
+                      onSelect={() => moveTrack(idx, idx - 1)}
+                      value="up"
+                      disabled={idx === 0}
+                      _icon={
+                        <Icon as={FiArrowUp} color="#3182ce" boxSize={4} />
+                      }
+                    >
+                      Move Up
+                    </Menu.Item>
+                    <Menu.Item
+                      onSelect={() => moveTrack(idx, idx + 1)}
+                      value="down"
+                      disabled={idx === playlist.length - 1}
+                      _icon={
+                        <Icon as={FiArrowDown} color="#4A5568" boxSize={4} />
+                      }
+                    >
+                      Move Down
+                    </Menu.Item>
+                    <Menu.Item
+                      onSelect={() => setEditTrack(track)}
+                      value="edit"
+                      _icon={<Icon as={FiEdit} color="black" boxSize={4} />}
+                    >
+                      Edit
+                    </Menu.Item>
+                    <Menu.Item
+                      onSelect={() => removeFromPlaylist(track.track_id)}
+                      value="remove"
+                      _icon={<Icon as={FiTrash2} color="red.500" boxSize={4} />}
+                    >
+                      Remove
+                    </Menu.Item>
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Portal>
+            </Menu.Root>,
           ]}
         />
       ))

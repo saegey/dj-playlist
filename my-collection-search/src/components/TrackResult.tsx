@@ -46,37 +46,26 @@ export default function TrackResult({
   playlistCount,
 }: TrackResultProps) {
   const [expanded, setExpanded] = useState(false);
+  const [hasMounted, setHasMounted] = React.useState(false);
+  React.useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
-  const ActionMenu = () => (
-    <Menu.Root positioning={{ placement: "bottom-end" }}>
-      <Menu.Trigger asChild>
-        <IconButton
-          aria-label="Actions"
-          icon={<FiMoreVertical size="20px" />}
-          size="sm"
-          variant="ghost"
-        />
-      </Menu.Trigger>
-      <Portal>
-        <Menu.Positioner>
-          <Menu.Content minW="120px">
-            {Array.isArray(buttons)
-              ? buttons.map((btn, idx) => (
-                  <MenuItem key={idx} onSelect={() => {}}>
-                    {btn}
-                  </MenuItem>
-                ))
-              : buttons && <MenuItem onSelect={() => {}}>{buttons}</MenuItem>}
-          </Menu.Content>
-        </Menu.Positioner>
-      </Portal>
-    </Menu.Root>
-  );
-
-  // Minimized view
-  if (minimized && !expanded) {
+  // Prevent hydration mismatch: render a placeholder for minimized view until after mount
+  if (minimized && !expanded && !hasMounted) {
+    // Adjust minH to match your minimized card height for best results
+    return <Box minH="56px" />;
+  }
+  // Minimized view (only render after mount to avoid hydration mismatch)
+  if (minimized && !expanded && hasMounted) {
     return (
-      <Box borderWidth="1px" borderRadius="md" p={2} mb={2} bg="gray.50">
+      <Box
+        borderWidth="1px"
+        borderRadius="md"
+        p={2}
+        mb={2}
+        bg={{ base: "gray.50", _dark: "gray.800" }}
+      >
         <Flex alignItems="center" gap={2}>
           {/* Track summary */}
           <Box flex="1">
@@ -100,7 +89,11 @@ export default function TrackResult({
                 Discogs
               </Link>
               {track.apple_music_url && (
-                <Link href={track.apple_music_url} color="blue.500" target="_blank">
+                <Link
+                  href={track.apple_music_url}
+                  color="blue.500"
+                  target="_blank"
+                >
                   Apple Music
                 </Link>
               )}
@@ -120,11 +113,16 @@ export default function TrackResult({
           {/* Actions */}
           <Flex align="center">
             {allowMinimize && (
-              <Button size="xs" variant="outline" ml={2} onClick={() => setExpanded(true)}>
+              <Button
+                size="xs"
+                variant="outline"
+                ml={2}
+                onClick={() => setExpanded(true)}
+              >
                 More
               </Button>
             )}
-            {buttons && <ActionMenu />}
+            {buttons}
           </Flex>
         </Flex>
       </Box>
@@ -144,9 +142,13 @@ export default function TrackResult({
         />
 
         <Flex direction="column" flex={1}>
-          <Text fontSize="lg" fontWeight="bold">{track.title}</Text>
+          <Text fontSize="lg" fontWeight="bold">
+            {track.title}
+          </Text>
           <Text fontSize="md">{track.artist}</Text>
-          <Text fontSize="sm" color="gray.600">{track.album} ({track.year})</Text>
+          <Text fontSize="sm" color="gray.600">
+            {track.album} ({track.year})
+          </Text>
 
           <Flex alignItems="center" gap={2} mt={1}>
             {[...Array(5)].map((_, i) => (
@@ -167,17 +169,17 @@ export default function TrackResult({
           </Flex>
 
           {/* Styles, genres, tags */}
-          {track.styles?.length > 0 && (
+          {Array.isArray(track.styles) && track.styles.length > 0 && (
             <Text fontSize="sm" color="purple.600">
               Styles: {track.styles.join(", ")}
             </Text>
           )}
-          {track.genres?.length > 0 && (
+          {Array.isArray(track.genres) && track.genres.length > 0 && (
             <Text fontSize="sm" color="teal.600">
               Genres: {track.genres.join(", ")}
             </Text>
           )}
-          {track.local_tags?.length > 0 && (
+          {Array.isArray(track.local_tags) && track.local_tags.length > 0 && (
             <Text fontSize="sm" color="orange.600">
               Local Tags: {track.local_tags.join(", ")}
             </Text>
@@ -185,13 +187,37 @@ export default function TrackResult({
 
           {/* Details line */}
           <Flex flexWrap="wrap" gap={4} mt={2}>
-            <Text fontSize="sm"><strong>Pos:</strong> {track.position}</Text>
-            <Text fontSize="sm"><strong>Dur:</strong> {formatSeconds(track.duration_seconds || 0)}</Text>
-            {track.bpm && <Text fontSize="sm"><strong>BPM:</strong> {track.bpm}</Text>}
-            {track.key && <Text fontSize="sm"><strong>Key:</strong> {track.key}</Text>}
-            {track.danceability && <Text fontSize="sm"><strong>Dance:</strong> {track.danceability}</Text>}
-            {track.mood_happy && <Text fontSize="sm"><strong>Happy:</strong> {track.mood_happy}</Text>}
-            {track.mood_aggressive && <Text fontSize="sm"><strong>Agg:</strong> {track.mood_aggressive}</Text>}
+            <Text fontSize="sm">
+              <strong>Pos:</strong> {track.position}
+            </Text>
+            <Text fontSize="sm">
+              <strong>Dur:</strong> {formatSeconds(track.duration_seconds || 0)}
+            </Text>
+            {track.bpm && (
+              <Text fontSize="sm">
+                <strong>BPM:</strong> {track.bpm}
+              </Text>
+            )}
+            {track.key && (
+              <Text fontSize="sm">
+                <strong>Key:</strong> {track.key}
+              </Text>
+            )}
+            {track.danceability && (
+              <Text fontSize="sm">
+                <strong>Dance:</strong> {track.danceability}
+              </Text>
+            )}
+            {track.mood_happy && (
+              <Text fontSize="sm">
+                <strong>Happy:</strong> {track.mood_happy}
+              </Text>
+            )}
+            {track.mood_aggressive && (
+              <Text fontSize="sm">
+                <strong>Agg:</strong> {track.mood_aggressive}
+              </Text>
+            )}
           </Flex>
 
           {track.notes && (
@@ -202,10 +228,28 @@ export default function TrackResult({
 
           {/* Links and audio */}
           <Flex gap={2} mt={2}>
-            <Link href={track.discogs_url} color="blue.500" target="_blank">Discogs</Link>
-            {track.apple_music_url && <Link href={track.apple_music_url} color="blue.500" target="_blank">Apple Music</Link>}
-            {track.youtube_url && <Link href={track.youtube_url} color="blue.500" target="_blank">YouTube</Link>}
-            {track.username && <Text fontSize="sm" color="gray.500">User: {track.username}</Text>}
+            <Link href={track.discogs_url} color="blue.500" target="_blank">
+              Discogs
+            </Link>
+            {track.apple_music_url && (
+              <Link
+                href={track.apple_music_url}
+                color="blue.500"
+                target="_blank"
+              >
+                Apple Music
+              </Link>
+            )}
+            {track.youtube_url && (
+              <Link href={track.youtube_url} color="blue.500" target="_blank">
+                YouTube
+              </Link>
+            )}
+            {track.username && (
+              <Text fontSize="sm" color="gray.500">
+                User: {track.username}
+              </Text>
+            )}
           </Flex>
 
           {track.local_audio_url && (
@@ -219,7 +263,11 @@ export default function TrackResult({
           {/* Minimize button */}
           <Flex justifyContent="flex-end" mt={2}>
             {allowMinimize && (
-              <Button size="xs" variant="outline" onClick={() => setExpanded(false)}>
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => setExpanded(false)}
+              >
                 Less
               </Button>
             )}
@@ -227,7 +275,7 @@ export default function TrackResult({
         </Flex>
 
         {/* Action menu */}
-        {buttons && <ActionMenu />}
+        {buttons}
       </Flex>
 
       {footer && <Box mt={2}>{footer}</Box>}
