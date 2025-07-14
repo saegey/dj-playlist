@@ -13,8 +13,11 @@ import {
   Portal,
   Dialog,
   CloseButton,
+  RatingGroup,
+  Icon,
 } from "@chakra-ui/react";
 import { Track } from "@/types/track";
+import { FiStar } from "react-icons/fi";
 
 // Labeled input for text/number fields
 function LabeledInput({
@@ -229,9 +232,9 @@ export default function TrackEditForm({
     <Box
       as="form"
       onSubmit={handleSubmit}
-      p={4}
-      borderWidth="1px"
-      borderRadius="md"
+      // p={4}
+      // borderWidth="1px"
+      // borderRadius="md"
     >
       <Flex gap={2} mb={2}>
         <Button
@@ -275,7 +278,13 @@ export default function TrackEditForm({
         </Button>
       </Flex>
 
-      <Stack>
+      <Stack
+        borderWidth="1px"
+        borderRadius="md"
+        padding={4}
+        marginBottom={4}
+        marginTop={4}
+      >
         <LabeledInput
           label="Title"
           name="title"
@@ -349,26 +358,22 @@ export default function TrackEditForm({
 
         <Box>
           <Text mb={1} fontSize="sm">
-            Star Rating
+            Rating
           </Text>
-          <Flex gap={1}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Button
-                key={star}
-                size="sm"
-                colorScheme={form.star_rating >= star ? "blue" : "gray"}
-                onClick={() => handleStarRating(star)}
-              >
-                ★
-              </Button>
-            ))}
-          </Flex>
+          <RatingGroup.Root
+            value={form.star_rating}
+            onValueChange={({ value }) => handleStarRating(value)}
+            size="md"
+            count={5}
+          >
+            <RatingGroup.HiddenInput />
+            <RatingGroup.Control />
+          </RatingGroup.Root>
         </Box>
-
-        <Button type="submit" colorScheme="blue" loading={loading}>
-          Save
-        </Button>
       </Stack>
+      <Button type="submit" colorScheme="blue" loading={loading}>
+        Save
+      </Button>
 
       {/* --- YouTube Dialog --- */}
       <Dialog.Root

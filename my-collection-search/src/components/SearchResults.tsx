@@ -54,7 +54,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
   return (
     <Box width="40%">
-      <Box display="flex" gap={3} mb={3} alignItems="flex-end">
+      <Box display="flex" gap={3} mb={3}>
         <Input
           placeholder="Search tracks..."
           value={query}
@@ -65,18 +65,19 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           <Select.Root
             collection={usernameCollection}
             value={selectedUsername ? [selectedUsername] : []}
-            onValueChange={(vals) =>
-              onUsernameChange(vals.length ? vals[0] : "")
-            }
-            placeholder="All Users"
-            size="md"
-            width="auto"
-            minW="140px"
+            onValueChange={(vals) => {
+              onUsernameChange(vals.value.length ? vals.value[0] : "");
+            }}
+            width="320px"
           >
             <Select.HiddenSelect />
             <Select.Control>
-              <Select.Trigger />
-              <Select.Indicator />
+              <Select.Trigger>
+                <Select.ValueText placeholder="Choose user library" />
+              </Select.Trigger>
+              <Select.IndicatorGroup>
+                <Select.Indicator />
+              </Select.IndicatorGroup>
             </Select.Control>
             <Portal>
               <Select.Positioner>

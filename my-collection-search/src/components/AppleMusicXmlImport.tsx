@@ -9,12 +9,21 @@ import {
   Flex,
   Dialog,
   Portal,
+  FileUpload,
+  Stack,
+  CloseButton,
 } from "@chakra-ui/react";
 import { MeiliSearch } from "meilisearch";
 import { toaster } from "@/components/ui/toaster"; // your v3-style toaster
 import { Track } from "@/types/track";
+import { FiUpload } from "react-icons/fi";
 
-type ImportedTrack = { name: string; artist: string; album: string; duration?: number };
+type ImportedTrack = {
+  name: string;
+  artist: string;
+  album: string;
+  duration?: number;
+};
 type MatchedTrack = Track | null;
 
 interface Props {
@@ -24,8 +33,13 @@ interface Props {
   fetchPlaylists: () => void;
 }
 
-export default function AppleMusicXmlImport({ isOpen, onClose, client, fetchPlaylists }: Props) {
-  const [step, setStep] = useState<"idle"|"parsed"|"review">("idle");
+export default function AppleMusicXmlImport({
+  isOpen,
+  onClose,
+  client,
+  fetchPlaylists,
+}: Props) {
+  const [step, setStep] = useState<"idle" | "parsed" | "review">("idle");
   const [name, setName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [tracks, setTracks] = useState<ImportedTrack[]>([]);
@@ -34,7 +48,7 @@ export default function AppleMusicXmlImport({ isOpen, onClose, client, fetchPlay
   const [error, setError] = useState<string | null>(null);
   const initialRef = useRef<HTMLInputElement>(null);
 
-  const notify = (opts: { title: string; type: "success"|"error" }) =>
+  const notify = (opts: { title: string; type: "success" | "error" }) =>
     toaster.create({ title: opts.title, type: opts.type });
 
   const parseXml = async () => {
@@ -56,17 +70,20 @@ export default function AppleMusicXmlImport({ isOpen, onClose, client, fetchPlay
         throw new Error("Playlist items missing");
       }
 
-      const imp: ImportedTrack[] = playlist["Playlist Items"].map((item: any) => {
-        const e = trackMap.get(String(item["Track ID"])) as any;
-        return {
-          name: e.Name || "",
-          artist: e.Artist || "",
-          album: e.Album || "",
-          duration: typeof e["Total Time"] === "number"
-            ? Math.round(e["Total Time"] / 1000)
-            : undefined,
-        };
-      }).filter(t => t.name);
+      const imp: ImportedTrack[] = playlist["Playlist Items"]
+        .map((item: any) => {
+          const e = trackMap.get(String(item["Track ID"])) as any;
+          return {
+            name: e.Name || "",
+            artist: e.Artist || "",
+            album: e.Album || "",
+            duration:
+              typeof e["Total Time"] === "number"
+                ? Math.round(e["Total Time"] / 1000)
+                : undefined,
+          };
+        })
+        .filter((t) => t.name);
 
       setTracks(imp);
       setStep("parsed");
@@ -102,7 +119,7 @@ export default function AppleMusicXmlImport({ isOpen, onClose, client, fetchPlay
       notify({ title: "Enter name and match tracks", type: "error" });
       return;
     }
-    const ids = matched.filter(Boolean).map(t => t!.track_id);
+    const ids = matched.filter(Boolean).map((t) => t!.track_id);
     if (!ids.length) {
       notify({ title: "No matched tracks", type: "error" });
       return;
@@ -114,7 +131,11 @@ export default function AppleMusicXmlImport({ isOpen, onClose, client, fetchPlay
     });
     if (resp.ok) {
       notify({ title: "Playlist saved!", type: "success" });
-      setStep("idle"); setTracks([]); setMatched([]); setName(""); setFile(null);
+      setStep("idle");
+      setTracks([]);
+      setMatched([]);
+      setName("");
+      setFile(null);
       fetchPlaylists();
       onClose();
     } else {
@@ -125,7 +146,7 @@ export default function AppleMusicXmlImport({ isOpen, onClose, client, fetchPlay
   return (
     <Dialog.Root
       open={isOpen}
-      onOpenChange={open => open ? null : onClose()}
+      onOpenChange={(open) => (open ? null : onClose())}
       initialFocusEl={() => initialRef.current}
       role="dialog"
       size="lg"
@@ -136,95 +157,226 @@ export default function AppleMusicXmlImport({ isOpen, onClose, client, fetchPlay
         <Dialog.Positioner>
           <Dialog.Content>
             <Dialog.Header>
-              {step === "idle" && "Import Apple Music XML"}
-              {step === "parsed" && "Parsed Tracks"}
-              {step === "review" && "Review Matches"}
+              <Dialog.Title>
+                {step === "idle" && "Import Apple Music XML"}
+                {step === "parsed" && "Parsed Tracks"}
+                {step === "review" && "Review Matches"}
+              </Dialog.Title>
+
+              <Dialog.CloseTrigger asChild>
+                <CloseButton
+                  // ref={cancelRef}
+                  size="sm"
+                  onClick={() => onClose()}
+                />
+              </Dialog.CloseTrigger>
             </Dialog.Header>
             <Dialog.Body>
               {/* idle */}
               {step === "idle" && (
-                <Box>
-                  <Input
+                <Stack>
+                  {/* <Input
                     ref={initialRef}
                     type="file"
                     accept=".xml"
                     mb={2}
                     size="sm"
                     onChange={e => { setFile(e.target.files?.[0] || null); }}
-                  />
-                  <Input
-                    size="sm"
-                    placeholder="Playlist name"
-                    mb={2}
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                  />
-                  <Button
-                    size="sm"
-                    colorPalette="purple"
-                    onClick={parseXml}
-                    isDisabled={!file || !name.trim() || loading}
+                  /> */}
+
+                  <FileUpload.Root
+                    accept={[".xml", "text/xml"]}
+                    onFileChange={(files) => {
+                      // Chakra UI v3 FileUpload: files.acceptedFiles is the correct property
+                      const file = files.acceptedFiles?.[0] || null;
+                      setFile(file);
+                    }}
                   >
-                    Parse Tracks
-                  </Button>
+                    <FileUpload.HiddenInput />
+                    <FileUpload.Trigger asChild>
+                      <Button variant="outline" size="sm">
+                        <FiUpload /> Upload file
+                      </Button>
+                    </FileUpload.Trigger>
+                    <FileUpload.List />
+                  </FileUpload.Root>
+                  <Box>
+                    <label htmlFor="playlist-name-input">
+                      <Text
+                        as="span"
+                        fontSize="sm"
+                        fontWeight="medium"
+                        mb={1}
+                        display="block"
+                      >
+                        Playlist name
+                      </Text>
+                    </label>
+                    <Input
+                      id="playlist-name-input"
+                      size="sm"
+                      placeholder="Playlist name"
+                      mb={2}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                  </Box>
+                  <Box>
+                    <Button
+                      size="sm"
+                      colorPalette="blue"
+                      onClick={parseXml}
+                      disabled={!file || !name.trim() || loading}
+                      loading={loading}
+                    >
+                      Parse Tracks
+                    </Button>
+                  </Box>
                   {loading && <Text fontSize="xs">Parsing…</Text>}
-                  {error && <Text color="red.500" fontSize="xs">{error}</Text>}
-                </Box>
+                  {error && (
+                    <Text color="red.500" fontSize="xs">
+                      {error}
+                    </Text>
+                  )}
+                </Stack>
               )}
               {/* parsed */}
               {step === "parsed" && (
                 <Box>
-                  <Text fontSize="xs" color="gray.600">Parsed {tracks.length} tracks</Text>
-                  <Box maxH="300px" overflowY="auto" bg="white" p={2} borderWidth="1px" borderRadius="md" mb={2}>
-                    {tracks.map((t,i) => (
-                      <Flex key={i} fontSize="xs" py={1} borderBottom="1px solid #eee" align="center" gap={2}>
-                        <Box flex={2}><b>{t.name}</b></Box>
-                        <Box flex={2} color="#888">{t.artist}</Box>
-                        <Box flex={2} color="#888">{t.album}</Box>
-                        {t.duration != null && <Box flex={1} color="#888">{t.duration}s</Box>}
+                  <Text fontSize="xs" color="gray.600">
+                    Parsed {tracks.length} tracks
+                  </Text>
+                  <Box
+                    maxH="300px"
+                    overflowY="auto"
+                    bg="white"
+                    p={2}
+                    borderWidth="1px"
+                    borderRadius="md"
+                    mb={2}
+                  >
+                    {tracks.map((t, i) => (
+                      <Flex
+                        key={i}
+                        fontSize="xs"
+                        py={1}
+                        borderBottom="1px solid #eee"
+                        align="center"
+                        gap={2}
+                      >
+                        <Box flex={2}>
+                          <b>{t.name}</b>
+                        </Box>
+                        <Box flex={2} color="#888">
+                          {t.artist}
+                        </Box>
+                        <Box flex={2} color="#888">
+                          {t.album}
+                        </Box>
+                        {t.duration != null && (
+                          <Box flex={1} color="#888">
+                            {t.duration}s
+                          </Box>
+                        )}
                       </Flex>
                     ))}
                   </Box>
-                  <Button size="sm" colorPalette="blue" onClick={matchTracks} isLoading={loading}>
+                  <Button
+                    size="sm"
+                    colorPalette="blue"
+                    onClick={matchTracks}
+                    loading={loading}
+                  >
                     Match Tracks
                   </Button>
-                  {error && <Text color="red.500" fontSize="xs">{error}</Text>}
+                  {error && (
+                    <Text color="red.500" fontSize="xs">
+                      {error}
+                    </Text>
+                  )}
                 </Box>
               )}
               {/* review */}
               {step === "review" && (
                 <Box>
-                  <Text fontSize="sm" mb={2}>Review and adjust matches</Text>
-                  <Box maxH="400px" overflowY="auto" bg="white" p={2} borderWidth="1px" borderRadius="md">
+                  <Text fontSize="sm" mb={2}>
+                    Review and adjust matches
+                  </Text>
+                  <Box
+                    maxH="400px"
+                    overflowY="auto"
+                    bg="white"
+                    p={2}
+                    borderWidth="1px"
+                    borderRadius="md"
+                  >
                     {tracks.map((imp, idx) => (
-                      <Flex key={idx} align="center" py={1} borderBottom="1px solid #eee" gap={2}>
-                        <Box flex={2} fontSize="xs"><b>{imp.name}</b><br/><Text as="span" color="#888">by {imp.artist}</Text><br /><Text as="span" color="#888">{imp.album}</Text></Box>
+                      <Flex
+                        key={idx}
+                        align="center"
+                        py={1}
+                        borderBottom="1px solid #eee"
+                        gap={2}
+                      >
+                        <Box flex={2} fontSize="xs">
+                          <b>{imp.name}</b>
+                          <br />
+                          <Text as="span" color="#888">
+                            by {imp.artist}
+                          </Text>
+                          <br />
+                          <Text as="span" color="#888">
+                            {imp.album}
+                          </Text>
+                        </Box>
                         <Box flex={3} fontSize="xs">
                           {matched[idx] ? (
                             <Box>
-                              <b>{matched[idx]!.title}</b> by {matched[idx]!.artist}<br />
-                              <Text as="span" color="#888">{matched[idx]!.album}</Text>
-                              <Button size="xs" ml={2} colorPalette="red" variant="outline" onClick={() => {
-                                setMatched(prev => prev.map((m,i)=> i===idx ? null : m));
-                              }}>
+                              <b>{matched[idx]!.title}</b> by{" "}
+                              {matched[idx]!.artist}
+                              <br />
+                              <Text as="span" color="#888">
+                                {matched[idx]!.album}
+                              </Text>
+                              <Button
+                                size="xs"
+                                ml={2}
+                                colorPalette="red"
+                                variant="outline"
+                                onClick={() => {
+                                  setMatched((prev) =>
+                                    prev.map((m, i) => (i === idx ? null : m))
+                                  );
+                                }}
+                              >
                                 Clear
                               </Button>
                             </Box>
-                          ) : <Text color="red">No match</Text>}
+                          ) : (
+                            <Text color="red">No match</Text>
+                          )}
                         </Box>
                         <Box flex={2}>
                           <Input
                             size="xs"
                             placeholder="Search..."
-                            onKeyDown={e => {
+                            onKeyDown={(e) => {
                               if (e.key === "Enter") {
                                 const q = (e.target as HTMLInputElement).value;
                                 setLoading(true);
-                                client.index<Track>("tracks").search(q, { limit: 1 })
-                                  .then(r => {
-                                    setMatched(prev => prev.map((m,i)=> i===idx ? (r.hits[0]||null) : m));
+                                client
+                                  .index<Track>("tracks")
+                                  .search(q, { limit: 1 })
+                                  .then((r) => {
+                                    setMatched((prev) =>
+                                      prev.map((m, i) =>
+                                        i === idx ? r.hits[0] || null : m
+                                      )
+                                    );
                                   })
-                                  .catch(err => setError("Search error: "+err.message))
+                                  .catch((err) =>
+                                    setError("Search error: " + err.message)
+                                  )
                                   .finally(() => setLoading(false));
                               }
                             }}
@@ -244,19 +396,27 @@ export default function AppleMusicXmlImport({ isOpen, onClose, client, fetchPlay
               </Dialog.ActionTrigger>
               {step === "idle" && null}
               {step === "parsed" && (
-                <Button ml={2} size="sm" colorPalette="blue" onClick={matchTracks}>
+                <Button
+                  ml={2}
+                  size="sm"
+                  colorPalette="blue"
+                  onClick={matchTracks}
+                >
                   Match Tracks
                 </Button>
               )}
               {step === "review" && (
-                <Button ml={2} size="sm" colorPalette="purple" onClick={savePlaylist} isLoading={loading}>
+                <Button
+                  ml={2}
+                  size="sm"
+                  colorPalette="purple"
+                  onClick={savePlaylist}
+                  loading={loading}
+                >
                   Save Playlist
                 </Button>
               )}
             </Dialog.Footer>
-            <Dialog.CloseTrigger asChild>
-              <Button position="absolute" top="8px" right="8px" size="sm">✕</Button>
-            </Dialog.CloseTrigger>
           </Dialog.Content>
         </Dialog.Positioner>
       </Portal>

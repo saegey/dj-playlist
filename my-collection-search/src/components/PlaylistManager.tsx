@@ -9,7 +9,10 @@ import {
   Button,
   Dialog,
   Portal,
+  CloseButton,
 } from "@chakra-ui/react";
+import { MeiliSearch } from "meilisearch";
+
 import { Toaster, toaster } from "@/components/ui/toaster"; // See below
 import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
 
@@ -24,7 +27,7 @@ type Props = {
   handleLoadPlaylist: (trackIds: string[]) => void;
   xmlImportModalOpen: boolean;
   setXmlImportModalOpen: (open: boolean) => void;
-  client: unknown;
+  client: MeiliSearch;
   fetchPlaylists: () => void;
 };
 
@@ -48,15 +51,12 @@ export default function PlaylistManager({
   const notify = (opts: Parameters<typeof toaster.create>[0]) =>
     toaster.create(opts);
 
-  const handleDeletePlaylist = (id: number) => {
-    setPlaylistToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
   const confirmDeletePlaylist = async () => {
     if (playlistToDelete == null) return;
     try {
-      await fetch(`/api/playlists?id=${playlistToDelete}`, { method: "DELETE" });
+      await fetch(`/api/playlists?id=${playlistToDelete}`, {
+        method: "DELETE",
+      });
       notify({ title: "Playlist deleted.", type: "success" });
       fetchPlaylists();
     } catch {
@@ -124,24 +124,44 @@ export default function PlaylistManager({
         </Button>
       </Flex>
 
-      <Box overflowY="auto" borderWidth="1px" borderRadius="md" p={2} bg="gray.50">
+      <Box
+        overflowY="auto"
+        borderWidth="1px"
+        borderRadius="md"
+        p={2}
+        bg="bg.subtle"
+      >
         {loadingPlaylists ? (
           <Text fontSize="sm">Loading...</Text>
         ) : playlists.length === 0 ? (
-          <Text fontSize="sm" color="gray.500">
+          <Text fontSize="sm" color="fg.muted">
             No saved playlists.
           </Text>
         ) : (
           playlists.map((pl) => (
             <Flex key={pl.id} direction="column" mb={2}>
-              <Text fontSize="sm" fontWeight="bold" isTruncated>
+              <Text fontSize="sm" fontWeight="bold">
                 {pl.name}
               </Text>
               <Flex mt={1}>
-                <Button size="xs" colorPalette="blue" mr={1} onClick={() => handleLoadPlaylist(pl.tracks)}>
+                <Button
+                  size="xs"
+                  variant="solid"
+                  colorScheme="primary"
+                  mr={1}
+                  onClick={() => handleLoadPlaylist(pl.tracks)}
+                >
                   Load
                 </Button>
-                <Button size="xs" colorPalette="gray" onClick={() => handleDeletePlaylist(pl.id)}>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  colorScheme="danger"
+                  onClick={() => {
+                    setPlaylistToDelete(pl.id);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
                   Delete
                 </Button>
               </Flex>
@@ -152,9 +172,9 @@ export default function PlaylistManager({
 
       <Dialog.Root
         open={deleteDialogOpen}
-        onOpenChange={(open) => {
-          setDeleteDialogOpen(open);
-          if (!open) setPlaylistToDelete(null);
+        onOpenChange={(details) => {
+          setDeleteDialogOpen(details.open);
+          if (!details.open) setPlaylistToDelete(null);
         }}
         role="alertdialog"
         initialFocusEl={() => cancelRef.current}
@@ -163,17 +183,26 @@ export default function PlaylistManager({
           <Dialog.Backdrop />
           <Dialog.Positioner>
             <Dialog.Content>
-              <Dialog.Header>Delete Playlist</Dialog.Header>
+              <Dialog.Header>
+                <Dialog.Title>Delete Playlist</Dialog.Title>
+
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton
+                    ref={cancelRef}
+                    size="sm"
+                    onClick={() => setDeleteDialogOpen(false)}
+                  />
+                </Dialog.CloseTrigger>
+              </Dialog.Header>
               <Dialog.Body>
                 Are you sure? This action cannot be undone.
               </Dialog.Body>
               <Dialog.Footer>
-                <Dialog.ActionTrigger asChild>
-                  <Button ref={cancelRef} onClick={() => setDeleteDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                </Dialog.ActionTrigger>
-                <Button colorPalette="red" ml={3} onClick={confirmDeletePlaylist}>
+                <Button
+                  colorPalette="red"
+                  ml={3}
+                  onClick={confirmDeletePlaylist}
+                >
                   Delete
                 </Button>
               </Dialog.Footer>
@@ -181,11 +210,22 @@ export default function PlaylistManager({
           </Dialog.Positioner>
         </Portal>
       </Dialog.Root>
-
-      <Button mt={6} colorPalette="purple" size="sm" width="100%" onClick={() => setXmlImportModalOpen(true)}>
+      <Button
+        mt={6}
+        variant="surface"
+        size="sm"
+        width="100%"
+        onClick={() => setXmlImportModalOpen(true)}
+      >
         Import Apple Music XML
       </Button>
-      <Button mt={2} colorPalette="teal" size="sm" width="100%" onClick={() => fileInputRef.current?.click()}>
+      <Button
+        mt={2}
+        variant="solid"
+        size="sm"
+        width="100%"
+        onClick={() => fileInputRef.current?.click()}
+      >
         Import Playlist JSON
       </Button>
       <input
