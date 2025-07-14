@@ -7,6 +7,7 @@ type Friend = {
 
 // You could load this from a config, DB, or user profile in a real app
 const DEFAULT_FRIENDS: Friend[] = [
+  { username: "Cdsmooth" },
   // Example: { username: 'friend1' },
 ];
 import {
@@ -15,15 +16,12 @@ import {
   Heading,
   Text,
   Alert,
-  AlertIcon,
   AlertTitle,
   AlertDescription,
   VStack,
   HStack,
-  Collapse,
-  useColorModeValue,
-  Divider,
   Code,
+  Input,
 } from "@chakra-ui/react";
 import TopMenuBar from "@/components/MenuBar";
 
@@ -116,62 +114,55 @@ export default function DiscogsSyncPage() {
   };
 
   // Chakra UI color mode value must be called unconditionally
-  const cardBg = useColorModeValue("gray.50", "gray.800");
 
   return (
     <>
-      <TopMenuBar current={'/discogs'} />
+      <TopMenuBar current={"/discogs"} />
       <Box maxW="700px" mx="auto" p={8}>
         <Heading mb={6} size="lg">
           Vinyl Playlist Maker Pro Edition Settings
         </Heading>
-        <HStack spacing={4} mb={6}>
+        <HStack mb={6}>
           <Button
             colorScheme="blue"
             onClick={() => handleSync()}
-            isLoading={syncing}
-            isDisabled={syncing || indexing}
+            loading={syncing}
+            disabled={syncing || indexing}
           >
             Sync My Collection
           </Button>
           <Button
             colorScheme="purple"
             onClick={handleUpdateIndex}
-            isLoading={indexing}
-            isDisabled={indexing || syncing}
+            loading={indexing}
+            disabled={indexing || syncing}
           >
             Update Index
           </Button>
           <Button
             colorScheme="orange"
             onClick={handleBackup}
-            isLoading={backingUp}
-            isDisabled={backingUp || syncing || indexing}
+            loading={backingUp}
+            disabled={backingUp || syncing || indexing}
           >
             Backup Database
           </Button>
         </HStack>
 
-        <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md" bg={cardBg}>
+        <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
           <Heading size="md" mb={2}>
-            Friends' Discogs Collections
+            Friends&apos; Discogs Collections
           </Heading>
-          <Text mb={2} color="gray.500">
-            Add friends' Discogs usernames to sync or browse their collections
-            for playlist collaboration or borrowing albums.
+          <Text mb={2}>
+            Add friends&apos; Discogs usernames to sync or browse their
+            collections for playlist collaboration or borrowing albums.
           </Text>
           <HStack mb={4}>
-            <input
+            <Input
               type="text"
               placeholder="Add friend's username"
               value={newFriend}
               onChange={(e) => setNewFriend(e.target.value)}
-              style={{
-                padding: 8,
-                borderRadius: 4,
-                border: "1px solid #ccc",
-                flex: 1,
-              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleAddFriend();
               }}
@@ -179,24 +170,24 @@ export default function DiscogsSyncPage() {
             <Button
               colorScheme="green"
               onClick={handleAddFriend}
-              isDisabled={!newFriend.trim()}
+              disabled={!newFriend.trim()}
             >
               Add
             </Button>
           </HStack>
-          <VStack align="stretch" spacing={2}>
+          <VStack align="stretch">
             {friends.length === 0 && (
               <Text color="gray.400">No friends added yet.</Text>
             )}
             {friends.map((friend) => (
-              <HStack key={friend.username} spacing={3}>
+              <HStack key={friend.username}>
                 <Text fontWeight="medium">{friend.username}</Text>
                 <Button
                   size="xs"
                   colorScheme="blue"
                   onClick={() => handleSync(friend.username)}
-                  isLoading={syncing}
-                  isDisabled={syncing || indexing}
+                  loading={syncing}
+                  disabled={syncing || indexing}
                 >
                   Sync
                 </Button>
@@ -214,15 +205,15 @@ export default function DiscogsSyncPage() {
         </Box>
 
         {indexError && (
-          <Alert status="error" mb={4}>
-            <AlertIcon />
-            <AlertTitle mr={2}>Index Error:</AlertTitle>
-            <AlertDescription>{indexError}</AlertDescription>
-          </Alert>
+          <Alert.Root status="error" title="Error">
+            <Alert.Indicator />
+            <Alert.Title>Index Error</Alert.Title>
+            <Alert.Description>{indexError}</Alert.Description>
+          </Alert.Root>
         )}
 
         {indexResult && (
-          <Box mt={6} p={4} borderWidth={1} borderRadius="md" bg={cardBg}>
+          <Box mt={6} p={4} borderWidth={1} borderRadius="md">
             <Heading size="md" mb={2}>
               Index Update Results
             </Heading>
@@ -231,19 +222,19 @@ export default function DiscogsSyncPage() {
         )}
 
         {error && (
-          <Alert status="error" mb={4}>
-            <AlertIcon />
-            <AlertTitle mr={2}>Error:</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <Alert.Root status="error" title="Error">
+            <Alert.Indicator />
+            <Alert.Title>Error</Alert.Title>
+            <Alert.Description>{error}</Alert.Description>
+          </Alert.Root>
         )}
 
         {result && (
-          <Box mt={6} p={4} borderWidth={1} borderRadius="md" bg={cardBg}>
+          <Box mt={6} p={4} borderWidth={1} borderRadius="md">
             <Heading size="md" mb={2}>
               Sync Results
             </Heading>
-            <VStack align="start" spacing={2}>
+            <VStack align="start">
               <Text>
                 <b>New releases downloaded:</b> {result.newReleases.length}
               </Text>
@@ -260,7 +251,7 @@ export default function DiscogsSyncPage() {
             {result.errors && result.errors.length > 0 && (
               <Box color="orange.600" mt={4}>
                 <b>Errors:</b>
-                <VStack align="start" spacing={1} mt={1}>
+                <VStack align="start" mt={1}>
                   {result.errors.map(
                     (e: { releaseId: string; error: string }, i: number) => (
                       <Text key={i} fontSize="sm">
@@ -294,18 +285,18 @@ export default function DiscogsSyncPage() {
         )}
 
         {backupError && (
-          <Alert status="error" mb={4}>
-            <AlertIcon />
-            <AlertTitle mr={2}>Backup Error:</AlertTitle>
-            <AlertDescription>{backupError}</AlertDescription>
-          </Alert>
+          <Alert.Root status="error" title="Backup Error">
+            <Alert.Indicator />
+            <Alert.Title>Backup Error</Alert.Title>
+            <Alert.Description>{backupError}</Alert.Description>
+          </Alert.Root>
         )}
         {backupResult && (
-          <Alert status="success" mb={4}>
-            <AlertIcon />
-            <AlertTitle mr={2}>Backup Complete:</AlertTitle>
-            <AlertDescription>{backupResult}</AlertDescription>
-          </Alert>
+          <Alert.Root status="success" title="Backup Complete">
+            <Alert.Indicator />
+            <Alert.Title>Backup Complete</Alert.Title>
+            <Alert.Description>{backupResult}</Alert.Description>
+          </Alert.Root>
         )}
       </Box>
     </>

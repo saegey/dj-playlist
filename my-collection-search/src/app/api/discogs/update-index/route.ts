@@ -3,9 +3,6 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { MeiliSearch } from "meilisearch";
 import { Pool } from "pg";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const DISCOGS_EXPORTS_DIR = path.resolve(process.cwd(), "discogs_exports");
 const client = new MeiliSearch({
@@ -57,7 +54,12 @@ export async function POST() {
           DISCOGS_EXPORTS_DIR,
           `release_${releaseFile}.json`
         );
-        if (!fs.existsSync(releasePath) && username && process.env.DISCOGS_USERNAME && username !== process.env.DISCOGS_USERNAME) {
+        if (
+          !fs.existsSync(releasePath) &&
+          username &&
+          process.env.DISCOGS_USERNAME &&
+          username !== process.env.DISCOGS_USERNAME
+        ) {
           // Try username-prefixed file if not the main user
           const altPath = path.join(
             DISCOGS_EXPORTS_DIR,
@@ -157,9 +159,15 @@ export async function POST() {
         ]
       );
       // Fetch the full row from the DB to get all fields (including custom fields)
-      const { rows } = await pool.query('SELECT * FROM tracks WHERE track_id = $1', [track.track_id]);
+      const { rows } = await pool.query(
+        "SELECT * FROM tracks WHERE track_id = $1",
+        [track.track_id]
+      );
       if (rows && rows[0]) {
         upserted.push(rows[0]);
+        console.debug(
+          `[Discogs Index] Upserted track: ${track.track_id} - ${track.title} (user: ${track.username}) ${track.local_tags}`
+        );
       }
     }
 
