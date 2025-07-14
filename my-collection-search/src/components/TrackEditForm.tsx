@@ -199,7 +199,6 @@ export default function TrackEditForm({
 
   const handleAnalyzeAudio = async () => {
     setAnalyzing(true);
-    setAnalysisResult(null);
     try {
       const res = await fetch("/api/tracks/analyze", {
         method: "POST",
@@ -208,6 +207,7 @@ export default function TrackEditForm({
           apple_music_url: form.apple_music_url,
           youtube_url: form.youtube_url,
           soundcloud_url: form.soundcloud_url,
+          track_id: form.track_id,
         }),
       });
       if (res.ok) {

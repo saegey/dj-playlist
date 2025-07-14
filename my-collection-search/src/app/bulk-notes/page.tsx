@@ -113,12 +113,24 @@ export default function BulkNotesPage() {
       <Toaster />
       <TopMenuBar current="/bulk-notes" />
       <Box p={6} pb={80}>
-        <HStack mb={4} gap={2}>
+        <HStack gap={2} mb={4}>
+          <Box>
+            <Input
+              placeholder="Search by artist..."
+              value={artistSearch}
+              onChange={(e) => setArtistSearch(e.target.value)}
+              size="sm"
+              maxW="320px"
+              width="300px"
+              mb={0}
+            />
+          </Box>
           <Select.Root
             collection={userCollection}
             value={selectedUsername ? [selectedUsername] : []}
             onValueChange={(v) => setSelectedUsername(v.value[0] || "")}
             width="160px"
+            size={"sm"}
           >
             <Select.HiddenSelect />
             <Select.Control>
@@ -159,15 +171,6 @@ export default function BulkNotesPage() {
             Copy Prompt
           </Button>
         </HStack>
-
-        <Input
-          placeholder="Search by artist..."
-          value={artistSearch}
-          onChange={(e) => setArtistSearch(e.target.value)}
-          size="sm"
-          maxW="320px"
-          mb={4}
-        />
 
         {loading ? (
           <Text>Loading…</Text>

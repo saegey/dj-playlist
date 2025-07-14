@@ -119,7 +119,7 @@ export async function POST(request: Request) {
       // Convert audio to .wav using ffmpeg
       let ext = path.extname(filePath).toLowerCase();
       wavPath = filePath.replace(new RegExp(`${ext}$`), `_${Date.now()}.wav`);
-      await execAsync(`ffmpeg -y -i "${filePath}" "${wavPath}"`);
+      await execAsync(`ffmpeg -y -i "${filePath}" -ac 1 "${wavPath}"`);
       console.log("Converted to wav:", wavPath);
 
       // Call Python Essentia analysis script

@@ -223,8 +223,8 @@ export default function TrackResult({
               </Link>
             )}
             {track.youtube_url && (
-              <Link href={track.youtube_url} color="blue.500" target="_blank">
-                YouTube
+              <Link href={track.youtube_url} target="_blank">
+                <Text fontSize="sm">YouTube</Text>
               </Link>
             )}
             {track.username && (
