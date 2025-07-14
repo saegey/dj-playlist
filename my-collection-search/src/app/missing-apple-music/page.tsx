@@ -13,6 +13,8 @@ import {
   Image,
   Input,
   HStack,
+  Portal,
+  createListCollection,
 } from "@chakra-ui/react";
 import {
   Modal,
@@ -174,27 +176,56 @@ export default function MissingAppleMusicPage() {
       alert("Failed to update track");
     }
   };
+
+  const usernameCollection = createListCollection({
+    items: usernames.map((u) => ({ label: u, value: u })),
+  });
+
   return (
     <>
       <TopMenuBar current="/missing-apple-music" />
       <Box p={6}>
-        <HStack mb={4} spacing={4} align="flex-end">
-          <Select
-            placeholder="All Users"
-            value={selectedUsername}
-            onChange={(e) => setSelectedUsername(e.target.value)}
-            minW="160px"
+        <HStack mb={4} align="flex-end">
+          <Select.Root
+            collection={usernameCollection}
+            value={selectedUsername ? [selectedUsername] : []}
+            onValueChange={(vals) => {
+              setSelectedUsername(vals.value.length ? vals.value[0] : "");
+            }}
+            width="320px"
           >
-            {usernames.map((u) => (
-              <option key={u} value={u}>
-                {u}
-              </option>
-            ))}
-          </Select>
+            <Select.HiddenSelect />
+            <Select.Control>
+              <Select.Trigger>
+                <Select.ValueText placeholder="Choose user library" />
+              </Select.Trigger>
+              <Select.IndicatorGroup>
+                <Select.Indicator />
+              </Select.IndicatorGroup>
+            </Select.Control>
+
+            <Portal>
+              <Select.Positioner>
+                <Select.Content>
+                  {usernames.map((u) => (
+                    <Select.Item
+                      key={u}
+                      item={{ label: u, value: u }}
+                      value={u}
+                    >
+                      {u}
+                      <Select.ItemIndicator />
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Positioner>
+            </Portal>
+          </Select.Root>
         </HStack>
         {typeof total === "number" && (
           <Text fontSize="md" color="gray.600" mb={4}>
-            {total} track{total === 1 ? "" : "s"} missing a music URL (Apple Music, SoundCloud, YouTube)
+            {total} track{total === 1 ? "" : "s"} missing a music URL (Apple
+            Music, SoundCloud, YouTube)
           </Text>
         )}
         {loading ? (

@@ -1,18 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import {
-  Box,
-  Flex,
-  Text,
-  Link,
-  Image,
-  Button,
-  Portal,
-  Menu,
-  MenuItem,
-  IconButton,
-} from "@chakra-ui/react";
-import { FiMoreVertical } from "react-icons/fi";
+import { Box, Flex, Text, Link, Image, Button } from "@chakra-ui/react";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
 
@@ -132,7 +120,7 @@ export default function TrackResult({
   // Expanded view
   return (
     <Box borderWidth="1px" borderRadius="md" p={3} mb={2}>
-      <Flex alignItems="center" gap={3}>
+      <Flex alignItems="flex-start" gap={3}>
         <Image
           src={track.album_thumbnail}
           alt={track.title}
@@ -179,9 +167,9 @@ export default function TrackResult({
               Genres: {track.genres.join(", ")}
             </Text>
           )}
-          {Array.isArray(track.local_tags) && track.local_tags.length > 0 && (
+          {track.local_tags && (
             <Text fontSize="sm" color="orange.600">
-              Local Tags: {track.local_tags.join(", ")}
+              Local Tags: {track.local_tags}
             </Text>
           )}
 
