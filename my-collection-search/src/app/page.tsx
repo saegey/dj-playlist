@@ -59,6 +59,7 @@ export default function SearchPage() {
     playlistCounts,
     hasMore,
     loadMore,
+    needsRefresh
   } = useSearchResults({ client, username: selectedUsername });
 
   const {
@@ -97,6 +98,9 @@ export default function SearchPage() {
     if (res.ok) {
       setEditTrack(null);
       setDialogOpen(false);
+      needsRefresh();
+      // Refresh search results after saving track
+      
     } else {
       alert("Failed to update track");
     }

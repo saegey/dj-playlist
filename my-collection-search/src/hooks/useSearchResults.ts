@@ -26,6 +26,7 @@ export function useSearchResults({
     {}
   );
   const limit = 20;
+  const [refreshFlag, setRefreshFlag] = useState(false);
 
   // Helper to fetch playlist counts for a list of track IDs
   const fetchPlaylistCounts = useCallback(async (trackIds: string[]) => {
@@ -44,6 +45,9 @@ export function useSearchResults({
       // Ignore errors for now
     }
   }, []);
+
+  // Search refresh logic
+  // (removed duplicate refreshSearch declaration)
 
   // Search logic
   useEffect(() => {
@@ -80,6 +84,31 @@ export function useSearchResults({
     };
     search();
   }, [query, fetchPlaylistCounts, client, username]);
+
+  const refreshSearch = useCallback(() => {
+    const filter = username ? [`username = "${username}"`] : undefined;
+    const index = client.index<Track>("tracks");
+    index.search(query, { limit, offset: 0, filter }).then((res) => {
+      setResults(res.hits);
+      setEstimatedResults(res.estimatedTotalHits || 0);
+      setOffset(limit);
+      setHasMore(res.hits.length === limit);
+      fetchPlaylistCounts(res.hits.map((t) => t.track_id));
+    });
+  }, [client, query, limit, fetchPlaylistCounts, username]);
+
+  // Effect to refresh search when refreshFlag is set
+  useEffect(() => {
+    if (refreshFlag) {
+      refreshSearch();
+      setRefreshFlag(false);
+    }
+  }, [refreshFlag, refreshSearch]);
+
+  // Method to trigger a refresh from outside
+  const needsRefresh = useCallback(() => {
+    setRefreshFlag(true);
+  }, []);
 
   const clearFilter = useCallback(() => {
     setActiveFilter(null);
@@ -144,5 +173,7 @@ export function useSearchResults({
     playlistCounts,
     hasMore,
     loadMore,
+    refreshSearch,
+    needsRefresh,
   };
 }
