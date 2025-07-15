@@ -8,6 +8,7 @@ type Friend = {
 // You could load this from a config, DB, or user profile in a real app
 const DEFAULT_FRIENDS: Friend[] = [
   { username: "Cdsmooth" },
+  { username: "starlustre" },
   // Example: { username: 'friend1' },
 ];
 import {
@@ -16,12 +17,11 @@ import {
   Heading,
   Text,
   Alert,
-  AlertTitle,
-  AlertDescription,
   VStack,
   HStack,
   Code,
   Input,
+  Collapsible,
 } from "@chakra-ui/react";
 import TopMenuBar from "@/components/MenuBar";
 
@@ -37,6 +37,7 @@ type SyncResult = {
 type IndexResult = { message?: string };
 
 export default function DiscogsSyncPage() {
+  const [showNewReleases, setShowNewReleases] = useState(false);
   const [friends, setFriends] = useState<Friend[]>(DEFAULT_FRIENDS);
   const [newFriend, setNewFriend] = useState("");
   const [syncing, setSyncing] = useState(false);
@@ -206,7 +207,7 @@ export default function DiscogsSyncPage() {
 
         {indexError && (
           <Alert.Root status="error" title="Error">
-            <Alert.Indicator />
+          <Box borderBottom="1px solid" borderColor="gray.200" mb={2} />
             <Alert.Title>Index Error</Alert.Title>
             <Alert.Description>{indexError}</Alert.Description>
           </Alert.Root>
@@ -263,11 +264,23 @@ export default function DiscogsSyncPage() {
               </Box>
             )}
             {result.newReleases.length > 0 && (
-              <Collapse in={true} animateOpacity>
+              <Collapsible.Root
+                open={showNewReleases}
+                onOpenChange={(details) => setShowNewReleases(details.open)}
+              >
                 <Box mt={4}>
-                  <Divider mb={2} />
-                  <details>
-                    <summary>Show new release IDs</summary>
+                  <Box borderBottom="1px" borderColor="gray.200" mb={2} />
+                  <Collapsible.Trigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowNewReleases((v) => !v)}
+                      mb={2}
+                    >
+                      {showNewReleases ? "Hide new release IDs" : "Show new release IDs"}
+                    </Button>
+                  </Collapsible.Trigger>
+                  <Collapsible.Content>
                     <Code
                       display="block"
                       whiteSpace="pre"
@@ -277,9 +290,9 @@ export default function DiscogsSyncPage() {
                     >
                       {JSON.stringify(result.newReleases, null, 2)}
                     </Code>
-                  </details>
+                  </Collapsible.Content>
                 </Box>
-              </Collapse>
+              </Collapsible.Root>
             )}
           </Box>
         )}

@@ -10,6 +10,7 @@ import {
   Dialog,
   Portal,
   CloseButton,
+  Stack,
 } from "@chakra-ui/react";
 import { MeiliSearch } from "meilisearch";
 
@@ -116,7 +117,7 @@ export default function PlaylistManager({
         />
         <Button
           size="sm"
-          colorPalette="blue"
+          variant={"solid"}
           disabled={!playlistName.trim()}
           onClick={handleCreatePlaylist}
         >
@@ -124,12 +125,13 @@ export default function PlaylistManager({
         </Button>
       </Flex>
 
-      <Box
+      <Stack
         overflowY="auto"
         borderWidth="1px"
         borderRadius="md"
         p={2}
         bg="bg.subtle"
+        separator={<Box borderBottomWidth="1px" borderColor="bg.emphasis" />}
       >
         {loadingPlaylists ? (
           <Text fontSize="sm">Loading...</Text>
@@ -155,8 +157,7 @@ export default function PlaylistManager({
                 </Button>
                 <Button
                   size="xs"
-                  variant="outline"
-                  colorScheme="danger"
+                  variant="subtle"
                   onClick={() => {
                     setPlaylistToDelete(pl.id);
                     setDeleteDialogOpen(true);
@@ -168,7 +169,7 @@ export default function PlaylistManager({
             </Flex>
           ))
         )}
-      </Box>
+      </Stack>
 
       <Dialog.Root
         open={deleteDialogOpen}
