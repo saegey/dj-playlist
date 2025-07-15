@@ -17,7 +17,7 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
   return (
     <Flex
       as="nav"
-      bg="brand.menuBg"
+      bgColor={"gray.subtle"}
       color="brand.menuText"
       p="4"
       justify="space-around"

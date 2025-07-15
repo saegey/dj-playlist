@@ -178,7 +178,7 @@ export default function SearchPage() {
 
         {/* Playlist Panel */}
         <Box
-          borderWidth="2px"
+          borderWidth="1px"
           borderRadius="lg"
           p={4}
           width="40%"
