@@ -18,6 +18,14 @@ import { toaster } from "@/components/ui/toaster"; // your v3-style toaster
 import { Track } from "@/types/track";
 import { FiUpload } from "react-icons/fi";
 
+type PlaylistItem = { "Track ID": number };
+type TrackEntry = {
+  Name?: string;
+  Artist?: string;
+  Album?: string;
+  "Total Time"?: number;
+};
+
 type ImportedTrack = {
   name: string;
   artist: string;
@@ -58,7 +66,10 @@ export default function AppleMusicXmlImport({
     try {
       const plist = await import("plist");
       const text = await file.text();
-      const parsed: any = plist.parse(text);
+      const parsed = plist.parse(text) as {
+        Tracks?: Record<string, unknown>;
+        Playlists?: Array<Record<string, unknown>>;
+      };
 
       if (!parsed?.Tracks || !Array.isArray(parsed?.Playlists)) {
         throw new Error("Tracks or Playlists not found in XML");
@@ -70,16 +81,20 @@ export default function AppleMusicXmlImport({
         throw new Error("Playlist items missing");
       }
 
-      const imp: ImportedTrack[] = playlist["Playlist Items"]
-        .map((item: any) => {
-          const e = trackMap.get(String(item["Track ID"])) as any;
+      const imp: ImportedTrack[] = (
+        playlist["Playlist Items"] as PlaylistItem[]
+      )
+        .map((item) => {
+          const e = trackMap.get(String(item["Track ID"])) as
+            | TrackEntry
+            | undefined;
           return {
-            name: e.Name || "",
-            artist: e.Artist || "",
-            album: e.Album || "",
+            name: e?.Name || "",
+            artist: e?.Artist || "",
+            album: e?.Album || "",
             duration:
-              typeof e["Total Time"] === "number"
-                ? Math.round(e["Total Time"] / 1000)
+              typeof e?.["Total Time"] === "number"
+                ? Math.round(e["Total Time"]! / 1000)
                 : undefined,
           };
         })
@@ -87,8 +102,12 @@ export default function AppleMusicXmlImport({
 
       setTracks(imp);
       setStep("parsed");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("An unknown error occurred");
+      }
     } finally {
       setLoading(false);
     }
@@ -106,8 +125,11 @@ export default function AppleMusicXmlImport({
       }
       setMatched(res);
       setStep("review");
-    } catch (err: any) {
-      setError("Match failed: " + err.message);
+    } catch (err: unknown) {
+      setError(
+        "Match failed: " +
+          (err instanceof Error ? err.message : "An unknown error occurred")
+      );
       setStep("parsed");
     } finally {
       setLoading(false);

@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     const counts = await getPlaylistCountsForTracks(track_ids);
     return NextResponse.json(counts);
   } catch (e) {
+    console.error("Error getting playlist counts:", e);
     return NextResponse.json({ error: "Failed to get playlist counts" }, { status: 500 });
   }
 }

@@ -14,10 +14,9 @@ import {
   Dialog,
   CloseButton,
   RatingGroup,
-  Icon,
 } from "@chakra-ui/react";
-import { Track } from "@/types/track";
-import { FiStar } from "react-icons/fi";
+
+import { AppleMusicResult, Track, YoutubeVideo } from "@/types/track";
 
 // Labeled input for text/number fields
 function LabeledInput({
@@ -54,7 +53,7 @@ export default function TrackEditForm({
   onSave,
 }: {
   track: Track;
-  onSave: (data: any) => void;
+  onSave: (data: Track) => void;
 }) {
   const [form, setForm] = useState({
     ...track,
@@ -67,26 +66,10 @@ export default function TrackEditForm({
     star_rating: typeof track.star_rating === "number" ? track.star_rating : 0,
   });
 
-  type YoutubeVideo = {
-    id: string;
-    title: string;
-    channel: string;
-    thumbnail?: string;
-    url: string;
-  };
   const [youtubeResults, setYoutubeResults] = useState<YoutubeVideo[]>([]);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
 
-  type AppleMusicResult = {
-    id: string;
-    title: string;
-    artist: string;
-    album: string;
-    artwork?: string;
-    url: string;
-    duration?: number;
-  };
   const [appleResults, setAppleResults] = useState<AppleMusicResult[]>([]);
   const [appleLoading, setAppleLoading] = useState(false);
   const [showAppleModal, setShowAppleModal] = useState(false);
@@ -131,7 +114,7 @@ export default function TrackEditForm({
       } else {
         alert("Failed to fetch from AI");
       }
-    } catch (err) {
+    } catch {
       alert("Error fetching from AI");
     }
     setFetching(false);
@@ -154,12 +137,13 @@ export default function TrackEditForm({
         alert("YouTube search failed");
       }
     } catch (err) {
+      console.error("YouTube search error:", err);
       alert("YouTube search error");
     }
     setYoutubeLoading(false);
   };
 
-  const handleYoutubeSelect = (video: any) => {
+  const handleYoutubeSelect = (video: YoutubeVideo) => {
     setForm((prev) => ({ ...prev, youtube_url: video.url }));
     setShowYoutubeModal(false);
   };
@@ -181,12 +165,13 @@ export default function TrackEditForm({
         alert("Apple Music search failed");
       }
     } catch (err) {
+      console.error("Apple Music search error:", err);
       alert("Apple Music search error");
     }
     setAppleLoading(false);
   };
 
-  const handleAppleSelect = (song: any) => {
+  const handleAppleSelect = (song: AppleMusicResult) => {
     setForm((prev) => ({
       ...prev,
       apple_music_url: song.url,
@@ -223,6 +208,7 @@ export default function TrackEditForm({
         alert("Analysis failed: " + (err.error || "Unknown error"));
       }
     } catch (err) {
+      console.error("Audio analysis error:", err);
       alert("Error analyzing audio");
     }
     setAnalyzing(false);
@@ -463,7 +449,7 @@ export default function TrackEditForm({
                 ) : appleResults.length === 0 ? (
                   <Text>No results found.</Text>
                 ) : (
-                  <Stack spacing={3}>
+                  <Stack>
                     {appleResults.map((song) => (
                       <Flex
                         key={song.id}

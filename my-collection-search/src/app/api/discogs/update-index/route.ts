@@ -5,11 +5,66 @@ import { MeiliSearch } from "meilisearch";
 import { Pool } from "pg";
 
 const DISCOGS_EXPORTS_DIR = path.resolve(process.cwd(), "discogs_exports");
+
 const client = new MeiliSearch({
   host: process.env.MEILISEARCH_HOST || "http://127.0.0.1:7700",
   apiKey: process.env.MEILISEARCH_API_KEY || "masterKey",
 });
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+interface DiscogsRelease {
+  id: string;
+  title: string;
+  artists: { name: string }[];
+  artists_sort?: string;
+  year: number;
+  styles: string[];
+  genres: string[];
+  uri: string;
+  thumb: string;
+  tracklist: {
+    position: string;
+    title: string;
+    duration: string;
+    artists: { name: string }[];
+  }[];
+}
+
+interface Track {
+  track_id: string;
+  title: string;
+  artist: string;
+  album: string;
+  year: number | null;
+  styles: string[];
+  genres: string[];
+  duration: string;
+  discogs_url: string;
+  album_thumbnail: string;
+  position: string;
+  duration_seconds: number | null;
+  bpm: number | null;
+  key: string | null;
+  notes: string | null;
+  local_tags: string[];
+  apple_music_url: string | null;
+  local_audio_url: string | null;
+  username: string;
+}
+
+interface Artist {
+  name: string;
+}
+
+interface ProcessedTrack {
+  position: string;
+  title: string;
+  duration: string;
+  artists: Artist[];
+  duration_seconds?: number | null;
+  apple_music_url?: string | null;
+  local_audio_url?: string | null;
+}
 
 export async function POST() {
   try {
@@ -29,7 +84,8 @@ export async function POST() {
         { status: 404 }
       );
     }
-    let allTracks: Record<string, any>[] = [];
+
+    const allTracks: Track[] = [];
     for (const manifestFile of manifestFiles) {
       const manifest = JSON.parse(
         fs.readFileSync(path.join(DISCOGS_EXPORTS_DIR, manifestFile), "utf-8")
@@ -71,7 +127,9 @@ export async function POST() {
         }
         console.log(`[Discogs Index] Checking release path: ${releasePath}`);
         if (!fs.existsSync(releasePath)) continue;
-        const album = JSON.parse(fs.readFileSync(releasePath, "utf-8"));
+        const album = JSON.parse(
+          fs.readFileSync(releasePath, "utf-8")
+        ) as DiscogsRelease;
         const artist_name =
           album["artists_sort"] ||
           (album.artists && album.artists[0] && album.artists[0].name) ||
@@ -82,7 +140,7 @@ export async function POST() {
         const album_genres = album["genres"] || [];
         const discogs_url = album["uri"];
         const thumbnail = album["thumb"];
-        (album["tracklist"] || []).forEach((track) => {
+        (album["tracklist"] || []).forEach((track: ProcessedTrack) => {
           let track_id = `${album["id"]}-${track["position"]}`;
           // Clean track_id: remove spaces and enforce valid characters only
           track_id = track_id.trim().replace(/[^a-zA-Z0-9\-_]/g, "");
@@ -90,7 +148,7 @@ export async function POST() {
             track_id,
             title: track["title"],
             artist: track["artists"]
-              ? track["artists"].map((a) => a.name).join(", ")
+              ? track["artists"].map((a: Artist) => a.name).join(", ")
               : artist_name,
             album: album_title,
             year: album_year,
@@ -119,7 +177,7 @@ export async function POST() {
     // Always get or create the index using .index(), which is safe and idempotent
     const index = client.index("tracks");
 
-    const upserted: Record<string, any>[] = [];
+    const upserted: Record<string, ProcessedTrack>[] = [];
     for (const [i, track] of allTracks.entries()) {
       if (i % 100 === 0)
         console.log(

@@ -4,7 +4,6 @@ import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 
-
 const execAsync = promisify(exec);
 const tmpDir = path.join(process.cwd(), "tmp");
 
@@ -13,6 +12,12 @@ if (!fs.existsSync(tmpDir)) {
   fs.mkdirSync(tmpDir, { recursive: true });
 }
 
+const { MeiliSearch } = await import("meilisearch");
+const client = new MeiliSearch({
+  host: process.env.MEILISEARCH_HOST || "http://127.0.0.1:7700",
+  apiKey: process.env.MEILISEARCH_API_KEY || "masterKey",
+});
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -20,40 +25,36 @@ export async function POST(request: Request) {
 
     let filePath: string | null = null;
     let wavPath: string | null = null;
-    let downloadedType: 'apple' | 'youtube' | 'soundcloud' | null = null;
+    // Download logic
     try {
       // Try Apple Music first
       if (apple_music_url) {
         console.log(`Downloading from Apple Music: ${apple_music_url}`);
         try {
-          await execAsync(`freyr get -d "${tmpDir}" "${apple_music_url}"`);
-          // Recursively find the most recently modified .m4a file in tmpDir (size > 0)
-          function findLatestM4aFile(dir: string): string | null {
-            let latest: { path: string; mtime: number } | null = null;
-            function walk(currentDir: string) {
-              const entries = fs.readdirSync(currentDir, { withFileTypes: true });
-              for (const entry of entries) {
-                const fullPath = path.join(currentDir, entry.name);
-                if (entry.isDirectory()) {
-                  walk(fullPath);
-                } else if (entry.isFile() && fullPath.endsWith(".m4a")) {
-                  const stat = fs.statSync(fullPath);
-                  if (stat.size > 0) {
-                    if (!latest || stat.mtime.getTime() > latest.mtime) {
-                      latest = { path: fullPath, mtime: stat.mtime.getTime() };
-                    }
-                  }
-                }
-              }
-            }
-            walk(dir);
-            return latest ? latest.path : null;
+          // Use a deterministic output directory
+          const appleOutDir = path.join(tmpDir, `apple_${Date.now()}`);
+          fs.mkdirSync(appleOutDir, { recursive: true });
+          await execAsync(
+            `freyr get --no-tree --directory "${appleOutDir}" "${apple_music_url}"`
+          );
+          // Find the newest .m4a file in the output directory
+          const files = fs.readdirSync(appleOutDir)
+            .filter(f => f.endsWith('.m4a'))
+            .map(f => ({
+              file: path.join(appleOutDir, f),
+              mtime: fs.statSync(path.join(appleOutDir, f)).mtime.getTime()
+            }))
+            .sort((a, b) => b.mtime - a.mtime);
+          if (files.length > 0 && fs.statSync(files[0].file).size > 0) {
+            filePath = files[0].file;
+          } else {
+            throw new Error("Downloaded .m4a file from Apple Music not found");
           }
-          filePath = findLatestM4aFile(tmpDir);
-          if (!filePath) throw new Error("Downloaded .m4a file not found");
-          downloadedType = 'apple';
         } catch (appleErr) {
-          console.warn("Apple Music download failed, will try YouTube or SoundCloud if available.", appleErr);
+          console.warn(
+            "Apple Music download failed, will try YouTube or SoundCloud if available.",
+            appleErr
+          );
         }
       }
       // Fallback to YouTube if Apple failed and youtube_url is present
@@ -61,63 +62,50 @@ export async function POST(request: Request) {
         console.log(`Downloading from YouTube: ${youtube_url}`);
         try {
           // Download audio as .m4a using yt-dlp
-          // Output file: tmp/youtube_{timestamp}.m4a
           const ytOut = path.join(tmpDir, `youtube_${Date.now()}.m4a`);
-          await execAsync(`yt-dlp -f bestaudio[ext=m4a] --extract-audio --audio-format m4a -o "${ytOut}" "${youtube_url}"`);
+          await execAsync(
+            `yt-dlp -f bestaudio[ext=m4a] --extract-audio --audio-format m4a -o "${ytOut}" "${youtube_url}"`
+          );
           if (fs.existsSync(ytOut) && fs.statSync(ytOut).size > 0) {
             filePath = ytOut;
-            downloadedType = 'youtube';
           } else {
             throw new Error("Downloaded .m4a file from YouTube not found");
           }
         } catch (ytErr) {
-          console.warn("YouTube download failed, will try SoundCloud if available.", ytErr);
+          console.warn(
+            "YouTube download failed, will try SoundCloud if available.",
+            ytErr
+          );
         }
       }
       // Fallback to SoundCloud if Apple and YouTube failed and soundcloud_url is present
       if (!filePath && soundcloud_url) {
         console.log(`Downloading from SoundCloud: ${soundcloud_url}`);
         try {
-          // Download audio as .mp3 using scdl
-          // Output file: tmp/scdl_{timestamp}.mp3
-          const scdlOutDir = path.join(tmpDir, `scdl_${Date.now()}`);
-          fs.mkdirSync(scdlOutDir, { recursive: true });
-          await execAsync(`scdl -l "${soundcloud_url}" --path "${scdlOutDir}" --onlymp3 --addtofile`);
-          // Find the most recent .mp3 file in scdlOutDir
-          function findLatestMp3File(dir: string): string | null {
-            let latest: { path: string; mtime: number } | null = null;
-            function walk(currentDir: string) {
-              const entries = fs.readdirSync(currentDir, { withFileTypes: true });
-              for (const entry of entries) {
-                const fullPath = path.join(currentDir, entry.name);
-                if (entry.isDirectory()) {
-                  walk(fullPath);
-                } else if (entry.isFile() && fullPath.endsWith(".mp3")) {
-                  const stat = fs.statSync(fullPath);
-                  if (stat.size > 0) {
-                    if (!latest || stat.mtime.getTime() > latest.mtime) {
-                      latest = { path: fullPath, mtime: stat.mtime.getTime() };
-                    }
-                  }
-                }
-              }
-            }
-            walk(dir);
-            return latest ? latest.path : null;
+          // Use a deterministic output filename
+          const scdlOut = path.join(tmpDir, `soundcloud_${Date.now()}.mp3`);
+          await execAsync(
+            `scdl -l "${soundcloud_url}" --path "${tmpDir}" --onlymp3 --addtofile --output "${scdlOut}"`
+          );
+          if (fs.existsSync(scdlOut) && fs.statSync(scdlOut).size > 0) {
+            filePath = scdlOut;
+          } else {
+            throw new Error("Downloaded .mp3 file from SoundCloud not found");
           }
-          filePath = findLatestMp3File(scdlOutDir);
-          if (!filePath) throw new Error("Downloaded .mp3 file from SoundCloud not found");
-          downloadedType = 'soundcloud';
         } catch (scErr) {
-          throw new Error("SoundCloud download failed: " + (scErr && scErr.message ? scErr.message : scErr));
+          throw new Error(
+            "SoundCloud download failed: " +
+              (scErr instanceof Error ? scErr.message : String(scErr))
+          );
         }
       }
       if (!filePath) {
-        throw new Error("No valid audio file could be downloaded from Apple Music, YouTube, or SoundCloud.");
+        throw new Error(
+          "No valid audio file could be downloaded from Apple Music, YouTube, or SoundCloud."
+        );
       }
-      console.log(`File downloaded to: ${filePath}`);
       // Convert audio to .wav using ffmpeg
-      let ext = path.extname(filePath).toLowerCase();
+      const ext = path.extname(filePath).toLowerCase();
       wavPath = filePath.replace(new RegExp(`${ext}$`), `_${Date.now()}.wav`);
       await execAsync(`ffmpeg -y -i "${filePath}" -ac 1 "${wavPath}"`);
       console.log("Converted to wav:", wavPath);
@@ -126,17 +114,24 @@ export async function POST(request: Request) {
       const pyScript = path.join(process.cwd(), "analyze_audio.py");
       let analysisResult;
       try {
-        const { stdout } = await execAsync(`python3 "${pyScript}" "${wavPath}"`);
+        const { stdout } = await execAsync(
+          `python3 "${pyScript}" "${wavPath}"`
+        );
         analysisResult = JSON.parse(stdout);
       } catch (err) {
-        throw new Error("Python analysis failed: " + (err && err.message ? err.message : err));
+        throw new Error(
+          "Python analysis failed: " +
+            (err instanceof Error ? err.message : String(err))
+        );
       }
 
       // Move the audio file to public/audio/ and keep it for playback
       const audioDir = path.join(process.cwd(), "public", "audio");
       if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
       // Use a unique filename: audio_{timestamp}_{Math.random()}.{ext}
-      const audioFileName = `audio_${Date.now()}_${Math.floor(Math.random()*1e6)}${ext}`;
+      const audioFileName = `audio_${Date.now()}_${Math.floor(
+        Math.random() * 1e6
+      )}${ext}`;
       const audioDest = path.join(audioDir, audioFileName);
       fs.copyFileSync(filePath, audioDest);
       // Clean up temp files
@@ -149,27 +144,34 @@ export async function POST(request: Request) {
 
       if (track_id) {
         try {
-          const { Pool } = await import('pg');
+          const { Pool } = await import("pg");
           const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-          console.debug('Updating track with local_audio_url:', { local_audio_url, track_id });
-          await pool.query('UPDATE tracks SET local_audio_url = $1 WHERE track_id = $2', [local_audio_url, track_id]);
+          console.debug("Updating track with local_audio_url:", {
+            local_audio_url,
+            track_id,
+          });
+          await pool.query(
+            "UPDATE tracks SET local_audio_url = $1 WHERE track_id = $2",
+            [local_audio_url, track_id]
+          );
 
           // Fetch the updated track for MeiliSearch
-          const { rows } = await pool.query('SELECT * FROM tracks WHERE track_id = $1', [track_id]);
+          const { rows } = await pool.query(
+            "SELECT * FROM tracks WHERE track_id = $1",
+            [track_id]
+          );
           if (rows && rows[0]) {
-            console.debug('Track updated successfully:', rows[0]);
+            console.debug("Track updated successfully:", rows[0]);
             try {
-              const { MeiliSearch } = await import('meilisearch');
-              const client = new MeiliSearch({ host: process.env.MEILISEARCH_HOST || 'http://127.0.0.1:7700', apiKey: process.env.MEILISEARCH_API_KEY || 'masterKey' });
-              const index = client.index('tracks');
+              const index = client.index("tracks");
               const res = await index.updateDocuments([rows[0]]);
-              console.debug('MeiliSearch index updated successfully', res);
+              console.debug("MeiliSearch index updated successfully", res);
             } catch (meiliError) {
-              console.error('Failed to update MeiliSearch:', meiliError);
+              console.error("Failed to update MeiliSearch:", meiliError);
             }
           }
         } catch (err) {
-          console.warn('Could not update track with local_audio_url:', err);
+          console.warn("Could not update track with local_audio_url:", err);
         }
       }
 

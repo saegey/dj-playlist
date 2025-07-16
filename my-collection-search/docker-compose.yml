@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: myapp
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://myuser:mypassword@db:5432/mydb
+      MEILI_HOST: http://meili:7700
+      MEILI_MASTER_KEY: mysupersecretkey
+      APPLE_MUSIC_TEAM_ID: ${APPLE_MUSIC_TEAM_ID}
+      APPLE_MUSIC_KEY_ID: ${APPLE_MUSIC_KEY_ID}
+      APPLE_MUSIC_PRIVATE_KEY_PATH: ${APPLE_MUSIC_PRIVATE_KEY_PATH}
+      DISCOGS_USER_TOKEN: ${DISCOGS_USER_TOKEN}
+      DISCOGS_USERNAME: ${DISCOGS_USERNAME}
+      DISCOGS_FOLDER_ID: ${DISCOGS_FOLDER_ID}
+    depends_on:
+      - db
+      - meili
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  meili:
+    image: getmeili/meilisearch:v1.6
+    restart: always
+    environment:
+      MEILI_MASTER_KEY: mysupersecretkey
+    ports:
+      - "7700:7700"
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=3600 # Check hourly
+    depends_on:
+      - app
+
+volumes:
+  db_data:
+

@@ -83,11 +83,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
               <Select.Positioner>
                 <Select.Content>
                   {usernames.map((u) => (
-                    <Select.Item
-                      item={{ label: u, value: u }}
-                      key={u}
-                      value={u}
-                    >
+                    <Select.Item item={{ label: u, value: u }} key={u}>
                       {u}
                       <Select.ItemIndicator />
                     </Select.Item>

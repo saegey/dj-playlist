@@ -28,3 +28,27 @@ export type Track = {
   star_rating?: number;
   username?: string; // Username of the user who added this track
 };
+
+export type YoutubeVideo = {
+  id: string;
+  title: string;
+  channel: string;
+  thumbnail?: string;
+  url: string;
+};
+
+export type AppleMusicResult = {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  artwork?: string;
+  url: string;
+  duration?: number;
+};
+
+export interface Playlist {
+  id: number;
+  name: string;
+  tracks: string[];
+}

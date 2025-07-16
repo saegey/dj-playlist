@@ -8,7 +8,6 @@ import {
   Spinner,
   Text,
   HStack,
-  Progress,
   createListCollection,
   Select,
   Table, // v3 import
@@ -31,7 +30,6 @@ export default function BackfillAudioPage() {
   const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     fetch("/api/tracks/usernames")
@@ -63,7 +61,11 @@ export default function BackfillAudioPage() {
   const toggleSelect = (trackId: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(trackId) ? next.delete(trackId) : next.add(trackId);
+      if (next.has(trackId)) {
+        next.delete(trackId);
+      } else {
+        next.add(trackId);
+      }
       return next;
     });
   };
@@ -72,8 +74,7 @@ export default function BackfillAudioPage() {
 
   const handleAnalyzeSelected = async () => {
     setAnalyzing(true);
-    let done = 0;
-    const total = selected.size;
+
     const updated = [...tracks];
     for (const trackId of selected) {
       const idx = updated.findIndex((t) => t.track_id === trackId);
@@ -108,16 +109,16 @@ export default function BackfillAudioPage() {
           }),
         });
         updated[idx].status = "success";
-      } catch (err: any) {
+      } catch (err) {
         updated[idx].status = "error";
-        updated[idx].errorMsg = err.message;
+        updated[idx].errorMsg =
+          err && typeof err === "object" && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Unknown error";
       }
-      done += 1;
-      setProgress(Math.round((done / total) * 100));
       setTracks([...updated]);
     }
     setAnalyzing(false);
-    setProgress(100);
   };
 
   const usernameCollection = createListCollection({
@@ -128,7 +129,7 @@ export default function BackfillAudioPage() {
     <>
       <TopMenuBar current="/backfill-audio" />
       <Box p={6}>
-        <HStack mb={4} spacing={4}>
+        <HStack mb={4}>
           <Select.Root
             collection={usernameCollection}
             value={selectedUsername ? [selectedUsername] : []}
@@ -151,7 +152,6 @@ export default function BackfillAudioPage() {
                     <Select.Item
                       key={u}
                       item={{ label: u, value: u }}
-                      value={u}
                     >
                       {u}
                       <Select.ItemIndicator />
