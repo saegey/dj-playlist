@@ -3,6 +3,9 @@ import { promisify } from "util";
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
+import { getMeiliClient } from "@/lib/meili";
+
+const meiliClient = getMeiliClient({ server: true });
 
 const execAsync = promisify(exec);
 const tmpDir = path.join(process.cwd(), "tmp");
@@ -12,19 +15,12 @@ if (!fs.existsSync(tmpDir)) {
   fs.mkdirSync(tmpDir, { recursive: true });
 }
 
-const { MeiliSearch } = await import("meilisearch");
-const client = new MeiliSearch({
-  host: process.env.MEILISEARCH_HOST || "http://127.0.0.1:7700",
-  apiKey: process.env.MEILISEARCH_API_KEY || "masterKey",
-});
-
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { apple_music_url, youtube_url, soundcloud_url, track_id } = body;
 
     let filePath: string | null = null;
-    let wavPath: string | null = null;
     // Download logic
     try {
       // Try Apple Music first
@@ -38,11 +34,12 @@ export async function POST(request: Request) {
             `freyr get --no-tree --directory "${appleOutDir}" "${apple_music_url}"`
           );
           // Find the newest .m4a file in the output directory
-          const files = fs.readdirSync(appleOutDir)
-            .filter(f => f.endsWith('.m4a'))
-            .map(f => ({
+          const files = fs
+            .readdirSync(appleOutDir)
+            .filter((f) => f.endsWith(".m4a"))
+            .map((f) => ({
               file: path.join(appleOutDir, f),
-              mtime: fs.statSync(path.join(appleOutDir, f)).mtime.getTime()
+              mtime: fs.statSync(path.join(appleOutDir, f)).mtime.getTime(),
             }))
             .sort((a, b) => b.mtime - a.mtime);
           if (files.length > 0 && fs.statSync(files[0].file).size > 0) {
@@ -104,43 +101,70 @@ export async function POST(request: Request) {
           "No valid audio file could be downloaded from Apple Music, YouTube, or SoundCloud."
         );
       }
-      // Convert audio to .wav using ffmpeg
-      const ext = path.extname(filePath).toLowerCase();
-      wavPath = filePath.replace(new RegExp(`${ext}$`), `_${Date.now()}.wav`);
-      await execAsync(`ffmpeg -y -i "${filePath}" -ac 1 "${wavPath}"`);
-      console.log("Converted to wav:", wavPath);
+      const audioDir = path.join(process.cwd(), "audio");
+      if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
 
-      // Call Python Essentia analysis script
-      const pyScript = path.join(process.cwd(), "analyze_audio.py");
+      // Convert audio to .wav using ffmpeg (handled after audioBaseName is set)
+      const ext = path.extname(filePath).toLowerCase();
+      const audioBaseName = `audio_${Date.now()}_${Math.floor(
+        Math.random() * 1e6
+      )}`;
+      const audioFileName = `${audioBaseName}${ext}`;
+      const audioDest = path.join(audioDir, audioFileName);
+
+      const wavFileName = `${audioBaseName}.wav`;
+      const wavDest = path.join(audioDir, wavFileName);
+      await execAsync(`ffmpeg -y -i "${filePath}" -ac 1 "${wavDest}"`);
+      console.log("Converted to wav:", wavDest);
+      // Set wavPath to the API URL for the wav file
+
+      // [After ffmpeg conversion]
+
+      // Call Essentia API service
       let analysisResult;
       try {
-        const { stdout } = await execAsync(
-          `python3 "${pyScript}" "${wavPath}"`
+        const essentiaApiUrl =
+          process.env.ESSENTIA_API_URL || "http://essentia:8001/analyze";
+        console.log(
+          "Calling Essentia API:",
+          essentiaApiUrl,
+          "with file",
+          `http://app:3000/api/audio?filename=${wavFileName}`
         );
-        analysisResult = JSON.parse(stdout);
+        const res = await fetch(essentiaApiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: `http://app:3000/api/audio?filename=${wavFileName}`,
+          }),
+        });
+        const responseText = await res.json();
+        console.log("Essentia API response status:", res.status);
+        if (!res.ok) {
+          throw new Error(`Essentia API error: ${res.status} $responseText}`);
+        }
+        analysisResult = responseText;
       } catch (err) {
         throw new Error(
-          "Python analysis failed: " +
-            (err instanceof Error ? err.message : String(err))
+          `Essentia API call failed: ${
+            err instanceof Error ? err.message : String(err)
+          }`
         );
       }
 
       // Move the audio file to public/audio/ and keep it for playback
-      const audioDir = path.join(process.cwd(), "public", "audio");
-      if (!fs.existsSync(audioDir)) fs.mkdirSync(audioDir, { recursive: true });
+
       // Use a unique filename: audio_{timestamp}_{Math.random()}.{ext}
-      const audioFileName = `audio_${Date.now()}_${Math.floor(
-        Math.random() * 1e6
-      )}${ext}`;
-      const audioDest = path.join(audioDir, audioFileName);
+
       fs.copyFileSync(filePath, audioDest);
+      // Save the wav file with the same base name
       // Clean up temp files
       if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      if (wavPath && fs.existsSync(wavPath)) fs.unlinkSync(wavPath);
+      // if (wavDest && fs.existsSync(wavDest)) fs.unlinkSync(wavDest);
       console.log("Temporary files deleted, audio saved to:", audioDest);
 
       // Save the audio URL to the track record (requires track_id in request)
-      const local_audio_url = `/audio/${audioFileName}`;
+      const local_audio_url = `${audioFileName}`;
 
       if (track_id) {
         try {
@@ -161,9 +185,9 @@ export async function POST(request: Request) {
             [track_id]
           );
           if (rows && rows[0]) {
-            console.debug("Track updated successfully:", rows[0]);
+            // console.debug("Track updated successfully:", rows[0]);
             try {
-              const index = client.index("tracks");
+              const index = meiliClient.index("tracks");
               const res = await index.updateDocuments([rows[0]]);
               console.debug("MeiliSearch index updated successfully", res);
             } catch (meiliError) {

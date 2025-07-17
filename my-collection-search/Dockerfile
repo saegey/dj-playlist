@@ -7,13 +7,13 @@ RUN apt-get update && apt-get install -y \
   python3 \
   python3-pip \
   git \
-  build-essential \
-  libfftw3-dev \
-  libeigen3-dev \
+  atomicparsley \
   && rm -rf /var/lib/apt/lists/*
 
 # Install youtube-dl
-RUN pip install youtube-dl
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Install Freyr
 RUN npm install -g git+https://github.com/miraclx/freyr-js.git

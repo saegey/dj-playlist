@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import type { MeiliSearch } from "meilisearch";
 
 interface UseSearchResultsOptions {
-  client: MeiliSearch;
+  client: MeiliSearch | null;
   username?: string;
 }
 
@@ -51,6 +51,9 @@ export function useSearchResults({
 
   // Search logic
   useEffect(() => {
+    if (!client) {
+      return;
+    }
     const filter = username ? [`username = "${username}"`] : undefined;
     if (!query) {
       (async () => {
@@ -86,6 +89,9 @@ export function useSearchResults({
   }, [query, fetchPlaylistCounts, client, username]);
 
   const refreshSearch = useCallback(() => {
+    if (!client) {
+      return;
+    }
     const filter = username ? [`username = "${username}"`] : undefined;
     const index = client.index<Track>("tracks");
     index.search(query, { limit, offset: 0, filter }).then((res) => {
@@ -117,6 +123,9 @@ export function useSearchResults({
     setOffset(0);
     setHasMore(false);
     (async () => {
+      if (!client) {
+        return;
+      }
       const index = client.index<Track>("tracks");
       const stats = await index.getStats();
       const total = stats.numberOfDocuments || 0;
@@ -131,6 +140,9 @@ export function useSearchResults({
   }, [client]);
 
   const loadMore = useCallback(async () => {
+    if (!client) {
+      return;
+    }
     const index = client.index<Track>("tracks");
     // let res;
     // if (activeFilter || activeFilterType) {

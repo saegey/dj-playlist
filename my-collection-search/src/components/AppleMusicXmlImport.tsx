@@ -37,7 +37,7 @@ type MatchedTrack = Track | null;
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  client: MeiliSearch;
+  client: MeiliSearch | null;
   fetchPlaylists: () => void;
 }
 
@@ -114,6 +114,9 @@ export default function AppleMusicXmlImport({
   };
 
   const matchTracks = async () => {
+    if (!client) {
+      return;
+    }
     setLoading(true);
     const res: MatchedTrack[] = [];
     try {
@@ -383,6 +386,9 @@ export default function AppleMusicXmlImport({
                             size="xs"
                             placeholder="Search..."
                             onKeyDown={(e) => {
+                              if (!client) {
+                                return;
+                              }
                               if (e.key === "Enter") {
                                 const q = (e.target as HTMLInputElement).value;
                                 setLoading(true);

@@ -1,15 +1,14 @@
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
-import { MeiliSearch } from "meilisearch";
+import { getMeiliClient } from "@/lib/meili";
 import { Pool } from "pg";
+import { Index } from "meilisearch";
 
 const DISCOGS_EXPORTS_DIR = path.resolve(process.cwd(), "discogs_exports");
 
-const client = new MeiliSearch({
-  host: process.env.MEILISEARCH_HOST || "http://127.0.0.1:7700",
-  apiKey: process.env.MEILISEARCH_API_KEY || "masterKey",
-});
+const meiliClient = getMeiliClient({ server: true });
+
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 interface DiscogsRelease {
@@ -64,6 +63,27 @@ interface ProcessedTrack {
   duration_seconds?: number | null;
   apple_music_url?: string | null;
   local_audio_url?: string | null;
+}
+
+async function getOrCreateTracksIndex(): Promise<Index> {
+  try {
+    console.log('[MeiliSearch] Attempting to get index "tracks"...');
+    const idx = await meiliClient.getIndex("tracks");
+    console.log('[MeiliSearch] Index "tracks" exists.');
+    return idx;
+  } catch (err) {
+    console.log("[MeiliSearch] Error getting index:", err);
+    console.log(
+      '[MeiliSearch] Index not found, creating index "tracks" with primaryKey "id"...'
+    );
+    await meiliClient.createIndex("tracks", { primaryKey: "id" });
+    console.log(
+      '[MeiliSearch] Index "tracks" created. Fetching index object...'
+    );
+    return meiliClient.index("tracks");
+    console.log("[MeiliSearch] Unknown error, rethrowing...");
+    throw err; // Something else went wrong
+  }
 }
 
 export async function POST() {
@@ -167,15 +187,15 @@ export async function POST() {
             local_audio_url: track["local_audio_url"] || null,
             username,
           });
-          console.log(
-            `[Discogs Index] Prepared track: ${track_id} - ${track["title"]} (user: ${username})`
-          );
+          // console.log(
+          //   `[Discogs Index] Prepared track: ${track_id} - ${track["title"]} (user: ${username})`
+          // );
         });
       }
     }
     console.log(`[Discogs Index] Total tracks to upsert: ${allTracks.length}`);
     // Always get or create the index using .index(), which is safe and idempotent
-    const index = client.index("tracks");
+    const index = await getOrCreateTracksIndex();
 
     const upserted: Record<string, ProcessedTrack>[] = [];
     for (const [i, track] of allTracks.entries()) {
@@ -223,7 +243,7 @@ export async function POST() {
       );
       if (rows && rows[0]) {
         upserted.push(rows[0]);
-        console.debug(JSON.stringify(rows[0], null, 2));
+        // console.debug(JSON.stringify(rows[0], null, 2));
       }
     }
 
@@ -282,7 +302,6 @@ export async function POST() {
     console.log(
       `[Discogs Index] Done. Upserted and indexed ${upserted.length} tracks.`
     );
-    await pool.end();
 
     return NextResponse.json({
       message: `Upserted and indexed ${upserted.length} tracks from discogs_exports.`,

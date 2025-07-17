@@ -1,16 +1,12 @@
+import { getMeiliClient } from "@/lib/meili";
 import { NextResponse } from "next/server";
-import { MeiliSearch } from "meilisearch";
-
-const client = new MeiliSearch({
-  host: process.env.MEILISEARCH_HOST || "http://127.0.0.1:7700",
-  apiKey: process.env.MEILISEARCH_API_KEY || "masterKey",
-});
-const index = client.index(process.env.MEILISEARCH_INDEX || "tracks");
 
 interface SearchOptions {
   filter: string;
   limit: number;
 }
+
+const meiliClient = getMeiliClient({ server: true });
 
 export async function GET(request: Request) {
   try {
@@ -31,6 +27,7 @@ export async function GET(request: Request) {
     let q = "";
     if (artist) q = artist;
 
+    const index = meiliClient.index("tracks");
     const result = await index.search(q, searchOptions);
     console.debug("Search result:", result);
     return NextResponse.json({ tracks: result.hits });

@@ -197,11 +197,12 @@ export default function TrackEditForm({
       });
       if (res.ok) {
         const data = await res.json();
+        console.log("Analysis result:", data);
         setForm((prev) => ({
           ...prev,
-          bpm: data.bpm ? String(data.bpm) : prev.bpm,
-          key: data.key ? `${data.key} ${data.scale}` : prev.key,
-          danceability: data.danceability || prev.danceability,
+          bpm: data.rhythm.bpm ? String(Math.round(data.rhythm.bpm)) : prev.bpm,
+          key: data.tonal.key_edma ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}` : prev.key,
+          danceability: data.rhythm.danceability || prev.danceability,
         }));
       } else {
         const err = await res.json();

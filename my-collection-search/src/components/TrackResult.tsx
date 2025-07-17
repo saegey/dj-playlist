@@ -237,7 +237,10 @@ export default function TrackResult({
           {track.local_audio_url && (
             <Box mt={2}>
               <audio controls style={{ width: "100%" }}>
-                <source src={track.local_audio_url} type="audio/mp4" />
+                <source
+                  src={`/api/audio?filename=${track.local_audio_url}`}
+                  type="audio/mp4"
+                />
               </audio>
             </Box>
           )}
