@@ -44,7 +44,8 @@ export async function POST(request: Request) {
       port: process.env.POSTGRES_PORT,
     };
     if (pg.url) {
-      pg = { ...pg, ...parsePgUrl(pg.url) };
+      const parsed = parsePgUrl(pg.url);
+      pg = { ...pg, ...{ ...parsed, port: parsed.port ? String(parsed.port) : undefined } };
     }
     const db = pg.db || "mydb";
     const user = pg.user || "myuser";
