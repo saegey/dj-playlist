@@ -1,5 +1,5 @@
 import NextLink from "next/link";
-import { Flex, Link } from "@chakra-ui/react";
+import { Flex, Link, Text } from "@chakra-ui/react";
 
 interface TopMenuBarProps {
   current?: string;
@@ -22,6 +22,9 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
       p="4"
       justify="space-around"
     >
+      <Text fontSize="lg" fontWeight="bold">
+        Vinyl Playlist
+      </Text>
       {menuItems.map((item) => (
         <Link
           key={item.href}
