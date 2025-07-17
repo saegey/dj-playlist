@@ -14,10 +14,25 @@ import {
   Dialog,
   CloseButton,
   RatingGroup,
-  Icon,
 } from "@chakra-ui/react";
-import { Track } from "@/types/track";
-import { FiStar } from "react-icons/fi";
+
+import { AppleMusicResult, YoutubeVideo } from "@/types/track";
+
+export interface TrackEditFormProps {
+  track_id: string; // Optional for new tracks
+  title?: string;
+  artist?: string;
+  album?: string;
+  local_tags?: string | undefined;
+  notes?: string | undefined | null;
+  bpm?: string | undefined | null;
+  key?: string | undefined | null;
+  danceability?: string | null;
+  apple_music_url?: string;
+  youtube_url?: string;
+  soundcloud_url?: string;
+  star_rating?: number;
+}
 
 // Labeled input for text/number fields
 function LabeledInput({
@@ -53,40 +68,29 @@ export default function TrackEditForm({
   track,
   onSave,
 }: {
-  track: Track;
-  onSave: (data: any) => void;
+  track: TrackEditFormProps;
+  onSave: (data: TrackEditFormProps) => void;
 }) {
   const [form, setForm] = useState({
-    ...track,
+    track_id: track.track_id || "",
+    album: track.album || "",
+    title: track.title || "",
+    artist: track.artist || "",
     local_tags: track.local_tags || "",
     notes: track.notes || "",
     bpm: track.bpm || "",
     key: track.key || "",
+    danceability: track.danceability || "",
+    apple_music_url: track.apple_music_url || "",
     youtube_url: track.youtube_url || "",
     soundcloud_url: track.soundcloud_url || "",
     star_rating: typeof track.star_rating === "number" ? track.star_rating : 0,
   });
 
-  type YoutubeVideo = {
-    id: string;
-    title: string;
-    channel: string;
-    thumbnail?: string;
-    url: string;
-  };
   const [youtubeResults, setYoutubeResults] = useState<YoutubeVideo[]>([]);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
 
-  type AppleMusicResult = {
-    id: string;
-    title: string;
-    artist: string;
-    album: string;
-    artwork?: string;
-    url: string;
-    duration?: number;
-  };
   const [appleResults, setAppleResults] = useState<AppleMusicResult[]>([]);
   const [appleLoading, setAppleLoading] = useState(false);
   const [showAppleModal, setShowAppleModal] = useState(false);
@@ -108,7 +112,7 @@ export default function TrackEditForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await onSave(form);
+    onSave(form);
     setLoading(false);
   };
 
@@ -131,7 +135,7 @@ export default function TrackEditForm({
       } else {
         alert("Failed to fetch from AI");
       }
-    } catch (err) {
+    } catch {
       alert("Error fetching from AI");
     }
     setFetching(false);
@@ -154,12 +158,13 @@ export default function TrackEditForm({
         alert("YouTube search failed");
       }
     } catch (err) {
+      console.error("YouTube search error:", err);
       alert("YouTube search error");
     }
     setYoutubeLoading(false);
   };
 
-  const handleYoutubeSelect = (video: any) => {
+  const handleYoutubeSelect = (video: YoutubeVideo) => {
     setForm((prev) => ({ ...prev, youtube_url: video.url }));
     setShowYoutubeModal(false);
   };
@@ -181,12 +186,13 @@ export default function TrackEditForm({
         alert("Apple Music search failed");
       }
     } catch (err) {
+      console.error("Apple Music search error:", err);
       alert("Apple Music search error");
     }
     setAppleLoading(false);
   };
 
-  const handleAppleSelect = (song: any) => {
+  const handleAppleSelect = (song: AppleMusicResult) => {
     setForm((prev) => ({
       ...prev,
       apple_music_url: song.url,
@@ -212,17 +218,21 @@ export default function TrackEditForm({
       });
       if (res.ok) {
         const data = await res.json();
+        console.log("Analysis result:", data);
         setForm((prev) => ({
           ...prev,
-          bpm: data.bpm ? String(data.bpm) : prev.bpm,
-          key: data.key ? `${data.key} ${data.scale}` : prev.key,
-          danceability: data.danceability || prev.danceability,
+          bpm: data.rhythm.bpm ? String(Math.round(data.rhythm.bpm)) : prev.bpm,
+          key: data.tonal.key_edma
+            ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
+            : prev.key,
+          danceability: data.rhythm.danceability || prev.danceability,
         }));
       } else {
         const err = await res.json();
         alert("Analysis failed: " + (err.error || "Unknown error"));
       }
     } catch (err) {
+      console.error("Audio analysis error:", err);
       alert("Error analyzing audio");
     }
     setAnalyzing(false);
@@ -463,7 +473,7 @@ export default function TrackEditForm({
                 ) : appleResults.length === 0 ? (
                   <Text>No results found.</Text>
                 ) : (
-                  <Stack spacing={3}>
+                  <Stack>
                     {appleResults.map((song) => (
                       <Flex
                         key={song.id}

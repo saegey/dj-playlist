@@ -46,6 +46,7 @@ In \"notes\", include a longer DJ-focused description with vibe, energy, suggest
     try {
       extracted = JSON.parse(cleaned);
     } catch (err) {
+      console.error("Failed to parse JSON from AI response", err, { aiText, cleaned });
       // Attempt to repair common JSON issues (unescaped quotes, unterminated strings, stray newlines)
       // Remove backslashes before quotes that are not escaping another backslash
       const repaired = cleaned.replace(/\\+"/g, '"');
@@ -56,7 +57,7 @@ In \"notes\", include a longer DJ-focused description with vibe, energy, suggest
       }
     }
 
-    const { key, bpm, notes, genre } = extracted;
+    const { notes, genre } = extracted;
     return NextResponse.json({ notes, genre });
   } catch (error) {
     console.error("Error fetching AI metadata:", error);

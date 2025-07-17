@@ -1,7 +1,9 @@
+import { getMeiliClient } from "@/lib/meili";
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const meiliClient = getMeiliClient({ server: true });
 
 // GET: tracks missing notes or local_tags
 export async function GET(request: Request) {
@@ -43,17 +45,15 @@ export async function POST(request: Request) {
         [u.local_tags || "", u.notes || "", u.track_id]
       );
       // Fetch updated track for MeiliSearch
-      const { rows } = await pool.query(`SELECT * FROM tracks WHERE track_id = $1`, [u.track_id]);
+      const { rows } = await pool.query(
+        `SELECT * FROM tracks WHERE track_id = $1`,
+        [u.track_id]
+      );
       if (rows[0]) updatedTracks.push(rows[0]);
     }
     // Update MeiliSearch index
     if (updatedTracks.length > 0) {
-      const { MeiliSearch } = await import('meilisearch');
-      const client = new MeiliSearch({
-        host: process.env.MEILISEARCH_HOST || 'http://127.0.0.1:7700',
-        apiKey: process.env.MEILISEARCH_API_KEY || 'masterKey',
-      });
-      const index = client.index(process.env.MEILISEARCH_INDEX || 'tracks');
+      const index = meiliClient.index("tracks");
       await index.updateDocuments(updatedTracks);
     }
     return NextResponse.json({ success: true });

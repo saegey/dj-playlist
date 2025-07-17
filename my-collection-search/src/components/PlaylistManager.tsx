@@ -28,7 +28,7 @@ type Props = {
   handleLoadPlaylist: (trackIds: string[]) => void;
   xmlImportModalOpen: boolean;
   setXmlImportModalOpen: (open: boolean) => void;
-  client: MeiliSearch;
+  client: MeiliSearch | null;
   fetchPlaylists: () => void;
 };
 

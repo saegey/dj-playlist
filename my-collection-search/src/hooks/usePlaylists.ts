@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import type { Track } from "@/types/track";
+import type { Playlist, Track } from "@/types/track";
 
 export interface PlaylistInfo {
   id?: number;
@@ -7,7 +7,7 @@ export interface PlaylistInfo {
 }
 
 export function usePlaylists() {
-  const [playlists, setPlaylists] = useState<any[]>([]); // TODO: type playlists
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [playlistName, setPlaylistName] = useState("");
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [playlistInfo, setPlaylistInfo] = useState<PlaylistInfo>({ name: "" });
@@ -58,41 +58,45 @@ export function usePlaylists() {
   }, [playlistName, playlist, fetchPlaylists]);
 
   // Load a playlist (replace current playlist)
-  const handleLoadPlaylist = useCallback(async (trackIds: Array<string>) => {
-    if (!trackIds || trackIds.length === 0) {
-      setPlaylist([]);
-      setPlaylistInfo({ name: "" });
-      return;
-    }
-    try {
-      // Fetch full track objects from backend by IDs
-      const res = await fetch("/api/tracks/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ track_ids: trackIds }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPlaylist(data);
-        // Try to find the playlist name from loaded playlists
-        const loaded = playlists.find(
-          (pl: any) =>
-            Array.isArray(pl.tracks) &&
-            pl.tracks.length === trackIds.length &&
-            pl.tracks.every((id: string, i: number) => id === trackIds[i])
-        );
-        if (loaded) {
-          setPlaylistInfo({ id: loaded.id, name: loaded.name });
-        } else {
-          setPlaylistInfo({ name: "" });
-        }
-      } else {
-        alert("Failed to load playlist tracks");
+  const handleLoadPlaylist = useCallback(
+    async (trackIds: Array<string>) => {
+      if (!trackIds || trackIds.length === 0) {
+        setPlaylist([]);
+        setPlaylistInfo({ name: "" });
+        return;
       }
-    } catch (e) {
-      alert("Error loading playlist tracks");
-    }
-  }, [playlists]);
+      try {
+        // Fetch full track objects from backend by IDs
+        const res = await fetch("/api/tracks/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ track_ids: trackIds }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPlaylist(data);
+          // Try to find the playlist name from loaded playlists
+          const loaded = playlists.find(
+            (pl: Playlist) =>
+              Array.isArray(pl.tracks) &&
+              pl.tracks.length === trackIds.length &&
+              pl.tracks.every((id: string, i: number) => id === trackIds[i])
+          );
+          if (loaded) {
+            setPlaylistInfo({ id: loaded.id, name: loaded.name });
+          } else {
+            setPlaylistInfo({ name: "" });
+          }
+        } else {
+          alert("Failed to load playlist tracks");
+        }
+      } catch (e) {
+        console.error("Error loading playlist tracks:", e);
+        alert("Error loading playlist tracks");
+      }
+    },
+    [playlists]
+  );
 
   // Save playlist to backend (update or create)
   const savePlaylist = useCallback(async () => {

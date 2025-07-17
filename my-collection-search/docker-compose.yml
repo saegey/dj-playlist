@@ -1,0 +1,83 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_MEILISEARCH_HOST: ${NEXT_PUBLIC_MEILISEARCH_HOST}
+        NEXT_PUBLIC_MEILISEARCH_API_KEY: ${NEXT_PUBLIC_MEILISEARCH_API_KEY}
+    container_name: myapp
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://myuser:mypassword@db:5432/mydb
+      MEILISEARCH_HOST: http://meili:7700
+      MEILISEARCH_API_KEY: mysupersecretkey
+      APPLE_MUSIC_TEAM_ID: ${APPLE_MUSIC_TEAM_ID}
+      APPLE_MUSIC_KEY_ID: ${APPLE_MUSIC_KEY_ID}
+      APPLE_MUSIC_PRIVATE_KEY_PATH: ${APPLE_MUSIC_PRIVATE_KEY_PATH}
+      DISCOGS_USER_TOKEN: ${DISCOGS_USER_TOKEN}
+      DISCOGS_USERNAME: ${DISCOGS_USERNAME}
+      DISCOGS_FOLDER_ID: ${DISCOGS_FOLDER_ID}
+      NEXT_PUBLIC_MEILISEARCH_HOST: ${NEXT_PUBLIC_MEILISEARCH_HOST}
+      NEXT_PUBLIC_MEILISEARCH_API_KEY: ${NEXT_PUBLIC_MEILISEARCH_API_KEY} 
+    depends_on:
+      - db
+      - meili
+    volumes:
+      - music_data:/app/audio
+      - db_dumps:/app/dumps
+  
+  migrate:
+    image: node:20
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      DATABASE_URL: postgres://myuser:mypassword@db:5432/mydb
+    entrypoint: ["sh", "-c", "npx wait-port db:5432 && npx node-pg-migrate up"]
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  meili:
+    image: getmeili/meilisearch:v1.6
+    restart: always
+    environment:
+      MEILI_MASTER_KEY: mysupersecretkey
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili_data:/meili_data
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=3600 # Check hourly
+    depends_on:
+      - app
+  
+  essentia:
+    build:
+      context: ../essentia-api
+    container_name: essentia-api
+    ports:
+      - "8001:8001"
+
+volumes:
+  db_data:
+  meili_data:
+  music_data:
+  db_dumps:

@@ -27,6 +27,7 @@ import {
 import TrackResult from "../../components/TrackResult";
 import dynamic from "next/dynamic";
 import TopMenuBar from "@/components/MenuBar";
+import { TrackEditFormProps } from "../../components/TrackEditForm";
 
 interface AppleMusicResult {
   id: string;
@@ -57,7 +58,7 @@ export default function MissingAppleMusicPage() {
   >({});
   const [overrideTrackId, setOverrideTrackId] = useState<string | null>(null);
   const [overrideQuery, setOverrideQuery] = useState<string>("");
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { onOpen, onClose } = useDisclosure();
 
   // Fetch usernames for filter dropdown
   useEffect(() => {
@@ -150,7 +151,7 @@ export default function MissingAppleMusicPage() {
     onOpen();
   };
   const handleSaveTrack = async (
-    data: Partial<Track> & { track_id: string }
+    data: TrackEditFormProps
   ) => {
     // PATCH to update endpoint
     const res = await fetch("/api/tracks/update", {
@@ -208,11 +209,7 @@ export default function MissingAppleMusicPage() {
               <Select.Positioner>
                 <Select.Content>
                   {usernames.map((u) => (
-                    <Select.Item
-                      key={u}
-                      item={{ label: u, value: u }}
-                      value={u}
-                    >
+                    <Select.Item key={u} item={{ label: u, value: u }}>
                       {u}
                       <Select.ItemIndicator />
                     </Select.Item>
@@ -248,7 +245,7 @@ export default function MissingAppleMusicPage() {
         )}
 
         <Modal
-          isOpen={!!editTrack && isOpen}
+          isOpen={!!editTrack}
           onClose={() => {
             setEditTrack(null);
             onClose();
@@ -262,7 +259,10 @@ export default function MissingAppleMusicPage() {
             <ModalCloseButton />
             <ModalBody>
               {editTrack && (
-                <TrackEditForm track={editTrack} onSave={handleSaveTrack} />
+                <TrackEditForm
+                  track={editTrack}
+                  onSave={handleSaveTrack}
+                />
               )}
             </ModalBody>
           </ModalContent>
@@ -276,7 +276,7 @@ export default function MissingAppleMusicPage() {
 type SingleTrackUIProps = {
   tracks: Track[];
   currentIndex: number;
-  appleResults: Record<string, any>;
+  appleResults: Record<string, AppleMusicResult | null | undefined>;
   overrideTrackId: string | null;
   overrideQuery: string;
   setOverrideTrackId: (id: string | null) => void;
@@ -479,7 +479,7 @@ function SingleTrackUI({
       <Flex justify="space-between" mt={4}>
         <Button
           onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-          isDisabled={currentIndex === 0}
+          disabled={currentIndex === 0}
           size="sm"
         >
           Previous
@@ -491,7 +491,7 @@ function SingleTrackUI({
           onClick={() =>
             setCurrentIndex((i) => Math.min(tracks.length - 1, i + 1))
           }
-          isDisabled={currentIndex === tracks.length - 1}
+          disabled={currentIndex === tracks.length - 1}
           size="sm"
         >
           Next

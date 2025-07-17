@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
-import { MeiliSearch } from "meilisearch";
+import React, { useState, useRef } from "react";
 import {
   Box,
   Flex,
@@ -23,6 +22,8 @@ import PlaylistManager from "@/components/PlaylistManager";
 import type { Track } from "@/types/track";
 import { parseDurationToSeconds, formatSeconds } from "@/lib/trackUtils";
 import TopMenuBar from "@/components/MenuBar";
+import { meiliClient } from "@/lib/meili";
+import { TrackEditFormProps } from "../components/TrackEditForm";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
@@ -38,15 +39,6 @@ export default function SearchPage() {
     setHasMounted(true);
   }, []);
 
-  const client = useMemo(
-    () =>
-      new MeiliSearch({
-        host: "http://127.0.0.1:7700",
-        apiKey: "masterKey",
-      }),
-    []
-  );
-
   const [selectedUsername, setSelectedUsername] = useState<string>("");
   const {
     query,
@@ -59,8 +51,8 @@ export default function SearchPage() {
     playlistCounts,
     hasMore,
     loadMore,
-    needsRefresh
-  } = useSearchResults({ client, username: selectedUsername });
+    needsRefresh,
+  } = useSearchResults({ client: meiliClient, username: selectedUsername });
 
   const {
     playlists,
@@ -88,7 +80,7 @@ export default function SearchPage() {
     setDialogOpen(true);
   };
 
-  const handleSaveTrack = async (data: Track) => {
+  const handleSaveTrack = async (data: TrackEditFormProps) => {
     const res = await fetch("/api/tracks/update", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -100,7 +92,6 @@ export default function SearchPage() {
       setDialogOpen(false);
       needsRefresh();
       // Refresh search results after saving track
-      
     } else {
       alert("Failed to update track");
     }
@@ -149,7 +140,7 @@ export default function SearchPage() {
               handleLoadPlaylist={handleLoadPlaylist}
               xmlImportModalOpen={xmlImportModalOpen}
               setXmlImportModalOpen={setXmlImportModalOpen}
-              client={client}
+              client={meiliClient}
               fetchPlaylists={fetchPlaylists}
             />
           )}

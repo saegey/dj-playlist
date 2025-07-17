@@ -29,6 +29,21 @@ function generateAppleMusicDeveloperToken() {
   });
 }
 
+interface SongAttributes {
+  name: string;
+  artistName: string;
+  albumName?: string;
+  url: string;
+  artwork?: { url: string };
+  durationInMillis?: number;
+  isrc?: string;
+}
+
+interface Song {
+  id: string;
+  attributes: SongAttributes;
+}
+
 export async function POST(req: Request) {
   try {
     const { title, artist, album, isrc } = await req.json();
@@ -48,14 +63,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Apple Music API error" }, { status: 500 });
     }
     const data = await res.json();
-    const songs = data?.results?.songs?.data || [];
+    const songs: Song[] = data?.results?.songs?.data || [];
     // Optionally, filter by ISRC if provided
     let filtered = songs;
     if (isrc) {
-      filtered = songs.filter((song: any) => song.attributes?.isrc?.toUpperCase() === isrc.toUpperCase());
+      filtered = songs.filter((song: Song) => song.attributes?.isrc?.toUpperCase() === isrc.toUpperCase());
     }
     // Map to a simple structure for the UI
-    const results = filtered.map((song: any) => ({
+    const results = filtered.map((song: Song) => ({
       id: song.id,
       title: song.attributes?.name,
       artist: song.attributes?.artistName,

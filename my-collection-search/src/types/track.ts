@@ -15,16 +15,40 @@ export type Track = {
   youtube_url?: string;
   soundcloud_url?: string;
   album_thumbnail?: string;
-  local_tags?: string;
-  bpm?: string | null;
-  key?: string | null;
-  danceability?: number | null;
+  local_tags?: string | undefined;
+  bpm?: string | undefined | null;
+  key?: string | undefined | null;
+  danceability?: string | null;
   mood_happy?: number | null;
   mood_sad?: number | null;
   mood_relaxed?: number | null;
   mood_aggressive?: number | null;
-  notes?: string;
+  notes?: string | undefined | null;
   local_audio_url?: string;
   star_rating?: number;
   username?: string; // Username of the user who added this track
 };
+
+export type YoutubeVideo = {
+  id: string;
+  title: string;
+  channel: string;
+  thumbnail?: string;
+  url: string;
+};
+
+export type AppleMusicResult = {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  artwork?: string;
+  url: string;
+  duration?: number;
+};
+
+export interface Playlist {
+  id: number;
+  name: string;
+  tracks: string[];
+}
