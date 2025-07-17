@@ -1,0 +1,10 @@
+services:
+  app:
+    command: npm run dev
+    volumes:
+      - .:/app
+    environment:
+      NEXT_PUBLIC_NODE_ENV: development
+      # Add any other dev-specific env vars here
+
+# You can override other services or settings as needed for dev

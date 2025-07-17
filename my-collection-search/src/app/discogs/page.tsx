@@ -114,6 +114,33 @@ export default function DiscogsSyncPage() {
     }
   };
 
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restoring, setRestoring] = useState(false);
+  const [restoreResult, setRestoreResult] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+
+  const handleRestore = async () => {
+    if (!restoreFile) return;
+    setRestoring(true);
+    setRestoreResult(null);
+    setRestoreError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", restoreFile);
+      const res = await fetch("/api/restore", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Unknown error");
+      setRestoreResult(data.message || "Restore complete");
+    } catch (e) {
+      setRestoreError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRestoring(false);
+    }
+  };
+
   // Chakra UI color mode value must be called unconditionally
 
   return (
@@ -311,6 +338,45 @@ export default function DiscogsSyncPage() {
             <Alert.Description>{backupResult}</Alert.Description>
           </Alert.Root>
         )}
+
+        <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
+          <Heading size="md" mb={2}>Restore Database from SQL File</Heading>
+          <Text mb={2}>Upload a SQL backup file to restore your database. This will overwrite all current data.</Text>
+          <HStack mb={4}>
+            <Input
+              type="file"
+              accept=".sql"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  setRestoreFile(e.target.files[0]);
+                }
+              }}
+              disabled={restoring}
+            />
+            <Button
+              colorScheme="red"
+              onClick={handleRestore}
+              disabled={!restoreFile || restoring}
+              loading={restoring}
+            >
+              Restore Database
+            </Button>
+          </HStack>
+          {restoreError && (
+            <Alert.Root status="error" title="Restore Error">
+              <Alert.Indicator />
+              <Alert.Title>Restore Error</Alert.Title>
+              <Alert.Description>{restoreError}</Alert.Description>
+            </Alert.Root>
+          )}
+          {restoreResult && (
+            <Alert.Root status="success" title="Restore Complete">
+              <Alert.Indicator />
+              <Alert.Title>Restore Complete</Alert.Title>
+              <Alert.Description>{restoreResult}</Alert.Description>
+            </Alert.Root>
+          )}
+        </Box>
       </Box>
     </>
   );

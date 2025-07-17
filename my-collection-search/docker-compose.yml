@@ -9,7 +9,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgres://myuser:mypassword@db:5432/mydb
+      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
       MEILISEARCH_HOST: http://meili:7700
       MEILISEARCH_API_KEY: mysupersecretkey
       APPLE_MUSIC_TEAM_ID: ${APPLE_MUSIC_TEAM_ID}
@@ -33,7 +33,7 @@ services:
     volumes:
       - .:/app
     environment:
-      DATABASE_URL: postgres://myuser:mypassword@db:5432/mydb
+      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
     entrypoint: ["sh", "-c", "npx wait-port db:5432 && npx node-pg-migrate up"]
     depends_on:
       - db
@@ -42,9 +42,9 @@ services:
     image: postgres:15
     restart: always
     environment:
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: mydb
+      POSTGRES_USER: djplaylist
+      POSTGRES_PASSWORD: djplaylistpassword
+      POSTGRES_DB: djplaylist
     volumes:
       - db_data:/var/lib/postgresql/data
 
