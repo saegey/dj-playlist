@@ -2,12 +2,18 @@
 FROM node:20-bullseye
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && \
+  apt-get install -y wget gnupg2 && \
+  echo "deb http://apt.postgresql.org/pub/repos/apt bullseye-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+  wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
+  apt-get update && \ 
+  apt-get install -y \
   ffmpeg \
   python3 \
   python3-pip \
   git \
   atomicparsley \
+  postgresql-client-15 \
   && rm -rf /var/lib/apt/lists/*
 
 # Install youtube-dl

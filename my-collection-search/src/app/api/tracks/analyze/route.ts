@@ -160,7 +160,7 @@ export async function POST(request: Request) {
       // Save the wav file with the same base name
       // Clean up temp files
       if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      // if (wavDest && fs.existsSync(wavDest)) fs.unlinkSync(wavDest);
+      if (wavDest && fs.existsSync(wavDest)) fs.unlinkSync(wavDest);
       console.log("Temporary files deleted, audio saved to:", audioDest);
 
       // Save the audio URL to the track record (requires track_id in request)

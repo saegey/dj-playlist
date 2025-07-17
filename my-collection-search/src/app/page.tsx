@@ -23,6 +23,7 @@ import type { Track } from "@/types/track";
 import { parseDurationToSeconds, formatSeconds } from "@/lib/trackUtils";
 import TopMenuBar from "@/components/MenuBar";
 import { meiliClient } from "@/lib/meili";
+import { TrackEditFormProps } from "../components/TrackEditForm";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
@@ -79,7 +80,7 @@ export default function SearchPage() {
     setDialogOpen(true);
   };
 
-  const handleSaveTrack = async (data: Track) => {
+  const handleSaveTrack = async (data: TrackEditFormProps) => {
     const res = await fetch("/api/tracks/update", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

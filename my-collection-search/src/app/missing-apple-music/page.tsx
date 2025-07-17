@@ -27,6 +27,7 @@ import {
 import TrackResult from "../../components/TrackResult";
 import dynamic from "next/dynamic";
 import TopMenuBar from "@/components/MenuBar";
+import { TrackEditFormProps } from "../../components/TrackEditForm";
 
 interface AppleMusicResult {
   id: string;
@@ -150,7 +151,7 @@ export default function MissingAppleMusicPage() {
     onOpen();
   };
   const handleSaveTrack = async (
-    data: Partial<Track> & { track_id: string }
+    data: TrackEditFormProps
   ) => {
     // PATCH to update endpoint
     const res = await fetch("/api/tracks/update", {
@@ -258,7 +259,10 @@ export default function MissingAppleMusicPage() {
             <ModalCloseButton />
             <ModalBody>
               {editTrack && (
-                <TrackEditForm track={editTrack} onSave={handleSaveTrack} />
+                <TrackEditForm
+                  track={editTrack}
+                  onSave={handleSaveTrack}
+                />
               )}
             </ModalBody>
           </ModalContent>

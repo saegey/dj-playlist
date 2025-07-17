@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "my-collection-search",
   "version": "0.1.0",
   "private": true,

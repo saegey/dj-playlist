@@ -99,13 +99,15 @@ export default function BackfillAudioPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             track_id: updated[idx].track_id,
-            bpm: data.bpm,
-            key: data.key ? `${data.key} ${data.scale}` : undefined,
-            danceability: data.danceability,
-            mood_happy: data.mood_happy,
-            mood_sad: data.mood_sad,
-            mood_relaxed: data.mood_relaxed,
-            mood_aggressive: data.mood_aggressive,
+            bpm: data.rhythm ? data.rhythm.bpm : undefined,
+            key: data.tonal
+              ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
+              : undefined,
+            danceability: data.rhythm ? data.rhythm.danceability : undefined,
+            // mood_happy: data.mood_happy,
+            // mood_sad: data.mood_sad,
+            // mood_relaxed: data.mood_relaxed,
+            // mood_aggressive: data.mood_aggressive,
           }),
         });
         updated[idx].status = "success";
@@ -149,10 +151,7 @@ export default function BackfillAudioPage() {
               <Select.Positioner>
                 <Select.Content>
                   {usernames.map((u) => (
-                    <Select.Item
-                      key={u}
-                      item={{ label: u, value: u }}
-                    >
+                    <Select.Item key={u} item={{ label: u, value: u }}>
                       {u}
                       <Select.ItemIndicator />
                     </Select.Item>

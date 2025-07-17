@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  console.log("Range header:", request.headers.get("range"));
   const filename = searchParams.get("filename");
   if (!filename) {
     return NextResponse.json({ error: "Missing filename" }, { status: 400 });

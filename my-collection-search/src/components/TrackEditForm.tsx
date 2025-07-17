@@ -16,7 +16,23 @@ import {
   RatingGroup,
 } from "@chakra-ui/react";
 
-import { AppleMusicResult, Track, YoutubeVideo } from "@/types/track";
+import { AppleMusicResult, YoutubeVideo } from "@/types/track";
+
+export interface TrackEditFormProps {
+  track_id: string; // Optional for new tracks
+  title?: string;
+  artist?: string;
+  album?: string;
+  local_tags?: string | undefined;
+  notes?: string | undefined | null;
+  bpm?: string | undefined | null;
+  key?: string | undefined | null;
+  danceability?: string | null;
+  apple_music_url?: string;
+  youtube_url?: string;
+  soundcloud_url?: string;
+  star_rating?: number;
+}
 
 // Labeled input for text/number fields
 function LabeledInput({
@@ -52,15 +68,20 @@ export default function TrackEditForm({
   track,
   onSave,
 }: {
-  track: Track;
-  onSave: (data: Track) => void;
+  track: TrackEditFormProps;
+  onSave: (data: TrackEditFormProps) => void;
 }) {
   const [form, setForm] = useState({
-    ...track,
+    track_id: track.track_id || "",
+    album: track.album || "",
+    title: track.title || "",
+    artist: track.artist || "",
     local_tags: track.local_tags || "",
     notes: track.notes || "",
     bpm: track.bpm || "",
     key: track.key || "",
+    danceability: track.danceability || "",
+    apple_music_url: track.apple_music_url || "",
     youtube_url: track.youtube_url || "",
     soundcloud_url: track.soundcloud_url || "",
     star_rating: typeof track.star_rating === "number" ? track.star_rating : 0,
@@ -91,7 +112,7 @@ export default function TrackEditForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await onSave(form);
+    onSave(form);
     setLoading(false);
   };
 
@@ -201,7 +222,9 @@ export default function TrackEditForm({
         setForm((prev) => ({
           ...prev,
           bpm: data.rhythm.bpm ? String(Math.round(data.rhythm.bpm)) : prev.bpm,
-          key: data.tonal.key_edma ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}` : prev.key,
+          key: data.tonal.key_edma
+            ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
+            : prev.key,
           danceability: data.rhythm.danceability || prev.danceability,
         }));
       } else {
