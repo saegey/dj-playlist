@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { Pool } from "pg";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const meiliClient = getMeiliClient({ server: true });
 
 // GET: tracks missing notes or local_tags
 export async function GET(request: Request) {
@@ -31,6 +30,8 @@ export async function GET(request: Request) {
 
 // POST: bulk update notes/genre
 export async function POST(request: Request) {
+  const meiliClient = getMeiliClient({ server: true });
+
   try {
     const { updates } = await request.json();
     if (!Array.isArray(updates))

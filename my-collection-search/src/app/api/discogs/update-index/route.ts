@@ -7,8 +7,6 @@ import { Index } from "meilisearch";
 
 const DISCOGS_EXPORTS_DIR = path.resolve(process.cwd(), "discogs_exports");
 
-const meiliClient = getMeiliClient({ server: true });
-
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 interface DiscogsRelease {
@@ -65,7 +63,7 @@ interface ProcessedTrack {
   local_audio_url?: string | null;
 }
 
-async function getOrCreateTracksIndex(): Promise<Index> {
+async function getOrCreateTracksIndex(meiliClient: any): Promise<Index> {
   try {
     console.log('[MeiliSearch] Attempting to get index "tracks"...');
     const idx = await meiliClient.getIndex("tracks");
@@ -81,13 +79,13 @@ async function getOrCreateTracksIndex(): Promise<Index> {
       '[MeiliSearch] Index "tracks" created. Fetching index object...'
     );
     return meiliClient.index("tracks");
-    console.log("[MeiliSearch] Unknown error, rethrowing...");
-    throw err; // Something else went wrong
+    // console.log("[MeiliSearch] Unknown error, rethrowing...");
+    // throw err; // Something else went wrong
   }
 }
 
-export async function POST() {
   try {
+    const meiliClient = getMeiliClient({ server: true });
     if (!fs.existsSync(DISCOGS_EXPORTS_DIR)) {
       return NextResponse.json(
         { error: "discogs_exports directory not found" },
@@ -195,7 +193,7 @@ export async function POST() {
     }
     console.log(`[Discogs Index] Total tracks to upsert: ${allTracks.length}`);
     // Always get or create the index using .index(), which is safe and idempotent
-    const index = await getOrCreateTracksIndex();
+    const index = await getOrCreateTracksIndex(meiliClient);
 
     const upserted: Record<string, ProcessedTrack>[] = [];
     for (const [i, track] of allTracks.entries()) {

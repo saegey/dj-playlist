@@ -5,8 +5,6 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { getMeiliClient } from "@/lib/meili";
 
-const meiliClient = getMeiliClient({ server: true });
-
 const execAsync = promisify(exec);
 const tmpDir = path.join(process.cwd(), "tmp");
 
@@ -16,6 +14,8 @@ if (!fs.existsSync(tmpDir)) {
 }
 
 export async function POST(request: Request) {
+  const meiliClient = getMeiliClient({ server: true });
+
   try {
     const body = await request.json();
     const { apple_music_url, youtube_url, soundcloud_url, track_id } = body;
