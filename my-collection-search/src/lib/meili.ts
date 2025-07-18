@@ -1,4 +1,3 @@
-// lib/meili.ts
 import { MeiliSearch } from "meilisearch";
 
 export function getMeiliClient({ server = false } = {}) {
