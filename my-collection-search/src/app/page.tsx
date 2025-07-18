@@ -22,7 +22,7 @@ import PlaylistManager from "@/components/PlaylistManager";
 import type { Track } from "@/types/track";
 import { parseDurationToSeconds, formatSeconds } from "@/lib/trackUtils";
 import TopMenuBar from "@/components/MenuBar";
-import { meiliClient } from "@/lib/meili";
+import { getMeiliClient } from "@/lib/meili";
 import { TrackEditFormProps } from "../components/TrackEditForm";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
@@ -30,6 +30,7 @@ const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
 });
 
 export default function SearchPage() {
+  const meiliClient = getMeiliClient();
   const [playlistSidebarMinimized, setPlaylistSidebarMinimized] =
     useState(false);
   const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
