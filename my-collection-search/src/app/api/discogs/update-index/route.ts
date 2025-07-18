@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
-import { getMeiliClient } from "@/lib/meili";
 import { Pool } from "pg";
 import { Index, MeiliSearch } from "meilisearch";
 
@@ -86,6 +85,7 @@ async function getOrCreateTracksIndex(meiliClient: MeiliSearch): Promise<Index> 
 
 export async function POST() {
   try {
+    const { getMeiliClient } = await import("@/lib/meili");
     const meiliClient = getMeiliClient({ server: true });
     if (!fs.existsSync(DISCOGS_EXPORTS_DIR)) {
       return NextResponse.json(

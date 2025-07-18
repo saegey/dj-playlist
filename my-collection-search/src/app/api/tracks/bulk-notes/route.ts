@@ -1,4 +1,3 @@
-import { getMeiliClient } from "@/lib/meili";
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
 
@@ -30,6 +29,7 @@ export async function GET(request: Request) {
 
 // POST: bulk update notes/genre
 export async function POST(request: Request) {
+  const { getMeiliClient } = await import("@/lib/meili");
   const meiliClient = getMeiliClient({ server: true });
 
   try {

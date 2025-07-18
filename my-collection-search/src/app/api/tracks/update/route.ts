@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { updateTrack } from "@/lib/db";
-import { getMeiliClient } from "@/lib/meili";
 
 export async function PATCH(req: Request) {
+  const { getMeiliClient } = await import("@/lib/meili");
   const meiliClient = getMeiliClient({ server: true });
 
   try {
