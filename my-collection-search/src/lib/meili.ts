@@ -2,16 +2,15 @@
 import { MeiliSearch } from "meilisearch";
 
 export function getMeiliClient({ server = false } = {}) {
-  const host = server
-    ? process.env.MEILISEARCH_HOST
-    : process.env.NEXT_PUBLIC_MEILISEARCH_HOST || process.env.MEILISEARCH_HOST;
-  const apiKey = server
-    ? process.env.MEILISEARCH_API_KEY
-    : process.env.NEXT_PUBLIC_MEILISEARCH_API_KEY || process.env.MEILISEARCH_API_KEY;
+  const host =
+    (server
+      ? process.env.MEILISEARCH_HOST
+      : process.env.NEXT_PUBLIC_MEILISEARCH_HOST) || "http://localhost:7700";
+  const apiKey =
+    (server
+      ? process.env.MEILISEARCH_API_KEY
+      : process.env.NEXT_PUBLIC_MEILISEARCH_API_KEY) || "default_api_key";
 
-  if (!host) {
-    throw new Error("Missing MeiliSearch host environment variable");
-  }
 
   return new MeiliSearch({ host, apiKey });
 }
