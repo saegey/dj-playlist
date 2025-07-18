@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 
 // Uncomment and configure if you want to use OpenAI API
 import OpenAI from "openai";
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: Request) {
   try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
     const { prompt } = await req.json();
 
     const completion = await openai.chat.completions.create({
@@ -14,7 +15,8 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content: "You are a DJ music metadata assistant. Always respond ONLY with a valid JSON object, never with extra text or code fences. Never use unescaped double quotes or newlines inside string values. If you are unsure, use null or an empty string for any field.",
+          content:
+            "You are a DJ music metadata assistant. Always respond ONLY with a valid JSON object, never with extra text or code fences. Never use unescaped double quotes or newlines inside string values. If you are unsure, use null or an empty string for any field.",
         },
         {
           role: "user",
@@ -41,19 +43,26 @@ In \"notes\", include a longer DJ-focused description with vibe, energy, suggest
     const match = cleaned.match(/\{[\s\S]*\}/);
     if (match) cleaned = match[0];
     // Remove any trailing commas before closing braces
-    cleaned = cleaned.replace(/,\s*}/g, '}').replace(/,\s*]/g, ']');
+    cleaned = cleaned.replace(/,\s*}/g, "}").replace(/,\s*]/g, "]");
     let extracted = { notes: "", genre: "" };
     try {
       extracted = JSON.parse(cleaned);
     } catch (err) {
-      console.error("Failed to parse JSON from AI response", err, { aiText, cleaned });
+      console.error("Failed to parse JSON from AI response", err, {
+        aiText,
+        cleaned,
+      });
       // Attempt to repair common JSON issues (unescaped quotes, unterminated strings, stray newlines)
       // Remove backslashes before quotes that are not escaping another backslash
       const repaired = cleaned.replace(/\\+"/g, '"');
       try {
         extracted = JSON.parse(repaired);
       } catch (err2) {
-        console.error("Failed to parse JSON from AI response after repair", err2, { aiText, cleaned, repaired });
+        console.error(
+          "Failed to parse JSON from AI response after repair",
+          err2,
+          { aiText, cleaned, repaired }
+        );
       }
     }
 

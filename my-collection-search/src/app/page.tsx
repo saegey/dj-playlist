@@ -22,14 +22,26 @@ import PlaylistManager from "@/components/PlaylistManager";
 import type { Track } from "@/types/track";
 import { parseDurationToSeconds, formatSeconds } from "@/lib/trackUtils";
 import TopMenuBar from "@/components/MenuBar";
-import { meiliClient } from "@/lib/meili";
+import { getMeiliClient } from "@/lib/meili";
 import { TrackEditFormProps } from "../components/TrackEditForm";
+import { MeiliSearch } from "meilisearch";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
 });
 
 export default function SearchPage() {
+  const [meiliClient, setMeiliClient] = useState<MeiliSearch | null>(null);
+
+  React.useEffect(() => {
+    try {
+      const client = getMeiliClient();
+      setMeiliClient(client);
+    } catch (err) {
+      console.warn("Skipping MeiliSearch: ", err);
+    }
+  }, []);
+
   const [playlistSidebarMinimized, setPlaylistSidebarMinimized] =
     useState(false);
   const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
@@ -130,7 +142,7 @@ export default function SearchPage() {
           >
             {playlistSidebarMinimized ? "▶" : "◀"}
           </Button>
-          {!playlistSidebarMinimized && (
+          {!playlistSidebarMinimized && meiliClient && (
             <PlaylistManager
               playlists={playlists}
               loadingPlaylists={loadingPlaylists}
@@ -147,25 +159,27 @@ export default function SearchPage() {
         </Box>
 
         {/* Search Results */}
-        <SearchResults
-          query={query}
-          onQueryChange={onQueryChange}
-          estimatedResults={estimatedResults}
-          activeFilter={activeFilter}
-          activeFilterType={activeFilterType}
-          clearFilter={clearFilter}
-          results={results}
-          playlistCounts={playlistCounts}
-          addToPlaylist={addToPlaylist}
-          handleEditClick={handleEditClick}
-          hasMore={hasMore}
-          loadMore={loadMore}
-          usernames={["saegey", "Cdsmooth", "starlustre"]}
-          selectedUsername={selectedUsername}
-          onUsernameChange={(username) => {
-            setSelectedUsername(username);
-          }}
-        />
+        {meiliClient && (
+          <SearchResults
+            query={query}
+            onQueryChange={onQueryChange}
+            estimatedResults={estimatedResults}
+            activeFilter={activeFilter}
+            activeFilterType={activeFilterType}
+            clearFilter={clearFilter}
+            results={results}
+            playlistCounts={playlistCounts}
+            addToPlaylist={addToPlaylist}
+            handleEditClick={handleEditClick}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            usernames={["saegey", "Cdsmooth", "starlustre"]}
+            selectedUsername={selectedUsername}
+            onUsernameChange={(username) => {
+              setSelectedUsername(username);
+            }}
+          />
+        )}
 
         {/* Playlist Panel */}
         <Box

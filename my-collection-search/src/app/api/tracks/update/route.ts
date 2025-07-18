@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { updateTrack } from "@/lib/db";
-import { getMeiliClient } from "@/lib/meili";
-
-const meiliClient = getMeiliClient({ server: true });
 
 export async function PATCH(req: Request) {
+  const { getMeiliClient } = await import("@/lib/meili");
+  const meiliClient = getMeiliClient({ server: true });
+
   try {
     const data = await req.json();
     const updated = await updateTrack(data);

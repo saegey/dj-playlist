@@ -1,4 +1,3 @@
-import { getMeiliClient } from "@/lib/meili";
 import { NextResponse } from "next/server";
 
 interface SearchOptions {
@@ -6,9 +5,10 @@ interface SearchOptions {
   limit: number;
 }
 
-const meiliClient = getMeiliClient({ server: true });
-
 export async function GET(request: Request) {
+  const { getMeiliClient } = await import("@/lib/meili");
+  const meiliClient = getMeiliClient({ server: true });
+
   try {
     const { searchParams } = new URL(request.url);
     const username = searchParams.get("username");
