@@ -3,7 +3,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { getMeiliClient } from "@/lib/meili";
 import { Pool } from "pg";
-import { Index } from "meilisearch";
+import { Index, MeiliSearch } from "meilisearch";
 
 const DISCOGS_EXPORTS_DIR = path.resolve(process.cwd(), "discogs_exports");
 
@@ -63,7 +63,7 @@ interface ProcessedTrack {
   local_audio_url?: string | null;
 }
 
-async function getOrCreateTracksIndex(meiliClient: any): Promise<Index> {
+async function getOrCreateTracksIndex(meiliClient: MeiliSearch): Promise<Index> {
   try {
     console.log('[MeiliSearch] Attempting to get index "tracks"...');
     const idx = await meiliClient.getIndex("tracks");
@@ -84,6 +84,7 @@ async function getOrCreateTracksIndex(meiliClient: any): Promise<Index> {
   }
 }
 
+export async function POST() {
   try {
     const meiliClient = getMeiliClient({ server: true });
     if (!fs.existsSync(DISCOGS_EXPORTS_DIR)) {
