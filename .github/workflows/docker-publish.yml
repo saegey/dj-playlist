@@ -33,6 +33,20 @@ jobs:
           file: ./my-collection-search/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/myapp:${{ github.ref_name }}
+        env:
+          OPENAI_API_KEY: dummy
+          NEXT_PUBLIC_MEILISEARCH_HOST: http://192.168.2.98:7700
+          NEXT_PUBLIC_MEILISEARCH_API_KEY: mysupersecretkey
+          DISCOGS_USER_TOKEN: dummytoken
+          DISCOGS_USERNAME: dummyusername
+          DISCOGS_FOLDER_ID: dummyfolderid
+          APPLE_MUSIC_TEAM_ID: dummyteamid
+          APPLE_MUSIC_KEY_ID: dummykid
+          APPLE_MUSIC_PRIVATE_KEY_PATH: /path/to/dummy/private/key.pem
+          DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
+          MEILISEARCH_HOST: http://meili:7700
+          MEILISEARCH_API_KEY: mysupersecretkey
+          YOUTUBE_API_KEY: dummyyoutubeapikey
 
       - name: Image digest
         run: echo "Published image for tag ${{ github.ref_name }}"
