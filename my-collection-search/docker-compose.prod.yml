@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/saegey/myapp:v1.0.18 # Use your published tag, e.g. v1.0.0
+    image: ghcr.io/saegey/myapp:v1.0.19 # Use your published tag, e.g. v1.0.0
     container_name: myapp
     ports:
       - "3000:3000"
@@ -56,7 +56,7 @@ services:
       - meili_data:/meili_data
 
   essentia:
-    image: ghcr.io/saegey/essentia-api:v1.0.18 # Use your published tag, e.g. v1.0.0
+    image: ghcr.io/saegey/essentia-api:v1.0.19 # Use your published tag, e.g. v1.0.0
     container_name: essentia-api
     ports:
       - "8001:8001"
