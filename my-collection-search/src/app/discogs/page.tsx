@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 type Friend = {
   username: string;
 };
@@ -22,6 +22,7 @@ import {
   Code,
   Input,
   Collapsible,
+  Spinner,
 } from "@chakra-ui/react";
 import TopMenuBar from "@/components/MenuBar";
 
@@ -37,6 +38,28 @@ type SyncResult = {
 type IndexResult = { message?: string };
 
 export default function DiscogsSyncPage() {
+  const [backups, setBackups] = useState<string[]>([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [backupListError, setBackupListError] = useState<string | null>(null);
+
+  // Fetch backups on mount
+  useEffect(() => {
+    const fetchBackups = async () => {
+      setLoadingBackups(true);
+      setBackupListError(null);
+      try {
+        const res = await fetch("/api/backups");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Unknown error");
+        setBackups(data.files || []);
+      } catch (e) {
+        setBackupListError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoadingBackups(false);
+      }
+    };
+    fetchBackups();
+  }, []);
   const [showNewReleases, setShowNewReleases] = useState(false);
   const [friends, setFriends] = useState<Friend[]>(DEFAULT_FRIENDS);
   const [newFriend, setNewFriend] = useState("");
@@ -178,59 +201,85 @@ export default function DiscogsSyncPage() {
         </HStack>
 
         <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
-          <Heading size="md" mb={2}>
-            Friends&apos; Discogs Collections
-          </Heading>
-          <Text mb={2}>
-            Add friends&apos; Discogs usernames to sync or browse their
-            collections for playlist collaboration or borrowing albums.
-          </Text>
-          <HStack mb={4}>
-            <Input
-              type="text"
-              placeholder="Add friend's username"
-              value={newFriend}
-              onChange={(e) => setNewFriend(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAddFriend();
-              }}
-            />
-            <Button
-              colorScheme="green"
-              onClick={handleAddFriend}
-              disabled={!newFriend.trim()}
-            >
-              Add
-            </Button>
-          </HStack>
-          <VStack align="stretch">
-            {friends.length === 0 && (
-              <Text color="gray.400">No friends added yet.</Text>
-            )}
-            {friends.map((friend) => (
-              <HStack key={friend.username}>
-                <Text fontWeight="medium">{friend.username}</Text>
-                <Button
-                  size="xs"
-                  colorScheme="blue"
-                  onClick={() => handleSync(friend.username)}
-                  loading={syncing}
-                  disabled={syncing || indexing}
-                >
-                  Sync
-                </Button>
-                <Button
-                  size="xs"
-                  colorScheme="red"
-                  variant="outline"
-                  onClick={() => handleRemoveFriend(friend.username)}
-                >
-                  Remove
-                </Button>
-              </HStack>
-            ))}
-          </VStack>
-        </Box>
+          <Heading size="md" mb={2}>Existing Database Backups</Heading>
+          {loadingBackups ? (
+            <Spinner />
+          ) : backupListError ? (
+            <Box color="red.500" mb={2}>
+              <b>Error:</b> {backupListError}
+            </Box>
+          ) : backups.length === 0 ? (
+            <Text>No backups found in the directory.</Text>
+          ) : (
+            <VStack align="stretch" gap={3}>
+              {backups.map((file) => (
+                <HStack key={file} justify="space-between">
+                  <Text fontSize="sm">{file}</Text>
+                  <a
+                    href={`/api/backups/${encodeURIComponent(file)}`}
+                    download
+                    style={{ textDecoration: "none" }}
+                  >
+                    <Button colorScheme="blue" size="sm">Download</Button>
+                  </a>
+                </HStack>
+              ))}
+            </VStack>
+          )}
+        {/* Friends section and all alerts/results should be inside the main Box */}
+        <Heading size="md" mb={2}>
+          Friends&apos; Discogs Collections
+        </Heading>
+        <Text mb={2}>
+          Add friends&apos; Discogs usernames to sync or browse their
+          collections for playlist collaboration or borrowing albums.
+        </Text>
+        <HStack mb={4}>
+          <Input
+            type="text"
+            placeholder="Add friend's username"
+            value={newFriend}
+            onChange={(e) => setNewFriend(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleAddFriend();
+            }}
+          />
+          <Button
+            colorScheme="green"
+            onClick={handleAddFriend}
+            disabled={!newFriend.trim()}
+          >
+            Add
+          </Button>
+        </HStack>
+        <VStack align="stretch">
+          {friends.length === 0 && (
+            <Text color="gray.400">No friends added yet.</Text>
+          )}
+          {friends.map((friend) => (
+            <HStack key={friend.username}>
+              <Text fontWeight="medium">{friend.username}</Text>
+              <Button
+                size="xs"
+                colorScheme="blue"
+                onClick={() => handleSync(friend.username)}
+                loading={syncing}
+                disabled={syncing || indexing}
+              >
+                Sync
+              </Button>
+              <Button
+                size="xs"
+                colorScheme="red"
+                variant="outline"
+                onClick={() => handleRemoveFriend(friend.username)}
+              >
+                Remove
+              </Button>
+            </HStack>
+          ))}
+        </VStack>
+      </Box>
 
         {indexError && (
           <Alert.Root status="error" title="Error">

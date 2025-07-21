@@ -27,6 +27,7 @@ services:
     volumes:
       - music_data:/app/audio
       - db_dumps:/app/dumps
+      - discogs_exports:/app/discogs_exports
   
   migrate:
     image: node:20
@@ -82,3 +83,4 @@ volumes:
   meili_data:
   music_data:
   db_dumps:
+  discogs_exports:

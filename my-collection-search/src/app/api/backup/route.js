@@ -49,8 +49,8 @@ export async function POST() {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const unique = `${timestamp}-${Math.floor(Math.random() * 1e6)}`;
       backupFile = path.join(BACKUP_DIR, `pg-backup-${unique}.sql`);
-      // Compose pg_dump command
-      let cmd = `PGPASSWORD='${pg.pass || ''}' pg_dump -U ${pg.user} -h ${pg.host || 'localhost'} -p ${pg.port || 5432} -F p -d ${pg.db} -f '${backupFile}'`;
+      // Compose pg_dump command (data only)
+      let cmd = `PGPASSWORD='${pg.pass || ''}' pg_dump -U ${pg.user} -h ${pg.host || 'localhost'} -p ${pg.port || 5432} -F p --data-only -d ${pg.db} -f '${backupFile}'`;
       execSync(cmd, { stdio: 'ignore', env: { ...process.env, PGPASSWORD: pg.pass || '' } });
       usedPg = true;
     }

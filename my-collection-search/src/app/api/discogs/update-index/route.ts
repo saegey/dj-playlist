@@ -78,8 +78,6 @@ async function getOrCreateTracksIndex(meiliClient: MeiliSearch): Promise<Index> 
       '[MeiliSearch] Index "tracks" created. Fetching index object...'
     );
     return meiliClient.index("tracks");
-    // console.log("[MeiliSearch] Unknown error, rethrowing...");
-    // throw err; // Something else went wrong
   }
 }
 
