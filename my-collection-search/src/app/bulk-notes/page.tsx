@@ -76,7 +76,10 @@ export default function BulkNotesPage() {
           `Track ID: ${t.track_id}\nTitle: ${t.title}\nArtist: ${t.artist}\nAlbum: ${t.album}\nDiscogs URL: ${t.discogs_url}\n---`
       )
       .join("\n");
-    const fullPrompt = `You are a DJ music metadata assistant. For each track below, return a JSON object... Tracks:\n${promptTracks}`;
+    const fullPrompt = `You are a DJ music metadata assistant. For each track below, return a JSON object with the following fields: track_id, local tags, notes.
+Example:
+{"track_id":"123","local_tags":"House","notes":"Great for warmup sets, uplifting vibe."}. In "notes", include a longer DJ-focused description with vibe, energy, suggested set placement, transition tips, and any emotional or cultural context. In local_tags, it is the genre or style of the actual track and not the album. 
+ Tracks:\n${promptTracks}`;
     setBulkPrompt(fullPrompt);
     navigator.clipboard.writeText(fullPrompt);
     toaster.create({ title: "Prompt copied", type: "success" });
