@@ -35,7 +35,7 @@ jobs:
           tags: ghcr.io/${{ github.repository_owner }}/myapp:${{ github.ref_name }}
         env:
           OPENAI_API_KEY: dummy
-          NEXT_PUBLIC_MEILISEARCH_HOST: http://192.168.2.98:7700
+          NEXT_PUBLIC_MEILISEARCH_HOST: http://vinyl.local:7700
           NEXT_PUBLIC_MEILISEARCH_API_KEY: mysupersecretkey
           DISCOGS_USER_TOKEN: dummytoken
           DISCOGS_USERNAME: dummyusername
