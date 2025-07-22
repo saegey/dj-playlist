@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useFriends } from "@/hooks/useFriends";
 import {
   Box,
   Button,
@@ -25,19 +26,13 @@ interface BackfillTrack extends Track {
 export default function BackfillAudioPage() {
   const [tracks, setTracks] = useState<BackfillTrack[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [usernames, setUsernames] = useState<string[]>([]);
+  const { friends: usernames } = useFriends();
   const [selectedUsername, setSelectedUsername] = useState<string>("");
   const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/tracks/usernames")
-      .then((res) => res.json())
-      .then((data) =>
-        setUsernames(Array.isArray(data) ? data : data.usernames || [])
-      );
-  }, []);
+  // Friends are loaded via useFriends hook
 
   useEffect(() => {
     setLoading(true);

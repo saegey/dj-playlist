@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useFriends } from "@/hooks/useFriends";
 import {
   Box,
   Button,
@@ -22,19 +23,13 @@ export default function BulkNotesPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [artistSearch, setArtistSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [usernames, setUsernames] = useState<string[]>([]);
+  const { friends: usernames } = useFriends();
   const [selectedUsername, setSelectedUsername] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [bulkPrompt, setBulkPrompt] = useState("");
   const [bulkJson, setBulkJson] = useState("");
 
-  useEffect(() => {
-    fetch("/api/tracks/usernames")
-      .then((r) => r.json())
-      .then((data) =>
-        setUsernames(Array.isArray(data) ? data : data.usernames || [])
-      );
-  }, []);
+  // Friends are loaded via useFriends hook
 
   useEffect(() => {
     setLoading(true);
