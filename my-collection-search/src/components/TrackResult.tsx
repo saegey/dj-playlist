@@ -85,7 +85,7 @@ export default function TrackResult({
               )}
             </Flex>
             <Flex fontSize="sm" gap={2}>
-              <Link href={track.discogs_url} target="_blank">
+              {/* <Link href={track.discogs_url} target="_blank">
                 Discogs
               </Link>
               {track.apple_music_url && (
@@ -97,7 +97,7 @@ export default function TrackResult({
                 <Link href={track.youtube_url} target="_blank">
                   YouTube
                 </Link>
-              )}
+              )} */}
               {track.username && (
                 <Text fontSize="sm">User: {track.username}</Text>
               )}

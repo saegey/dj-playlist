@@ -20,6 +20,7 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
       bgColor={"gray.subtle"}
       color="brand.menuText"
       p="4"
+      mb="4"
       justify="space-around"
     >
       <Text fontSize="lg" fontWeight="bold" hideBelow="md">

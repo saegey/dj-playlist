@@ -18,9 +18,6 @@ interface SearchResultsProps {
   query: string;
   onQueryChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   estimatedResults: number;
-  activeFilter: string | null;
-  activeFilterType: "genre" | "style" | "artist" | null;
-  clearFilter: () => void;
   results: Track[];
   playlistCounts: Record<string, number>;
   addToPlaylist: (track: Track) => void;
@@ -35,9 +32,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   query,
   onQueryChange,
   estimatedResults,
-  activeFilter,
-  activeFilterType,
-  clearFilter,
   results,
   playlistCounts,
   addToPlaylist,

@@ -9,6 +9,10 @@ import {
   Portal,
   Dialog,
   CloseButton,
+  Drawer,
+  Container,
+  Float,
+  Circle,
 } from "@chakra-ui/react";
 import dynamic from "next/dynamic";
 
@@ -29,8 +33,9 @@ import { MeiliSearch } from "meilisearch";
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
 });
-
 export default function SearchPage() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [meiliClient, setMeiliClient] = useState<MeiliSearch | null>(null);
 
   React.useEffect(() => {
@@ -56,9 +61,6 @@ export default function SearchPage() {
     query,
     onQueryChange,
     estimatedResults,
-    activeFilter,
-    activeFilterType,
-    clearFilter,
     results,
     playlistCounts,
     hasMore,
@@ -120,122 +122,184 @@ export default function SearchPage() {
   return (
     <>
       <TopMenuBar current="/" />
-      <Flex p={4} gap={4} direction="row">
-        {/* Playlist Sidebar */}
-        <Box
-          position="relative"
-          width={playlistSidebarMinimized ? "40px" : "300px"}
-          minWidth={playlistSidebarMinimized ? "40px" : "300px"}
-          transition="width 0.2s"
-          mr={2}
-          hideBelow="md"
+      <Flex gap={4} direction="row">
+        {/* Playlist Sidebar Drawer Trigger */}
+        <Drawer.Root
+          open={sidebarDrawerOpen}
+          onOpenChange={(e) => setSidebarDrawerOpen(e.open)}
         >
-          <Button
-            aria-label={playlistSidebarMinimized ? "Expand" : "Minimize"}
-            size="xs"
-            position="absolute"
-            top={2}
-            right={playlistSidebarMinimized ? 0 : -4}
-            zIndex={1}
-            onClick={() => setPlaylistSidebarMinimized((m) => !m)}
-            variant="ghost"
-            px={1}
-          >
-            {playlistSidebarMinimized ? "▶" : "◀"}
-          </Button>
-          {!playlistSidebarMinimized && meiliClient && (
-            <PlaylistManager
-              playlists={playlists}
-              loadingPlaylists={loadingPlaylists}
-              playlistName={playlistName}
-              setPlaylistName={setPlaylistName}
-              handleCreatePlaylist={handleCreatePlaylist}
-              handleLoadPlaylist={handleLoadPlaylist}
-              xmlImportModalOpen={xmlImportModalOpen}
-              setXmlImportModalOpen={setXmlImportModalOpen}
-              client={meiliClient}
-              fetchPlaylists={fetchPlaylists}
-            />
-          )}
-        </Box>
+          <Drawer.Trigger asChild>
+            <Button
+              position="fixed"
+              left={6}
+              bottom={6}
+              zIndex={100}
+              colorScheme="gray"
+              size="lg"
+              borderRadius="full"
+              boxShadow="md"
+            >
+              Sidebar
+            </Button>
+          </Drawer.Trigger>
+          <Portal>
+            <Drawer.Backdrop />
+            <Drawer.Positioner>
+              <Drawer.Content>
+                <Drawer.Header>
+                  <Drawer.Title>Playlist Sidebar</Drawer.Title>
+                </Drawer.Header>
+                <Drawer.Body>
+                  <Box>
+                    <Button
+                      aria-label={
+                        playlistSidebarMinimized ? "Expand" : "Minimize"
+                      }
+                      size="xs"
+                      position="absolute"
+                      top={2}
+                      right={playlistSidebarMinimized ? 0 : -4}
+                      zIndex={1}
+                      onClick={() => setPlaylistSidebarMinimized((m) => !m)}
+                      variant="ghost"
+                      px={1}
+                    >
+                      {playlistSidebarMinimized ? "▶" : "◀"}
+                    </Button>
+                    {!playlistSidebarMinimized && meiliClient && (
+                      <PlaylistManager
+                        playlists={playlists}
+                        loadingPlaylists={loadingPlaylists}
+                        playlistName={playlistName}
+                        setPlaylistName={setPlaylistName}
+                        handleCreatePlaylist={handleCreatePlaylist}
+                        handleLoadPlaylist={handleLoadPlaylist}
+                        xmlImportModalOpen={xmlImportModalOpen}
+                        setXmlImportModalOpen={setXmlImportModalOpen}
+                        client={meiliClient}
+                        fetchPlaylists={fetchPlaylists}
+                      />
+                    )}
+                  </Box>
+                </Drawer.Body>
+                <Drawer.Footer>
+                  <Drawer.CloseTrigger asChild>
+                    <CloseButton size="sm" />
+                  </Drawer.CloseTrigger>
+                </Drawer.Footer>
+              </Drawer.Content>
+            </Drawer.Positioner>
+          </Portal>
+        </Drawer.Root>
 
         {/* Search Results */}
-        {meiliClient && (
-          <SearchResults
-            query={query}
-            onQueryChange={onQueryChange}
-            estimatedResults={estimatedResults}
-            activeFilter={activeFilter}
-            activeFilterType={activeFilterType}
-            clearFilter={clearFilter}
-            results={results}
-            playlistCounts={playlistCounts}
-            addToPlaylist={addToPlaylist}
-            handleEditClick={handleEditClick}
-            hasMore={hasMore}
-            loadMore={loadMore}
-            selectedUsername={selectedUsername}
-            onUsernameChange={(username) => {
-              setSelectedUsername(username);
-            }}
-          />
-        )}
+        <Container maxW={["8xl", "2xl", "2xl"]}>
+          {meiliClient && (
+            <SearchResults
+              query={query}
+              onQueryChange={onQueryChange}
+              estimatedResults={estimatedResults}
+              results={results}
+              playlistCounts={playlistCounts}
+              addToPlaylist={addToPlaylist}
+              handleEditClick={handleEditClick}
+              hasMore={hasMore}
+              loadMore={loadMore}
+              selectedUsername={selectedUsername}
+              onUsernameChange={(username) => {
+                setSelectedUsername(username);
+              }}
+            />
+          )}
+        </Container>
 
-        {/* Playlist Panel */}
-        <Box
-          borderWidth="1px"
-          borderRadius="lg"
-          p={4}
-          width="40%"
-          overflowY="auto"
-          hideBelow="md"
+        {/* Playlist Drawer Trigger */}
+        <Drawer.Root
+          open={drawerOpen}
+          onOpenChange={(e) => setDrawerOpen(e.open)}
+          size={["sm", "md", "md"]}
         >
-          <Flex alignItems="center" justifyContent="space-between" mb={3}>
-            <Box>
-              <Text fontSize="xl" fontWeight="bold">
-                Playlist ({hasMounted ? playlist.length : 0})
-              </Text>
-              <Text fontSize="sm" color="gray.500">
-                Total Playtime: {hasMounted ? totalPlaytimeFormatted : "--:--"}
-              </Text>
+          <Drawer.Trigger asChild>
+            <Box position="fixed" right={6} bottom={6} zIndex={100}>
+              <Button
+                colorScheme="blue"
+                size="lg"
+                borderRadius="full"
+                boxShadow="md"
+                position="relative"
+                pr={hasMounted && playlist.length > 0 ? 8 : undefined}
+              >
+                Playlist
+                {hasMounted && playlist.length > 0 && (
+                  <Float placement="top-end">
+                    <Circle size="6" bg="red.500" color="white" fontSize="sm">
+                      {playlist.length}
+                    </Circle>
+                  </Float>
+                )}
+              </Button>
             </Box>
-            <Flex gap={2} alignItems="center">
-              <Button
-                variant="solid"
-                size="sm"
-                onClick={savePlaylist}
-                disabled={!hasMounted || playlist.length === 0}
-              >
-                Save
-              </Button>
-              <Button
-                size="sm"
-                variant={"outline"}
-                onClick={exportPlaylist}
-                disabled={!hasMounted || playlist.length === 0}
-              >
-                Export
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setPlaylist([])}
-                disabled={!hasMounted || playlist.length === 0}
-              >
-                Clear
-              </Button>
-            </Flex>
-          </Flex>
-          <PlaylistViewer
-            {...usePlaylistViewer({
-              playlist,
-              playlistCounts,
-              moveTrack,
-              setEditTrack: handleEditClick,
-              removeFromPlaylist,
-            })}
-          />
-        </Box>
+          </Drawer.Trigger>
+
+          <Portal>
+            <Drawer.Backdrop />
+            <Drawer.Positioner>
+              <Drawer.Content>
+                <Drawer.Header>
+                  <Drawer.Title>
+                    Playlist ({hasMounted ? playlist.length : 0})
+                  </Drawer.Title>
+                </Drawer.Header>
+                <Drawer.Body>
+                  <Text fontSize="sm" color="gray.500" mb={2}>
+                    Total Playtime:{" "}
+                    {hasMounted ? totalPlaytimeFormatted : "--:--"}
+                  </Text>
+                  <Flex gap={2} alignItems="center" mb={4}>
+                    <Button
+                      variant="solid"
+                      size="sm"
+                      onClick={savePlaylist}
+                      disabled={!hasMounted || playlist.length === 0}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={"outline"}
+                      onClick={exportPlaylist}
+                      disabled={!hasMounted || playlist.length === 0}
+                    >
+                      Export
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPlaylist([])}
+                      disabled={!hasMounted || playlist.length === 0}
+                    >
+                      Clear
+                    </Button>
+                  </Flex>
+                  <PlaylistViewer
+                    {...usePlaylistViewer({
+                      playlist,
+                      playlistCounts,
+                      moveTrack,
+                      setEditTrack: handleEditClick,
+                      removeFromPlaylist,
+                    })}
+                  />
+                </Drawer.Body>
+                <Drawer.Footer>
+                  <Drawer.CloseTrigger asChild>
+                    <CloseButton size="sm" />
+                  </Drawer.CloseTrigger>
+                </Drawer.Footer>
+              </Drawer.Content>
+            </Drawer.Positioner>
+          </Portal>
+        </Drawer.Root>
       </Flex>
 
       {/* Dialog replacing Modal */}
