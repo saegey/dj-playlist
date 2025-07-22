@@ -76,8 +76,35 @@ Example:
 {"track_id":"123","local_tags":"House","notes":"Great for warmup sets, uplifting vibe."}. In "notes", include a longer DJ-focused description with vibe, energy, suggested set placement, transition tips, and any emotional or cultural context. In local_tags, it is the genre or style of the actual track and not the album. 
  Tracks:\n${promptTracks}`;
     setBulkPrompt(fullPrompt);
-    navigator.clipboard.writeText(fullPrompt);
-    toaster.create({ title: "Prompt copied", type: "success" });
+    // Robust clipboard copy with fallback
+    const copyToClipboard = async (text: string) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        toaster.create({ title: "Prompt copied", type: "success" });
+      } catch (err) {
+        console.error("Failed to copy prompt", err);
+        // Fallback: create a textarea, select, and copy
+        try {
+          const textarea = document.createElement("textarea");
+          textarea.value = text;
+          textarea.setAttribute("readonly", "");
+          textarea.style.position = "absolute";
+          textarea.style.left = "-9999px";
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textarea);
+          toaster.create({
+            title: "Prompt copied (fallback)",
+            type: "success",
+          });
+        } catch (fallbackErr) {
+          console.error("Failed to copy prompt with text area", fallbackErr);
+          toaster.create({ title: "Failed to copy prompt", type: "error" });
+        }
+      }
+    };
+    copyToClipboard(fullPrompt);
   };
 
   const handleUpload = async () => {

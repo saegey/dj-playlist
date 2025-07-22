@@ -53,7 +53,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   });
 
   return (
-    <Box width="40%">
+    <Box>
       <Box display="flex" gap={3} mb={3}>
         <Input
           placeholder="Search tracks..."
@@ -70,7 +70,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             onValueChange={(vals) => {
               onUsernameChange(vals.value.length ? vals.value[0] : "");
             }}
-            width="320px"
+            width="120px"
           >
             <Select.HiddenSelect />
             <Select.Control>
@@ -99,25 +99,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
       <Text fontSize="sm" color="gray.500" mb={2}>
         {estimatedResults.toLocaleString()} results found
-        {activeFilter && activeFilterType && (
-          <>
-            <Text as="span" color="purple.600" ml={2}>
-              Filtered by{" "}
-              {activeFilterType.charAt(0).toUpperCase() +
-                activeFilterType.slice(1)}
-              : <b>{activeFilter}</b>
-            </Text>
-            <Button
-              size="xs"
-              ml={2}
-              variant="outline"
-              colorScheme="gray"
-              onClick={clearFilter}
-            >
-              Clear Filter
-            </Button>
-          </>
-        )}
       </Text>
 
       {results.map((track) => (

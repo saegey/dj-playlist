@@ -128,6 +128,7 @@ export default function SearchPage() {
           minWidth={playlistSidebarMinimized ? "40px" : "300px"}
           transition="width 0.2s"
           mr={2}
+          hideBelow="md"
         >
           <Button
             aria-label={playlistSidebarMinimized ? "Expand" : "Minimize"}
@@ -187,6 +188,7 @@ export default function SearchPage() {
           p={4}
           width="40%"
           overflowY="auto"
+          hideBelow="md"
         >
           <Flex alignItems="center" justifyContent="space-between" mb={3}>
             <Box>

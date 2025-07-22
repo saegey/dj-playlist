@@ -22,7 +22,7 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
       p="4"
       justify="space-around"
     >
-      <Text fontSize="lg" fontWeight="bold">
+      <Text fontSize="lg" fontWeight="bold" hideBelow="md">
         Vinyl Playlist
       </Text>
       {menuItems.map((item) => (
