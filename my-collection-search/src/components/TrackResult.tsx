@@ -12,7 +12,6 @@ import {
   Badge,
   SimpleGrid,
 } from "@chakra-ui/react";
-import { FiChevronDown } from "react-icons/fi";
 import { SiDiscogs, SiApplemusic, SiYoutube } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
@@ -95,8 +94,17 @@ export default function TrackResult({
 
   // Expanded view
   return (
-    <Box borderWidth="1px" borderRadius="md" p={3} mb={2}>
-      <Flex gap={3} position={"relative"}>
+    <Flex
+      borderWidth="1px"
+      borderRadius="md"
+      p={3}
+      mb={2}
+      flexDirection="column"
+      flexGrow={1}
+      minHeight={0}
+      width={"100%"}
+    >
+      <Flex gap={3} position={"relative"} width={"100%"}>
         <Image
           src={track.album_thumbnail}
           alt={track.title}
@@ -246,6 +254,6 @@ export default function TrackResult({
       </Flex>
 
       {footer && <Box mt={2}>{footer}</Box>}
-    </Box>
+    </Flex>
   );
 }

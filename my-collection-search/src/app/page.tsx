@@ -47,8 +47,6 @@ export default function SearchPage() {
     }
   }, []);
 
-  const [playlistSidebarMinimized, setPlaylistSidebarMinimized] =
-    useState(false);
   const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
   // Prevent hydration mismatch for playlist count and playtime
   const [hasMounted, setHasMounted] = React.useState(false);
@@ -152,7 +150,7 @@ export default function SearchPage() {
                 </Drawer.Header>
                 <Drawer.Body>
                   <Box>
-                    {!playlistSidebarMinimized && meiliClient && (
+                    {meiliClient && (
                       <PlaylistManager
                         playlists={playlists}
                         loadingPlaylists={loadingPlaylists}
