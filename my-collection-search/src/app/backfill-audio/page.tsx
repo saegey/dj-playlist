@@ -3,12 +3,10 @@
 import React, { useEffect, useState } from "react";
 import { useFriends } from "@/hooks/useFriends";
 import {
-  Box,
   Button,
   Checkbox,
   Spinner,
   Text,
-  HStack,
   createListCollection,
   Select,
   Table, // v3 import
