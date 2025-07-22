@@ -173,7 +173,6 @@ export default function SearchPage() {
             handleEditClick={handleEditClick}
             hasMore={hasMore}
             loadMore={loadMore}
-            usernames={["saegey", "Cdsmooth", "starlustre"]}
             selectedUsername={selectedUsername}
             onUsernameChange={(username) => {
               setSelectedUsername(username);

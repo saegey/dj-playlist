@@ -1,16 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-type Friend = {
-  username: string;
-};
-
-// You could load this from a config, DB, or user profile in a real app
-const DEFAULT_FRIENDS: Friend[] = [
-  { username: "Cdsmooth" },
-  { username: "starlustre" },
-  // Example: { username: 'friend1' },
-];
+import { useFriends } from "@/hooks/useFriends";
 import {
   Box,
   Button,
@@ -61,7 +52,12 @@ export default function DiscogsSyncPage() {
     fetchBackups();
   }, []);
   const [showNewReleases, setShowNewReleases] = useState(false);
-  const [friends, setFriends] = useState<Friend[]>(DEFAULT_FRIENDS);
+  const {
+    friends,
+    loading: friendsLoading,
+    addFriend,
+    removeFriend,
+  } = useFriends();
   const [newFriend, setNewFriend] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [result, setResult] = useState<SyncResult | null>(null);
@@ -85,16 +81,16 @@ export default function DiscogsSyncPage() {
       setSyncing(false);
     }
   };
-  const handleAddFriend = () => {
+  const handleAddFriend = async () => {
     const username = newFriend.trim();
-    if (username && !friends.some((f) => f.username === username)) {
-      setFriends([...friends, { username }]);
+    if (username && !friends.includes(username)) {
+      await addFriend(username);
       setNewFriend("");
     }
   };
 
-  const handleRemoveFriend = (username: string) => {
-    setFriends(friends.filter((f) => f.username !== username));
+  const handleRemoveFriend = async (username: string) => {
+    await removeFriend(username);
   };
 
   const [indexing, setIndexing] = useState(false);
@@ -201,7 +197,68 @@ export default function DiscogsSyncPage() {
         </HStack>
 
         <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
-          <Heading size="md" mb={2}>Existing Database Backups</Heading>
+          {/* Friends section and all alerts/results should be inside the main Box */}
+          <Heading size="md" mb={2}>
+            Friends&apos; Discogs Collections
+          </Heading>
+          <Text mb={2}>
+            Add friends&apos; Discogs usernames to sync or browse their
+            collections for playlist collaboration or borrowing albums.
+          </Text>
+          <HStack mb={4}>
+            <Input
+              type="text"
+              placeholder="Add friend's username"
+              value={newFriend}
+              onChange={(e) => setNewFriend(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAddFriend();
+              }}
+            />
+            <Button
+              colorScheme="green"
+              onClick={handleAddFriend}
+              disabled={!newFriend.trim()}
+            >
+              Add
+            </Button>
+          </HStack>
+          <VStack align="stretch">
+            {friendsLoading ? (
+              <Text color="gray.400">Loading friends...</Text>
+            ) : friends.length === 0 ? (
+              <Text color="gray.400">No friends added yet.</Text>
+            ) : (
+              friends.map((username) => (
+                <HStack key={username}>
+                  <Text fontWeight="medium">{username}</Text>
+                  <Button
+                    size="xs"
+                    colorScheme="blue"
+                    onClick={() => handleSync(username)}
+                    loading={syncing}
+                    disabled={syncing || indexing}
+                  >
+                    Sync
+                  </Button>
+                  <Button
+                    size="xs"
+                    colorScheme="red"
+                    variant="outline"
+                    onClick={() => handleRemoveFriend(username)}
+                  >
+                    Remove
+                  </Button>
+                </HStack>
+              ))
+            )}
+          </VStack>
+        </Box>
+
+        <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
+          <Heading size="md" mb={2}>
+            Existing Database Backups
+          </Heading>
           {loadingBackups ? (
             <Spinner />
           ) : backupListError ? (
@@ -220,70 +277,19 @@ export default function DiscogsSyncPage() {
                     download
                     style={{ textDecoration: "none" }}
                   >
-                    <Button colorScheme="blue" size="sm">Download</Button>
+                    <Button colorScheme="blue" size="sm">
+                      Download
+                    </Button>
                   </a>
                 </HStack>
               ))}
             </VStack>
           )}
-        {/* Friends section and all alerts/results should be inside the main Box */}
-        <Heading size="md" mb={2}>
-          Friends&apos; Discogs Collections
-        </Heading>
-        <Text mb={2}>
-          Add friends&apos; Discogs usernames to sync or browse their
-          collections for playlist collaboration or borrowing albums.
-        </Text>
-        <HStack mb={4}>
-          <Input
-            type="text"
-            placeholder="Add friend's username"
-            value={newFriend}
-            onChange={(e) => setNewFriend(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleAddFriend();
-            }}
-          />
-          <Button
-            colorScheme="green"
-            onClick={handleAddFriend}
-            disabled={!newFriend.trim()}
-          >
-            Add
-          </Button>
-        </HStack>
-        <VStack align="stretch">
-          {friends.length === 0 && (
-            <Text color="gray.400">No friends added yet.</Text>
-          )}
-          {friends.map((friend) => (
-            <HStack key={friend.username}>
-              <Text fontWeight="medium">{friend.username}</Text>
-              <Button
-                size="xs"
-                colorScheme="blue"
-                onClick={() => handleSync(friend.username)}
-                loading={syncing}
-                disabled={syncing || indexing}
-              >
-                Sync
-              </Button>
-              <Button
-                size="xs"
-                colorScheme="red"
-                variant="outline"
-                onClick={() => handleRemoveFriend(friend.username)}
-              >
-                Remove
-              </Button>
-            </HStack>
-          ))}
-        </VStack>
-      </Box>
+        </Box>
 
         {indexError && (
           <Alert.Root status="error" title="Error">
-          <Box borderBottom="1px solid" borderColor="gray.200" mb={2} />
+            <Box borderBottom="1px solid" borderColor="gray.200" mb={2} />
             <Alert.Title>Index Error</Alert.Title>
             <Alert.Description>{indexError}</Alert.Description>
           </Alert.Root>
@@ -353,7 +359,9 @@ export default function DiscogsSyncPage() {
                       onClick={() => setShowNewReleases((v) => !v)}
                       mb={2}
                     >
-                      {showNewReleases ? "Hide new release IDs" : "Show new release IDs"}
+                      {showNewReleases
+                        ? "Hide new release IDs"
+                        : "Show new release IDs"}
                     </Button>
                   </Collapsible.Trigger>
                   <Collapsible.Content>
@@ -389,8 +397,13 @@ export default function DiscogsSyncPage() {
         )}
 
         <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
-          <Heading size="md" mb={2}>Restore Database from SQL File</Heading>
-          <Text mb={2}>Upload a SQL backup file to restore your database. This will overwrite all current data.</Text>
+          <Heading size="md" mb={2}>
+            Restore Database from SQL File
+          </Heading>
+          <Text mb={2}>
+            Upload a SQL backup file to restore your database. This will
+            overwrite all current data.
+          </Text>
           <HStack mb={4}>
             <Input
               type="file"

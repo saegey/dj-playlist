@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useFriends } from "@/hooks/useFriends";
 import { Track } from "../../types/track";
 import {
   Box,
@@ -49,7 +50,7 @@ export default function MissingAppleMusicPage() {
   const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [editTrack, setEditTrack] = useState<Track | null>(null);
-  const [usernames, setUsernames] = useState<string[]>([]);
+  const { friends: usernames } = useFriends();
   const [selectedUsername, setSelectedUsername] = useState<string>("");
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -60,19 +61,7 @@ export default function MissingAppleMusicPage() {
   const [overrideQuery, setOverrideQuery] = useState<string>("");
   const { onOpen, onClose } = useDisclosure();
 
-  // Fetch usernames for filter dropdown
-  useEffect(() => {
-    const fetchUsernames = async () => {
-      const res = await fetch("/api/tracks/usernames");
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) setUsernames(data);
-        else if (data && Array.isArray(data.usernames))
-          setUsernames(data.usernames);
-      }
-    };
-    fetchUsernames();
-  }, []);
+  // Friends are loaded via useFriends hook
 
   // Pagination state
   const [page, setPage] = useState(1);

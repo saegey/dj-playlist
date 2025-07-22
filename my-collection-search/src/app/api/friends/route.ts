@@ -6,7 +6,12 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export async function GET() {
   try {
     const { rows } = await pool.query("SELECT username FROM friends ORDER BY added_at DESC");
-    return NextResponse.json({ friends: rows.map(r => r.username) });
+    let friends = rows.map(r => r.username);
+    const currentUser = process.env.DISCOGS_USERNAME;
+    if (currentUser && !friends.includes(currentUser)) {
+      friends = [currentUser, ...friends];
+    }
+    return NextResponse.json({ friends });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }

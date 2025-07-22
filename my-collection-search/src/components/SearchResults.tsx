@@ -1,4 +1,5 @@
 import React from "react";
+import { useFriends } from "@/hooks/useFriends";
 import {
   Box,
   Input,
@@ -26,7 +27,6 @@ interface SearchResultsProps {
   handleEditClick: (track: Track) => void;
   hasMore: boolean;
   loadMore: () => void;
-  usernames?: string[];
   selectedUsername?: string;
   onUsernameChange?: (username: string) => void;
 }
@@ -44,12 +44,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   handleEditClick,
   hasMore,
   loadMore,
-  usernames = [],
   selectedUsername = "",
   onUsernameChange,
 }) => {
+  const { friends, loading: friendsLoading } = useFriends();
   const usernameCollection = createListCollection({
-    items: usernames.map((u) => ({ label: u, value: u })),
+    items: friends.map((u) => ({ label: u, value: u })),
   });
 
   return (
@@ -61,7 +61,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           onChange={onQueryChange}
           flex="1"
         />
-        {usernames.length > 0 && onUsernameChange && (
+        {friendsLoading ? (
+          <Text>Loading friends...</Text>
+        ) : friends.length > 0 && onUsernameChange ? (
           <Select.Root
             collection={usernameCollection}
             value={selectedUsername ? [selectedUsername] : []}
@@ -82,7 +84,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             <Portal>
               <Select.Positioner>
                 <Select.Content>
-                  {usernames.map((u) => (
+                  {friends.map((u) => (
                     <Select.Item item={{ label: u, value: u }} key={u}>
                       {u}
                       <Select.ItemIndicator />
@@ -92,7 +94,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
               </Select.Positioner>
             </Portal>
           </Select.Root>
-        )}
+        ) : null}
       </Box>
 
       <Text fontSize="sm" color="gray.500" mb={2}>
