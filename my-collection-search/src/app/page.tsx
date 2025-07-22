@@ -127,6 +127,7 @@ export default function SearchPage() {
         <Drawer.Root
           open={sidebarDrawerOpen}
           onOpenChange={(e) => setSidebarDrawerOpen(e.open)}
+          placement={"start"}
         >
           <Drawer.Trigger asChild>
             <Button
@@ -151,21 +152,6 @@ export default function SearchPage() {
                 </Drawer.Header>
                 <Drawer.Body>
                   <Box>
-                    <Button
-                      aria-label={
-                        playlistSidebarMinimized ? "Expand" : "Minimize"
-                      }
-                      size="xs"
-                      position="absolute"
-                      top={2}
-                      right={playlistSidebarMinimized ? 0 : -4}
-                      zIndex={1}
-                      onClick={() => setPlaylistSidebarMinimized((m) => !m)}
-                      variant="ghost"
-                      px={1}
-                    >
-                      {playlistSidebarMinimized ? "▶" : "◀"}
-                    </Button>
                     {!playlistSidebarMinimized && meiliClient && (
                       <PlaylistManager
                         playlists={playlists}
@@ -248,39 +234,43 @@ export default function SearchPage() {
                 <Drawer.Header>
                   <Drawer.Title>
                     Playlist ({hasMounted ? playlist.length : 0})
+                    <Text fontSize="sm" color="gray.500" mb={2}>
+                      Total Playtime:{" "}
+                      {hasMounted ? totalPlaytimeFormatted : "--:--"}
+                    </Text>
                   </Drawer.Title>
+                  <Box mt={2}>
+                    <Box>
+                      <Flex gap={2} alignItems="center" mb={4}>
+                        <Button
+                          variant="solid"
+                          size="sm"
+                          onClick={savePlaylist}
+                          disabled={!hasMounted || playlist.length === 0}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={"outline"}
+                          onClick={exportPlaylist}
+                          disabled={!hasMounted || playlist.length === 0}
+                        >
+                          Export
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPlaylist([])}
+                          disabled={!hasMounted || playlist.length === 0}
+                        >
+                          Clear
+                        </Button>
+                      </Flex>
+                    </Box>
+                  </Box>
                 </Drawer.Header>
                 <Drawer.Body>
-                  <Text fontSize="sm" color="gray.500" mb={2}>
-                    Total Playtime:{" "}
-                    {hasMounted ? totalPlaytimeFormatted : "--:--"}
-                  </Text>
-                  <Flex gap={2} alignItems="center" mb={4}>
-                    <Button
-                      variant="solid"
-                      size="sm"
-                      onClick={savePlaylist}
-                      disabled={!hasMounted || playlist.length === 0}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={"outline"}
-                      onClick={exportPlaylist}
-                      disabled={!hasMounted || playlist.length === 0}
-                    >
-                      Export
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPlaylist([])}
-                      disabled={!hasMounted || playlist.length === 0}
-                    >
-                      Clear
-                    </Button>
-                  </Flex>
                   <PlaylistViewer
                     {...usePlaylistViewer({
                       playlist,
@@ -308,7 +298,7 @@ export default function SearchPage() {
         onOpenChange={(details) => setDialogOpen(details.open)}
         initialFocusEl={() => initialFocusRef.current}
         role="dialog"
-        size="lg"
+        size={["full", "md", "lg"]}
       >
         <Portal>
           <Dialog.Backdrop />

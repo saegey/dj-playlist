@@ -14,6 +14,7 @@ import {
   Dialog,
   CloseButton,
   RatingGroup,
+  SimpleGrid,
 } from "@chakra-ui/react";
 
 import { AppleMusicResult, YoutubeVideo } from "@/types/track";
@@ -246,7 +247,7 @@ export default function TrackEditForm({
       // borderWidth="1px"
       // borderRadius="md"
     >
-      <Flex gap={2} mb={2}>
+      <SimpleGrid columns={[2, 2, 4]} gap={2} mb={2}>
         <Button
           type="button"
           colorScheme="purple"
@@ -286,7 +287,7 @@ export default function TrackEditForm({
         >
           Analyze Audio
         </Button>
-      </Flex>
+      </SimpleGrid>
 
       <Stack
         borderWidth="1px"
@@ -389,7 +390,7 @@ export default function TrackEditForm({
       <Dialog.Root
         open={showYoutubeModal}
         onOpenChange={(details) => setShowYoutubeModal(details.open)}
-        size="lg"
+        size={["full", "lg", "lg"]}
       >
         <Portal>
           <Dialog.Backdrop />
@@ -455,7 +456,7 @@ export default function TrackEditForm({
       <Dialog.Root
         open={showAppleModal}
         onOpenChange={(details) => setShowAppleModal(details.open)}
-        size="lg"
+        size={["full", "lg", "lg"]}
       >
         <Portal>
           <Dialog.Backdrop />

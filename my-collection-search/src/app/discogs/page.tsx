@@ -14,6 +14,7 @@ import {
   Input,
   Collapsible,
   Spinner,
+  SimpleGrid,
 } from "@chakra-ui/react";
 import TopMenuBar from "@/components/MenuBar";
 
@@ -169,7 +170,7 @@ export default function DiscogsSyncPage() {
         <Heading mb={6} size="lg">
           Vinyl Playlist Maker Pro Edition Settings
         </Heading>
-        <HStack mb={6}>
+        <SimpleGrid gap={4} columns={{ base: 1, md: 3 }}>
           <Button
             colorScheme="blue"
             onClick={() => handleSync()}
@@ -194,7 +195,7 @@ export default function DiscogsSyncPage() {
           >
             Backup Database
           </Button>
-        </HStack>
+        </SimpleGrid>
 
         <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
           {/* Friends section and all alerts/results should be inside the main Box */}

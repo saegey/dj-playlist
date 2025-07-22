@@ -12,6 +12,7 @@ import {
   Badge,
   SimpleGrid,
 } from "@chakra-ui/react";
+import { FiChevronDown } from "react-icons/fi";
 import { SiDiscogs, SiApplemusic, SiYoutube } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
@@ -59,45 +60,25 @@ export default function TrackResult({
   // Minimized view (only render after mount to avoid hydration mismatch)
   if (minimized && !expanded && hasMounted) {
     return (
-      <Box
-        borderWidth="1px"
-        borderRadius="md"
-        p={2}
-        mb={2}
-        // bg={{ base: "gray.50", _dark: "gray.800" }}
-      >
+      <Box borderWidth="1px" borderRadius="md" p={2} mb={2} position="relative">
         <Flex alignItems="center" gap={2}>
-          {/* Track summary */}
-          <Box flex="1">
-            <Text fontWeight="bold">{track.title}</Text>
-            <Text fontSize="sm">{track.artist}</Text>
+          {/* Track summary (clickable to expand) */}
+          <Box
+            flex="1"
+            cursor={allowMinimize ? "pointer" : undefined}
+            onClick={allowMinimize ? () => setExpanded(true) : undefined}
+          >
+            <Text fontWeight="bold" fontSize={["sm", "sm", "sm"]}>
+              {track.title}
+            </Text>
+            <Text fontSize="sm">
+              {track.album} - {track.artist}
+            </Text>
             <Flex fontSize="sm" color="gray.600" gap={2}>
               <Text>{formatSeconds(track.duration_seconds || 0)}</Text>
               <Text>{track.position}</Text>
               {track.bpm && <Text>{track.bpm} bpm</Text>}
               <Text>{track.key}</Text>
-              {track.danceability && <Text>{track.danceability} DANCE</Text>}
-              {typeof playlistCount === "number" && (
-                <Text color="purple.600">
-                  In {playlistCount} playlist
-                  {playlistCount === 1 ? "" : "s"}
-                </Text>
-              )}
-            </Flex>
-            <Flex fontSize="sm" gap={2}>
-              {/* <Link href={track.discogs_url} target="_blank">
-                Discogs
-              </Link>
-              {track.apple_music_url && (
-                <Link href={track.apple_music_url} target="_blank">
-                  Apple Music
-                </Link>
-              )}
-              {track.youtube_url && (
-                <Link href={track.youtube_url} target="_blank">
-                  YouTube
-                </Link>
-              )} */}
               {track.username && (
                 <Text fontSize="sm">User: {track.username}</Text>
               )}
@@ -105,20 +86,9 @@ export default function TrackResult({
           </Box>
 
           {/* Actions */}
-          <Flex align="center">
-            {allowMinimize && (
-              <Button
-                size="xs"
-                variant="outline"
-                mr={2}
-                onClick={() => setExpanded(true)}
-              >
-                More
-              </Button>
-            )}
-            {buttons}
-          </Flex>
+          <Flex align="center">{buttons}</Flex>
         </Flex>
+        {/* Floating Chevron Icon for expand */}
       </Box>
     );
   }
@@ -171,7 +141,7 @@ export default function TrackResult({
           {Array.isArray(track.genres) && track.genres.length > 0 && (
             <>
               {track.genres.map((genre) => (
-                <Badge key={genre} size="xs" variant="surface">
+                <Badge key={genre} size={["xs", "sm", "sm"]} variant="surface">
                   {genre}
                 </Badge>
               ))}
@@ -180,21 +150,21 @@ export default function TrackResult({
           {Array.isArray(track.styles) && track.styles.length > 0 && (
             <>
               {track.styles.map((style) => (
-                <Badge key={style} size="xs" variant="outline">
+                <Badge key={style} size={["xs", "sm", "sm"]}  variant="outline">
                   {style}
                 </Badge>
               ))}
             </>
           )}
           {track.local_tags && track.local_tags !== "{}" && (
-            <Badge key={track.local_tags} size="xs" variant="solid">
+            <Badge key={track.local_tags} size={["xs", "sm", "sm"]}  variant="solid">
               {track.local_tags}
             </Badge>
           )}
         </Flex>
 
         {/* Details line */}
-        <Box bg={"gray.subtle"} p={1} borderRadius="md">
+        <Box bg={"gray.subtle"} pl={4} pb={2} borderRadius="md">
           <SimpleGrid columns={[3, null, 3]} gap={1} mt={2}>
             {[
               { label: "Pos", value: track.position },
@@ -262,14 +232,14 @@ export default function TrackResult({
         )}
 
         {/* Minimize button */}
-        <Flex justifyContent="flex-end" mt={2}>
+        <Flex mt={2}>
           {allowMinimize && (
             <Button
               size="xs"
               variant="outline"
               onClick={() => setExpanded(false)}
             >
-              Less
+              Hide
             </Button>
           )}
         </Flex>

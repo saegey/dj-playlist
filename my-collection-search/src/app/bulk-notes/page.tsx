@@ -14,6 +14,9 @@ import {
   Select,
   Table,
   Checkbox,
+  SimpleGrid,
+  Group,
+  Container,
 } from "@chakra-ui/react";
 import { toaster, Toaster } from "@/components/ui/toaster";
 import { Track } from "../../types/track";
@@ -137,16 +140,16 @@ Example:
     <>
       <Toaster />
       <TopMenuBar current="/bulk-notes" />
-      <Box p={6} pb={80}>
-        <HStack gap={2} mb={4}>
+      <Container>
+        <SimpleGrid gap={2} mb={4} columns={[1, 1, 3]}>
           <Box>
             <Input
               placeholder="Search by artist..."
               value={artistSearch}
               onChange={(e) => setArtistSearch(e.target.value)}
               size="sm"
-              maxW="320px"
-              width="300px"
+              variant="subtle"
+              width="100%"
               mb={0}
             />
           </Box>
@@ -154,8 +157,9 @@ Example:
             collection={userCollection}
             value={selectedUsername ? [selectedUsername] : []}
             onValueChange={(v) => setSelectedUsername(v.value[0] || "")}
-            width="160px"
+            width="100%"
             size={"sm"}
+            variant={"subtle"}
           >
             <Select.HiddenSelect />
             <Select.Control>
@@ -179,23 +183,20 @@ Example:
               </Select.Positioner>
             </Portal>
           </Select.Root>
-          <Button onClick={selectAll} size="sm">
-            Select All
-          </Button>
-          <Button onClick={selectFirst10} size="sm">
-            Select First 10
-          </Button>
-          <Button onClick={deselectAll} size="sm">
-            Deselect All
-          </Button>
-          <Button
-            onClick={handleGeneratePrompt}
-            size="sm"
-            disabled={!selected.size}
-          >
-            Copy Prompt
-          </Button>
-        </HStack>
+          {/* Master checkbox will replace select all/deselect all buttons */}
+          <Group grow>
+            <Button onClick={selectFirst10} size="sm">
+              Select First 10
+            </Button>
+            <Button
+              onClick={handleGeneratePrompt}
+              size="sm"
+              disabled={!selected.size}
+            >
+              Copy Prompt
+            </Button>
+          </Group>
+        </SimpleGrid>
 
         {loading ? (
           <Text>Loading…</Text>
@@ -209,14 +210,32 @@ Example:
             showColumnBorder
             interactive
             mb={4}
+            fontSize={["xs", "sm", "sm"]}
           >
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader />
+                <Table.ColumnHeader>
+                  <Checkbox.Root
+                    checked={
+                      selected.size === tracks.length && tracks.length > 0
+                    }
+                    onCheckedChange={() => {
+                      if (selected.size === tracks.length) {
+                        deselectAll();
+                      } else {
+                        selectAll();
+                      }
+                    }}
+                    disabled={tracks.length === 0}
+                  >
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control />
+                  </Checkbox.Root>
+                </Table.ColumnHeader>
                 <Table.ColumnHeader>Title</Table.ColumnHeader>
                 <Table.ColumnHeader>Artist</Table.ColumnHeader>
                 <Table.ColumnHeader>Album</Table.ColumnHeader>
-                <Table.ColumnHeader>Discogs</Table.ColumnHeader>
+                {/* <Table.ColumnHeader>Discogs</Table.ColumnHeader> */}
               </Table.Row>
             </Table.Header>
             <Table.Body>
@@ -237,7 +256,7 @@ Example:
                   <Table.Cell>{track.title}</Table.Cell>
                   <Table.Cell>{track.artist}</Table.Cell>
                   <Table.Cell>{track.album}</Table.Cell>
-                  <Table.Cell>
+                  {/* <Table.Cell>
                     {track.discogs_url ? (
                       <a
                         href={track.discogs_url}
@@ -249,7 +268,7 @@ Example:
                     ) : (
                       <Text>—</Text>
                     )}
-                  </Table.Cell>
+                  </Table.Cell> */}
                 </Table.Row>
               ))}
             </Table.Body>
@@ -272,20 +291,26 @@ Example:
           boxShadow="0 -2px 8px rgba(0,0,0,0.08)"
           zIndex={100}
         >
-          <Text fontWeight="bold">Paste Bulk JSON Results</Text>
-          <Textarea
-            value={bulkJson}
-            onChange={(e) => setBulkJson(e.target.value)}
-            rows={6}
-            fontSize="sm"
-            placeholder='[{"track_id":"123","genre":"House","notes":"..."}]'
-            mb={2}
-          />
-          <Button colorPalette="blue" onClick={handleUpload} loading={loading}>
-            Upload Results
-          </Button>
+          <Container>
+            <Text fontWeight="bold">Paste Bulk JSON Results</Text>
+            <Textarea
+              value={bulkJson}
+              onChange={(e) => setBulkJson(e.target.value)}
+              rows={6}
+              fontSize="sm"
+              placeholder='[{"track_id":"123","genre":"House","notes":"..."}]'
+              mb={2}
+            />
+            <Button
+              colorPalette="blue"
+              onClick={handleUpload}
+              loading={loading}
+            >
+              Upload Results
+            </Button>
+          </Container>
         </Box>
-      </Box>
+      </Container>
     </>
   );
 }

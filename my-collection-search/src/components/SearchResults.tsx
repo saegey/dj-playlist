@@ -104,7 +104,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           buttons={[
             <Menu.Root key="menu">
               <Menu.Trigger asChild>
-                <Button variant="outline" size="xs">
+                <Button variant="plain" size={["xs", "sm", "md"]}>
                   <FiMoreVertical />
                 </Button>
               </Menu.Trigger>

@@ -1,6 +1,12 @@
 import React from "react";
-import { Box, Text, Button, Portal, Menu } from "@chakra-ui/react";
-import { FiMoreVertical } from "react-icons/fi";
+import {
+  Box,
+  Button,
+  Menu,
+  EmptyState,
+  VStack,
+} from "@chakra-ui/react";
+import { FiHeadphones, FiMoreVertical } from "react-icons/fi";
 import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
 
@@ -21,7 +27,19 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
 }) => (
   <Box overflowY="auto">
     {playlist.length === 0 ? (
-      <Text color="gray.500">No tracks in playlist yet.</Text>
+      <EmptyState.Root size={"sm"}>
+        <EmptyState.Content>
+          <EmptyState.Indicator>
+            <FiHeadphones />
+          </EmptyState.Indicator>
+          <VStack textAlign="center">
+            <EmptyState.Title>Your playlist is empty</EmptyState.Title>
+            <EmptyState.Description>
+              Add tracks to your playlist to get started.
+            </EmptyState.Description>
+          </VStack>
+        </EmptyState.Content>
+      </EmptyState.Root>
     ) : (
       playlist.map((track, idx) => (
         <TrackResult
@@ -32,50 +50,39 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
           buttons={[
             <Menu.Root key="menu">
               <Menu.Trigger asChild>
-                <Button variant="outline" size="xs">
+                <Button variant="plain" size="xs">
                   <FiMoreVertical size={16} />
                 </Button>
               </Menu.Trigger>
-              <Portal>
-                <Menu.Positioner>
-                  <Menu.Content>
-                    <Menu.Item
-                      onSelect={() => moveTrack(idx, idx - 1)}
-                      value="up"
-                      disabled={idx === 0}
-                      //   icon={
-                      //     <Icon as={FiArrowUp} color="#3182ce" boxSize={4} />
-                      //   }
-                    >
-                      Move Up
-                    </Menu.Item>
-                    <Menu.Item
-                      onSelect={() => moveTrack(idx, idx + 1)}
-                      value="down"
-                      disabled={idx === playlist.length - 1}
-                      //   icon={
-                      //     <Icon as={FiArrowDown} color="#4A5568" boxSize={4} />
-                      //   }
-                    >
-                      Move Down
-                    </Menu.Item>
-                    <Menu.Item
-                      onSelect={() => setEditTrack(track)}
-                      value="edit"
-                      //   icon={<Icon as={FiEdit} color="black" boxSize={4} />}
-                    >
-                      Edit
-                    </Menu.Item>
-                    <Menu.Item
-                      onSelect={() => removeFromPlaylist(track.track_id)}
-                      value="remove"
-                      //   icon={<Icon as={FiTrash2} color="red.500" boxSize={4} />}
-                    >
-                      Remove
-                    </Menu.Item>
-                  </Menu.Content>
-                </Menu.Positioner>
-              </Portal>
+              {/* <Portal> */}
+              <Menu.Positioner>
+                <Menu.Content>
+                  <Menu.Item
+                    onSelect={() => moveTrack(idx, idx - 1)}
+                    value="up"
+                    disabled={idx === 0}
+                  >
+                    Move Up
+                  </Menu.Item>
+                  <Menu.Item
+                    onSelect={() => moveTrack(idx, idx + 1)}
+                    value="down"
+                    disabled={idx === playlist.length - 1}
+                  >
+                    Move Down
+                  </Menu.Item>
+                  <Menu.Item onSelect={() => setEditTrack(track)} value="edit">
+                    Edit
+                  </Menu.Item>
+                  <Menu.Item
+                    onSelect={() => removeFromPlaylist(track.track_id)}
+                    value="remove"
+                  >
+                    Remove
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu.Positioner>
+              {/* </Portal> */}
             </Menu.Root>,
           ]}
         />
