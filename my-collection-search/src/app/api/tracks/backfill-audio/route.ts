@@ -23,12 +23,7 @@ export async function GET(request: Request) {
     };
     let q = "";
     if (artist) q = artist;
-    console.debug(
-      "Backfill audio search with query:",
-      q,
-      "and options:",
-      searchOptions
-    );
+
     const index = meiliClient.index("tracks");
     const result = await index.search(q, searchOptions);
     return NextResponse.json({ tracks: result.hits });
