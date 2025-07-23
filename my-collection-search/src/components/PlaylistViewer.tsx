@@ -16,6 +16,7 @@ interface PlaylistViewerProps {
   moveTrack: (fromIdx: number, toIdx: number) => void;
   setEditTrack: (track: Track) => void;
   removeFromPlaylist: (trackId: string) => void;
+  playlistAvgEmbedding?: number[];
 }
 
 const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
@@ -24,6 +25,7 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
   moveTrack,
   setEditTrack,
   removeFromPlaylist,
+  playlistAvgEmbedding = [],
 }) => (
   <Box overflowY="auto">
     {playlist.length === 0 ? (

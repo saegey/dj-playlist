@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import type { Playlist, Track } from "@/types/track";
 
 export interface PlaylistInfo {
@@ -6,18 +6,41 @@ export interface PlaylistInfo {
   name: string;
 }
 
+// Extend Track type to include embedding
+export interface TrackWithEmbedding extends Track {
+  _vectors?: {
+    default: Array<number>;
+  };
+}
+
 export function usePlaylists() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [playlistName, setPlaylistName] = useState("");
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
   const [playlistInfo, setPlaylistInfo] = useState<PlaylistInfo>({ name: "" });
-  const [playlist, setPlaylist] = useState<Track[]>(() => {
+  const [playlist, setPlaylist] = useState<TrackWithEmbedding[]>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("playlist");
       return stored ? JSON.parse(stored) : [];
     }
     return [];
   });
+
+  // Memoized average embedding for playlist
+  const playlistAvgEmbedding = useMemo(() => {
+    console.log("Calculating average embedding for playlist", playlist);
+    if (!playlist.length) return null;
+    // Filter tracks with valid embedding arrays
+    const playlistEmbs = playlist
+      .map((t) => t._vectors?.default || "[]")
+      .filter((emb): emb is number[] => Array.isArray(emb) && emb.length > 0);
+    if (!playlistEmbs.length) return null;
+    // Calculate average for each dimension
+    return playlistEmbs[0].map(
+      (_: number, i: number) =>
+        playlistEmbs.reduce((sum, emb) => sum + emb[i], 0) / playlistEmbs.length
+    );
+  }, [playlist]);
 
   // Fetch playlists from backend
   const fetchPlaylists = useCallback(async () => {
@@ -147,7 +170,7 @@ export function usePlaylists() {
   }, []);
 
   // Add track to playlist
-  const addToPlaylist = useCallback((track: Track) => {
+  const addToPlaylist = useCallback((track: TrackWithEmbedding) => {
     setPlaylist((prev) => {
       if (!prev.some((t) => t.track_id === track.track_id)) {
         return [...prev, track];
@@ -166,6 +189,37 @@ export function usePlaylists() {
       return updated;
     });
   }, []);
+
+  // Get recommendations from MeiliSearch based on playlist average embedding
+  const getRecommendations = useCallback(
+    async (k: number = 10) => {
+      if (!playlistAvgEmbedding || !playlistAvgEmbedding.length) return [];
+      console.log("Fetching recommendations for playlist", {
+        playlistAvgEmbedding,
+        k,
+        playlist,
+      });
+      try {
+        const { getMeiliClient } = await import("@/lib/meili");
+        const meiliClient = getMeiliClient();
+        const index = meiliClient.index("tracks");
+        const playlistIds = playlist.map((t) => t.track_id);
+        console.log(playlistAvgEmbedding);
+        const results = await index.search(undefined, {
+          vector: playlistAvgEmbedding,
+          limit: k,
+          filter: `NOT track_id IN [${playlistIds.join(
+            ","
+          )}] AND username = 'saegey'`,
+        });
+        return results.hits || [];
+      } catch (err) {
+        console.error("Error fetching recommendations:", err);
+        return [];
+      }
+    },
+    [playlistAvgEmbedding, playlist]
+  );
 
   // Persist playlist to localStorage
   useEffect(() => {
@@ -193,5 +247,7 @@ export function usePlaylists() {
     removeFromPlaylist,
     addToPlaylist,
     moveTrack,
+    playlistAvgEmbedding,
+    getRecommendations,
   };
 }

@@ -81,6 +81,8 @@ export default function SearchPage() {
     addToPlaylist,
     removeFromPlaylist,
     moveTrack,
+    playlistAvgEmbedding,
+    getRecommendations
   } = usePlaylists();
 
   const [editTrack, setEditTrack] = useState<Track | null>(null);
@@ -116,6 +118,29 @@ export default function SearchPage() {
     return sum + parseDurationToSeconds(track.duration);
   }, 0);
   const totalPlaytimeFormatted = formatSeconds(totalPlaytimeSeconds);
+
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    console.log("Fetching recommendations for playlist", {
+      playlistAvgEmbedding,
+      k: 10,
+      playlist,
+    });
+    let cancelled = false;
+    async function fetchRecommendations() {
+      if (playlist.length === 0) {
+        setRecommendations([]);
+        return;
+      }
+      const recs = await getRecommendations(10);
+      if (!cancelled) setRecommendations(recs);
+    }
+    fetchRecommendations();
+    return () => {
+      cancelled = true;
+    };
+  }, [playlist, getRecommendations]);
 
   return (
     <>
@@ -233,8 +258,22 @@ export default function SearchPage() {
                   <Drawer.Title>
                     Playlist ({hasMounted ? playlist.length : 0})
                     <Text fontSize="sm" color="gray.500" mb={2}>
-                      Total Playtime:{" "}
-                      {hasMounted ? totalPlaytimeFormatted : "--:--"}
+                      Total Playtime: {hasMounted ? totalPlaytimeFormatted : "--:--"}
+                      {/* Playlist Recommendations */}
+                      {recommendations.length > 0 && (
+                        <Box mt={2}>
+                          <Text fontWeight="bold" fontSize="sm" color="blue.500" mb={1}>
+                            Recommended Tracks:
+                          </Text>
+                          <ul style={{ margin: 0, paddingLeft: 16 }}>
+                            {recommendations.map((rec: any) => (
+                              <li key={rec.id || rec.track_id}>
+                                {rec.title} – {rec.artist}
+                              </li>
+                            ))}
+                          </ul>
+                        </Box>
+                      )}
                     </Text>
                   </Drawer.Title>
                   <Box mt={2}>
@@ -276,6 +315,7 @@ export default function SearchPage() {
                       moveTrack,
                       setEditTrack: handleEditClick,
                       removeFromPlaylist,
+                      playlistAvgEmbedding: playlistAvgEmbedding ?? undefined,
                     })}
                   />
                 </Drawer.Body>
