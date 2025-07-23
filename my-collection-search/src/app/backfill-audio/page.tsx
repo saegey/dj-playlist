@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { ActionBar, CloseButton } from "@chakra-ui/react";
+import { LuTrash2, LuShare } from "react-icons/lu";
 import { useFriends } from "@/hooks/useFriends";
 import {
   Button,
@@ -281,6 +283,36 @@ export default function BackfillAudioPage() {
             </Table.Body>
           </Table.Root>
         )}
+      {/* ActionBar appears when items are selected */}
+      <ActionBar.Root
+        open={selected.size > 0}
+        onOpenChange={(e) => {
+          if (!e.open) deselectAll();
+        }}
+        closeOnInteractOutside={false}
+      >
+        <Portal>
+          <ActionBar.Positioner>
+            <ActionBar.Content>
+              <ActionBar.SelectionTrigger>
+                {selected.size} selected
+              </ActionBar.SelectionTrigger>
+              <ActionBar.Separator />
+              <Button variant="outline" size="sm">
+                <LuTrash2 style={{ marginRight: 4 }} />
+                Delete
+              </Button>
+              <Button variant="outline" size="sm">
+                <LuShare style={{ marginRight: 4 }} />
+                Share
+              </Button>
+              <ActionBar.CloseTrigger asChild>
+                <CloseButton size="sm" />
+              </ActionBar.CloseTrigger>
+            </ActionBar.Content>
+          </ActionBar.Positioner>
+        </Portal>
+      </ActionBar.Root>
       </Container>
     </>
   );
