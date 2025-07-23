@@ -300,6 +300,7 @@ export async function POST() {
       "notes",
       "apple_music_url",
       "youtube_url",
+      "hasVectors",
     ]);
     console.log(
       `[Discogs Index] Adding ${upserted.length} tracks to MeiliSearch index...`
@@ -332,6 +333,7 @@ export async function POST() {
           notes: t.notes ? t.notes : null,
           local_tags: t.local_tags ? t.local_tags : [],
           _vectors: { default: vectorArr },
+          hasVectors: vectorArr ? true : false,
         };
       })
     );
