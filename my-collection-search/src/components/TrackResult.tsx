@@ -1,6 +1,18 @@
 "use client";
 import React, { useState } from "react";
-import { Box, Flex, Text, Link, Image, Button } from "@chakra-ui/react";
+import {
+  Box,
+  Flex,
+  Text,
+  Link,
+  Image,
+  Button,
+  RatingGroup,
+  Float,
+  Badge,
+  SimpleGrid,
+} from "@chakra-ui/react";
+import { SiDiscogs, SiApplemusic, SiYoutube } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
 
@@ -47,45 +59,25 @@ export default function TrackResult({
   // Minimized view (only render after mount to avoid hydration mismatch)
   if (minimized && !expanded && hasMounted) {
     return (
-      <Box
-        borderWidth="1px"
-        borderRadius="md"
-        p={2}
-        mb={2}
-        // bg={{ base: "gray.50", _dark: "gray.800" }}
-      >
+      <Box borderWidth="1px" borderRadius="md" p={2} mb={2} position="relative">
         <Flex alignItems="center" gap={2}>
-          {/* Track summary */}
-          <Box flex="1">
-            <Text fontWeight="bold">{track.title}</Text>
-            <Text fontSize="sm">{track.artist}</Text>
+          {/* Track summary (clickable to expand) */}
+          <Box
+            flex="1"
+            cursor={allowMinimize ? "pointer" : undefined}
+            onClick={allowMinimize ? () => setExpanded(true) : undefined}
+          >
+            <Text fontWeight="bold" fontSize={["sm", "sm", "sm"]}>
+              {track.title}
+            </Text>
+            <Text fontSize="sm">
+              {track.album} - {track.artist}
+            </Text>
             <Flex fontSize="sm" color="gray.600" gap={2}>
               <Text>{formatSeconds(track.duration_seconds || 0)}</Text>
               <Text>{track.position}</Text>
               {track.bpm && <Text>{track.bpm} bpm</Text>}
               <Text>{track.key}</Text>
-              {track.danceability && <Text>{track.danceability} DANCE</Text>}
-              {typeof playlistCount === "number" && (
-                <Text color="purple.600">
-                  In {playlistCount} playlist
-                  {playlistCount === 1 ? "" : "s"}
-                </Text>
-              )}
-            </Flex>
-            <Flex fontSize="sm" gap={2}>
-              <Link href={track.discogs_url} target="_blank">
-                Discogs
-              </Link>
-              {track.apple_music_url && (
-                <Link href={track.apple_music_url} target="_blank">
-                  Apple Music
-                </Link>
-              )}
-              {track.youtube_url && (
-                <Link href={track.youtube_url} target="_blank">
-                  YouTube
-                </Link>
-              )}
               {track.username && (
                 <Text fontSize="sm">User: {track.username}</Text>
               )}
@@ -93,177 +85,175 @@ export default function TrackResult({
           </Box>
 
           {/* Actions */}
-          <Flex align="center">
-            {allowMinimize && (
-              <Button
-                size="xs"
-                variant="outline"
-                mr={2}
-                onClick={() => setExpanded(true)}
-              >
-                More
-              </Button>
-            )}
-            {buttons}
-          </Flex>
+          <Flex align="center">{buttons}</Flex>
         </Flex>
+        {/* Floating Chevron Icon for expand */}
       </Box>
     );
   }
 
   // Expanded view
   return (
-    <Box borderWidth="1px" borderRadius="md" p={3} mb={2}>
-      <Flex alignItems="flex-start" gap={3}>
+    <Flex
+      borderWidth="1px"
+      borderRadius="md"
+      p={3}
+      mb={2}
+      flexDirection="column"
+      flexGrow={1}
+      minHeight={0}
+      width={"100%"}
+    >
+      <Flex gap={3} position={"relative"} width={"100%"}>
         <Image
           src={track.album_thumbnail}
           alt={track.title}
-          boxSize="100px"
+          boxSize={["50px", "60px", "70px"]}
           objectFit="cover"
           borderRadius="md"
         />
 
         <Flex direction="column" flex={1}>
-          <Text fontSize="lg" fontWeight="bold">
+          <Text fontSize={["sm", "md", "md"]} fontWeight="bold">
             {track.title}
           </Text>
-          <Text fontSize="md">{track.artist}</Text>
-          <Text fontSize="sm" color="gray.600">
+          <Text fontSize={["sm", "md", "md"]}>{track.artist}</Text>
+          <Text fontSize={["xs", "sm", "sm"]} color="brand.muted">
             {track.album} ({track.year})
           </Text>
-
-          <Flex alignItems="center" gap={2} mt={1}>
-            {[...Array(5)].map((_, i) => (
-              <Box
-                key={i}
-                as="span"
-                fontSize="md"
-                color={i < (track.star_rating || 0) ? "black.500" : "gray.300"}
-              >
-                ★
-              </Box>
-            ))}
-            {typeof playlistCount === "number" && (
-              <Text fontSize="sm" color="purple.600" mt={1}>
-                In {playlistCount} playlist{playlistCount === 1 ? "" : "s"}
-              </Text>
-            )}
-          </Flex>
-
-          {/* Styles, genres, tags */}
-          {Array.isArray(track.styles) && track.styles.length > 0 && (
-            <Text fontSize="sm" color="purple.600">
-              Styles: {track.styles.join(", ")}
-            </Text>
-          )}
-          {Array.isArray(track.genres) && track.genres.length > 0 && (
-            <Text fontSize="sm" color="teal.600">
-              Genres: {track.genres.join(", ")}
-            </Text>
-          )}
-          {track.local_tags && (
-            <Text fontSize="sm" color="orange.600">
-              Local Tags: {track.local_tags}
-            </Text>
-          )}
-
-          {/* Details line */}
-          <Flex flexWrap="wrap" gap={4} mt={2}>
-            <Text fontSize="sm">
-              <strong>Pos:</strong> {track.position}
-            </Text>
-            <Text fontSize="sm">
-              <strong>Dur:</strong> {formatSeconds(track.duration_seconds || 0)}
-            </Text>
-            {track.bpm && (
-              <Text fontSize="sm">
-                <strong>BPM:</strong> {track.bpm}
-              </Text>
-            )}
-            {track.key && (
-              <Text fontSize="sm">
-                <strong>Key:</strong> {track.key}
-              </Text>
-            )}
-            {track.danceability && (
-              <Text fontSize="sm">
-                <strong>Dance:</strong> {track.danceability}
-              </Text>
-            )}
-            {track.mood_happy && (
-              <Text fontSize="sm">
-                <strong>Happy:</strong> {track.mood_happy}
-              </Text>
-            )}
-            {track.mood_aggressive && (
-              <Text fontSize="sm">
-                <strong>Agg:</strong> {track.mood_aggressive}
-              </Text>
-            )}
-          </Flex>
-
-          {track.notes && (
-            <Box mt={2}>
-              <ExpandableMarkdown text={track.notes} maxLength={100} />
-            </Box>
-          )}
-
-          {/* Links and audio */}
-          <Flex gap={2} mt={2}>
-            <Link href={track.discogs_url} target="_blank">
-              <Text fontSize="sm">Discogs</Text>
-            </Link>
-            {track.apple_music_url && (
-              <Link
-                href={track.apple_music_url}
-                // color="blue.500"
-                target="_blank"
-              >
-                <Text fontSize="sm">Apple Music</Text>
-              </Link>
-            )}
-            {track.youtube_url && (
-              <Link href={track.youtube_url} target="_blank">
-                <Text fontSize="sm">YouTube</Text>
-              </Link>
-            )}
-            {track.username && (
-              <Text fontSize="sm" color="gray.500">
-                User: {track.username}
-              </Text>
-            )}
-          </Flex>
-
-          {track.local_audio_url && (
-            <Box mt={2}>
-              <audio controls style={{ width: "100%" }}>
-                <source
-                  src={`/api/audio?filename=${track.local_audio_url}`}
-                  type="audio/mp4"
-                />
-              </audio>
-            </Box>
-          )}
-
-          {/* Minimize button */}
-          <Flex justifyContent="flex-end" mt={2}>
-            {allowMinimize && (
-              <Button
-                size="xs"
-                variant="outline"
-                onClick={() => setExpanded(false)}
-              >
-                Less
-              </Button>
-            )}
-          </Flex>
         </Flex>
 
         {/* Action menu */}
-        {buttons}
+        <Float mr={3} mt={3}>
+          {buttons}
+        </Float>
+      </Flex>
+      <Flex direction="column" flex={1}>
+        <Flex alignItems="center" gap={2} mt={1}>
+          <RatingGroup.Root defaultValue={track.star_rating || 0} readOnly>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <RatingGroup.Item key={index} index={index + 1}>
+                <RatingGroup.ItemIndicator fontSize="sm" />
+              </RatingGroup.Item>
+            ))}
+          </RatingGroup.Root>
+          {typeof playlistCount === "number" && playlistCount > 0 && (
+            <Text fontSize={["xs", "sm", "sm"]} color="brand.muted" mt={1}>
+              In {playlistCount} playlist{playlistCount === 1 ? "" : "s"}
+            </Text>
+          )}
+        </Flex>
+        <Flex gap={2} mt={1} flexWrap="wrap" mb={2} overflowX="auto">
+          {/* Styles, genres, tags */}
+
+          {Array.isArray(track.genres) && track.genres.length > 0 && (
+            <>
+              {track.genres.map((genre) => (
+                <Badge key={genre} size={["xs", "sm", "sm"]} variant="surface">
+                  {genre}
+                </Badge>
+              ))}
+            </>
+          )}
+          {Array.isArray(track.styles) && track.styles.length > 0 && (
+            <>
+              {track.styles.map((style) => (
+                <Badge key={style} size={["xs", "sm", "sm"]}  variant="outline">
+                  {style}
+                </Badge>
+              ))}
+            </>
+          )}
+          {track.local_tags && track.local_tags !== "{}" && (
+            <Badge key={track.local_tags} size={["xs", "sm", "sm"]}  variant="solid">
+              {track.local_tags}
+            </Badge>
+          )}
+        </Flex>
+
+        {/* Details line */}
+        <Box bg={"gray.subtle"} pl={4} pb={2} borderRadius="md">
+          <SimpleGrid columns={[3, null, 3]} gap={1} mt={2}>
+            {[
+              { label: "Pos", value: track.position },
+              {
+                label: "Dur",
+                value: formatSeconds(track.duration_seconds || 0),
+              },
+              { label: "BPM", value: track.bpm },
+              { label: "Key", value: track.key },
+              { label: "Dance", value: track.danceability },
+              { label: "Happy", value: track.mood_happy },
+              { label: "Agg", value: track.mood_aggressive },
+            ]
+              .filter(
+                (field) =>
+                  field.value !== undefined &&
+                  field.value !== null &&
+                  field.value !== ""
+              )
+              .map((field) => (
+                <Text fontSize={["xs", "sm", "sm"]} key={field.label}>
+                  <strong>{field.label}:</strong> {field.value}
+                </Text>
+              ))}
+          </SimpleGrid>
+        </Box>
+
+        {track.notes && (
+          <Box mt={2}>
+            <ExpandableMarkdown text={track.notes} maxLength={100} />
+          </Box>
+        )}
+
+        {/* Links and audio */}
+        <Flex gap={2} mt={2}>
+          <Link href={track.discogs_url} target="_blank" aria-label="Discogs">
+            <SiDiscogs size={20} style={{ verticalAlign: "middle" }} />
+          </Link>
+          {track.apple_music_url && (
+            <Link href={track.apple_music_url} target="_blank">
+              <SiApplemusic size={20} style={{ verticalAlign: "middle" }} />
+            </Link>
+          )}
+          {track.youtube_url && (
+            <Link href={track.youtube_url} target="_blank">
+              <SiYoutube size={20} style={{ verticalAlign: "middle" }} />
+            </Link>
+          )}
+          {track.username && (
+            <Text fontSize="sm" color="gray.500">
+              User: {track.username}
+            </Text>
+          )}
+        </Flex>
+
+        {track.local_audio_url && (
+          <Box mt={2}>
+            <audio controls style={{ width: "100%" }}>
+              <source
+                src={`/api/audio?filename=${track.local_audio_url}`}
+                type="audio/mp4"
+              />
+            </audio>
+          </Box>
+        )}
+
+        {/* Minimize button */}
+        <Flex mt={2}>
+          {allowMinimize && (
+            <Button
+              size="xs"
+              variant="outline"
+              onClick={() => setExpanded(false)}
+            >
+              Hide
+            </Button>
+          )}
+        </Flex>
       </Flex>
 
       {footer && <Box mt={2}>{footer}</Box>}
-    </Box>
+    </Flex>
   );
 }

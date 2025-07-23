@@ -18,9 +18,6 @@ interface SearchResultsProps {
   query: string;
   onQueryChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   estimatedResults: number;
-  activeFilter: string | null;
-  activeFilterType: "genre" | "style" | "artist" | null;
-  clearFilter: () => void;
   results: Track[];
   playlistCounts: Record<string, number>;
   addToPlaylist: (track: Track) => void;
@@ -35,9 +32,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   query,
   onQueryChange,
   estimatedResults,
-  activeFilter,
-  activeFilterType,
-  clearFilter,
   results,
   playlistCounts,
   addToPlaylist,
@@ -53,7 +47,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   });
 
   return (
-    <Box width="40%">
+    <Box>
       <Box display="flex" gap={3} mb={3}>
         <Input
           placeholder="Search tracks..."
@@ -70,7 +64,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             onValueChange={(vals) => {
               onUsernameChange(vals.value.length ? vals.value[0] : "");
             }}
-            width="320px"
+            width="120px"
           >
             <Select.HiddenSelect />
             <Select.Control>
@@ -99,25 +93,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
       <Text fontSize="sm" color="gray.500" mb={2}>
         {estimatedResults.toLocaleString()} results found
-        {activeFilter && activeFilterType && (
-          <>
-            <Text as="span" color="purple.600" ml={2}>
-              Filtered by{" "}
-              {activeFilterType.charAt(0).toUpperCase() +
-                activeFilterType.slice(1)}
-              : <b>{activeFilter}</b>
-            </Text>
-            <Button
-              size="xs"
-              ml={2}
-              variant="outline"
-              colorScheme="gray"
-              onClick={clearFilter}
-            >
-              Clear Filter
-            </Button>
-          </>
-        )}
       </Text>
 
       {results.map((track) => (
@@ -129,7 +104,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           buttons={[
             <Menu.Root key="menu">
               <Menu.Trigger asChild>
-                <Button variant="outline" size="xs">
+                <Button variant="plain" size={["xs", "sm", "md"]}>
                   <FiMoreVertical />
                 </Button>
               </Menu.Trigger>

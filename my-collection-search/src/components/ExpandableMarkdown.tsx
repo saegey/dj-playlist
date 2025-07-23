@@ -1,4 +1,4 @@
-import { Box, Button } from "@chakra-ui/react";
+import { Box, Text } from "@chakra-ui/react";
 import { useState as useLocalState } from "react";
 import ReactMarkdown from "react-markdown";
 // ExpandableMarkdown component for markdown notes with expand/collapse
@@ -17,18 +17,36 @@ export default function ExpandableMarkdown({
     !expanded && isLong ? text.slice(0, maxLength) + "..." : text;
   return (
     <Box>
-      <ReactMarkdown>{displayText}</ReactMarkdown>
-      {isLong && (
-        <Button
-          size="xs"
-          variant="outline"
-          colorScheme="blue"
-          onClick={() => setExpanded((e) => !e)}
-          mt={1}
+      <Box fontSize={["xs", "sm", "sm"]}>
+        <ReactMarkdown
+          components={{
+            p: ({ children }) => (
+              <Text as="span" lineHeight="short" m={0}>
+                {children}
+              </Text>
+            ),
+          }}
         >
-          {expanded ? "Show less" : "Show more"}
-        </Button>
-      )}
+          {displayText}
+        </ReactMarkdown>
+        {isLong && (
+          <Text
+            as="span"
+            color="blue.500"
+            fontSize="xs"
+            cursor="pointer"
+            textDecoration="underline"
+            onClick={() => setExpanded((e) => !e)}
+            _hover={{ color: "blue.700" }}
+            role="button"
+            tabIndex={0}
+            display="inline"
+            ml={1}
+          >
+            {expanded ? "show less" : "more"}
+          </Text>
+        )}
+      </Box>
     </Box>
   );
 }

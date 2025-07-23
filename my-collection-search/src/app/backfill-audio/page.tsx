@@ -3,17 +3,17 @@
 import React, { useEffect, useState } from "react";
 import { useFriends } from "@/hooks/useFriends";
 import {
-  Box,
   Button,
   Checkbox,
   Spinner,
   Text,
-  HStack,
   createListCollection,
   Select,
   Table, // v3 import
   Portal,
   Input,
+  Container,
+  SimpleGrid,
 } from "@chakra-ui/react";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
@@ -125,13 +125,24 @@ export default function BackfillAudioPage() {
   return (
     <>
       <TopMenuBar current="/backfill-audio" />
-      <Box p={6}>
-        <HStack mb={4}>
+      <Container>
+        <SimpleGrid columns={[1, null, 3]} gap={4} mb={4}>
+          <Input
+            type="text"
+            placeholder="Search"
+            value={artistSearch}
+            onChange={(e) => setArtistSearch(e.target.value)}
+            disabled={analyzing}
+            size={["sm", "md", "md"]}
+            variant={"subtle"}
+          />
           <Select.Root
             collection={usernameCollection}
             value={selectedUsername ? [selectedUsername] : []}
             onValueChange={(vals) => setSelectedUsername(vals.value[0] || "")}
-            width="320px"
+            width="100%"
+            size={["sm", "md", "md"]}
+            variant={"subtle"}
           >
             <Select.HiddenSelect />
             <Select.Control>
@@ -156,32 +167,16 @@ export default function BackfillAudioPage() {
             </Portal>
           </Select.Root>
 
-          <Box flex="1">
-            <Input
-              type="text"
-              placeholder="Search by artist name..."
-              value={artistSearch}
-              onChange={(e) => setArtistSearch(e.target.value)}
-              disabled={analyzing}
-            />
-          </Box>
-
-          <Button onClick={selectAll} size="lg">
-            Select All
-          </Button>
-          <Button onClick={deselectAll} size="lg">
-            Deselect All
-          </Button>
+          {/* Master checkbox will replace these buttons */}
           <Button
-            colorScheme="teal"
             onClick={handleAnalyzeSelected}
             disabled={!selected.size || analyzing}
             loading={analyzing}
-            size="lg"
+            size={["sm", "md", "md"]}
           >
             Analyze
           </Button>
-        </HStack>
+        </SimpleGrid>
 
         {loading ? (
           <Spinner />
@@ -194,14 +189,32 @@ export default function BackfillAudioPage() {
             striped
             showColumnBorder
             interactive
+            fontSize={["xs", "sm", "sm"]}
           >
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader />
+                <Table.ColumnHeader>
+                  <Checkbox.Root
+                    checked={
+                      selected.size === tracks.length && tracks.length > 0
+                    }
+                    // _indeterminate={selected.size > 0 && selected.size < tracks.length}
+                    onChange={() => {
+                      if (selected.size === tracks.length) {
+                        deselectAll();
+                      } else {
+                        selectAll();
+                      }
+                    }}
+                    disabled={analyzing || tracks.length === 0}
+                  >
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control />
+                  </Checkbox.Root>
+                </Table.ColumnHeader>
                 <Table.ColumnHeader>Title</Table.ColumnHeader>
                 <Table.ColumnHeader>Artist</Table.ColumnHeader>
-                <Table.ColumnHeader>Apple Music</Table.ColumnHeader>
-                <Table.ColumnHeader>YouTube</Table.ColumnHeader>
+                <Table.ColumnHeader>Source</Table.ColumnHeader>
                 <Table.ColumnHeader>Status</Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
@@ -232,18 +245,21 @@ export default function BackfillAudioPage() {
                       >
                         Apple
                       </a>
-                    ) : (
-                      <Text color="gray.400">—</Text>
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {track.youtube_url ? (
+                    ) : track.youtube_url ? (
                       <a
                         href={track.youtube_url}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        YouTube
+                        Youtube
+                      </a>
+                    ) : track.soundcloud_url ? (
+                      <a
+                        href={track.soundcloud_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        SoundCloud
                       </a>
                     ) : (
                       <Text color="gray.400">—</Text>
@@ -265,7 +281,7 @@ export default function BackfillAudioPage() {
             </Table.Body>
           </Table.Root>
         )}
-      </Box>
+      </Container>
     </>
   );
 }

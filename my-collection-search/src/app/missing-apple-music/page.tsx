@@ -9,24 +9,15 @@ import {
   Text,
   Button,
   Spinner,
-  useDisclosure,
   Select,
   Image,
   Input,
   HStack,
   Portal,
   createListCollection,
+  Container,
 } from "@chakra-ui/react";
-import {
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalCloseButton,
-} from "@chakra-ui/modal";
 import TrackResult from "../../components/TrackResult";
-import dynamic from "next/dynamic";
 import TopMenuBar from "@/components/MenuBar";
 import { TrackEditFormProps } from "../../components/TrackEditForm";
 
@@ -41,15 +32,10 @@ interface AppleMusicResult {
   isrc?: string;
 }
 
-const TrackEditForm = dynamic(() => import("../../components/TrackEditForm"), {
-  ssr: false,
-});
-
 export default function MissingAppleMusicPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editTrack, setEditTrack] = useState<Track | null>(null);
   const { friends: usernames } = useFriends();
   const [selectedUsername, setSelectedUsername] = useState<string>("");
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -59,7 +45,6 @@ export default function MissingAppleMusicPage() {
   >({});
   const [overrideTrackId, setOverrideTrackId] = useState<string | null>(null);
   const [overrideQuery, setOverrideQuery] = useState<string>("");
-  const { onOpen, onClose } = useDisclosure();
 
   // Friends are loaded via useFriends hook
 
@@ -117,10 +102,14 @@ export default function MissingAppleMusicPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setAppleResults((prev) => ({
-          ...prev,
-          [track.track_id]: data.results && data.results[0],
-        }));
+        if (Array.isArray(data.results) && data.results.length === 0) {
+          setAppleResults((prev) => ({ ...prev, [track.track_id]: null }));
+        } else {
+          setAppleResults((prev) => ({
+            ...prev,
+            [track.track_id]: data.results && data.results[0],
+          }));
+        }
       } else {
         setAppleResults((prev) => ({ ...prev, [track.track_id]: null }));
       }
@@ -135,13 +124,7 @@ export default function MissingAppleMusicPage() {
     }
   }, [tracks, currentIndex]);
 
-  const handleEditClick = (track: Track) => {
-    setEditTrack(track);
-    onOpen();
-  };
-  const handleSaveTrack = async (
-    data: TrackEditFormProps
-  ) => {
+  const handleSaveTrack = async (data: TrackEditFormProps) => {
     // PATCH to update endpoint
     const res = await fetch("/api/tracks/update", {
       method: "PATCH",
@@ -152,8 +135,6 @@ export default function MissingAppleMusicPage() {
       setTracks((prev) =>
         prev.map((t) => (t.track_id === data.track_id ? { ...t, ...data } : t))
       );
-      setEditTrack(null);
-      onClose();
       // If last track on page, fetch next page
       if (currentIndex === tracks.length - 1 && tracks.length === pageSize) {
         setPage((p) => p + 1);
@@ -174,7 +155,7 @@ export default function MissingAppleMusicPage() {
   return (
     <>
       <TopMenuBar current="/missing-apple-music" />
-      <Box p={6}>
+      <Container maxW={["8xl", "2xl", "2xl"]}>
         <HStack mb={4} align="flex-end">
           <Select.Root
             collection={usernameCollection}
@@ -227,36 +208,11 @@ export default function MissingAppleMusicPage() {
             overrideQuery={overrideQuery}
             setOverrideTrackId={setOverrideTrackId}
             setOverrideQuery={setOverrideQuery}
-            handleEditClick={handleEditClick}
             handleSaveTrack={handleSaveTrack}
             setCurrentIndex={setCurrentIndex}
           />
         )}
-
-        <Modal
-          isOpen={!!editTrack}
-          onClose={() => {
-            setEditTrack(null);
-            onClose();
-          }}
-          isCentered
-          size="xl"
-        >
-          <ModalOverlay />
-          <ModalContent>
-            <ModalHeader>Edit Track</ModalHeader>
-            <ModalCloseButton />
-            <ModalBody>
-              {editTrack && (
-                <TrackEditForm
-                  track={editTrack}
-                  onSave={handleSaveTrack}
-                />
-              )}
-            </ModalBody>
-          </ModalContent>
-        </Modal>
-      </Box>
+      </Container>
     </>
   );
 }
@@ -270,7 +226,6 @@ type SingleTrackUIProps = {
   overrideQuery: string;
   setOverrideTrackId: (id: string | null) => void;
   setOverrideQuery: (q: string) => void;
-  handleEditClick: (track: Track) => void;
   handleSaveTrack: (
     data: Partial<Track> & { track_id: string }
   ) => Promise<void>;
@@ -285,7 +240,6 @@ function SingleTrackUI({
   overrideQuery,
   setOverrideTrackId,
   setOverrideQuery,
-  handleEditClick,
   handleSaveTrack,
   setCurrentIndex,
 }: SingleTrackUIProps) {
@@ -293,6 +247,7 @@ function SingleTrackUI({
   const [overrideResults, setOverrideResults] = React.useState<
     AppleMusicResult[] | null
   >(null);
+  const [saving, setSaving] = React.useState(false);
   // Reset overrideResults when override mode or track changes
   React.useEffect(() => {
     setOverrideResults(null);
@@ -302,24 +257,17 @@ function SingleTrackUI({
   const apple = appleResults[track.track_id];
   const isOverride = overrideTrackId === track.track_id;
 
+  const handleSave = async (url: string) => {
+    setSaving(true);
+    await handleSaveTrack({ ...track, apple_music_url: url });
+    setSaving(false);
+  };
+
   return (
     <Box borderWidth="1px" borderRadius="md" p={3} mb={4} boxShadow="sm">
-      <Flex align="center" gap={4}>
-        <Box flex="1">
-          <TrackResult
-            track={track}
-            buttons={
-              <Button
-                colorScheme="blue"
-                size="sm"
-                onClick={() => handleEditClick(track)}
-              >
-                Edit
-              </Button>
-            }
-            allowMinimize={false}
-          />
-        </Box>
+      <Flex align="center" gap={4} flexDirection={"column"}>
+        <TrackResult track={track} allowMinimize={false} />
+
         <Box minW="180px" textAlign="center">
           {isOverride ? (
             overrideResults === null ? (
@@ -354,13 +302,8 @@ function SingleTrackUI({
                   colorScheme="green"
                   size="xs"
                   mt={1}
-                  onClick={async () => {
-                    // Save Apple Music URL to track
-                    await handleSaveTrack({
-                      ...track,
-                      apple_music_url: overrideResults[0].url,
-                    });
-                  }}
+                  onClick={() => handleSave(overrideResults[0].url)}
+                  loading={saving}
                 >
                   Save URL
                 </Button>
@@ -393,13 +336,8 @@ function SingleTrackUI({
                 colorScheme="green"
                 size="xs"
                 mt={1}
-                onClick={async () => {
-                  // Save Apple Music URL to track
-                  await handleSaveTrack({
-                    ...track,
-                    apple_music_url: apple.url,
-                  });
-                }}
+                onClick={() => handleSave(apple.url)}
+                loading={saving}
               >
                 Save URL
               </Button>

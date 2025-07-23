@@ -11,11 +11,14 @@ import {
   Portal,
   CloseButton,
   Stack,
+  EmptyState,
+  VStack,
 } from "@chakra-ui/react";
 import { MeiliSearch } from "meilisearch";
 
 import { Toaster, toaster } from "@/components/ui/toaster"; // See below
 import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
+import { FiHeadphones } from "react-icons/fi";
 
 export type Playlist = { id: number; name: string; tracks: string[] };
 
@@ -136,9 +139,19 @@ export default function PlaylistManager({
         {loadingPlaylists ? (
           <Text fontSize="sm">Loading...</Text>
         ) : playlists.length === 0 ? (
-          <Text fontSize="sm" color="fg.muted">
-            No saved playlists.
-          </Text>
+          <EmptyState.Root size={"sm"}>
+            <EmptyState.Content>
+              <EmptyState.Indicator>
+                <FiHeadphones />
+              </EmptyState.Indicator>
+              <VStack textAlign="center">
+                <EmptyState.Title>No saved playlists</EmptyState.Title>
+                <EmptyState.Description>
+                  Save your playlists to access them here.
+                </EmptyState.Description>
+              </VStack>
+            </EmptyState.Content>
+          </EmptyState.Root>
         ) : (
           playlists.map((pl) => (
             <Flex key={pl.id} direction="column" mb={2}>
