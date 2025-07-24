@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 import {
   Box,
   Flex,
@@ -17,6 +18,7 @@ import {
 import dynamic from "next/dynamic";
 
 import PlaylistViewer from "@/components/PlaylistViewer";
+import TrackResult from "@/components/TrackResult";
 import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
 
 import SearchResults from "@/components/SearchResults";
@@ -54,7 +56,7 @@ export default function SearchPage() {
     setHasMounted(true);
   }, []);
 
-  const [selectedUsername, setSelectedUsername] = useState<string>("");
+  const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const {
     query,
     onQueryChange,
@@ -81,6 +83,8 @@ export default function SearchPage() {
     addToPlaylist,
     removeFromPlaylist,
     moveTrack,
+    playlistAvgEmbedding,
+    getRecommendations,
   } = usePlaylists();
 
   const [editTrack, setEditTrack] = useState<Track | null>(null);
@@ -116,6 +120,29 @@ export default function SearchPage() {
     return sum + parseDurationToSeconds(track.duration);
   }, 0);
   const totalPlaytimeFormatted = formatSeconds(totalPlaytimeSeconds);
+
+  const [recommendations, setRecommendations] = useState<Track[]>([]);
+
+  React.useEffect(() => {
+    console.log("Fetching recommendations for playlist", {
+      playlistAvgEmbedding,
+      k: 10,
+      playlist,
+    });
+    let cancelled = false;
+    async function fetchRecommendations() {
+      if (playlist.length === 0) {
+        setRecommendations([]);
+        return;
+      }
+      const recs = await getRecommendations(25);
+      if (!cancelled) setRecommendations(recs);
+    }
+    fetchRecommendations();
+    return () => {
+      cancelled = true;
+    };
+  }, [playlist, getRecommendations, playlistAvgEmbedding]);
 
   return (
     <>
@@ -235,6 +262,7 @@ export default function SearchPage() {
                     <Text fontSize="sm" color="gray.500" mb={2}>
                       Total Playtime:{" "}
                       {hasMounted ? totalPlaytimeFormatted : "--:--"}
+                      {/* Playlist Recommendations */}
                     </Text>
                   </Drawer.Title>
                   <Box mt={2}>
@@ -276,8 +304,27 @@ export default function SearchPage() {
                       moveTrack,
                       setEditTrack: handleEditClick,
                       removeFromPlaylist,
+                      playlistAvgEmbedding: playlistAvgEmbedding ?? undefined,
                     })}
                   />
+                  {/* Recommendations below playlist tracks */}
+                  {recommendations.length > 0 && (
+                    <Box mt={6}>
+                      <Text
+                        fontWeight="bold"
+                        fontSize="sm"
+                        color="blue.500"
+                        mb={2}
+                      >
+                        Recommended Tracks:
+                      </Text>
+                      <Box display="flex" flexDirection="column" gap={2}>
+                        {recommendations.map((rec: Track) => (
+                          <TrackResult key={rec.track_id} track={rec} />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
                 </Drawer.Body>
                 <Drawer.Footer>
                   <Drawer.CloseTrigger asChild>

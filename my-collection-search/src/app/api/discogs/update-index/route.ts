@@ -62,7 +62,9 @@ interface ProcessedTrack {
   local_audio_url?: string | null;
 }
 
-async function getOrCreateTracksIndex(meiliClient: MeiliSearch): Promise<Index> {
+async function getOrCreateTracksIndex(
+  meiliClient: MeiliSearch
+): Promise<Index> {
   try {
     console.log('[MeiliSearch] Attempting to get index "tracks"...');
     const idx = await meiliClient.getIndex("tracks");
@@ -119,9 +121,9 @@ export async function POST() {
         `[Discogs Index] Found ${releaseFiles.length} release files for user: ${username}`
       );
       for (const releaseFile of releaseFiles) {
-        console.log(
-          `[Discogs Index] Processing release file: ${releaseFile} for user: ${username}`
-        );
+        // console.log(
+        //   `[Discogs Index] Processing release file: ${releaseFile} for user: ${username}`
+        // );
         // Support username-prefixed files for friends' collections
         let releasePath = path.join(
           DISCOGS_EXPORTS_DIR,
@@ -142,7 +144,7 @@ export async function POST() {
             releasePath = altPath;
           }
         }
-        console.log(`[Discogs Index] Checking release path: ${releasePath}`);
+        // console.log(`[Discogs Index] Checking release path: ${releasePath}`);
         if (!fs.existsSync(releasePath)) continue;
         const album = JSON.parse(
           fs.readFileSync(releasePath, "utf-8")
@@ -193,6 +195,39 @@ export async function POST() {
     console.log(`[Discogs Index] Total tracks to upsert: ${allTracks.length}`);
     // Always get or create the index using .index(), which is safe and idempotent
     const index = await getOrCreateTracksIndex(meiliClient);
+    // Set vector settings for the embedding field (MeiliSearch v1.7+)
+    // Set embedders for userProvided vectors (MeiliSearch v1.7+)
+    try {
+      const embedderRes = await fetch(
+        `${meiliClient.config.host}/indexes/tracks/settings/embedders`,
+        {
+          method: "PATCH",
+          headers: new Headers({
+            Authorization: `Bearer ${meiliClient.config.apiKey ?? ""}`,
+            "Content-Type": "application/json",
+          }),
+          body: JSON.stringify({
+            default: {
+              source: "userProvided",
+              dimensions: 1536,
+            },
+          }),
+        }
+      );
+      if (!embedderRes.ok) {
+        console.warn(
+          "Failed to set MeiliSearch embedders:",
+          await embedderRes.text()
+        );
+      } else {
+        console.log(
+          "MeiliSearch embedders updated for userProvided vectors.",
+          embedderRes
+        );
+      }
+    } catch (err) {
+      console.warn("Error setting MeiliSearch embedders:", err);
+    }
 
     const upserted: Record<string, ProcessedTrack>[] = [];
     for (const [i, track] of allTracks.entries()) {
@@ -245,15 +280,15 @@ export async function POST() {
     }
 
     await index.updateSearchableAttributes([
-      "title",
+      "local_tags",
       "artist",
       "album",
-      "local_tags",
       "styles",
-      "genres",
+      "title",
       "notes",
-      "username",
+      "genres",
     ]);
+    // using meilisearch-js
     await index.updateFilterableAttributes([
       "title",
       "artist",
@@ -270,25 +305,51 @@ export async function POST() {
       "notes",
       "apple_music_url",
       "youtube_url",
+      "hasVectors",
+    ]);
+
+    await index.updateRankingRules([
+      "words",
+      "typo",
+      "proximity",
+      "attribute",
+      "sort",
+      "exactness",
     ]);
     console.log(
       `[Discogs Index] Adding ${upserted.length} tracks to MeiliSearch index...`
     );
 
     // Write upserted tracks to a JSON file for debugging
-    fs.writeFileSync(
-      path.join(DISCOGS_EXPORTS_DIR, "debug_upserted_tracks.json"),
-      JSON.stringify(upserted, null, 2),
-      "utf-8"
-    );
-
+    // fs.writeFileSync(
+    //   path.join(DISCOGS_EXPORTS_DIR, "debug_upserted_tracks.json"),
+    //   JSON.stringify(upserted, null, 2),
+    //   "utf-8"
+    // );
     const { taskUid } = await index.addDocuments(
-      upserted.map((t) => ({
-        ...t,
-        // Ensure all fields are present, even if null
-        notes: t.notes ? t.notes : null,
-        local_tags: t.local_tags ? t.local_tags : [],
-      }))
+      upserted.map((t) => {
+        // Remove embedding, keep _vectors as array
+        const { embedding, ...rest } = t;
+        let vectorArr = null;
+        if (embedding) {
+          if (Array.isArray(embedding)) {
+            vectorArr = embedding;
+          } else if (typeof embedding === "string") {
+            try {
+              vectorArr = JSON.parse(embedding);
+            } catch {
+              vectorArr = null;
+            }
+          }
+        }
+        return {
+          ...rest,
+          notes: t.notes ? t.notes : null,
+          local_tags: t.local_tags ? t.local_tags : [],
+          _vectors: { default: vectorArr },
+          hasVectors: vectorArr ? true : false,
+        };
+      })
     );
 
     console.log(

@@ -99,6 +99,27 @@ export default function TrackEditForm({
   const [analyzing, setAnalyzing] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [vectorLoading, setVectorLoading] = useState(false);
+  const handleFetchVector = async () => {
+    setVectorLoading(true);
+    try {
+      const res = await fetch("/api/tracks/vectorize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ track_id: form.track_id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setForm((prev) => ({ ...prev, embedding: data.embedding }));
+      } else {
+        alert("Failed to fetch vector");
+      }
+    } catch (err) {
+      console.error("Error fetching vector:", err);
+      alert("Error fetching vector");
+    }
+    setVectorLoading(false);
+  };
 
   const handleStarRating = (rating: number) => {
     setForm((prev) => ({ ...prev, star_rating: rating }));
@@ -247,7 +268,16 @@ export default function TrackEditForm({
       // borderWidth="1px"
       // borderRadius="md"
     >
-      <SimpleGrid columns={[2, 2, 4]} gap={2} mb={2}>
+      <SimpleGrid columns={[2, 2, 5]} gap={2} mb={2}>
+        <Button
+          type="button"
+          colorScheme="orange"
+          loading={vectorLoading}
+          size="sm"
+          onClick={handleFetchVector}
+        >
+          Get Vector
+        </Button>
         <Button
           type="button"
           colorScheme="purple"

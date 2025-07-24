@@ -13,9 +13,28 @@ export async function POST(req: Request) {
     const params = track_ids.map((_, i) => `$${i + 1}`).join(',');
     const query = `SELECT * FROM tracks WHERE track_id IN (${params})`;
     const { rows } = await pool.query(query, track_ids);
-    // Preserve order of input track_ids
+    // Preserve order of input track_ids and alias embedding as _vectors.default
     const trackMap = Object.fromEntries(rows.map((t) => [t.track_id, t]));
-    const ordered = track_ids.map((id) => trackMap[id]).filter(Boolean);
+    const ordered = track_ids.map((id) => {
+      const t = trackMap[id];
+      if (!t) return undefined;
+      let embeddingArr = null;
+      if (t.embedding) {
+        if (Array.isArray(t.embedding)) {
+          embeddingArr = t.embedding;
+        } else if (typeof t.embedding === "string") {
+          try {
+            embeddingArr = JSON.parse(t.embedding);
+          } catch {
+            embeddingArr = null;
+          }
+        }
+      }
+      return {
+        ...t,
+        _vectors: embeddingArr ? { default: embeddingArr } : undefined,
+      };
+    }).filter(Boolean);
     return NextResponse.json(ordered);
   } catch (error) {
     console.error('Error fetching tracks by ids:', error);

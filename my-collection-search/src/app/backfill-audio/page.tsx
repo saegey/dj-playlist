@@ -1,33 +1,37 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { Switch } from "@chakra-ui/react";
+import { ActionBar, CloseButton } from "@chakra-ui/react";
+import { LuLightbulb, LuMusic } from "react-icons/lu";
 import { useFriends } from "@/hooks/useFriends";
 import {
   Button,
   Checkbox,
   Spinner,
   Text,
-  createListCollection,
-  Select,
   Table, // v3 import
   Portal,
   Input,
   Container,
   SimpleGrid,
 } from "@chakra-ui/react";
+import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
+import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 
 interface BackfillTrack extends Track {
   status?: "pending" | "analyzing" | "success" | "error";
   errorMsg?: string;
 }
-
 export default function BackfillAudioPage() {
   const [tracks, setTracks] = useState<BackfillTrack[]>([]);
+  const [showMissingAudio, setShowMissingAudio] = useState(true);
+  const [showMissingVectors, setShowMissingVectors] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { friends: usernames } = useFriends();
-  const [selectedUsername, setSelectedUsername] = useState<string>("");
+  const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -36,22 +40,34 @@ export default function BackfillAudioPage() {
 
   useEffect(() => {
     setLoading(true);
-    const params = [];
-    if (selectedUsername)
-      params.push(`username=${encodeURIComponent(selectedUsername)}`);
-    if (artistSearch.trim())
-      params.push(`artist=${encodeURIComponent(artistSearch.trim())}`);
-    const url =
-      "/api/tracks/backfill-audio" +
-      (params.length ? `?${params.join("&")}` : "");
-    fetch(url)
-      .then((res) => res.json())
-      .then((data) => {
-        setTracks(data.tracks || []);
-        setSelected(new Set());
-      })
-      .finally(() => setLoading(false));
-  }, [selectedUsername, artistSearch]);
+    const fetchTracks = async () => {
+      const { getMeiliClient } = await import("@/lib/meili");
+      const meiliClient = getMeiliClient();
+      const index = meiliClient.index("tracks");
+      const filter = [];
+      if (selectedUsername) filter.push(`username = '${selectedUsername}'`);
+      // if (artistSearch.trim()) filter.push(`artist = '${artistSearch.trim()}'`);
+      if (showMissingAudio) {
+        filter.push("local_audio_url IS NULL");
+      } else {
+        filter.push("local_audio_url IS NOT NULL");
+      }
+      if (showMissingVectors) {
+        filter.push("hasVectors = false");
+      } else {
+        filter.push("hasVectors = true");
+      }
+      const results = await index.search("", {
+        q: artistSearch.trim(),
+        filter: filter.join(" AND "),
+        limit: 1000,
+      });
+      setTracks((results.hits as BackfillTrack[]) || []);
+      setSelected(new Set());
+      setLoading(false);
+    };
+    fetchTracks();
+  }, [selectedUsername, artistSearch, showMissingAudio, showMissingVectors]);
 
   const toggleSelect = (trackId: string) => {
     setSelected((prev) => {
@@ -66,6 +82,37 @@ export default function BackfillAudioPage() {
   };
   const selectAll = () => setSelected(new Set(tracks.map((t) => t.track_id)));
   const deselectAll = () => setSelected(new Set());
+
+  const handleVectorizeSelected = async () => {
+    setAnalyzing(true);
+    const updated = [...tracks];
+    for (const trackId of selected) {
+      const idx = updated.findIndex((t) => t.track_id === trackId);
+      if (idx === -1) continue;
+      updated[idx].status = "analyzing";
+      setTracks([...updated]);
+      try {
+        const res = await fetch("/api/tracks/vectorize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            track_id: updated[idx].track_id,
+            // add other fields if needed
+          }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || "Failed");
+        updated[idx].status = "success";
+      } catch (err) {
+        updated[idx].status = "error";
+        updated[idx].errorMsg =
+          err && typeof err === "object" && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Unknown error";
+      }
+      setTracks([...updated]);
+    }
+    setAnalyzing(false);
+  };
 
   const handleAnalyzeSelected = async () => {
     setAnalyzing(true);
@@ -118,15 +165,21 @@ export default function BackfillAudioPage() {
     setAnalyzing(false);
   };
 
-  const usernameCollection = createListCollection({
-    items: usernames.map((u) => ({ label: u, value: u })),
+
+  const UsernameSelect = useUsernameSelect({
+    usernames,
+    selectedUsername,
+    setSelectedUsername,
+    size: ["sm", "md", "md"],
+    variant: "subtle",
+    width: "100%",
   });
 
   return (
     <>
       <TopMenuBar current="/backfill-audio" />
       <Container>
-        <SimpleGrid columns={[1, null, 3]} gap={4} mb={4}>
+        <SimpleGrid columns={[1, null, 5]} gap={4} mb={4}>
           <Input
             type="text"
             placeholder="Search"
@@ -136,47 +189,72 @@ export default function BackfillAudioPage() {
             size={["sm", "md", "md"]}
             variant={"subtle"}
           />
-          <Select.Root
-            collection={usernameCollection}
-            value={selectedUsername ? [selectedUsername] : []}
-            onValueChange={(vals) => setSelectedUsername(vals.value[0] || "")}
-            width="100%"
-            size={["sm", "md", "md"]}
-            variant={"subtle"}
+          <Switch.Root
+            checked={showMissingAudio}
+            onCheckedChange={(e) => setShowMissingAudio(e.checked)}
           >
-            <Select.HiddenSelect />
-            <Select.Control>
-              <Select.Trigger>
-                <Select.ValueText placeholder="Choose user library" />
-              </Select.Trigger>
-              <Select.IndicatorGroup>
-                <Select.Indicator />
-              </Select.IndicatorGroup>
-            </Select.Control>
-            <Portal>
-              <Select.Positioner>
-                <Select.Content>
-                  {usernames.map((u) => (
-                    <Select.Item key={u} item={{ label: u, value: u }}>
-                      {u}
-                      <Select.ItemIndicator />
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Positioner>
-            </Portal>
-          </Select.Root>
-
-          {/* Master checkbox will replace these buttons */}
-          <Button
-            onClick={handleAnalyzeSelected}
-            disabled={!selected.size || analyzing}
-            loading={analyzing}
-            size={["sm", "md", "md"]}
+            <Switch.Label>Missing Audio</Switch.Label>
+            <Switch.HiddenInput />
+            <Switch.Control>
+              <Switch.Thumb />
+            </Switch.Control>
+            <Switch.Label />
+          </Switch.Root>
+          <Switch.Root
+            checked={showMissingVectors}
+            onCheckedChange={(e) => setShowMissingVectors(e.checked)}
           >
-            Analyze
-          </Button>
+            <Switch.Label>Missing Vectors</Switch.Label>
+            <Switch.HiddenInput />
+            <Switch.Control>
+              <Switch.Thumb />
+            </Switch.Control>
+            <Switch.Label />
+          </Switch.Root>
+          {UsernameSelect}
         </SimpleGrid>
+
+        {/* ActionBar appears when items are selected */}
+        <ActionBar.Root
+          open={selected.size > 0}
+          onOpenChange={(e) => {
+            if (!e.open) deselectAll();
+          }}
+          closeOnInteractOutside={false}
+          portalled={false}
+        >
+          <Portal>
+            <ActionBar.Positioner>
+              <ActionBar.Content>
+                <ActionBar.SelectionTrigger>
+                  {selected.size} selected
+                </ActionBar.SelectionTrigger>
+                <ActionBar.Separator />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleVectorizeSelected}
+                  disabled={!selected.size || analyzing}
+                >
+                  <LuLightbulb style={{ marginRight: 4 }} />
+                  Vectorize
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAnalyzeSelected}
+                  disabled={!selected.size || analyzing}
+                >
+                  <LuMusic style={{ marginRight: 4 }} />
+                  Analyze Audio
+                </Button>
+                <ActionBar.CloseTrigger asChild>
+                  <CloseButton size="sm" />
+                </ActionBar.CloseTrigger>
+              </ActionBar.Content>
+            </ActionBar.Positioner>
+          </Portal>
+        </ActionBar.Root>
 
         {loading ? (
           <Spinner />
