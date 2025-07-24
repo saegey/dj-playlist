@@ -165,7 +165,6 @@ export default function BackfillAudioPage() {
     setAnalyzing(false);
   };
 
-
   const UsernameSelect = useUsernameSelect({
     usernames,
     selectedUsername,
@@ -261,103 +260,108 @@ export default function BackfillAudioPage() {
         ) : tracks.length === 0 ? (
           <Text color="gray.500">No tracks to backfill.</Text>
         ) : (
-          <Table.Root
-            size="sm"
-            variant="outline"
-            striped
-            showColumnBorder
-            interactive
-            fontSize={["xs", "sm", "sm"]}
-          >
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeader>
-                  <Checkbox.Root
-                    checked={
-                      selected.size === tracks.length && tracks.length > 0
-                    }
-                    // _indeterminate={selected.size > 0 && selected.size < tracks.length}
-                    onChange={() => {
-                      if (selected.size === tracks.length) {
-                        deselectAll();
-                      } else {
-                        selectAll();
-                      }
-                    }}
-                    disabled={analyzing || tracks.length === 0}
-                  >
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control />
-                  </Checkbox.Root>
-                </Table.ColumnHeader>
-                <Table.ColumnHeader>Title</Table.ColumnHeader>
-                <Table.ColumnHeader>Artist</Table.ColumnHeader>
-                <Table.ColumnHeader>Source</Table.ColumnHeader>
-                <Table.ColumnHeader>Status</Table.ColumnHeader>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {tracks.map((track) => (
-                <Table.Row
-                  key={track.track_id}
-                  data-selected={selected.has(track.track_id) ? "" : undefined}
-                >
-                  <Table.Cell>
+          <Table.ScrollArea borderWidth="1px" maxHeight={["calc(100vh - 400px)", "calc(100vh - 300px)"]}>
+            <Table.Root
+              size="sm"
+              variant="outline"
+              // striped
+              showColumnBorder
+              // interactive
+              // mb={"200px"}
+              fontSize={["xs", "sm", "sm"]}
+            >
+              <Table.Header>
+                <Table.Row>
+                  <Table.ColumnHeader>
                     <Checkbox.Root
-                      checked={selected.has(track.track_id)}
-                      onChange={() => toggleSelect(track.track_id)}
-                      disabled={analyzing}
+                      checked={
+                        selected.size === tracks.length && tracks.length > 0
+                      }
+                      // _indeterminate={selected.size > 0 && selected.size < tracks.length}
+                      onChange={() => {
+                        if (selected.size === tracks.length) {
+                          deselectAll();
+                        } else {
+                          selectAll();
+                        }
+                      }}
+                      disabled={analyzing || tracks.length === 0}
                     >
                       <Checkbox.HiddenInput />
                       <Checkbox.Control />
                     </Checkbox.Root>
-                  </Table.Cell>
-                  <Table.Cell>{track.title}</Table.Cell>
-                  <Table.Cell>{track.artist}</Table.Cell>
-                  <Table.Cell>
-                    {track.apple_music_url ? (
-                      <a
-                        href={track.apple_music_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Apple
-                      </a>
-                    ) : track.youtube_url ? (
-                      <a
-                        href={track.youtube_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Youtube
-                      </a>
-                    ) : track.soundcloud_url ? (
-                      <a
-                        href={track.soundcloud_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        SoundCloud
-                      </a>
-                    ) : (
-                      <Text color="gray.400">—</Text>
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {track.status === "analyzing" ? (
-                      <Spinner size="xs" />
-                    ) : track.status === "success" ? (
-                      <Text color="green.500">✓</Text>
-                    ) : track.status === "error" ? (
-                      <Text color="red.500">{track.errorMsg || "Error"}</Text>
-                    ) : (
-                      <Text color="gray.400">—</Text>
-                    )}
-                  </Table.Cell>
+                  </Table.ColumnHeader>
+                  <Table.ColumnHeader>Title</Table.ColumnHeader>
+                  <Table.ColumnHeader>Artist</Table.ColumnHeader>
+                  <Table.ColumnHeader>Source</Table.ColumnHeader>
+                  <Table.ColumnHeader>Status</Table.ColumnHeader>
                 </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Root>
+              </Table.Header>
+              <Table.Body>
+                {tracks.map((track) => (
+                  <Table.Row
+                    key={track.track_id}
+                    data-selected={
+                      selected.has(track.track_id) ? "" : undefined
+                    }
+                  >
+                    <Table.Cell>
+                      <Checkbox.Root
+                        checked={selected.has(track.track_id)}
+                        onChange={() => toggleSelect(track.track_id)}
+                        disabled={analyzing}
+                      >
+                        <Checkbox.HiddenInput />
+                        <Checkbox.Control />
+                      </Checkbox.Root>
+                    </Table.Cell>
+                    <Table.Cell>{track.title}</Table.Cell>
+                    <Table.Cell>{track.artist}</Table.Cell>
+                    <Table.Cell>
+                      {track.apple_music_url ? (
+                        <a
+                          href={track.apple_music_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Apple
+                        </a>
+                      ) : track.youtube_url ? (
+                        <a
+                          href={track.youtube_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Youtube
+                        </a>
+                      ) : track.soundcloud_url ? (
+                        <a
+                          href={track.soundcloud_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          SoundCloud
+                        </a>
+                      ) : (
+                        <Text color="gray.400">—</Text>
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {track.status === "analyzing" ? (
+                        <Spinner size="xs" />
+                      ) : track.status === "success" ? (
+                        <Text color="green.500">✓</Text>
+                      ) : track.status === "error" ? (
+                        <Text color="red.500">{track.errorMsg || "Error"}</Text>
+                      ) : (
+                        <Text color="gray.400">—</Text>
+                      )}
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table.Root>
+          </Table.ScrollArea>
         )}
       </Container>
     </>

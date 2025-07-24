@@ -204,11 +204,11 @@ export function usePlaylists() {
         const meiliClient = getMeiliClient();
         const index = meiliClient.index("tracks");
         const playlistIds = playlist.map((t) => t.track_id);
-        const playlistArtists = playlist.map((t) => `'${t.artist.replace(/'/g, "''")}'`);
-        let filter = `NOT track_id IN [${playlistIds.join(",")}] AND username = 'saegey'`;
-        if (playlistArtists.length > 0) {
-          filter += ` AND NOT artist IN [${playlistArtists.join(",")}]`;
-        }
+        // const playlistArtists = playlist.map((t) => `'${t.artist.replace(/'/g, "''")}'`);
+        const filter = `NOT track_id IN [${playlistIds.join(",")}] AND username = 'saegey'`;
+        // if (playlistArtists.length > 0) {
+        //   filter += ` AND NOT artist IN [${playlistArtists.join(",")}]`;
+        // }
         console.log(playlistAvgEmbedding);
         const results = await index.search(undefined, {
           vector: playlistAvgEmbedding,

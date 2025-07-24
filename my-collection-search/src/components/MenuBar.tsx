@@ -50,28 +50,53 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
             >
               {item.href === "/" && (
                 <Box>
-                  <TbPlaylist size={25} />
+                  <TbPlaylist
+                    size={25}
+                    color={
+                      current === item.href ? "blue" : "brand.menuActiveText"
+                    }
+                  />
                 </Box>
               )}
               {item.href === "/missing-apple-music" && (
                 <Box>
-                  <SiApplemusic size={25} />
+                  <SiApplemusic
+                    size={25}
+                    color={
+                      current === item.href ? "blue" : "brand.menuActiveText"
+                    }
+                  />
                 </Box>
               )}
               {item.href === "/backfill-audio" && (
                 <Box>
-                  <LuAudioLines size={25} />
+                  <LuAudioLines
+                    size={25}
+                    color={
+                      current === item.href ? "blue" : "brand.menuActiveText"
+                    }
+                  />
                 </Box>
               )}
               {item.href === "/bulk-notes" && (
                 <Box>
-                  <IoBookSharp size={25} />
+                  <IoBookSharp
+                    size={25}
+                    color={
+                      current === item.href ? "blue" : "brand.menuActiveText"
+                    }
+                  />
                 </Box>
               )}
 
               {item.href === "/discogs" && (
                 <Box>
-                  <IoMdSettings size={25} />
+                  <IoMdSettings
+                    size={25}
+                    color={
+                      current === item.href ? "blue" : "brand.menuActiveText"
+                    }
+                  />
                 </Box>
               )}
               <Text hideBelow="md">{item.label}</Text>
