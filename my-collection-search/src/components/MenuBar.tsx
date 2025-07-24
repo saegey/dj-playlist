@@ -55,7 +55,12 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
               )}
               {item.href === "/missing-apple-music" && (
                 <Box>
-                  <SiApplemusic size={25} />
+                  <SiApplemusic
+                    size={25}
+                    color={
+                      current === item.href ? "brand.menuActiveText" : "blue"
+                    }
+                  />
                 </Box>
               )}
               {item.href === "/backfill-audio" && (

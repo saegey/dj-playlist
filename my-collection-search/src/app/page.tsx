@@ -14,6 +14,7 @@ import {
   Container,
   Float,
   Circle,
+  Menu,
 } from "@chakra-ui/react";
 import dynamic from "next/dynamic";
 
@@ -31,6 +32,7 @@ import TopMenuBar from "@/components/MenuBar";
 import { getMeiliClient } from "@/lib/meili";
 import { TrackEditFormProps } from "../components/TrackEditForm";
 import { MeiliSearch } from "meilisearch";
+import { FiMoreVertical } from "react-icons/fi";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
@@ -320,7 +322,39 @@ export default function SearchPage() {
                       </Text>
                       <Box display="flex" flexDirection="column" gap={2}>
                         {recommendations.map((rec: Track) => (
-                          <TrackResult key={rec.track_id} track={rec} />
+                          <TrackResult
+                            key={rec.track_id}
+                            track={rec}
+                            buttons={[
+                              <Menu.Root key="menu">
+                                <Menu.Trigger asChild>
+                                  <Button
+                                    variant="plain"
+                                    size={["xs", "sm", "md"]}
+                                  >
+                                    <FiMoreVertical />
+                                  </Button>
+                                </Menu.Trigger>
+
+                                <Menu.Positioner>
+                                  <Menu.Content>
+                                    <Menu.Item
+                                      onSelect={() => addToPlaylist(rec)}
+                                      value="add"
+                                    >
+                                      Add to Playlist
+                                    </Menu.Item>
+                                    <Menu.Item
+                                      onSelect={() => handleEditClick(rec)}
+                                      value="edit"
+                                    >
+                                      Edit Track
+                                    </Menu.Item>
+                                  </Menu.Content>
+                                </Menu.Positioner>
+                              </Menu.Root>,
+                            ]}
+                          />
                         ))}
                       </Box>
                     </Box>
