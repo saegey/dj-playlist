@@ -17,6 +17,7 @@ import {
 import dynamic from "next/dynamic";
 
 import PlaylistViewer from "@/components/PlaylistViewer";
+import TrackResult from "@/components/TrackResult";
 import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
 
 import SearchResults from "@/components/SearchResults";
@@ -119,7 +120,7 @@ export default function SearchPage() {
   }, 0);
   const totalPlaytimeFormatted = formatSeconds(totalPlaytimeSeconds);
 
-  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<Track[]>([]);
 
   React.useEffect(() => {
     console.log("Fetching recommendations for playlist", {
@@ -133,14 +134,14 @@ export default function SearchPage() {
         setRecommendations([]);
         return;
       }
-      const recs = await getRecommendations(10);
+      const recs = await getRecommendations(25);
       if (!cancelled) setRecommendations(recs);
     }
     fetchRecommendations();
     return () => {
       cancelled = true;
     };
-  }, [playlist, getRecommendations]);
+  }, [playlist, getRecommendations, playlistAvgEmbedding]);
 
   return (
     <>
@@ -260,20 +261,6 @@ export default function SearchPage() {
                     <Text fontSize="sm" color="gray.500" mb={2}>
                       Total Playtime: {hasMounted ? totalPlaytimeFormatted : "--:--"}
                       {/* Playlist Recommendations */}
-                      {recommendations.length > 0 && (
-                        <Box mt={2}>
-                          <Text fontWeight="bold" fontSize="sm" color="blue.500" mb={1}>
-                            Recommended Tracks:
-                          </Text>
-                          <ul style={{ margin: 0, paddingLeft: 16 }}>
-                            {recommendations.map((rec: any) => (
-                              <li key={rec.id || rec.track_id}>
-                                {rec.title} – {rec.artist}
-                              </li>
-                            ))}
-                          </ul>
-                        </Box>
-                      )}
                     </Text>
                   </Drawer.Title>
                   <Box mt={2}>
@@ -318,6 +305,19 @@ export default function SearchPage() {
                       playlistAvgEmbedding: playlistAvgEmbedding ?? undefined,
                     })}
                   />
+                  {/* Recommendations below playlist tracks */}
+                  {recommendations.length > 0 && (
+                    <Box mt={6}>
+                      <Text fontWeight="bold" fontSize="sm" color="blue.500" mb={2}>
+                        Recommended Tracks:
+                      </Text>
+                      <Box display="flex" flexDirection="column" gap={2}>
+                        {recommendations.map((rec: Track) => (
+                          <TrackResult key={rec.track_id} track={rec} />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
                 </Drawer.Body>
                 <Drawer.Footer>
                   <Drawer.CloseTrigger asChild>

@@ -3,21 +3,20 @@
 import React, { useEffect, useState } from "react";
 import { Switch } from "@chakra-ui/react";
 import { ActionBar, CloseButton } from "@chakra-ui/react";
-import { LuLightbulb } from "react-icons/lu";
+import { LuLightbulb, LuMusic } from "react-icons/lu";
 import { useFriends } from "@/hooks/useFriends";
 import {
   Button,
   Checkbox,
   Spinner,
   Text,
-  createListCollection,
-  Select,
   Table, // v3 import
   Portal,
   Input,
   Container,
   SimpleGrid,
 } from "@chakra-ui/react";
+import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
 
@@ -114,8 +113,65 @@ export default function BackfillAudioPage() {
     setAnalyzing(false);
   };
 
-  const usernameCollection = createListCollection({
-    items: usernames.map((u) => ({ label: u, value: u })),
+  const handleAnalyzeSelected = async () => {
+    setAnalyzing(true);
+
+    const updated = [...tracks];
+    for (const trackId of selected) {
+      const idx = updated.findIndex((t) => t.track_id === trackId);
+      if (idx === -1) continue;
+      updated[idx].status = "analyzing";
+      setTracks([...updated]);
+      try {
+        const res = await fetch("/api/tracks/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            track_id: updated[idx].track_id,
+            apple_music_url: updated[idx].apple_music_url,
+            youtube_url: updated[idx].youtube_url,
+            soundcloud_url: updated[idx].soundcloud_url,
+          }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || "Failed");
+        const data = await res.json();
+        await fetch("/api/tracks/update", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            track_id: updated[idx].track_id,
+            bpm: data.rhythm ? data.rhythm.bpm : undefined,
+            key: data.tonal
+              ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
+              : undefined,
+            danceability: data.rhythm ? data.rhythm.danceability : undefined,
+            // mood_happy: data.mood_happy,
+            // mood_sad: data.mood_sad,
+            // mood_relaxed: data.mood_relaxed,
+            // mood_aggressive: data.mood_aggressive,
+          }),
+        });
+        updated[idx].status = "success";
+      } catch (err) {
+        updated[idx].status = "error";
+        updated[idx].errorMsg =
+          err && typeof err === "object" && "message" in err
+            ? String((err as { message?: unknown }).message)
+            : "Unknown error";
+      }
+      setTracks([...updated]);
+    }
+    setAnalyzing(false);
+  };
+
+
+  const UsernameSelect = useUsernameSelect({
+    usernames,
+    selectedUsername,
+    setSelectedUsername,
+    size: ["sm", "md", "md"],
+    variant: "subtle",
+    width: "100%",
   });
 
   return (
@@ -154,47 +210,50 @@ export default function BackfillAudioPage() {
             </Switch.Control>
             <Switch.Label />
           </Switch.Root>
-          <Select.Root
-            collection={usernameCollection}
-            value={selectedUsername ? [selectedUsername] : []}
-            onValueChange={(vals) => setSelectedUsername(vals.value[0] || "")}
-            width="100%"
-            size={["sm", "md", "md"]}
-            variant={"subtle"}
-          >
-            <Select.HiddenSelect />
-            <Select.Control>
-              <Select.Trigger>
-                <Select.ValueText placeholder="Choose user library" />
-              </Select.Trigger>
-              <Select.IndicatorGroup>
-                <Select.Indicator />
-              </Select.IndicatorGroup>
-            </Select.Control>
-            <Portal>
-              <Select.Positioner>
-                <Select.Content>
-                  {usernames.map((u) => (
-                    <Select.Item key={u} item={{ label: u, value: u }}>
-                      {u}
-                      <Select.ItemIndicator />
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Positioner>
-            </Portal>
-          </Select.Root>
-
-          {/* Master checkbox will replace these buttons */}
-          <Button
-            onClick={handleVectorizeSelected}
-            disabled={!selected.size || analyzing}
-            loading={analyzing}
-            size={["sm", "md", "md"]}
-          >
-            Vectorize
-          </Button>
+          {UsernameSelect}
         </SimpleGrid>
+
+        {/* ActionBar appears when items are selected */}
+        <ActionBar.Root
+          open={selected.size > 0}
+          onOpenChange={(e) => {
+            if (!e.open) deselectAll();
+          }}
+          closeOnInteractOutside={false}
+          portalled={false}
+        >
+          <Portal>
+            <ActionBar.Positioner>
+              <ActionBar.Content>
+                <ActionBar.SelectionTrigger>
+                  {selected.size} selected
+                </ActionBar.SelectionTrigger>
+                <ActionBar.Separator />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleVectorizeSelected}
+                  disabled={!selected.size || analyzing}
+                >
+                  <LuLightbulb style={{ marginRight: 4 }} />
+                  Vectorize
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAnalyzeSelected}
+                  disabled={!selected.size || analyzing}
+                >
+                  <LuMusic style={{ marginRight: 4 }} />
+                  Analyze Audio
+                </Button>
+                <ActionBar.CloseTrigger asChild>
+                  <CloseButton size="sm" />
+                </ActionBar.CloseTrigger>
+              </ActionBar.Content>
+            </ActionBar.Positioner>
+          </Portal>
+        </ActionBar.Root>
 
         {loading ? (
           <Spinner />
@@ -299,37 +358,6 @@ export default function BackfillAudioPage() {
             </Table.Body>
           </Table.Root>
         )}
-        {/* ActionBar appears when items are selected */}
-        <ActionBar.Root
-          open={selected.size > 0}
-          onOpenChange={(e) => {
-            if (!e.open) deselectAll();
-          }}
-          closeOnInteractOutside={false}
-        >
-          <Portal>
-            <ActionBar.Positioner>
-              <ActionBar.Content>
-                <ActionBar.SelectionTrigger>
-                  {selected.size} selected
-                </ActionBar.SelectionTrigger>
-                <ActionBar.Separator />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleVectorizeSelected}
-                  disabled={!selected.size || analyzing}
-                >
-                  <LuLightbulb style={{ marginRight: 4 }} />
-                  Vectorize
-                </Button>
-                <ActionBar.CloseTrigger asChild>
-                  <CloseButton size="sm" />
-                </ActionBar.CloseTrigger>
-              </ActionBar.Content>
-            </ActionBar.Positioner>
-          </Portal>
-        </ActionBar.Root>
       </Container>
     </>
   );

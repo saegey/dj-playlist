@@ -1,12 +1,11 @@
 import { Pool } from "pg";
-import OpenAI from "openai";
+import { getTrackEmbedding } from "@/lib/track-embedding";
 import { Track } from "@/types/track";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function getTrack(track_id: string): Promise<Track | null> {
   const res = await pool.query("SELECT * FROM tracks WHERE track_id = $1", [
@@ -15,21 +14,6 @@ async function getTrack(track_id: string): Promise<Track | null> {
   return res.rows[0] || null;
 }
 
-function buildPrompt(track: Track) {
-  return `Track: ${track.title}
-Artist: ${track.artist}
-Album: ${track.album}
-Year: ${track.year || ""}
-Genres: ${track.genres || ""}
-Styles: ${track.styles || ""}
-Local Tags: ${track.local_tags || ""}
-BPM: ${track.bpm || ""}
-Key: ${track.key || ""}
-Danceability: ${track.danceability || ""}
-Mood Happy: ${track.mood_happy || ""}
-Star Rating: ${track.star_rating || ""}
-Notes: ${track.notes || ""}`;
-}
 
 export async function POST(request: Request) {
   try {
@@ -46,12 +30,8 @@ export async function POST(request: Request) {
         status: 404,
       });
     }
-    const prompt = buildPrompt(track);
-    const embeddingRes = await openai.embeddings.create({
-      model: "text-embedding-ada-002",
-      input: prompt,
-    });
-    const embedding = embeddingRes.data[0].embedding;
+
+    const embedding = await getTrackEmbedding(track);
     // Convert JS array to Postgres vector format: [0.1,0.2,...]
     const pgVector = `[${embedding.join(",")}]`;
     await pool.query("UPDATE tracks SET embedding = $1 WHERE track_id = $2", [

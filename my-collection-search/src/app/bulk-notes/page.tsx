@@ -8,15 +8,13 @@ import {
   Text,
   Textarea,
   Input,
-  Portal,
-  createListCollection,
-  Select,
   Table,
   Checkbox,
   SimpleGrid,
   Group,
   Container,
 } from "@chakra-ui/react";
+import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import { toaster, Toaster } from "@/components/ui/toaster";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
@@ -131,8 +129,13 @@ Example:
     });
   };
 
-  const userCollection = createListCollection({
-    items: usernames.map((u) => ({ label: u, value: u })),
+  const UsernameSelect = useUsernameSelect({
+    usernames,
+    selectedUsername,
+    setSelectedUsername,
+    size: ["sm"],
+    variant: "subtle",
+    width: "100%",
   });
 
   return (
@@ -152,36 +155,7 @@ Example:
               mb={0}
             />
           </Box>
-          <Select.Root
-            collection={userCollection}
-            value={selectedUsername ? [selectedUsername] : []}
-            onValueChange={(v) => setSelectedUsername(v.value[0] || "")}
-            width="100%"
-            size={"sm"}
-            variant={"subtle"}
-          >
-            <Select.HiddenSelect />
-            <Select.Control>
-              <Select.Trigger>
-                <Select.ValueText placeholder="All Users" />
-              </Select.Trigger>
-              <Select.IndicatorGroup>
-                <Select.Indicator />
-              </Select.IndicatorGroup>
-            </Select.Control>
-            <Portal>
-              <Select.Positioner>
-                <Select.Content>
-                  {usernames.map((u) => (
-                    <Select.Item key={u} item={{ label: u, value: u }}>
-                      {u}
-                      <Select.ItemIndicator />
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Positioner>
-            </Portal>
-          </Select.Root>
+          {UsernameSelect}
           {/* Master checkbox will replace select all/deselect all buttons */}
           <Group grow>
             <Button onClick={selectFirst10} size="sm">
@@ -255,19 +229,6 @@ Example:
                   <Table.Cell>{track.title}</Table.Cell>
                   <Table.Cell>{track.artist}</Table.Cell>
                   <Table.Cell>{track.album}</Table.Cell>
-                  {/* <Table.Cell>
-                    {track.discogs_url ? (
-                      <a
-                        href={track.discogs_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Discogs
-                      </a>
-                    ) : (
-                      <Text>—</Text>
-                    )}
-                  </Table.Cell> */}
                 </Table.Row>
               ))}
             </Table.Body>

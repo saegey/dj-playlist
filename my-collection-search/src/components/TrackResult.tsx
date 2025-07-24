@@ -115,7 +115,8 @@ export default function TrackResult({
 
         <Flex direction="column" flex={1}>
           <Text fontSize={["sm", "md", "md"]} fontWeight="bold">
-            {track.title}
+            {track.title}{" "}
+            {track._semanticScore ? `(${track._semanticScore.toFixed(2)})` : ""}
           </Text>
           <Text fontSize={["sm", "md", "md"]}>{track.artist}</Text>
           <Text fontSize={["xs", "sm", "sm"]} color="brand.muted">
@@ -158,14 +159,18 @@ export default function TrackResult({
           {Array.isArray(track.styles) && track.styles.length > 0 && (
             <>
               {track.styles.map((style) => (
-                <Badge key={style} size={["xs", "sm", "sm"]}  variant="outline">
+                <Badge key={style} size={["xs", "sm", "sm"]} variant="outline">
                   {style}
                 </Badge>
               ))}
             </>
           )}
           {track.local_tags && track.local_tags !== "{}" && (
-            <Badge key={track.local_tags} size={["xs", "sm", "sm"]}  variant="solid">
+            <Badge
+              key={track.local_tags}
+              size={["xs", "sm", "sm"]}
+              variant="solid"
+            >
               {track.local_tags}
             </Badge>
           )}

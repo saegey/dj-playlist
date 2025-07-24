@@ -192,7 +192,7 @@ export function usePlaylists() {
 
   // Get recommendations from MeiliSearch based on playlist average embedding
   const getRecommendations = useCallback(
-    async (k: number = 10) => {
+    async (k: number = 25) => {
       if (!playlistAvgEmbedding || !playlistAvgEmbedding.length) return [];
       console.log("Fetching recommendations for playlist", {
         playlistAvgEmbedding,
@@ -204,15 +204,18 @@ export function usePlaylists() {
         const meiliClient = getMeiliClient();
         const index = meiliClient.index("tracks");
         const playlistIds = playlist.map((t) => t.track_id);
+        const playlistArtists = playlist.map((t) => `'${t.artist.replace(/'/g, "''")}'`);
+        let filter = `NOT track_id IN [${playlistIds.join(",")}] AND username = 'saegey'`;
+        if (playlistArtists.length > 0) {
+          filter += ` AND NOT artist IN [${playlistArtists.join(",")}]`;
+        }
         console.log(playlistAvgEmbedding);
         const results = await index.search(undefined, {
           vector: playlistAvgEmbedding,
           limit: k,
-          filter: `NOT track_id IN [${playlistIds.join(
-            ","
-          )}] AND username = 'saegey'`,
+          filter,
         });
-        return results.hits || [];
+        return results.hits as Track[] || [];
       } catch (err) {
         console.error("Error fetching recommendations:", err);
         return [];

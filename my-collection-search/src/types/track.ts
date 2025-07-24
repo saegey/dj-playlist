@@ -27,6 +27,7 @@ export type Track = {
   local_audio_url?: string;
   star_rating?: number;
   username?: string; // Username of the user who added this track
+  _semanticScore?: number; // Optional semantic score for AI recommendations
 };
 
 export type YoutubeVideo = {

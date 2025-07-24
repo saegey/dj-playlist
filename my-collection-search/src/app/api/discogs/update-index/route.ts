@@ -203,21 +203,27 @@ export async function POST() {
         {
           method: "PATCH",
           headers: new Headers({
-            "Authorization": `Bearer ${meiliClient.config.apiKey ?? ""}`,
+            Authorization: `Bearer ${meiliClient.config.apiKey ?? ""}`,
             "Content-Type": "application/json",
           }),
           body: JSON.stringify({
             default: {
               source: "userProvided",
-              dimensions: 1536
-            }
+              dimensions: 1536,
+            },
           }),
         }
       );
       if (!embedderRes.ok) {
-        console.warn("Failed to set MeiliSearch embedders:", await embedderRes.text());
+        console.warn(
+          "Failed to set MeiliSearch embedders:",
+          await embedderRes.text()
+        );
       } else {
-        console.log("MeiliSearch embedders updated for userProvided vectors.", embedderRes);
+        console.log(
+          "MeiliSearch embedders updated for userProvided vectors.",
+          embedderRes
+        );
       }
     } catch (err) {
       console.warn("Error setting MeiliSearch embedders:", err);
@@ -274,14 +280,13 @@ export async function POST() {
     }
 
     await index.updateSearchableAttributes([
-      "title",
+      "local_tags",
       "artist",
       "album",
-      "local_tags",
       "styles",
-      "genres",
+      "title",
       "notes",
-      "username",
+      "genres",
     ]);
     // using meilisearch-js
     await index.updateFilterableAttributes([
@@ -301,6 +306,15 @@ export async function POST() {
       "apple_music_url",
       "youtube_url",
       "hasVectors",
+    ]);
+
+    await index.updateRankingRules([
+      "words",
+      "typo",
+      "proximity",
+      "attribute",
+      "sort",
+      "exactness",
     ]);
     console.log(
       `[Discogs Index] Adding ${upserted.length} tracks to MeiliSearch index...`

@@ -1,15 +1,7 @@
 import React from "react";
 import { useFriends } from "@/hooks/useFriends";
-import {
-  Box,
-  Input,
-  Text,
-  Button,
-  Portal,
-  Select,
-  createListCollection,
-  Menu,
-} from "@chakra-ui/react";
+import { Box, Input, Text, Button, Portal, Menu } from "@chakra-ui/react";
+import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import TrackResult from "@/components/TrackResult";
 import { Track } from "@/types/track";
 import { FiMoreVertical } from "react-icons/fi";
@@ -42,8 +34,13 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   onUsernameChange,
 }) => {
   const { friends, loading: friendsLoading } = useFriends();
-  const usernameCollection = createListCollection({
-    items: friends.map((u) => ({ label: u, value: u })),
+  const UsernameSelect = useUsernameSelect({
+    usernames: friends,
+    selectedUsername,
+    setSelectedUsername: onUsernameChange || (() => {}),
+    size: ["sm", "md", "md"],
+    variant: "subtle",
+    width: "120px",
   });
 
   return (
@@ -54,40 +51,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           value={query}
           onChange={onQueryChange}
           flex="1"
+          variant={"subtle"}
         />
         {friendsLoading ? (
           <Text>Loading friends...</Text>
         ) : friends.length > 0 && onUsernameChange ? (
-          <Select.Root
-            collection={usernameCollection}
-            value={selectedUsername ? [selectedUsername] : []}
-            onValueChange={(vals) => {
-              onUsernameChange(vals.value.length ? vals.value[0] : "");
-            }}
-            width="120px"
-          >
-            <Select.HiddenSelect />
-            <Select.Control>
-              <Select.Trigger>
-                <Select.ValueText placeholder="Choose user library" />
-              </Select.Trigger>
-              <Select.IndicatorGroup>
-                <Select.Indicator />
-              </Select.IndicatorGroup>
-            </Select.Control>
-            <Portal>
-              <Select.Positioner>
-                <Select.Content>
-                  {friends.map((u) => (
-                    <Select.Item item={{ label: u, value: u }} key={u}>
-                      {u}
-                      <Select.ItemIndicator />
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Positioner>
-            </Portal>
-          </Select.Root>
+          UsernameSelect
         ) : null}
       </Box>
 

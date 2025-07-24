@@ -9,14 +9,12 @@ import {
   Text,
   Button,
   Spinner,
-  Select,
   Image,
   Input,
   HStack,
-  Portal,
-  createListCollection,
   Container,
 } from "@chakra-ui/react";
+import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import TrackResult from "../../components/TrackResult";
 import TopMenuBar from "@/components/MenuBar";
 import { TrackEditFormProps } from "../../components/TrackEditForm";
@@ -148,8 +146,13 @@ export default function MissingAppleMusicPage() {
     }
   };
 
-  const usernameCollection = createListCollection({
-    items: usernames.map((u) => ({ label: u, value: u })),
+  const UsernameSelect = useUsernameSelect({
+    usernames,
+    selectedUsername,
+    setSelectedUsername,
+    size: ["sm", "md", "md"],
+    variant: "subtle",
+    width: "320px",
   });
 
   return (
@@ -157,37 +160,7 @@ export default function MissingAppleMusicPage() {
       <TopMenuBar current="/missing-apple-music" />
       <Container maxW={["8xl", "2xl", "2xl"]}>
         <HStack mb={4} align="flex-end">
-          <Select.Root
-            collection={usernameCollection}
-            value={selectedUsername ? [selectedUsername] : []}
-            onValueChange={(vals) => {
-              setSelectedUsername(vals.value.length ? vals.value[0] : "");
-            }}
-            width="320px"
-          >
-            <Select.HiddenSelect />
-            <Select.Control>
-              <Select.Trigger>
-                <Select.ValueText placeholder="Choose user library" />
-              </Select.Trigger>
-              <Select.IndicatorGroup>
-                <Select.Indicator />
-              </Select.IndicatorGroup>
-            </Select.Control>
-
-            <Portal>
-              <Select.Positioner>
-                <Select.Content>
-                  {usernames.map((u) => (
-                    <Select.Item key={u} item={{ label: u, value: u }}>
-                      {u}
-                      <Select.ItemIndicator />
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Positioner>
-            </Portal>
-          </Select.Root>
+          {UsernameSelect}
         </HStack>
         {typeof total === "number" && (
           <Text fontSize="md" color="gray.600" mb={4}>
