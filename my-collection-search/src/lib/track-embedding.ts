@@ -1,7 +1,11 @@
 import OpenAI from "openai";
 import { Track } from "@/types/track";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+    ? process.env.OPENAI_API_KEY
+    : "My API Key",
+});
 
 export function buildTrackPrompt(track: Track): string {
   const parts = [];
