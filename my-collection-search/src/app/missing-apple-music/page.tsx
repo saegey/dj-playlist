@@ -18,6 +18,7 @@ import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import TrackResult from "../../components/TrackResult";
 import TopMenuBar from "@/components/MenuBar";
 import { TrackEditFormProps } from "../../components/TrackEditForm";
+import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 
 interface AppleMusicResult {
   id: string;
@@ -35,7 +36,7 @@ export default function MissingAppleMusicPage() {
   const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const { friends: usernames } = useFriends();
-  const [selectedUsername, setSelectedUsername] = useState<string>("");
+  const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const [appleResults, setAppleResults] = useState<

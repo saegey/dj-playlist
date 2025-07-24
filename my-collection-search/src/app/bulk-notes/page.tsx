@@ -18,13 +18,14 @@ import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import { toaster, Toaster } from "@/components/ui/toaster";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
+import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 
 export default function BulkNotesPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [artistSearch, setArtistSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { friends: usernames } = useFriends();
-  const [selectedUsername, setSelectedUsername] = useState<string>("");
+  const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const [loading, setLoading] = useState(false);
   const [bulkPrompt, setBulkPrompt] = useState("");
   const [bulkJson, setBulkJson] = useState("");

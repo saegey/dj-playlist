@@ -19,6 +19,7 @@ import {
 import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
+import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 
 interface BackfillTrack extends Track {
   status?: "pending" | "analyzing" | "success" | "error";
@@ -30,7 +31,7 @@ export default function BackfillAudioPage() {
   const [showMissingVectors, setShowMissingVectors] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { friends: usernames } = useFriends();
-  const [selectedUsername, setSelectedUsername] = useState<string>("");
+  const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);

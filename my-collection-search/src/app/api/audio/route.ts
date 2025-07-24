@@ -28,9 +28,30 @@ export async function GET(request: Request) {
     const nodeStream = fs.createReadStream(filePath);
     const readableStream = new ReadableStream({
       start(ctrl) {
-        nodeStream.on("data", (chunk) => ctrl.enqueue(chunk));
-        nodeStream.on("end", () => ctrl.close());
-        nodeStream.on("error", (err) => ctrl.error(err));
+        function cleanup() {
+          nodeStream.removeAllListeners("data");
+          nodeStream.removeAllListeners("end");
+          nodeStream.removeAllListeners("error");
+        }
+        nodeStream.on("data", (chunk) => {
+          try {
+            ctrl.enqueue(chunk);
+          } catch {
+            cleanup();
+            nodeStream.destroy();
+          }
+        });
+        nodeStream.once("end", () => {
+          cleanup();
+          try { ctrl.close(); } catch {}
+        });
+        nodeStream.once("error", (err) => {
+          cleanup();
+          try { ctrl.error(err); } catch {}
+        });
+      },
+      cancel() {
+        nodeStream.destroy();
       },
     });
     return new Response(readableStream, {
@@ -53,9 +74,30 @@ export async function GET(request: Request) {
   const nodeStream = fs.createReadStream(filePath, { start, end });
   const readableStream = new ReadableStream({
     start(ctrl) {
-      nodeStream.on("data", (chunk) => ctrl.enqueue(chunk));
-      nodeStream.on("end", () => ctrl.close());
-      nodeStream.on("error", (err) => ctrl.error(err));
+      function cleanup() {
+        nodeStream.removeAllListeners("data");
+        nodeStream.removeAllListeners("end");
+        nodeStream.removeAllListeners("error");
+      }
+      nodeStream.on("data", (chunk) => {
+        try {
+          ctrl.enqueue(chunk);
+        } catch {
+          cleanup();
+          nodeStream.destroy();
+        }
+      });
+      nodeStream.once("end", () => {
+        cleanup();
+        try { ctrl.close(); } catch {}
+      });
+      nodeStream.once("error", (err) => {
+        cleanup();
+        try { ctrl.error(err); } catch {}
+      });
+    },
+    cancel() {
+      nodeStream.destroy();
     },
   });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 import {
   Box,
   Flex,
@@ -55,7 +56,7 @@ export default function SearchPage() {
     setHasMounted(true);
   }, []);
 
-  const [selectedUsername, setSelectedUsername] = useState<string>("");
+  const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const {
     query,
     onQueryChange,
@@ -83,7 +84,7 @@ export default function SearchPage() {
     removeFromPlaylist,
     moveTrack,
     playlistAvgEmbedding,
-    getRecommendations
+    getRecommendations,
   } = usePlaylists();
 
   const [editTrack, setEditTrack] = useState<Track | null>(null);
@@ -259,7 +260,8 @@ export default function SearchPage() {
                   <Drawer.Title>
                     Playlist ({hasMounted ? playlist.length : 0})
                     <Text fontSize="sm" color="gray.500" mb={2}>
-                      Total Playtime: {hasMounted ? totalPlaytimeFormatted : "--:--"}
+                      Total Playtime:{" "}
+                      {hasMounted ? totalPlaytimeFormatted : "--:--"}
                       {/* Playlist Recommendations */}
                     </Text>
                   </Drawer.Title>
@@ -308,7 +310,12 @@ export default function SearchPage() {
                   {/* Recommendations below playlist tracks */}
                   {recommendations.length > 0 && (
                     <Box mt={6}>
-                      <Text fontWeight="bold" fontSize="sm" color="blue.500" mb={2}>
+                      <Text
+                        fontWeight="bold"
+                        fontSize="sm"
+                        color="blue.500"
+                        mb={2}
+                      >
                         Recommended Tracks:
                       </Text>
                       <Box display="flex" flexDirection="column" gap={2}>
