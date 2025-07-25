@@ -269,7 +269,7 @@ export default function SearchPage() {
                   </Drawer.Title>
                   <Box mt={2}>
                     <Box>
-                      <Flex gap={2} alignItems="center" mb={4}>
+                      <Flex gap={2} alignItems="center" mb={4} mt={4}>
                         <Button
                           variant="solid"
                           size="sm"
@@ -323,6 +323,7 @@ export default function SearchPage() {
                       <Box display="flex" flexDirection="column" gap={2}>
                         {recommendations.map((rec: Track) => (
                           <TrackResult
+                            allowMinimize={false}
                             key={rec.track_id}
                             track={rec}
                             buttons={[
