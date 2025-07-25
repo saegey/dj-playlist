@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "migrate": "node-pg-migrate", 
+    "migrate": "node-pg-migrate",
     "search": "../meilisearch --master-key=mysupersecretkey"
   },
   "dependencies": {

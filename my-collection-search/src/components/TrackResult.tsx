@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   Flex,
@@ -47,9 +47,21 @@ export default function TrackResult({
 }: TrackResultProps) {
   const [expanded, setExpanded] = useState(false);
   const [hasMounted, setHasMounted] = React.useState(false);
+  const [playingUrl, setPlayingUrl] = useState("");
   React.useEffect(() => {
     setHasMounted(true);
   }, []);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Start playback when audio is ready and URL is set
+  useEffect(() => {
+    if (playingUrl && audioRef.current) {
+      audioRef.current.play().catch((err) => {
+        console.error("Autoplay failed:", err);
+      });
+    }
+  }, [playingUrl]);
 
   // Prevent hydration mismatch: render a placeholder for minimized view until after mount
   if (minimized && !expanded && !hasMounted) {
@@ -234,16 +246,40 @@ export default function TrackResult({
         </Flex>
 
         {track.local_audio_url && (
-          <Box mt={2}>
-            <audio controls style={{ width: "100%" }}>
-              <source
-                src={`/api/audio?filename=${track.local_audio_url}`}
-                type="audio/mp4"
-              />
-            </audio>
+          <Box
+            mt={2}
+            // borderWidth="1px"
+            // borderRadius="md"
+            // bg="gray.50"
+            // p={2}
+            // display="flex"
+            // alignItems="center"
+            width="100%"
+            flexDir="column"
+          >
+            {playingUrl === `/api/audio?filename=${track.local_audio_url}` ? (
+              <audio
+                ref={audioRef}
+                controls
+                style={{ width: "100%" }}
+                preload="none"
+                src={playingUrl}
+              >
+                Your browser does not support the audio element.
+              </audio>
+            ) : (
+              <Button
+                onClick={() =>
+                  setPlayingUrl(`/api/audio?filename=${track.local_audio_url}`)
+                }
+                size="sm"
+                mt={1}
+              >
+                ▶ Play
+              </Button>
+            )}
           </Box>
         )}
-
         {/* Minimize button */}
         <Flex mt={2}>
           {allowMinimize && (
