@@ -378,7 +378,7 @@ export default function SearchPage() {
         onOpenChange={(details) => setDialogOpen(details.open)}
         initialFocusEl={() => initialFocusRef.current}
         role="dialog"
-        size={["full", "md", "lg"]}
+        size={["full", "xl", "xl"]}
       >
         <Portal>
           <Dialog.Backdrop />

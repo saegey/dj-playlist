@@ -79,13 +79,21 @@ export async function POST(request: Request) {
       if (!filePath && soundcloud_url) {
         console.log(`Downloading from SoundCloud: ${soundcloud_url}`);
         try {
-          // Use a deterministic output filename
-          const scdlOut = path.join(tmpDir, `soundcloud_${Date.now()}.mp3`);
+          // Download to tmpDir using scdl, then find the newest .mp3 file
           await execAsync(
-            `scdl -l "${soundcloud_url}" --path "${tmpDir}" --onlymp3 --addtofile --output "${scdlOut}"`
+            `scdl -l "${soundcloud_url}" --path "${tmpDir}" --onlymp3 --addtofile`
           );
-          if (fs.existsSync(scdlOut) && fs.statSync(scdlOut).size > 0) {
-            filePath = scdlOut;
+          // Find the newest .mp3 file in tmpDir
+          const files = fs
+            .readdirSync(tmpDir)
+            .filter((f) => f.endsWith(".mp3"))
+            .map((f) => ({
+              file: path.join(tmpDir, f),
+              mtime: fs.statSync(path.join(tmpDir, f)).mtime.getTime(),
+            }))
+            .sort((a, b) => b.mtime - a.mtime);
+          if (files.length > 0 && fs.statSync(files[0].file).size > 0) {
+            filePath = files[0].file;
           } else {
             throw new Error("Downloaded .mp3 file from SoundCloud not found");
           }

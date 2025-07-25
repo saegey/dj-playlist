@@ -1,3 +1,5 @@
+// Utility to strip query/hash from a SoundCloud URL
+
 "use client";
 
 import { useState } from "react";
@@ -33,6 +35,18 @@ export interface TrackEditFormProps {
   youtube_url?: string;
   soundcloud_url?: string;
   star_rating?: number;
+}
+
+function cleanSoundcloudUrl(url?: string) {
+  if (!url) return url;
+  try {
+    const urlObj = new URL(url);
+    urlObj.search = "";
+    urlObj.hash = "";
+    return urlObj.toString();
+  } catch {
+    return url;
+  }
 }
 
 // Labeled input for text/number fields
@@ -134,7 +148,12 @@ export default function TrackEditForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    onSave(form);
+    // Strip query params from soundcloud_url if present
+    const cleanForm = {
+      ...form,
+      soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
+    };
+    onSave(cleanForm);
     setLoading(false);
   };
 
@@ -234,7 +253,7 @@ export default function TrackEditForm({
         body: JSON.stringify({
           apple_music_url: form.apple_music_url,
           youtube_url: form.youtube_url,
-          soundcloud_url: form.soundcloud_url,
+          soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
           track_id: form.track_id,
         }),
       });
@@ -247,7 +266,10 @@ export default function TrackEditForm({
           key: data.tonal.key_edma
             ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
             : prev.key,
-          danceability: data.rhythm.danceability || prev.danceability,
+          danceability:
+            typeof data.rhythm.danceability === "number"
+              ? data.rhythm.danceability.toFixed(3)
+              : prev.danceability,
         }));
       } else {
         const err = await res.json();

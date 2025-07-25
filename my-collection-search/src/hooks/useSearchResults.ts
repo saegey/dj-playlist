@@ -49,34 +49,18 @@ export function useSearchResults({
   // Search refresh logic
   // (removed duplicate refreshSearch declaration)
 
+  // Reset offset to 0 whenever query or username changes
+  useEffect(() => {
+    setOffset(0);
+  }, [query, username]);
+
   // Search logic
   useEffect(() => {
     if (!client) {
       return;
     }
     const filter = username ? [`username = "${username}"`] : undefined;
-    if (!query) {
-      (async () => {
-        const index = client.index<Track>("tracks");
-        const stats = await index.getStats();
-        const total = stats.numberOfDocuments || 0;
-        const randomOffset =
-          total > 10 ? Math.floor(Math.random() * (total - 10)) : 0;
-        const res = await index.search("", {
-          limit: 10,
-          offset: randomOffset,
-          filter,
-        });
-        setResults(res.hits);
-        setEstimatedResults(total);
-        setOffset(10);
-        setHasMore(total > 10);
-        fetchPlaylistCounts(res.hits.map((t) => t.track_id));
-      })();
-      return;
-    }
-
-    const search = async () => {
+    const doSearch = async () => {
       const index = client.index<Track>("tracks");
       const res = await index.search(query, { limit, offset: 0, filter });
       setResults(res.hits);
@@ -85,7 +69,7 @@ export function useSearchResults({
       setEstimatedResults(res.estimatedTotalHits || 0);
       fetchPlaylistCounts(res.hits.map((t) => t.track_id));
     };
-    search();
+    doSearch();
   }, [query, fetchPlaylistCounts, client, username]);
 
   const refreshSearch = useCallback(() => {
