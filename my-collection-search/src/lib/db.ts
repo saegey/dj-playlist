@@ -1,3 +1,10 @@
+import { Playlist } from "@/types/track";
+import { Pool } from "pg";
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
 // Get the number of playlists each track appears in
 // Returns: { [track_id: string]: number }
 export async function getPlaylistCountsForTracks(
@@ -32,42 +39,39 @@ export async function updateTrack(data: {
   local_audio_url?: string;
 }) {
   const { track_id, ...fields } = data;
-  if (!track_id || Object.keys(fields).length === 0) return null;
-  // Fetch current track to preserve local_audio_url
-  const currentRes = await pool.query(
-    "SELECT local_audio_url FROM tracks WHERE track_id = $1",
-    [track_id]
-  );
-  const current = currentRes.rows[0];
-  // if (current && current.local_audio_url !== undefined) {
-  //   // Remove local_audio_url from update fields if present
-  //   if ("local_audio_url" in fields) {
-  //     delete fields.local_audio_url;
-  //   }
-  // }
+  if (!track_id) return null;
+  // Remove undefined fields
+  const filteredFields: Record<string, unknown> = {};
+  Object.keys(fields).forEach((key) => {
+    const value = fields[key as keyof typeof fields];
+    if (value !== undefined && value !== null && value !== "") {
+      filteredFields[key] = value;
+    }
+  });
+  if (Object.keys(filteredFields).length === 0) {
+    // No fields to update, return current
+    const currentRes = await pool.query(
+      "SELECT * FROM tracks WHERE track_id = $1",
+      [track_id]
+    );
+    return currentRes.rows[0] || null;
+  }
   // Build dynamic SET clause
-  const setClauses = [];
+  const setClauses: string[] = [];
   const values = [];
   let idx = 1;
-  for (const key in fields) {
+  (Object.keys(filteredFields) as (keyof typeof fields)[]).forEach((key) => {
     setClauses.push(`${key} = $${idx}`);
-    values.push(fields[key as keyof typeof fields]);
+    values.push(filteredFields[key]);
     idx++;
-  }
+  });
   values.push(track_id);
-  if (setClauses.length === 0) return current || null;
   const query = `UPDATE tracks SET ${setClauses.join(
     ", "
   )} WHERE track_id = $${idx} RETURNING *`;
   const { rows } = await pool.query(query, values);
-  return rows[0] || current || null;
+  return rows[0] || null;
 }
-import { Playlist } from "@/types/track";
-import { Pool } from "pg";
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
 
 export async function getAllTracks() {
   const { rows } = await pool.query("SELECT * FROM tracks ORDER BY id DESC");
@@ -92,7 +96,7 @@ export async function getAllPlaylists() {
       tracksByPlaylist[row.playlist_id] = [];
     tracksByPlaylist[row.playlist_id].push(row.track_id);
   });
-  
+
   return playlists.map((p: Playlist) => ({
     ...p,
     tracks: tracksByPlaylist[p.id] || [],
