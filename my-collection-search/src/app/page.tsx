@@ -137,7 +137,7 @@ export default function SearchPage() {
         setRecommendations([]);
         return;
       }
-      const recs = await getRecommendations(25);
+      const recs = await getRecommendations(50);
       if (!cancelled) setRecommendations(recs);
     }
     fetchRecommendations();
