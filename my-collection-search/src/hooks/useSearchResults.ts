@@ -99,8 +99,6 @@ export function useSearchResults({ client, username, filter }: UseSearchResultsO
   }, []);
 
   const clearFilter = useCallback(() => {
-    setActiveFilter(null);
-    setActiveFilterType(null);
     setOffset(0);
     setHasMore(false);
     (async () => {
