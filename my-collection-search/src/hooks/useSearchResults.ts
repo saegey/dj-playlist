@@ -4,16 +4,15 @@ import type { Track } from "@/types/track";
 import { useEffect } from "react";
 import type { MeiliSearch } from "meilisearch";
 
+
 interface UseSearchResultsOptions {
   client: MeiliSearch | null;
   username?: string;
+  filter?: string[];
 }
 
-export function useSearchResults({
-  client,
-  username,
-}: UseSearchResultsOptions) {
-  const [query, setQuery] = useState("");
+export function useSearchResults({ client, username, filter }: UseSearchResultsOptions) {
+  // query is only a prop now
   const [results, setResults] = useState<Track[]>([]);
   const [estimatedResults, setEstimatedResults] = useState(0);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
@@ -25,6 +24,8 @@ export function useSearchResults({
   const [playlistCounts, setPlaylistCounts] = useState<Record<string, number>>(
     {}
   );
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(false);
   const limit = 20;
   const [refreshFlag, setRefreshFlag] = useState(false);
 
@@ -52,17 +53,18 @@ export function useSearchResults({
   // Reset offset to 0 whenever query or username changes
   useEffect(() => {
     setOffset(0);
-  }, [query, username]);
+  }, [query, username, filter]);
 
   // Search logic
   useEffect(() => {
     if (!client) {
       return;
     }
-    const filter = username ? [`username = "${username}"`] : undefined;
+    // Use custom filter if provided, else fallback to username filter
+    const searchFilter = filter ?? (username ? [`username = "${username}"`] : undefined);
     const doSearch = async () => {
       const index = client.index<Track>("tracks");
-      const res = await index.search(query, { limit, offset: 0, filter });
+      const res = await index.search(query || "", { limit, offset: 0, filter: searchFilter });
       setResults(res.hits);
       setOffset(limit);
       setHasMore(res.hits.length === limit);
@@ -70,22 +72,22 @@ export function useSearchResults({
       fetchPlaylistCounts(res.hits.map((t) => t.track_id));
     };
     doSearch();
-  }, [query, fetchPlaylistCounts, client, username]);
+  }, [query, fetchPlaylistCounts, client, username, filter]);
 
   const refreshSearch = useCallback(() => {
     if (!client) {
       return;
     }
-    const filter = username ? [`username = "${username}"`] : undefined;
+    const searchFilter = filter ?? (username ? [`username = "${username}"`] : undefined);
     const index = client.index<Track>("tracks");
-    index.search(query, { limit, offset: 0, filter }).then((res) => {
+    index.search(query, { limit, offset: 0, filter: searchFilter }).then((res) => {
       setResults(res.hits);
       setEstimatedResults(res.estimatedTotalHits || 0);
       setOffset(limit);
       setHasMore(res.hits.length === limit);
       fetchPlaylistCounts(res.hits.map((t) => t.track_id));
     });
-  }, [client, query, limit, fetchPlaylistCounts, username]);
+  }, [client, query, limit, fetchPlaylistCounts, username, filter]);
 
   // Effect to refresh search when refreshFlag is set
   useEffect(() => {
@@ -103,7 +105,6 @@ export function useSearchResults({
   const clearFilter = useCallback(() => {
     setActiveFilter(null);
     setActiveFilterType(null);
-    setQuery("");
     setOffset(0);
     setHasMore(false);
     (async () => {
@@ -128,19 +129,8 @@ export function useSearchResults({
       return;
     }
     const index = client.index<Track>("tracks");
-    // let res;
-    // if (activeFilter || activeFilterType) {
-    //   let filter;
-    //   if (activeFilterType === "genre") filter = [`genres = \"${activeFilter}\"`];
-    //   else if (activeFilterType === "style") filter = [`styles = \"${activeFilter}\"`];
-    //   else if (activeFilterType === "artist") filter = [`artist = \"${activeFilter}\"`];
-    //   res = await index.search("", { filter, limit, offset });
-    // } else {
-    //   res = await index.search(query, { limit, offset });
-    // }
-    const filter = username ? [`username = "${username}"`] : undefined;
-
-    const res = await index.search(query, { limit, offset, filter });
+    const searchFilter = filter ?? (username ? [`username = "${username}"`] : undefined);
+    const res = await index.search(query, { limit, offset, filter: searchFilter });
     setResults((prev) => {
       const newTracks = res.hits.filter((t) => !(t.track_id in playlistCounts));
       if (newTracks.length > 0)
@@ -149,7 +139,7 @@ export function useSearchResults({
     });
     setOffset(offset + limit);
     setHasMore(res.hits.length === limit);
-  }, [client, username, query, offset, fetchPlaylistCounts, playlistCounts]);
+  }, [client, username, query, offset, fetchPlaylistCounts, playlistCounts, filter]);
 
   const onQueryChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,8 +149,6 @@ export function useSearchResults({
   );
 
   return {
-    query,
-    onQueryChange,
     estimatedResults,
     activeFilter,
     activeFilterType,
@@ -171,5 +159,10 @@ export function useSearchResults({
     loadMore,
     refreshSearch,
     needsRefresh,
+    loading,
+    setQuery,
+    query, 
+    setLoading,
+    onQueryChange
   };
 }

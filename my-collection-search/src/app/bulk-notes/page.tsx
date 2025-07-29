@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useFriends } from "@/hooks/useFriends";
 import {
   Box,
@@ -16,38 +16,58 @@ import {
 } from "@chakra-ui/react";
 import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import { toaster, Toaster } from "@/components/ui/toaster";
-import { Track } from "../../types/track";
+// import { Track } from "../../types/track";
+import { useSearchResults } from "@/hooks/useSearchResults";
 import TopMenuBar from "@/components/MenuBar";
 import { useSelectedUsername } from "@/hooks/useSelectedUsername";
+import { getMeiliClient } from "@/lib/meili";
+import { MeiliSearch } from "meilisearch";
 
 export default function BulkNotesPage() {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [artistSearch, setArtistSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { friends: usernames } = useFriends();
   const [selectedUsername, setSelectedUsername] = useSelectedUsername();
-  const [loading, setLoading] = useState(false);
   const [bulkPrompt, setBulkPrompt] = useState("");
   const [bulkJson, setBulkJson] = useState("");
+  const [filterLocalTagsEmpty, setFilterLocalTagsEmpty] = useState(true);
+  const [artistSearch, setArtistSearch] = useState("");
+  const [meiliClient, setMeiliClient] = useState<MeiliSearch | null>(null);
+
+  React.useEffect(() => {
+    try {
+      const client = getMeiliClient();
+      setMeiliClient(client);
+    } catch (err) {
+      console.warn("Skipping MeiliSearch: ", err);
+    }
+  }, []);
+
+  const {
+    // query,
+    setQuery,
+    // onQueryChange,
+    // estimatedResults,
+    results: tracks,
+    // playlistCounts,
+    // hasMore,
+    // loadMore,
+    // needsRefresh,
+    loading,
+  } = useSearchResults({
+    client: meiliClient,
+    username: selectedUsername,
+  });
+
+  React.useEffect(() => {
+    if (meiliClient && artistSearch !== "") {
+      setQuery(artistSearch);
+    }
+  }, [artistSearch, meiliClient, setQuery]);
 
   // Friends are loaded via useFriends hook
 
-  useEffect(() => {
-    setLoading(true);
-    let url = artistSearch.trim()
-      ? `/api/tracks/bulk-notes-search?artist=${encodeURIComponent(
-          artistSearch
-        )}`
-      : "/api/tracks/bulk-notes";
-    if (selectedUsername)
-      url +=
-        (url.includes("?") ? "&" : "?") +
-        `username=${encodeURIComponent(selectedUsername)}`;
-    fetch(url)
-      .then((r) => r.json())
-      .then((data) => setTracks(data.tracks || []))
-      .finally(() => setLoading(false));
-  }, [selectedUsername, artistSearch]);
+  // Toggle for filtering tracks with/without local_tags
+  const handleToggleLocalTags = () => setFilterLocalTagsEmpty((v) => !v);
 
   const toggleSelect = (id: string) =>
     setSelected((prev) => {
@@ -117,13 +137,13 @@ Example:
       toaster.create({ title: "Invalid JSON", type: "error" });
       return;
     }
-    setLoading(true);
+    // no-op: loading handled by hook
     const res = await fetch("/api/tracks/bulk-notes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ updates: parsed }),
     });
-    setLoading(false);
+    // no-op: loading handled by hook
     toaster.create({
       title: res.ok ? "Tracks updated" : "Update failed",
       type: res.ok ? "success" : "error",
@@ -144,7 +164,19 @@ Example:
       <Toaster />
       <TopMenuBar current="/bulk-notes" />
       <Container>
-        <SimpleGrid gap={2} mb={4} columns={[1, 1, 3]}>
+        <SimpleGrid gap={2} mb={4} columns={[1, 1, 4]}>
+          <Box display="flex" alignItems="center">
+            <Checkbox.Root
+              checked={filterLocalTagsEmpty}
+              onCheckedChange={handleToggleLocalTags}
+            >
+              <Checkbox.HiddenInput />
+              <Checkbox.Control />
+              <Text ml={2} fontSize="sm">
+                Only show tracks missing local_tags
+              </Text>
+            </Checkbox.Root>
+          </Box>
           <Box>
             <Input
               placeholder="Search by artist..."
