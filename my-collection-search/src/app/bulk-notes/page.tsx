@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useFriends } from "@/hooks/useFriends";
 import {
   Box,
@@ -43,19 +43,13 @@ export default function BulkNotesPage() {
   }, []);
 
   const {
-    // query,
     setQuery,
-    // onQueryChange,
-    // estimatedResults,
     results: tracks,
-    // playlistCounts,
-    // hasMore,
-    // loadMore,
-    // needsRefresh,
     loading,
   } = useSearchResults({
     client: meiliClient,
     username: selectedUsername,
+    filter: filterLocalTagsEmpty ? "local_tags IS NULL OR local_tags IS EMPTY" : undefined,
   });
 
   React.useEffect(() => {

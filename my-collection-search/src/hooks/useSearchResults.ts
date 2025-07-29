@@ -8,17 +8,12 @@ import type { MeiliSearch } from "meilisearch";
 interface UseSearchResultsOptions {
   client: MeiliSearch | null;
   username?: string;
-  filter?: string[];
+  filter?: string;
 }
 
 export function useSearchResults({ client, username, filter }: UseSearchResultsOptions) {
-  // query is only a prop now
   const [results, setResults] = useState<Track[]>([]);
   const [estimatedResults, setEstimatedResults] = useState(0);
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [activeFilterType, setActiveFilterType] = useState<
-    "genre" | "style" | "artist" | null
-  >(null);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [playlistCounts, setPlaylistCounts] = useState<Record<string, number>>(
@@ -56,6 +51,7 @@ export function useSearchResults({ client, username, filter }: UseSearchResultsO
   }, [query, username, filter]);
 
   // Search logic
+  // const filterKey = JSON.stringify(filter);
   useEffect(() => {
     if (!client) {
       return;
@@ -150,8 +146,6 @@ export function useSearchResults({ client, username, filter }: UseSearchResultsO
 
   return {
     estimatedResults,
-    activeFilter,
-    activeFilterType,
     clearFilter,
     results,
     playlistCounts,
