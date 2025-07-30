@@ -45,13 +45,28 @@ export async function POST(request: Request) {
     };
     if (pg.url) {
       const parsed = parsePgUrl(pg.url);
-      pg = { ...pg, ...{ ...parsed, port: parsed.port ? String(parsed.port) : undefined } };
+      pg = {
+        ...pg,
+        ...{ ...parsed, port: parsed.port ? String(parsed.port) : undefined },
+      };
     }
     const db = pg.db || "mydb";
     const user = pg.user || "myuser";
     const pass = pg.pass || "mypassword";
     const host = pg.host || "db";
     const port = pg.port || "5432";
+
+    // Delete all rows from all tables before restore
+    // Generate a script that disables triggers, deletes all data, and re-enables triggers
+    const cleanScript = `\nDO $$ DECLARE\n    r RECORD;\nBEGIN\n    -- Disable triggers\n    EXECUTE 'SET session_replication_role = replica';\n    -- Delete from all tables\n    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP\n        EXECUTE 'DELETE FROM "' || r.tablename || '"';\n    END LOOP;\n    -- Re-enable triggers\n    EXECUTE 'SET session_replication_role = DEFAULT';\nEND $$;\n`;
+    const cleanPath = path.join(restoreDir, "clean.sql");
+    fs.writeFileSync(cleanPath, cleanScript);
+    // Run the clean script
+    const cleanCmd = `PGPASSWORD='${pass}' psql -U ${user} -h ${host} -p ${port} -d ${db} -f '${cleanPath}'`;
+    execSync(cleanCmd, {
+      stdio: "ignore",
+      env: { ...process.env, PGPASSWORD: pass },
+    });
 
     // Run psql restore
     const cmd = `PGPASSWORD='${pass}' psql -U ${user} -h ${host} -p ${port} -d ${db} -f '${restorePath}'`;
@@ -60,7 +75,9 @@ export async function POST(request: Request) {
       env: { ...process.env, PGPASSWORD: pass },
     });
 
-    return NextResponse.json({ message: "Database restored successfully." });
+    return NextResponse.json({
+      message: "Database cleaned and restored successfully.",
+    });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : String(e) },

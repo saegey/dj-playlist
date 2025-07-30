@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "migrate": "node-pg-migrate",
-    "search": "../meilisearch --master-key=mysupersecretkey"
+    "search": "../meilisearch --master-key=mysupersecretkey",
+    "psql": "docker-compose exec db psql -U djplaylist -d djplaylist"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",

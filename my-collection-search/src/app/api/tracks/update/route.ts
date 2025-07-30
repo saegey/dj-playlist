@@ -49,26 +49,31 @@ export async function PATCH(req: Request) {
       }
     }
 
+    let embedding;
     if (shouldUpdateEmbedding) {
       try {
-        const embedding = await getTrackEmbedding(updated);
+        embedding = await getTrackEmbedding(updated);
         const pgVector = `[${embedding.join(",")}]`;
         await pool.query(
           "UPDATE tracks SET embedding = $1 WHERE track_id = $2",
           [pgVector, updated.track_id]
         );
         updated.embedding = embedding;
-        // Update MeiliSearch index with new embedding
-        const index = meiliClient.index("tracks");
-        await index.updateDocuments([
-          {
-            ...updated,
-            _vectors: { default: embedding },
-          },
-        ]);
       } catch (embedError) {
         console.error("Failed to update embedding:", embedError);
       }
+    }
+    // Always update MeiliSearch
+    try {
+      const index = meiliClient.index("tracks");
+      await index.updateDocuments([
+        {
+          ...updated,
+          ...(embedding ? { _vectors: { default: embedding } } : {}),
+        },
+      ]);
+    } catch (meiliError) {
+      console.error("Failed to update MeiliSearch:", meiliError);
     }
 
     return NextResponse.json(updated);
