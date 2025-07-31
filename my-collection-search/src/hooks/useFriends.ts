@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 
-export function useFriends({ showCurrentUser = false }) {
+interface UseFriendsOptions {
+  showCurrentUser?: boolean;
+}
+
+export function useFriends({
+  showCurrentUser = false,
+}: UseFriendsOptions = {}) {
   const [friends, setFriends] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

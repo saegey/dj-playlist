@@ -222,7 +222,6 @@ export default function SearchPage() {
               setSelectedUsername(username);
             }}
             loading={loading}
-            // meiliClient={meiliClient}
           />
         </Container>
 

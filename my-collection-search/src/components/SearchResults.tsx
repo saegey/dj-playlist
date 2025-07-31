@@ -66,6 +66,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     size: ["sm", "md", "md"],
     variant: "subtle",
     width: "120px",
+    includeAllOption: true,
   });
 
   // Debounced input state
@@ -94,9 +95,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
           flex="1"
           variant={"subtle"}
         />
-        {friendsLoading ? (
-          <Text>Loading friends...</Text>
-        ) : friends.length > 0 && onUsernameChange ? (
+        {onUsernameChange ? (
           usernameSelect
         ) : null}
       </Box>

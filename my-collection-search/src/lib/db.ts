@@ -37,6 +37,7 @@ export async function updateTrack(data: {
   local_tags?: string[];
   apple_music_url?: string;
   local_audio_url?: string;
+  duration_seconds?: number;
 }) {
   const { track_id, ...fields } = data;
   if (!track_id) return null;

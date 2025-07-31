@@ -16,7 +16,6 @@ import {
 } from "@chakra-ui/react";
 import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import { toaster, Toaster } from "@/components/ui/toaster";
-// import { Track } from "../../types/track";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import TopMenuBar from "@/components/MenuBar";
 import { useSelectedUsername } from "@/hooks/useSelectedUsername";
@@ -25,7 +24,7 @@ import { MeiliSearch } from "meilisearch";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { friends: usernames } = useFriends();
+  const { friends: usernames } = useFriends({ showCurrentUser: true });
   const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const [bulkPrompt, setBulkPrompt] = useState("");
   const [bulkJson, setBulkJson] = useState("");
@@ -49,7 +48,9 @@ export default function BulkNotesPage() {
   } = useSearchResults({
     client: meiliClient,
     username: selectedUsername,
-    filter: filterLocalTagsEmpty ? "local_tags IS NULL OR local_tags IS EMPTY" : undefined,
+    filter: filterLocalTagsEmpty
+      ? "local_tags IS NULL OR local_tags IS EMPTY"
+      : undefined,
   });
 
   React.useEffect(() => {
@@ -167,7 +168,7 @@ Example:
               <Checkbox.HiddenInput />
               <Checkbox.Control />
               <Text ml={2} fontSize="sm">
-                Only show tracks missing local_tags
+                Missing metadata
               </Text>
             </Checkbox.Root>
           </Box>
