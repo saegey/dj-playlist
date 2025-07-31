@@ -60,7 +60,7 @@ export default function BackfillAudioPage() {
       const results = await index.search("", {
         q: artistSearch.trim(),
         filter: filter.join(" AND "),
-        limit: 1000,
+        limit: 20,
       });
       setTracks((results.hits as BackfillTrack[]) || []);
       setSelected(new Set());
@@ -274,10 +274,7 @@ export default function BackfillAudioPage() {
             <Table.Root
               size="sm"
               variant="outline"
-              // striped
               showColumnBorder
-              // interactive
-              // mb={"200px"}
               fontSize={["xs", "sm", "sm"]}
             >
               <Table.Header>
