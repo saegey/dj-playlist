@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 
-export function useFriends() {
+export function useFriends({ showCurrentUser = false }) {
   const [friends, setFriends] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchFriends = useCallback(async () => {
+  const fetchFriends = useCallback(async (showCurrentUser: boolean = false) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/friends");
+      const res = showCurrentUser
+        ? await fetch("/api/friends?showCurrentUser=true")
+        : await fetch("/api/friends");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unknown error");
       setFriends(data.friends || []);
@@ -20,45 +22,54 @@ export function useFriends() {
     }
   }, []);
 
-  const addFriend = useCallback(async (username: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/friends", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Unknown error");
-      await fetchFriends();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchFriends]);
+  const addFriend = useCallback(
+    async (username: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/friends", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Unknown error");
+        await fetchFriends();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchFriends]
+  );
 
-  const removeFriend = useCallback(async (username: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/friends?username=${encodeURIComponent(username)}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Unknown error");
-      await fetchFriends();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchFriends]);
+  const removeFriend = useCallback(
+    async (username: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          `/api/friends?username=${encodeURIComponent(username)}`,
+          {
+            method: "DELETE",
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Unknown error");
+        await fetchFriends();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [fetchFriends]
+  );
 
   useEffect(() => {
-    fetchFriends();
-  }, [fetchFriends]);
+    fetchFriends(showCurrentUser);
+  }, [fetchFriends, showCurrentUser]);
 
   return { friends, loading, error, fetchFriends, addFriend, removeFriend };
 }

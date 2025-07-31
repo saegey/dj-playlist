@@ -1,14 +1,30 @@
 import { Pool } from "pg";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const { rows } = await pool.query(
-      "SELECT username FROM friends WHERE username <> $1 ORDER BY added_at DESC",
-      [process.env.DISCOGS_USERNAME]
-    );
+    // Next.js API Route Request may have nextUrl property for URL parsing
+    const searchParams = request.nextUrl.searchParams;
+    const showCurrentUser = searchParams.get("showCurrentUser") === "true"; // example usage
+
+    let rows;
+    if (showCurrentUser) {
+      console.debug("Fetching all friends including current user");
+      ({ rows } = await pool.query(
+        "SELECT username FROM friends ORDER BY added_at DESC"
+      ));
+      rows.push({
+        username: process.env.DISCOGS_USERNAME,
+      });
+    } else {
+      console.debug("Fetching all friends excluding current user");
+      ({ rows } = await pool.query(
+        "SELECT username FROM friends WHERE username <> $1 ORDER BY added_at DESC",
+        [process.env.DISCOGS_USERNAME]
+      ));
+    }
     const friends = rows.map((r) => r.username);
     return NextResponse.json({ friends });
   } catch (e) {

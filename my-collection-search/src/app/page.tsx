@@ -17,11 +17,9 @@ import {
   Menu,
 } from "@chakra-ui/react";
 import dynamic from "next/dynamic";
-
 import PlaylistViewer from "@/components/PlaylistViewer";
 import TrackResult from "@/components/TrackResult";
 import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
-
 import SearchResults from "@/components/SearchResults";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { usePlaylists } from "@/hooks/usePlaylists";
@@ -32,7 +30,7 @@ import TopMenuBar from "@/components/MenuBar";
 import { getMeiliClient } from "@/lib/meili";
 import { TrackEditFormProps } from "../components/TrackEditForm";
 import { MeiliSearch } from "meilisearch";
-import { FiMoreVertical } from "react-icons/fi";
+import { FiList, FiMoreVertical } from "react-icons/fi";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
@@ -68,7 +66,9 @@ export default function SearchPage() {
     hasMore,
     loadMore,
     needsRefresh,
+    loading,
   } = useSearchResults({ client: meiliClient, username: selectedUsername });
+  console.log('SearchPage results:', loading, results.length, estimatedResults);
 
   const {
     playlists,
@@ -167,7 +167,7 @@ export default function SearchPage() {
               borderRadius="full"
               boxShadow="md"
             >
-              Sidebar
+              Playlists
             </Button>
           </Drawer.Trigger>
           <Portal>
@@ -175,7 +175,7 @@ export default function SearchPage() {
             <Drawer.Positioner>
               <Drawer.Content>
                 <Drawer.Header>
-                  <Drawer.Title>Playlist Sidebar</Drawer.Title>
+                  <Drawer.Title>Playlists</Drawer.Title>
                 </Drawer.Header>
                 <Drawer.Body>
                   <Box>
@@ -207,23 +207,23 @@ export default function SearchPage() {
 
         {/* Search Results */}
         <Container maxW={["8xl", "2xl", "2xl"]}>
-          {meiliClient && (
-            <SearchResults
-              query={query}
-              onQueryChange={onQueryChange}
-              estimatedResults={estimatedResults}
-              results={results}
-              playlistCounts={playlistCounts}
-              addToPlaylist={addToPlaylist}
-              handleEditClick={handleEditClick}
-              hasMore={hasMore}
-              loadMore={loadMore}
-              selectedUsername={selectedUsername}
-              onUsernameChange={(username) => {
-                setSelectedUsername(username);
-              }}
-            />
-          )}
+          <SearchResults
+            query={query}
+            onQueryChange={onQueryChange}
+            estimatedResults={estimatedResults}
+            results={results}
+            playlistCounts={playlistCounts}
+            addToPlaylist={addToPlaylist}
+            handleEditClick={handleEditClick}
+            hasMore={hasMore}
+            loadMore={loadMore}
+            selectedUsername={selectedUsername}
+            onUsernameChange={(username) => {
+              setSelectedUsername(username);
+            }}
+            loading={loading}
+            // meiliClient={meiliClient}
+          />
         </Container>
 
         {/* Playlist Drawer Trigger */}
@@ -242,7 +242,7 @@ export default function SearchPage() {
                 position="relative"
                 pr={hasMounted && playlist.length > 0 ? 8 : undefined}
               >
-                Playlist
+                <FiList size={25} />
                 {hasMounted && playlist.length > 0 && (
                   <Float placement="top-end">
                     <Circle size="6" bg="red.500" color="white" fontSize="sm">
