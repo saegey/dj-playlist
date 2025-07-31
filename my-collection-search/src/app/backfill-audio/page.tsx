@@ -30,7 +30,7 @@ export default function BackfillAudioPage() {
   const [showMissingAudio, setShowMissingAudio] = useState(true);
   const [showMissingVectors, setShowMissingVectors] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { friends: usernames } = useFriends();
+  const { friends: usernames } = useFriends({ showCurrentUser: true });
   const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -141,11 +141,18 @@ export default function BackfillAudioPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             track_id: updated[idx].track_id,
-            bpm: data.rhythm ? data.rhythm.bpm : undefined,
+            bpm:
+              data.rhythm && typeof data.rhythm.bpm === "number"
+                ? Math.round(data.rhythm.bpm)
+                : undefined,
             key: data.tonal
               ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
               : undefined,
-            danceability: data.rhythm ? data.rhythm.danceability : undefined,
+            danceability:
+              data.rhythm && typeof data.rhythm.danceability === "number"
+                ? Number(data.rhythm.danceability.toFixed(3))
+                : undefined,
+            duration_seconds: Math.round(data.metadata.audio_properties.length),
             // mood_happy: data.mood_happy,
             // mood_sad: data.mood_sad,
             // mood_relaxed: data.mood_relaxed,
@@ -260,7 +267,10 @@ export default function BackfillAudioPage() {
         ) : tracks.length === 0 ? (
           <Text color="gray.500">No tracks to backfill.</Text>
         ) : (
-          <Table.ScrollArea borderWidth="1px" maxHeight={["calc(100vh - 400px)", "calc(100vh - 300px)"]}>
+          <Table.ScrollArea
+            borderWidth="1px"
+            maxHeight={["calc(100vh - 400px)", "calc(100vh - 300px)"]}
+          >
             <Table.Root
               size="sm"
               variant="outline"

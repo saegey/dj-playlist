@@ -15,23 +15,13 @@ const menuItems = [
   { href: "/missing-apple-music", label: "Match" },
   { href: "/backfill-audio", label: "Audio" },
   { href: "/bulk-notes", label: "Metadata" },
-  { href: "/discogs", label: "Settings" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export default function TopMenuBar({ current }: TopMenuBarProps) {
   return (
-    <Flex
-      as="nav"
-      bgColor={"gray.subtle"}
-      color="brand.menuText"
-      p="4"
-      mb="4"
-      // justify="space-around"
-    >
+    <Flex as="nav" bgColor={"gray.subtle"} color="brand.menuText" p="4" mb="4">
       <Container>
-        {/* <Text fontSize="lg" fontWeight="bold" hideBelow="md">
-          Vinyl Playlist
-        </Text> */}
         <Group gap={4} align="center" grow>
           {menuItems.map((item) => (
             <Link
@@ -41,10 +31,6 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
               fontWeight={current === item.href ? "bold" : "normal"}
               fontSize={["sm", "sm", "sm"]}
               color={current === item.href ? "brand.menuActiveText" : undefined}
-              // borderBottom={current === item.href ? "2px solid" : undefined}
-              // borderColor={
-              //   current === item.href ? "brand.menuActiveBorder" : undefined
-              // }
               px={2}
               as={NextLink}
             >
@@ -89,7 +75,7 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
                 </Box>
               )}
 
-              {item.href === "/discogs" && (
+              {item.href === "/settings" && (
                 <Box>
                   <IoMdSettings
                     size={25}

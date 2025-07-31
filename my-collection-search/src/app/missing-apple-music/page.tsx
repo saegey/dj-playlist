@@ -35,7 +35,7 @@ export default function MissingAppleMusicPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const { friends: usernames } = useFriends();
+  const { friends: usernames } = useFriends({showCurrentUser: true});
   const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const [currentIndex, setCurrentIndex] = useState(0);
 

@@ -35,6 +35,7 @@ export interface TrackEditFormProps {
   youtube_url?: string;
   soundcloud_url?: string;
   star_rating?: number;
+  duration_seconds?: number; // Optional for new tracks
 }
 
 function cleanSoundcloudUrl(url?: string) {
@@ -100,6 +101,7 @@ export default function TrackEditForm({
     youtube_url: track.youtube_url || "",
     soundcloud_url: track.soundcloud_url || "",
     star_rating: typeof track.star_rating === "number" ? track.star_rating : 0,
+    duration_seconds: track.duration_seconds || undefined, // Optional for new tracks
   });
 
   const [youtubeResults, setYoutubeResults] = useState<YoutubeVideo[]>([]);
@@ -148,13 +150,16 @@ export default function TrackEditForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Strip query params from soundcloud_url if present
-    const cleanForm = {
-      ...form,
-      soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
-    };
-    onSave(cleanForm);
-    setLoading(false);
+    try {
+      // Strip query params from soundcloud_url if present
+      const cleanForm = {
+        ...form,
+        soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
+      };
+      await Promise.resolve(onSave(cleanForm));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchFromChatGPT = async () => {
@@ -270,6 +275,7 @@ export default function TrackEditForm({
             typeof data.rhythm.danceability === "number"
               ? data.rhythm.danceability.toFixed(3)
               : prev.danceability,
+          duration_seconds: Math.round(data.metadata.audio_properties.length),
         }));
       } else {
         const err = await res.json();
@@ -283,13 +289,7 @@ export default function TrackEditForm({
   };
 
   return (
-    <Box
-      as="form"
-      onSubmit={handleSubmit}
-      // p={4}
-      // borderWidth="1px"
-      // borderRadius="md"
-    >
+    <Box as="form" onSubmit={handleSubmit}>
       <SimpleGrid columns={[2, 2, 5]} gap={2} mb={2}>
         <Button
           type="button"
@@ -387,6 +387,13 @@ export default function TrackEditForm({
             onChange={handleChange}
             type="number"
           />
+          <LabeledInput
+            label="Duration (seconds)"
+            name="duration_seconds"
+            value={form.duration_seconds ?? ""}
+            onChange={handleChange}
+            type="number"
+          />
         </Flex>
         <LabeledInput
           label="Genre (comma separated)"
@@ -434,7 +441,7 @@ export default function TrackEditForm({
           </RatingGroup.Root>
         </Box>
       </Stack>
-      <Button type="submit" colorScheme="blue" loading={loading}>
+      <Button type="submit" loading={loading} disabled={loading} size={"sm"}>
         Save
       </Button>
 
@@ -470,7 +477,10 @@ export default function TrackEditForm({
                         borderRadius="md"
                         p={2}
                         _hover={{ bg: "gray.50", cursor: "pointer" }}
-                        onClick={() => handleYoutubeSelect(video)}
+                        onClick={() => {
+                          handleYoutubeSelect(video);
+                          console.log(video);
+                        }}
                       >
                         {video.thumbnail && (
                           <Image
@@ -489,6 +499,7 @@ export default function TrackEditForm({
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
+                            console.log(video);
                             handleYoutubeSelect(video);
                           }}
                         >

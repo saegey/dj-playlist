@@ -3,6 +3,7 @@ import path from "path";
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
 import { Index, MeiliSearch } from "meilisearch";
+import { parseDurationToSeconds } from "@/lib/trackUtils";
 
 const DISCOGS_EXPORTS_DIR = path.resolve(process.cwd(), "discogs_exports");
 
@@ -177,7 +178,10 @@ export async function POST() {
             discogs_url: discogs_url,
             album_thumbnail: thumbnail,
             position: track["position"] || "",
-            duration_seconds: track["duration_seconds"] || null,
+            duration_seconds:
+              typeof track["duration_seconds"] === "number"
+                ? track["duration_seconds"]
+                : parseDurationToSeconds(track["duration"]),
             bpm: null,
             key: null,
             notes: null,
@@ -186,9 +190,6 @@ export async function POST() {
             local_audio_url: track["local_audio_url"] || null,
             username,
           });
-          // console.log(
-          //   `[Discogs Index] Prepared track: ${track_id} - ${track["title"]} (user: ${username})`
-          // );
         });
       }
     }
@@ -275,7 +276,6 @@ export async function POST() {
       );
       if (rows && rows[0]) {
         upserted.push(rows[0]);
-        // console.debug(JSON.stringify(rows[0], null, 2));
       }
     }
 
@@ -320,12 +320,6 @@ export async function POST() {
       `[Discogs Index] Adding ${upserted.length} tracks to MeiliSearch index...`
     );
 
-    // Write upserted tracks to a JSON file for debugging
-    // fs.writeFileSync(
-    //   path.join(DISCOGS_EXPORTS_DIR, "debug_upserted_tracks.json"),
-    //   JSON.stringify(upserted, null, 2),
-    //   "utf-8"
-    // );
     const { taskUid } = await index.addDocuments(
       upserted.map((t) => {
         // Remove embedding, keep _vectors as array

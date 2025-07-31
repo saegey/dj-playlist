@@ -7,7 +7,9 @@ export type UseUsernameSelectProps = {
   size?: ("sm" | "md" | "lg" | "xs")[];
   variant?: "subtle" | "outline";
   width?: string;
+  includeAllOption?: boolean;
 };
+
 
 export function useUsernameSelect({
   usernames,
@@ -16,12 +18,21 @@ export function useUsernameSelect({
   size = ["sm", "md", "md"],
   variant = "subtle",
   width = "100%",
+  includeAllOption = false,
 }: UseUsernameSelectProps) {
+  const items = React.useMemo(
+    () =>
+      includeAllOption
+        ? [{ label: "All Libraries", value: "" }, ...usernames.map((u) => ({ label: u, value: u }))]
+        : usernames.map((u) => ({ label: u, value: u })),
+    [usernames, includeAllOption]
+  );
+
   const usernameCollection = React.useMemo(
     () => createListCollection({
-      items: usernames.map((u) => ({ label: u, value: u })),
+      items,
     }),
-    [usernames]
+    [items]
   );
 
   return (
@@ -45,9 +56,9 @@ export function useUsernameSelect({
       <Portal>
         <Select.Positioner>
           <Select.Content>
-            {usernames.map((u) => (
-              <Select.Item key={u} item={{ label: u, value: u }}>
-                {u}
+            {items.map((item) => (
+              <Select.Item key={item.value ?? item.label} item={item}>
+                {item.label}
                 <Select.ItemIndicator />
               </Select.Item>
             ))}
