@@ -35,7 +35,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   onUsernameChange,
   loading = false,
 }) => {
-  const { friends, loading: friendsLoading } = useFriends({
+  const { friends } = useFriends({
     showCurrentUser: true,
   });
   const lastResultRef = React.useRef<HTMLDivElement | null>(null);
@@ -79,7 +79,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     const handler = setTimeout(() => {
       if (debouncedValue !== query) {
         // Only call if changed
-        onQueryChangeProp({ target: { value: debouncedValue } } as React.ChangeEvent<HTMLInputElement>);
+        onQueryChangeProp({
+          target: { value: debouncedValue },
+        } as React.ChangeEvent<HTMLInputElement>);
       }
     }, 300);
     return () => clearTimeout(handler);
@@ -91,13 +93,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         <Input
           placeholder="Search tracks..."
           value={debouncedValue}
-          onChange={e => setDebouncedValue(e.target.value)}
+          onChange={(e) => setDebouncedValue(e.target.value)}
           flex="1"
           variant={"subtle"}
         />
-        {onUsernameChange ? (
-          usernameSelect
-        ) : null}
+        {onUsernameChange ? usernameSelect : null}
       </Box>
 
       {loading ? (
