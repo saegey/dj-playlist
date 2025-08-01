@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box,
   Button,
@@ -16,10 +16,13 @@ import {
   Dialog,
   CloseButton,
   RatingGroup,
-  SimpleGrid,
+  Menu,
+  FileUpload,
+  Spinner,
 } from "@chakra-ui/react";
 
 import { AppleMusicResult, YoutubeVideo } from "@/types/track";
+import { HiUpload } from "react-icons/hi";
 
 export interface TrackEditFormProps {
   track_id: string; // Optional for new tracks
@@ -83,10 +86,20 @@ function LabeledTextarea({
 export default function TrackEditForm({
   track,
   onSave,
+  dialogOpen,
+  setDialogOpen,
+  initialFocusRef,
 }: {
   track: TrackEditFormProps;
   onSave: (data: TrackEditFormProps) => void;
+  dialogOpen: boolean;
+  setDialogOpen: (open: boolean) => void;
+  initialFocusRef: React.RefObject<HTMLButtonElement | null>;
 }) {
+  // File upload logic
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+
   const [form, setForm] = useState({
     track_id: track.track_id || "",
     album: track.album || "",
@@ -104,6 +117,26 @@ export default function TrackEditForm({
     duration_seconds: track.duration_seconds || undefined, // Optional for new tracks
   });
 
+  React.useEffect(() => {
+    setForm({
+      track_id: track.track_id || "",
+      album: track.album || "",
+      title: track.title || "",
+      artist: track.artist || "",
+      local_tags: track.local_tags || "",
+      notes: track.notes || "",
+      bpm: track.bpm || "",
+      key: track.key || "",
+      danceability: track.danceability || "",
+      apple_music_url: track.apple_music_url || "",
+      youtube_url: track.youtube_url || "",
+      soundcloud_url: track.soundcloud_url || "",
+      star_rating:
+        typeof track.star_rating === "number" ? track.star_rating : 0,
+      duration_seconds: track.duration_seconds || undefined,
+    });
+  }, [track]);
+
   const [youtubeResults, setYoutubeResults] = useState<YoutubeVideo[]>([]);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
@@ -116,6 +149,7 @@ export default function TrackEditForm({
   const [fetching, setFetching] = useState(false);
   const [loading, setLoading] = useState(false);
   const [vectorLoading, setVectorLoading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const handleFetchVector = async () => {
     setVectorLoading(true);
     try {
@@ -135,6 +169,41 @@ export default function TrackEditForm({
       alert("Error fetching vector");
     }
     setVectorLoading(false);
+  };
+
+  const handleFileUpload = async () => {
+    // alert("File upload started", JSON.stringify(file));
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("track_id", form.track_id);
+      const res = await fetch("/api/tracks/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const response = await res.json();
+      const { analysis: data } = response;
+      setForm((prev) => ({
+        ...prev,
+        bpm: data.rhythm.bpm ? String(Math.round(data.rhythm.bpm)) : prev.bpm,
+        key: data.tonal.key_edma
+          ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
+          : prev.key,
+        danceability:
+          typeof data.rhythm.danceability === "number"
+            ? data.rhythm.danceability.toFixed(3)
+            : prev.danceability,
+        duration_seconds: Math.round(data.metadata.audio_properties.length),
+      }));
+    } catch (err) {
+      alert("Upload failed: " + (err instanceof Error ? err.message : err));
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setFile(null);
   };
 
   const handleStarRating = (rating: number) => {
@@ -289,299 +358,373 @@ export default function TrackEditForm({
   };
 
   return (
-    <Box as="form" onSubmit={handleSubmit}>
-      <SimpleGrid columns={[2, 2, 5]} gap={2} mb={2}>
-        <Button
-          type="button"
-          colorScheme="orange"
-          loading={vectorLoading}
-          size="sm"
-          onClick={handleFetchVector}
-        >
-          Get Vector
-        </Button>
-        <Button
-          type="button"
-          colorScheme="purple"
-          loading={fetching}
-          size="sm"
-          onClick={fetchFromChatGPT}
-        >
-          Fetch from AI
-        </Button>
-        <Button
-          type="button"
-          colorScheme="red"
-          loading={appleLoading}
-          onClick={searchAppleMusic}
-          size="sm"
-        >
-          Search Apple Music
-        </Button>
-        <Button
-          type="button"
-          colorScheme="gray"
-          loading={youtubeLoading}
-          onClick={searchYouTube}
-          size="sm"
-        >
-          Search YouTube
-        </Button>
-        <Button
-          type="button"
-          colorScheme="teal"
-          loading={analyzing}
-          onClick={handleAnalyzeAudio}
-          size="sm"
-          disabled={
-            !form.apple_music_url && !form.youtube_url && !form.soundcloud_url
-          }
-        >
-          Analyze Audio
-        </Button>
-      </SimpleGrid>
-
-      <Stack
-        borderWidth="1px"
-        borderRadius="md"
-        padding={4}
-        marginBottom={4}
-        marginTop={4}
-      >
-        <LabeledInput
-          label="Title"
-          name="title"
-          value={form.title}
-          onChange={handleChange}
-        />
-        <LabeledInput
-          label="Artist"
-          name="artist"
-          value={form.artist}
-          onChange={handleChange}
-        />
-        <LabeledInput
-          label="Album"
-          name="album"
-          value={form.album}
-          onChange={handleChange}
-        />
-        <Flex gap={2}>
-          <LabeledInput
-            label="BPM"
-            name="bpm"
-            value={form.bpm}
-            onChange={handleChange}
-            type="number"
-          />
-          <LabeledInput
-            label="Key"
-            name="key"
-            value={form.key}
-            onChange={handleChange}
-          />
-          <LabeledInput
-            label="Danceability"
-            name="danceability"
-            value={form.danceability ?? ""}
-            onChange={handleChange}
-            type="number"
-          />
-          <LabeledInput
-            label="Duration (seconds)"
-            name="duration_seconds"
-            value={form.duration_seconds ?? ""}
-            onChange={handleChange}
-            type="number"
-          />
-        </Flex>
-        <LabeledInput
-          label="Genre (comma separated)"
-          name="local_tags"
-          value={form.local_tags}
-          onChange={handleChange}
-        />
-        <LabeledTextarea
-          label="Notes"
-          name="notes"
-          value={form.notes}
-          onChange={handleChange}
-        />
-        <LabeledInput
-          label="Apple Music URL"
-          name="apple_music_url"
-          value={form.apple_music_url || ""}
-          onChange={handleChange}
-        />
-        <LabeledInput
-          label="YouTube URL"
-          name="youtube_url"
-          value={form.youtube_url || ""}
-          onChange={handleChange}
-        />
-        <LabeledInput
-          label="SoundCloud URL"
-          name="soundcloud_url"
-          value={form.soundcloud_url || ""}
-          onChange={handleChange}
-        />
-
-        <Box>
-          <Text mb={1} fontSize="sm">
-            Rating
-          </Text>
-          <RatingGroup.Root
-            value={form.star_rating}
-            onValueChange={({ value }) => handleStarRating(value)}
-            size="md"
-            count={5}
-          >
-            <RatingGroup.HiddenInput />
-            <RatingGroup.Control />
-          </RatingGroup.Root>
-        </Box>
-      </Stack>
-      <Button type="submit" loading={loading} disabled={loading} size={"sm"}>
-        Save
-      </Button>
-
-      {/* --- YouTube Dialog --- */}
-      <Dialog.Root
-        open={showYoutubeModal}
-        onOpenChange={(details) => setShowYoutubeModal(details.open)}
-        size={["full", "lg", "lg"]}
-      >
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Select YouTube Video</Dialog.Title>
-                <Dialog.CloseTrigger asChild>
-                  <CloseButton size="sm" />
-                </Dialog.CloseTrigger>
-              </Dialog.Header>
-              <Dialog.Body>
-                {youtubeLoading ? (
-                  <Text>Loading...</Text>
-                ) : youtubeResults.length === 0 ? (
-                  <Text>No results found.</Text>
-                ) : (
-                  <Stack>
-                    {youtubeResults.map((video) => (
-                      <Flex
-                        key={video.id}
-                        align="center"
-                        gap={3}
-                        borderWidth="1px"
-                        borderRadius="md"
-                        p={2}
-                        _hover={{ bg: "gray.50", cursor: "pointer" }}
-                        onClick={() => {
-                          handleYoutubeSelect(video);
-                          console.log(video);
-                        }}
-                      >
-                        {video.thumbnail && (
-                          <Image
-                            src={video.thumbnail}
-                            alt={video.title}
-                            boxSize="60px"
-                            borderRadius="md"
-                          />
-                        )}
-                        <Box flex="1">
-                          <Text fontWeight="bold">{video.title}</Text>
-                          <Text fontSize="sm">{video.channel}</Text>
-                        </Box>
-                        <Button
-                          colorScheme="blue"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            console.log(video);
-                            handleYoutubeSelect(video);
-                          }}
+    <Dialog.Root
+      open={dialogOpen}
+      onOpenChange={(details) => setDialogOpen(details.open)}
+      initialFocusEl={() => initialFocusRef.current}
+      role="dialog"
+      size={["full", "xl", "xl"]}
+    >
+      <Portal>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>Edit Track</Dialog.Title>
+              <Dialog.CloseTrigger asChild>
+                <CloseButton ref={initialFocusRef} size="sm" />
+              </Dialog.CloseTrigger>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Box as="form" onSubmit={handleSubmit}>
+                <Flex gap={4} direction="row">
+                  <Menu.Root>
+                    <Menu.Trigger asChild>
+                      <Button variant="outline" size="sm">
+                        Actions
+                      </Button>
+                    </Menu.Trigger>
+                    {/* <Portal> */}
+                    <Menu.Positioner>
+                      <Menu.Content>
+                        <Menu.Item
+                          value="vector"
+                          disabled={vectorLoading}
+                          onSelect={handleFetchVector}
                         >
-                          Select
-                        </Button>
-                      </Flex>
-                    ))}
-                  </Stack>
-                )}
-              </Dialog.Body>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
-
-      {/* --- Apple Music Dialog --- */}
-      <Dialog.Root
-        open={showAppleModal}
-        onOpenChange={(details) => setShowAppleModal(details.open)}
-        size={["full", "lg", "lg"]}
-      >
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Select Apple Music Track</Dialog.Title>
-                <Dialog.CloseTrigger asChild>
-                  <CloseButton size="sm" />
-                </Dialog.CloseTrigger>
-              </Dialog.Header>
-              <Dialog.Body>
-                {appleLoading ? (
-                  <Text>Loading...</Text>
-                ) : appleResults.length === 0 ? (
-                  <Text>No results found.</Text>
-                ) : (
-                  <Stack>
-                    {appleResults.map((song) => (
-                      <Flex
-                        key={song.id}
-                        align="center"
-                        gap={3}
-                        borderWidth="1px"
-                        borderRadius="md"
-                        p={2}
-                        _hover={{ bg: "gray.50", cursor: "pointer" }}
-                        onClick={() => handleAppleSelect(song)}
-                      >
-                        {song.artwork && (
-                          <Image
-                            src={song.artwork.replace("{w}x{h}bb", "60x60bb")}
-                            alt={song.title}
-                            boxSize="60px"
-                            borderRadius="md"
-                          />
-                        )}
-                        <Box flex="1">
-                          <Text fontWeight="bold">{song.title}</Text>
-                          <Text fontSize="sm">
-                            {song.artist} — {song.album}
-                          </Text>
-                        </Box>
-                        <Button
-                          colorScheme="blue"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAppleSelect(song);
-                          }}
+                          {vectorLoading ? "Getting Vector..." : "Get Vector"}
+                        </Menu.Item>
+                        <Menu.Item
+                          value="ai"
+                          disabled={fetching}
+                          onSelect={fetchFromChatGPT}
                         >
-                          Select
-                        </Button>
-                      </Flex>
-                    ))}
-                  </Stack>
-                )}
-              </Dialog.Body>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
-    </Box>
+                          {fetching ? "Fetching from AI..." : "Fetch from AI"}
+                        </Menu.Item>
+                        <Menu.Item
+                          value="apple"
+                          disabled={appleLoading}
+                          onSelect={searchAppleMusic}
+                        >
+                          {appleLoading
+                            ? "Searching Apple Music..."
+                            : "Search Apple Music"}
+                        </Menu.Item>
+                        <Menu.Item
+                          value="youtube"
+                          disabled={youtubeLoading}
+                          onSelect={searchYouTube}
+                        >
+                          {youtubeLoading
+                            ? "Searching YouTube..."
+                            : "Search YouTube"}
+                        </Menu.Item>
+                        <Menu.Item
+                          value="analyze"
+                          disabled={
+                            analyzing ||
+                            (!form.apple_music_url &&
+                              !form.youtube_url &&
+                              !form.soundcloud_url)
+                          }
+                          onSelect={handleAnalyzeAudio}
+                        >
+                          {analyzing ? "Analyzing Audio..." : "Analyze Audio"}
+                        </Menu.Item>
+                        {/* <Menu.Item
+                        value="file"
+                        // onSelect={() => {
+                        //   if (fileInputRef.current)
+                        //     fileInputRef.current.click();
+                        // }}
+                      >
+                      </Menu.Item> */}
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Menu.Root>
+
+                  <FileUpload.Root
+                    disabled={uploading}
+                    onFileChange={(files) => {
+                      // alert("File upload started");
+                      // Chakra UI v3 FileUpload: files.acceptedFiles is the correct property
+                      const file = files.acceptedFiles?.[0] || null;
+                      setFile(file);
+                      handleFileUpload();
+                    }}
+                  >
+                    <FileUpload.HiddenInput />
+                    <FileUpload.Trigger asChild>
+                      <Button variant="outline" size="sm">
+                        {uploading ? (
+                          <>
+                            <Spinner /> Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <HiUpload /> Upload Audio
+                          </>
+                        )}
+                      </Button>
+                    </FileUpload.Trigger>
+                  </FileUpload.Root>
+                </Flex>
+
+                <Stack
+                  borderWidth="1px"
+                  borderRadius="md"
+                  padding={4}
+                  marginBottom={4}
+                  marginTop={4}
+                >
+                  <LabeledInput
+                    label="Title"
+                    name="title"
+                    value={form.title}
+                    onChange={handleChange}
+                  />
+                  <LabeledInput
+                    label="Artist"
+                    name="artist"
+                    value={form.artist}
+                    onChange={handleChange}
+                  />
+                  <LabeledInput
+                    label="Album"
+                    name="album"
+                    value={form.album}
+                    onChange={handleChange}
+                  />
+                  <Flex gap={2}>
+                    <LabeledInput
+                      label="BPM"
+                      name="bpm"
+                      value={form.bpm}
+                      onChange={handleChange}
+                      type="number"
+                    />
+                    <LabeledInput
+                      label="Key"
+                      name="key"
+                      value={form.key}
+                      onChange={handleChange}
+                    />
+                    <LabeledInput
+                      label="Danceability"
+                      name="danceability"
+                      value={form.danceability ?? ""}
+                      onChange={handleChange}
+                      type="number"
+                    />
+                    <LabeledInput
+                      label="Duration (seconds)"
+                      name="duration_seconds"
+                      value={form.duration_seconds ?? ""}
+                      onChange={handleChange}
+                      type="number"
+                    />
+                  </Flex>
+                  <LabeledInput
+                    label="Genre (comma separated)"
+                    name="local_tags"
+                    value={form.local_tags}
+                    onChange={handleChange}
+                  />
+                  <LabeledTextarea
+                    label="Notes"
+                    name="notes"
+                    value={form.notes}
+                    height={"100px"}
+                    onChange={handleChange}
+                  />
+                  <LabeledInput
+                    label="Apple Music URL"
+                    name="apple_music_url"
+                    value={form.apple_music_url || ""}
+                    onChange={handleChange}
+                  />
+                  <LabeledInput
+                    label="YouTube URL"
+                    name="youtube_url"
+                    value={form.youtube_url || ""}
+                    onChange={handleChange}
+                  />
+                  <LabeledInput
+                    label="SoundCloud URL"
+                    name="soundcloud_url"
+                    value={form.soundcloud_url || ""}
+                    onChange={handleChange}
+                  />
+
+                  <Box>
+                    <Text mb={1} fontSize="sm">
+                      Rating
+                    </Text>
+                    <RatingGroup.Root
+                      value={form.star_rating}
+                      onValueChange={({ value }) => handleStarRating(value)}
+                      size="md"
+                      count={5}
+                    >
+                      <RatingGroup.HiddenInput />
+                      <RatingGroup.Control />
+                    </RatingGroup.Root>
+                  </Box>
+                </Stack>
+                <Button
+                  type="submit"
+                  loading={loading}
+                  disabled={loading}
+                  size={"sm"}
+                >
+                  Save
+                </Button>
+
+                {/* --- YouTube Dialog --- */}
+                <Dialog.Root
+                  open={showYoutubeModal}
+                  onOpenChange={(details) => setShowYoutubeModal(details.open)}
+                  size={["full", "lg", "lg"]}
+                >
+                  <Portal>
+                    <Dialog.Backdrop />
+                    <Dialog.Positioner>
+                      <Dialog.Content>
+                        <Dialog.Header>
+                          <Dialog.Title>Select YouTube Video</Dialog.Title>
+                          <Dialog.CloseTrigger asChild>
+                            <CloseButton size="sm" />
+                          </Dialog.CloseTrigger>
+                        </Dialog.Header>
+                        <Dialog.Body>
+                          {youtubeLoading ? (
+                            <Text>Loading...</Text>
+                          ) : youtubeResults.length === 0 ? (
+                            <Text>No results found.</Text>
+                          ) : (
+                            <Stack>
+                              {youtubeResults.map((video) => (
+                                <Flex
+                                  key={video.id}
+                                  align="center"
+                                  gap={3}
+                                  borderWidth="1px"
+                                  borderRadius="md"
+                                  p={2}
+                                  _hover={{ bg: "gray.50", cursor: "pointer" }}
+                                  onClick={() => {
+                                    handleYoutubeSelect(video);
+                                    console.log(video);
+                                  }}
+                                >
+                                  {video.thumbnail && (
+                                    <Image
+                                      src={video.thumbnail}
+                                      alt={video.title}
+                                      boxSize="60px"
+                                      borderRadius="md"
+                                    />
+                                  )}
+                                  <Box flex="1">
+                                    <Text fontWeight="bold">{video.title}</Text>
+                                    <Text fontSize="sm">{video.channel}</Text>
+                                  </Box>
+                                  <Button
+                                    colorScheme="blue"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      console.log(video);
+                                      handleYoutubeSelect(video);
+                                    }}
+                                  >
+                                    Select
+                                  </Button>
+                                </Flex>
+                              ))}
+                            </Stack>
+                          )}
+                        </Dialog.Body>
+                      </Dialog.Content>
+                    </Dialog.Positioner>
+                  </Portal>
+                </Dialog.Root>
+
+                {/* --- Apple Music Dialog --- */}
+                <Dialog.Root
+                  open={showAppleModal}
+                  onOpenChange={(details) => setShowAppleModal(details.open)}
+                  size={["full", "lg", "lg"]}
+                >
+                  <Portal>
+                    <Dialog.Backdrop />
+                    <Dialog.Positioner>
+                      <Dialog.Content>
+                        <Dialog.Header>
+                          <Dialog.Title>Select Apple Music Track</Dialog.Title>
+                          <Dialog.CloseTrigger asChild>
+                            <CloseButton size="sm" />
+                          </Dialog.CloseTrigger>
+                        </Dialog.Header>
+                        <Dialog.Body>
+                          {appleLoading ? (
+                            <Text>Loading...</Text>
+                          ) : appleResults.length === 0 ? (
+                            <Text>No results found.</Text>
+                          ) : (
+                            <Stack>
+                              {appleResults.map((song) => (
+                                <Flex
+                                  key={song.id}
+                                  align="center"
+                                  gap={3}
+                                  borderWidth="1px"
+                                  borderRadius="md"
+                                  p={2}
+                                  _hover={{ bg: "gray.50", cursor: "pointer" }}
+                                  onClick={() => handleAppleSelect(song)}
+                                >
+                                  {song.artwork && (
+                                    <Image
+                                      src={song.artwork.replace(
+                                        "{w}x{h}bb",
+                                        "60x60bb"
+                                      )}
+                                      alt={song.title}
+                                      boxSize="60px"
+                                      borderRadius="md"
+                                    />
+                                  )}
+                                  <Box flex="1">
+                                    <Text fontWeight="bold">{song.title}</Text>
+                                    <Text fontSize="sm">
+                                      {song.artist} — {song.album}
+                                    </Text>
+                                  </Box>
+                                  <Button
+                                    colorScheme="blue"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAppleSelect(song);
+                                    }}
+                                  >
+                                    Select
+                                  </Button>
+                                </Flex>
+                              ))}
+                            </Stack>
+                          )}
+                        </Dialog.Body>
+                      </Dialog.Content>
+                    </Dialog.Positioner>
+                  </Portal>
+                </Dialog.Root>
+              </Box>
+            </Dialog.Body>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Portal>
+    </Dialog.Root>
   );
 }
