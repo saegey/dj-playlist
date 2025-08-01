@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useContext, createContext, ReactNode } from "react";
 import type { Playlist, Track } from "@/types/track";
 
 export interface PlaylistInfo {
@@ -13,7 +13,33 @@ export interface TrackWithEmbedding extends Track {
   };
 }
 
-export function usePlaylists() {
+// Context types
+interface PlaylistsContextType {
+  playlists: Playlist[];
+  setPlaylists: React.Dispatch<React.SetStateAction<Playlist[]>>;
+  playlistName: string;
+  setPlaylistName: React.Dispatch<React.SetStateAction<string>>;
+  loadingPlaylists: boolean;
+  playlistInfo: PlaylistInfo;
+  setPlaylistInfo: React.Dispatch<React.SetStateAction<PlaylistInfo>>;
+  playlist: TrackWithEmbedding[];
+  setPlaylist: React.Dispatch<React.SetStateAction<TrackWithEmbedding[]>>;
+  fetchPlaylists: () => Promise<void>;
+  handleCreatePlaylist: () => Promise<void>;
+  handleLoadPlaylist: (trackIds: Array<string>) => Promise<void>;
+  savePlaylist: () => Promise<void>;
+  exportPlaylist: () => void;
+  clearPlaylist: () => void;
+  removeFromPlaylist: (trackId: string) => void;
+  addToPlaylist: (track: TrackWithEmbedding) => void;
+  moveTrack: (fromIdx: number, toIdx: number) => void;
+  playlistAvgEmbedding: number[] | null;
+  getRecommendations: (k?: number) => Promise<Track[]>;
+}
+
+const PlaylistsContext = createContext<PlaylistsContextType | undefined>(undefined);
+
+export function PlaylistsProvider({ children }: { children: ReactNode }) {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [playlistName, setPlaylistName] = useState("");
   const [loadingPlaylists, setLoadingPlaylists] = useState(false);
@@ -28,14 +54,11 @@ export function usePlaylists() {
 
   // Memoized average embedding for playlist
   const playlistAvgEmbedding = useMemo(() => {
-    console.log("Calculating average embedding for playlist", playlist);
     if (!playlist.length) return null;
-    // Filter tracks with valid embedding arrays
     const playlistEmbs = playlist
       .map((t) => t._vectors?.default || "[]")
       .filter((emb): emb is number[] => Array.isArray(emb) && emb.length > 0);
     if (!playlistEmbs.length) return null;
-    // Calculate average for each dimension
     return playlistEmbs[0].map(
       (_: number, i: number) =>
         playlistEmbs.reduce((sum, emb) => sum + emb[i], 0) / playlistEmbs.length
@@ -231,7 +254,7 @@ export function usePlaylists() {
     }
   }, [playlist]);
 
-  return {
+  const value: PlaylistsContextType = {
     playlists,
     setPlaylists,
     playlistName,
@@ -253,4 +276,18 @@ export function usePlaylists() {
     playlistAvgEmbedding,
     getRecommendations,
   };
+
+  return React.createElement(PlaylistsContext.Provider, { value }, children);
 }
+
+// Hook to use the playlists context
+export function usePlaylists() {
+  const ctx = useContext(PlaylistsContext);
+  if (!ctx) {
+    throw new Error("usePlaylists must be used within a PlaylistsProvider");
+  }
+  return ctx;
+}
+
+
+export default PlaylistsProvider;
