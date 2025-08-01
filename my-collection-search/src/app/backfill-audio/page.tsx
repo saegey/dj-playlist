@@ -1,21 +1,32 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Switch } from "@chakra-ui/react";
-import { ActionBar, CloseButton } from "@chakra-ui/react";
-import { LuLightbulb, LuMusic } from "react-icons/lu";
-import { useFriends } from "@/hooks/useFriends";
 import {
+  Switch,
+  ActionBar,
+  CloseButton,
   Button,
   Checkbox,
   Spinner,
   Text,
-  Table, // v3 import
   Portal,
   Input,
   Container,
   SimpleGrid,
+  ButtonGroup,
+  IconButton,
+  Stack,
+  Pagination,
+  Table,
 } from "@chakra-ui/react";
+
+import {
+  LuLightbulb,
+  LuMusic,
+  LuChevronLeft,
+  LuChevronRight,
+} from "react-icons/lu";
+import { useFriends } from "@/hooks/useFriends";
 import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
@@ -25,6 +36,7 @@ interface BackfillTrack extends Track {
   status?: "pending" | "analyzing" | "success" | "error";
   errorMsg?: string;
 }
+
 export default function BackfillAudioPage() {
   const [tracks, setTracks] = useState<BackfillTrack[]>([]);
   const [showMissingAudio, setShowMissingAudio] = useState(true);
@@ -35,8 +47,15 @@ export default function BackfillAudioPage() {
   const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+  const [total, setTotal] = useState(0);
 
-  // Friends are loaded via useFriends hook
+  // Reset page to 1 when filters or search change
+  useEffect(() => {
+    setPage(1);
+  }, [selectedUsername, artistSearch, showMissingAudio, showMissingVectors]);
 
   useEffect(() => {
     setLoading(true);
@@ -46,7 +65,6 @@ export default function BackfillAudioPage() {
       const index = meiliClient.index("tracks");
       const filter = [];
       if (selectedUsername) filter.push(`username = '${selectedUsername}'`);
-      // if (artistSearch.trim()) filter.push(`artist = '${artistSearch.trim()}'`);
       if (showMissingAudio) {
         filter.push("local_audio_url IS NULL");
       } else {
@@ -57,17 +75,26 @@ export default function BackfillAudioPage() {
       } else {
         filter.push("hasVectors = true");
       }
+      const offset = (page - 1) * pageSize;
       const results = await index.search("", {
         q: artistSearch.trim(),
         filter: filter.join(" AND "),
-        limit: 20,
+        limit: pageSize,
+        offset,
       });
       setTracks((results.hits as BackfillTrack[]) || []);
+      setTotal(results.estimatedTotalHits || 0);
       setSelected(new Set());
       setLoading(false);
     };
     fetchTracks();
-  }, [selectedUsername, artistSearch, showMissingAudio, showMissingVectors]);
+  }, [
+    selectedUsername,
+    artistSearch,
+    showMissingAudio,
+    showMissingVectors,
+    page,
+  ]);
 
   const toggleSelect = (trackId: string) => {
     setSelected((prev) => {
@@ -185,6 +212,8 @@ export default function BackfillAudioPage() {
     <>
       <TopMenuBar current="/backfill-audio" />
       <Container>
+        {/* Pagination UI */}
+
         <SimpleGrid columns={[1, null, 5]} gap={4} mb={4}>
           <Input
             type="text"
@@ -279,7 +308,7 @@ export default function BackfillAudioPage() {
             >
               <Table.Header>
                 <Table.Row>
-                  <Table.ColumnHeader>
+                  <Table.ColumnHeader width={"5%"}>
                     <Checkbox.Root
                       checked={
                         selected.size === tracks.length && tracks.length > 0
@@ -298,10 +327,10 @@ export default function BackfillAudioPage() {
                       <Checkbox.Control />
                     </Checkbox.Root>
                   </Table.ColumnHeader>
-                  <Table.ColumnHeader>Title</Table.ColumnHeader>
-                  <Table.ColumnHeader>Artist</Table.ColumnHeader>
-                  <Table.ColumnHeader>Source</Table.ColumnHeader>
-                  <Table.ColumnHeader>Status</Table.ColumnHeader>
+                  <Table.ColumnHeader width={"45%"}>Title</Table.ColumnHeader>
+                  <Table.ColumnHeader width={"25%"}>Artist</Table.ColumnHeader>
+                  <Table.ColumnHeader width={"13%"}>Source</Table.ColumnHeader>
+                  <Table.ColumnHeader width={"12%"}>Status</Table.ColumnHeader>
                 </Table.Row>
               </Table.Header>
               <Table.Body>
@@ -322,8 +351,16 @@ export default function BackfillAudioPage() {
                         <Checkbox.Control />
                       </Checkbox.Root>
                     </Table.Cell>
-                    <Table.Cell>{track.title}</Table.Cell>
-                    <Table.Cell>{track.artist}</Table.Cell>
+                    <Table.Cell maxW="220px">
+                      <Text truncate title={track.title}>
+                        {track.title}
+                      </Text>
+                    </Table.Cell>
+                    <Table.Cell maxW="140px">
+                      <Text truncate title={track.artist}>
+                        {track.artist}
+                      </Text>
+                    </Table.Cell>
                     <Table.Cell>
                       {track.apple_music_url ? (
                         <a
@@ -370,6 +407,40 @@ export default function BackfillAudioPage() {
             </Table.Root>
           </Table.ScrollArea>
         )}
+        <Stack align="center" my={4}>
+          <Pagination.Root count={total} pageSize={pageSize} page={page}>
+            <ButtonGroup variant="ghost" size="md">
+              <Pagination.PrevTrigger asChild>
+                <IconButton
+                  aria-label="Previous page"
+                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                >
+                  <LuChevronLeft />
+                </IconButton>
+              </Pagination.PrevTrigger>
+              <Pagination.Items
+                render={(pageObj: { type: "page"; value: number }) => (
+                  <IconButton
+                    key={pageObj.value}
+                    variant={pageObj.value === page ? "solid" : "outline"}
+                    aria-current={pageObj.value === page ? "page" : undefined}
+                    onClick={() => setPage(pageObj.value)}
+                  >
+                    {pageObj.value}
+                  </IconButton>
+                )}
+              />
+              <Pagination.NextTrigger asChild>
+                <IconButton
+                  aria-label="Next page"
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  <LuChevronRight />
+                </IconButton>
+              </Pagination.NextTrigger>
+            </ButtonGroup>
+          </Pagination.Root>
+        </Stack>
       </Container>
     </>
   );

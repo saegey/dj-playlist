@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+
 import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 import {
   Box,
@@ -16,7 +17,7 @@ import {
 import dynamic from "next/dynamic";
 import SearchResults from "@/components/SearchResults";
 import { useSearchResults } from "@/hooks/useSearchResults";
-import { usePlaylists } from "@/hooks/usePlaylists";
+import PlaylistsProvider, { usePlaylists } from "@/hooks/usePlaylists";
 import PlaylistManager from "@/components/PlaylistManager";
 import type { Track } from "@/types/track";
 import TopMenuBar from "@/components/MenuBar";
@@ -25,11 +26,12 @@ import { TrackEditFormProps } from "../components/TrackEditForm";
 import { MeiliSearch } from "meilisearch";
 import { FiList } from "react-icons/fi";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
+import { toaster, Toaster } from "@/components/ui/toaster";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
 });
-export default function SearchPage() {
+const SearchPage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
   const [meiliClient, setMeiliClient] = useState<MeiliSearch | null>(null);
@@ -103,8 +105,15 @@ export default function SearchPage() {
     }
   };
 
+  // Wrap handleLoadPlaylist to show toast
+  const handleLoadPlaylistWithToast = async (trackIds: Array<string>) => {
+    await handleLoadPlaylist(trackIds);
+    toaster.create({ title: "Playlist loaded!", type: "success" });
+  };
+
   return (
     <>
+      <Toaster />
       <TopMenuBar current="/" />
       <Flex gap={4} direction="row">
         {/* Playlist Sidebar Drawer Trigger */}
@@ -143,7 +152,7 @@ export default function SearchPage() {
                         playlistName={playlistName}
                         setPlaylistName={setPlaylistName}
                         handleCreatePlaylist={handleCreatePlaylist}
-                        handleLoadPlaylist={handleLoadPlaylist}
+                        handleLoadPlaylist={handleLoadPlaylistWithToast}
                         xmlImportModalOpen={xmlImportModalOpen}
                         setXmlImportModalOpen={setXmlImportModalOpen}
                         client={meiliClient}
@@ -228,4 +237,13 @@ export default function SearchPage() {
       )}
     </>
   );
-}
+};
+
+const SearchPageWrapper = () => {
+  return (
+    <PlaylistsProvider>
+      <SearchPage />
+    </PlaylistsProvider>
+  );
+};
+export default SearchPageWrapper;
