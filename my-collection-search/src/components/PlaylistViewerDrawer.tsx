@@ -61,8 +61,6 @@ export const PlaylistViewerDrawer = ({
     pause,
     playNext,
     playPrev,
-    playTrack,
-    stop,
     audioElement,
   } = usePlaylistPlayer(playlist);
 

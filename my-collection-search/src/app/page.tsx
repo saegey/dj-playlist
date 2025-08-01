@@ -7,7 +7,6 @@ import {
   Flex,
   Button,
   Portal,
-  Dialog,
   CloseButton,
   Drawer,
   Container,
@@ -79,9 +78,10 @@ export default function SearchPage() {
 
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const initialFocusRef = useRef<HTMLButtonElement | null>(null);
+  const initialFocusRef = useRef<HTMLButtonElement>(null);
 
   const handleEditClick = (track: Track) => {
+    console.log("Editing track:", track);
     setEditTrack(track);
     setDialogOpen(true);
   };
@@ -217,26 +217,6 @@ export default function SearchPage() {
           />
         </Drawer.Root>
       </Flex>
-
-      {/* Dialog replacing Modal */}
-      {/* <Dialog.Root
-        open={dialogOpen}
-        onOpenChange={(details) => setDialogOpen(details.open)}
-        initialFocusEl={() => initialFocusRef.current}
-        role="dialog"
-        size={["full", "xl", "xl"]}
-      >
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Edit Track</Dialog.Title>
-                <Dialog.CloseTrigger asChild>
-                  <CloseButton ref={initialFocusRef} size="sm" />
-                </Dialog.CloseTrigger>
-              </Dialog.Header>
-              <Dialog.Body> */}
       {editTrack && (
         <TrackEditForm
           track={editTrack}
@@ -246,11 +226,6 @@ export default function SearchPage() {
           initialFocusRef={initialFocusRef}
         />
       )}
-      {/* </Dialog.Body>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root> */}
     </>
   );
 }

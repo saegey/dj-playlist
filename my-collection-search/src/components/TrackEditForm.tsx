@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Box,
   Button,
@@ -17,9 +17,12 @@ import {
   CloseButton,
   RatingGroup,
   Menu,
+  FileUpload,
+  Spinner,
 } from "@chakra-ui/react";
 
 import { AppleMusicResult, YoutubeVideo } from "@/types/track";
+import { HiUpload } from "react-icons/hi";
 
 export interface TrackEditFormProps {
   track_id: string; // Optional for new tracks
@@ -91,8 +94,12 @@ export default function TrackEditForm({
   onSave: (data: TrackEditFormProps) => void;
   dialogOpen: boolean;
   setDialogOpen: (open: boolean) => void;
-  initialFocusRef: React.RefObject<HTMLButtonElement>;
+  initialFocusRef: React.RefObject<HTMLButtonElement | null>;
 }) {
+  // File upload logic
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploading, setUploading] = useState(false);
+
   const [form, setForm] = useState({
     track_id: track.track_id || "",
     album: track.album || "",
@@ -110,6 +117,26 @@ export default function TrackEditForm({
     duration_seconds: track.duration_seconds || undefined, // Optional for new tracks
   });
 
+  React.useEffect(() => {
+    setForm({
+      track_id: track.track_id || "",
+      album: track.album || "",
+      title: track.title || "",
+      artist: track.artist || "",
+      local_tags: track.local_tags || "",
+      notes: track.notes || "",
+      bpm: track.bpm || "",
+      key: track.key || "",
+      danceability: track.danceability || "",
+      apple_music_url: track.apple_music_url || "",
+      youtube_url: track.youtube_url || "",
+      soundcloud_url: track.soundcloud_url || "",
+      star_rating:
+        typeof track.star_rating === "number" ? track.star_rating : 0,
+      duration_seconds: track.duration_seconds || undefined,
+    });
+  }, [track]);
+
   const [youtubeResults, setYoutubeResults] = useState<YoutubeVideo[]>([]);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
@@ -122,6 +149,7 @@ export default function TrackEditForm({
   const [fetching, setFetching] = useState(false);
   const [loading, setLoading] = useState(false);
   const [vectorLoading, setVectorLoading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
   const handleFetchVector = async () => {
     setVectorLoading(true);
     try {
@@ -141,6 +169,41 @@ export default function TrackEditForm({
       alert("Error fetching vector");
     }
     setVectorLoading(false);
+  };
+
+  const handleFileUpload = async () => {
+    // alert("File upload started", JSON.stringify(file));
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("track_id", form.track_id);
+      const res = await fetch("/api/tracks/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const response = await res.json();
+      const { analysis: data } = response;
+      setForm((prev) => ({
+        ...prev,
+        bpm: data.rhythm.bpm ? String(Math.round(data.rhythm.bpm)) : prev.bpm,
+        key: data.tonal.key_edma
+          ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
+          : prev.key,
+        danceability:
+          typeof data.rhythm.danceability === "number"
+            ? data.rhythm.danceability.toFixed(3)
+            : prev.danceability,
+        duration_seconds: Math.round(data.metadata.audio_properties.length),
+      }));
+    } catch (err) {
+      alert("Upload failed: " + (err instanceof Error ? err.message : err));
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    setFile(null);
   };
 
   const handleStarRating = (rating: number) => {
@@ -314,63 +377,98 @@ export default function TrackEditForm({
             </Dialog.Header>
             <Dialog.Body>
               <Box as="form" onSubmit={handleSubmit}>
-                <Menu.Root>
-                  <Menu.Trigger asChild>
-                    <Button variant="outline" size="sm">
-                      Actions
-                    </Button>
-                  </Menu.Trigger>
-                  {/* <Portal> */}
-                  <Menu.Positioner>
-                    <Menu.Content>
-                      <Menu.Item
-                        value="vector"
-                        disabled={vectorLoading}
-                        onSelect={handleFetchVector}
+                <Flex gap={4} direction="row">
+                  <Menu.Root>
+                    <Menu.Trigger asChild>
+                      <Button variant="outline" size="sm">
+                        Actions
+                      </Button>
+                    </Menu.Trigger>
+                    {/* <Portal> */}
+                    <Menu.Positioner>
+                      <Menu.Content>
+                        <Menu.Item
+                          value="vector"
+                          disabled={vectorLoading}
+                          onSelect={handleFetchVector}
+                        >
+                          {vectorLoading ? "Getting Vector..." : "Get Vector"}
+                        </Menu.Item>
+                        <Menu.Item
+                          value="ai"
+                          disabled={fetching}
+                          onSelect={fetchFromChatGPT}
+                        >
+                          {fetching ? "Fetching from AI..." : "Fetch from AI"}
+                        </Menu.Item>
+                        <Menu.Item
+                          value="apple"
+                          disabled={appleLoading}
+                          onSelect={searchAppleMusic}
+                        >
+                          {appleLoading
+                            ? "Searching Apple Music..."
+                            : "Search Apple Music"}
+                        </Menu.Item>
+                        <Menu.Item
+                          value="youtube"
+                          disabled={youtubeLoading}
+                          onSelect={searchYouTube}
+                        >
+                          {youtubeLoading
+                            ? "Searching YouTube..."
+                            : "Search YouTube"}
+                        </Menu.Item>
+                        <Menu.Item
+                          value="analyze"
+                          disabled={
+                            analyzing ||
+                            (!form.apple_music_url &&
+                              !form.youtube_url &&
+                              !form.soundcloud_url)
+                          }
+                          onSelect={handleAnalyzeAudio}
+                        >
+                          {analyzing ? "Analyzing Audio..." : "Analyze Audio"}
+                        </Menu.Item>
+                        {/* <Menu.Item
+                        value="file"
+                        // onSelect={() => {
+                        //   if (fileInputRef.current)
+                        //     fileInputRef.current.click();
+                        // }}
                       >
-                        {vectorLoading ? "Getting Vector..." : "Get Vector"}
-                      </Menu.Item>
-                      <Menu.Item
-                        value="ai"
-                        disabled={fetching}
-                        onSelect={fetchFromChatGPT}
-                      >
-                        {fetching ? "Fetching from AI..." : "Fetch from AI"}
-                      </Menu.Item>
-                      <Menu.Item
-                        value="apple"
-                        disabled={appleLoading}
-                        onSelect={searchAppleMusic}
-                      >
-                        {appleLoading
-                          ? "Searching Apple Music..."
-                          : "Search Apple Music"}
-                      </Menu.Item>
-                      <Menu.Item
-                        value="youtube"
-                        disabled={youtubeLoading}
-                        onSelect={searchYouTube}
-                      >
-                        {youtubeLoading
-                          ? "Searching YouTube..."
-                          : "Search YouTube"}
-                      </Menu.Item>
-                      <Menu.Item
-                        value="analyze"
-                        disabled={
-                          analyzing ||
-                          (!form.apple_music_url &&
-                            !form.youtube_url &&
-                            !form.soundcloud_url)
-                        }
-                        onSelect={handleAnalyzeAudio}
-                      >
-                        {analyzing ? "Analyzing Audio..." : "Analyze Audio"}
-                      </Menu.Item>
-                    </Menu.Content>
-                  </Menu.Positioner>
-                  {/* </Portal> */}
-                </Menu.Root>
+                      </Menu.Item> */}
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Menu.Root>
+
+                  <FileUpload.Root
+                    disabled={uploading}
+                    onFileChange={(files) => {
+                      // alert("File upload started");
+                      // Chakra UI v3 FileUpload: files.acceptedFiles is the correct property
+                      const file = files.acceptedFiles?.[0] || null;
+                      setFile(file);
+                      handleFileUpload();
+                    }}
+                  >
+                    <FileUpload.HiddenInput />
+                    <FileUpload.Trigger asChild>
+                      <Button variant="outline" size="sm">
+                        {uploading ? (
+                          <>
+                            <Spinner /> Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <HiUpload /> Upload Audio
+                          </>
+                        )}
+                      </Button>
+                    </FileUpload.Trigger>
+                  </FileUpload.Root>
+                </Flex>
 
                 <Stack
                   borderWidth="1px"
@@ -436,6 +534,7 @@ export default function TrackEditForm({
                     label="Notes"
                     name="notes"
                     value={form.notes}
+                    height={"100px"}
                     onChange={handleChange}
                   />
                   <LabeledInput
