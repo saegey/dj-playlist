@@ -49,7 +49,7 @@ export default function BulkNotesPage() {
     client: meiliClient,
     username: selectedUsername,
     filter: filterLocalTagsEmpty
-      ? "local_tags IS NULL OR local_tags IS EMPTY"
+      ? "local_tags IS NULL OR local_tags IS EMPTY OR local_tags = '{}'"
       : undefined,
   });
 
