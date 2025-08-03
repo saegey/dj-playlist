@@ -41,6 +41,18 @@ export default function BulkNotesPage() {
     }
   }, []);
 
+  // Build filter string for MeiliSearch
+  let filter = undefined;
+  const localTagsFilter =
+    "local_tags IS NULL OR local_tags IS EMPTY OR local_tags = '{}'";
+  if (filterLocalTagsEmpty && selectedUsername) {
+    filter = `(${localTagsFilter}) AND username = '${selectedUsername}'`;
+  } else if (filterLocalTagsEmpty) {
+    filter = localTagsFilter;
+  } else if (selectedUsername) {
+    filter = `username = '${selectedUsername}'`;
+  }
+
   const {
     setQuery,
     results: tracks,
@@ -48,9 +60,7 @@ export default function BulkNotesPage() {
   } = useSearchResults({
     client: meiliClient,
     username: selectedUsername,
-    filter: filterLocalTagsEmpty
-      ? "local_tags IS NULL OR local_tags IS EMPTY OR local_tags = '{}'"
-      : undefined,
+    filter,
   });
 
   React.useEffect(() => {
@@ -87,7 +97,7 @@ export default function BulkNotesPage() {
           `Track ID: ${t.track_id}\nTitle: ${t.title}\nArtist: ${t.artist}\nAlbum: ${t.album}\nDiscogs URL: ${t.discogs_url}\n---`
       )
       .join("\n");
-    const fullPrompt = `You are a DJ music metadata assistant. For each track below, return a JSON object with the following fields: track_id, local tags, notes.
+    const fullPrompt = `You are a DJ music metadata assistant. For each track below, return a JSON object with the following fields: track_id, local tags, notes. The notes don't use the name of the track and instead just This track.
 Example:
 {"track_id":"123","local_tags":"House","notes":"Great for warmup sets, uplifting vibe."}. In "notes", include a longer DJ-focused description with vibe, energy, suggested set placement, transition tips, and any emotional or cultural context. In local_tags, it is the genre or style of the actual track and not the album. 
  Tracks:\n${promptTracks}`;
