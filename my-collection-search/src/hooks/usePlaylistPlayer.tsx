@@ -1,7 +1,8 @@
 import React, { useCallback, useState, useRef, useEffect } from "react";
 import type { Track } from "@/types/track";
 
-export function usePlaylistPlayer(playlist: Track[]) {
+export function usePlaylistPlayer(initialPlaylist: Track[] = []) {
+  const [playlist, setPlaylist] = useState<Track[]>(initialPlaylist);
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(
     null
   );
@@ -115,6 +116,8 @@ export function usePlaylistPlayer(playlist: Track[]) {
   );
 
   return {
+    playlist,
+    setPlaylist,
     isPlaying,
     currentTrackIndex,
     currentTrack:

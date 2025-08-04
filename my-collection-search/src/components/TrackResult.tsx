@@ -15,6 +15,7 @@ import {
 import { SiDiscogs, SiApplemusic, SiYoutube } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
+import { keyToCamelot } from "./PlaylistViewer";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -29,7 +30,7 @@ function formatSeconds(seconds: number): string {
 }
 
 export type TrackResultProps = {
-  track: Track;
+  track: Track | (Track & { camelot_key?: string });
   buttons?: React.ReactNode;
   minimized?: boolean;
   allowMinimize?: boolean;
@@ -89,7 +90,9 @@ export default function TrackResult({
               <Text>{formatSeconds(track.duration_seconds || 0)}</Text>
               <Text>{track.position}</Text>
               {track.bpm && <Text>{track.bpm} bpm</Text>}
-              <Text>{track.key}</Text>
+              <Text>
+                {track.key} - {keyToCamelot(track.key)}
+              </Text>
               {track.username && (
                 <Text fontSize="sm">User: {track.username}</Text>
               )}
@@ -198,7 +201,10 @@ export default function TrackResult({
                 value: formatSeconds(track.duration_seconds || 0),
               },
               { label: "BPM", value: track.bpm },
-              { label: "Key", value: track.key },
+              {
+                label: "Key",
+                value: `${track.key} - ${keyToCamelot(track.key)}`,
+              },
               { label: "Dance", value: track.danceability },
               { label: "Happy", value: track.mood_happy },
               { label: "Agg", value: track.mood_aggressive },
