@@ -60,6 +60,12 @@ services:
     ports:
       - "8001:8001"
 
+  ga-service:
+    image: ghcr.io/saegey/ga-service:v1.0.42 # Use your published tag, e.g. v1.0.0
+    container_name: ga-service
+    ports:
+      - "8002:8002"
+
   watchtower:
     image: containrrr/watchtower
     restart: always

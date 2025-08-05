@@ -33,19 +33,6 @@ import { useSearchResults } from "@/hooks/useSearchResults";
 import { MeiliSearch } from "meilisearch";
 import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 
-type TrackCompat = Track & {
-  _vectors?: { default?: number[] };
-  energy?: number | string;
-  bpm?: number | string;
-};
-interface TrackWithCamelot {
-  camelot_key?: string;
-  _vectors?: { default?: number[] };
-  energy: number;
-  bpm: number;
-  idx: number;
-}
-
 export const PlaylistViewerDrawer = ({
   hasMounted,
   handleEditClick,
@@ -72,7 +59,6 @@ export const PlaylistViewerDrawer = ({
     isPlaying,
     currentTrackIndex,
     currentTrack,
-    setPlaylist: setPlaylistPlayer,
     play,
     pause,
     playNext,
@@ -85,117 +71,12 @@ export const PlaylistViewerDrawer = ({
     username: selectedUsername,
   });
 
-  const [showOptimalOrder, setShowOptimalOrder] = useState(false);
+  const [optimalOrderType, setOptimalOrderType] = useState<
+    "original" | "greedy" | "genetic"
+  >("original");
   const [recommendations, setRecommendations] = useState<Track[]>([]);
 
-  // Compute optimal order if needed (must be after playlist/showOptimalOrder are defined)
-  const optimalPlaylist = useMemo(() => {
-    if (!showOptimalOrder || playlist.length === 0) return playlist;
-    // --- Types ---
-
-    function cosineSimilarity(a: number[], b: number[]): number {
-      const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
-      const normA = Math.sqrt(a.reduce((sum, val) => sum + val ** 2, 0));
-      const normB = Math.sqrt(b.reduce((sum, val) => sum + val ** 2, 0));
-      return dot / (normA * normB);
-    }
-    function camelotDistance(a: string, b: string): number {
-      if (!a || !b) return 6;
-      const parse = (k: string) => {
-        const m = k.match(/^(\d{1,2})([AB])$/i);
-        if (!m) return null;
-        return [parseInt(m[1], 10), m[2].toUpperCase()];
-      };
-      const pa = parse(a) as [number, string] | null;
-      const pb = parse(b) as [number, string] | null;
-      if (!pa || !pb) return 6;
-      const [numA, modeA] = pa;
-      const [numB, modeB] = pb;
-      if (modeA === modeB) {
-        return Math.min(Math.abs(numA - numB), 12 - Math.abs(numA - numB));
-      }
-      return numA === numB ? 1 : 2;
-    }
-    function transitionPenalty(
-      from: TrackWithCamelot,
-      to: TrackWithCamelot
-    ): number {
-      const bpmDiff = Math.abs((from.bpm ?? 0) - (to.bpm ?? 0));
-      const energyJump = Math.abs((from.energy ?? 0) - (to.energy ?? 0));
-      const harmonicPenalty = camelotDistance(
-        from.camelot_key ?? "",
-        to.camelot_key ?? ""
-      );
-      return 0.1 * bpmDiff + 1.5 * energyJump + 2.0 * harmonicPenalty;
-    }
-    function buildCompatibilityGraph(
-      tracks: TrackWithCamelot[],
-      alpha = 0.7
-    ): number[][] {
-      const n = tracks.length;
-      const edges: number[][] = Array.from({ length: n }, () =>
-        Array(n).fill(0)
-      );
-      for (let i = 0; i < n; ++i) {
-        for (let j = 0; j < n; ++j) {
-          if (i === j) continue;
-          let sim = 0;
-          const vecA = tracks[i]._vectors?.default ?? [];
-          const vecB = tracks[j]._vectors?.default ?? [];
-          if (vecA.length && vecB.length) {
-            sim = cosineSimilarity(vecA, vecB);
-          }
-          const penalty = transitionPenalty(tracks[i], tracks[j]);
-          edges[i][j] = alpha * sim + (1 - alpha) * -penalty;
-        }
-      }
-      return edges;
-    }
-    function greedyPath(
-      tracks: TrackWithCamelot[],
-      edges: number[][]
-    ): number[] {
-      const n = tracks.length;
-      if (n === 0) return [];
-      const visited = Array(n).fill(false);
-      const path = [0];
-      visited[0] = true;
-      for (let step = 1; step < n; ++step) {
-        const last = path[path.length - 1];
-        let best = -Infinity;
-        let bestIdx = -1;
-        for (let j = 0; j < n; ++j) {
-          if (!visited[j] && edges[last][j] > best) {
-            best = edges[last][j];
-            bestIdx = j;
-          }
-        }
-        if (bestIdx === -1) break;
-        path.push(bestIdx);
-        visited[bestIdx] = true;
-      }
-      return path;
-    }
-    const updated: TrackWithCamelot[] = playlist.map((track, idx) => {
-      const t = track as TrackCompat;
-      return {
-        camelot_key: keyToCamelot(t.key),
-        _vectors: t._vectors,
-        energy: typeof t.energy === "number" ? t.energy : Number(t.energy) || 0,
-        bpm: typeof t.bpm === "number" ? t.bpm : Number(t.bpm) || 0,
-        idx,
-      };
-    });
-    const edges = buildCompatibilityGraph(updated);
-    const path = greedyPath(updated, edges);
-    return path.map((i) => playlist[updated[i].idx]);
-  }, [showOptimalOrder, playlist]);
-
-  React.useEffect(() => {
-    setPlaylistPlayer(optimalPlaylist);
-  }, [optimalPlaylist, setPlaylistPlayer]);
-
-  const totalPlaytimeSeconds = optimalPlaylist.reduce((sum, track) => {
+  const totalPlaytimeSeconds = playlist.reduce((sum, track) => {
     if (!track.duration && typeof track.duration_seconds === "number") {
       return sum + track.duration_seconds;
     }
@@ -308,10 +189,12 @@ export const PlaylistViewerDrawer = ({
                     {/* <Button
                       variant="solid"
                       size="sm"
-                      onClick={savePlaylist}
+                      onClick={() => {
+                        setGeneticPlaylistOrder((v) => !v);
+                      }}
                       disabled={!hasMounted || playlist.length === 0}
                     >
-                      Save
+                      {geneticPlaylistOrder ? "Original" : "Genetic"}
                     </Button> */}
                     <Button
                       size="sm"
@@ -319,27 +202,59 @@ export const PlaylistViewerDrawer = ({
                       onClick={exportPlaylist}
                       disabled={!hasMounted || playlist.length === 0}
                     >
-                      Export JSON
+                      JSON
                     </Button>
-                    <Button
-                      size="sm"
-                      variant={showOptimalOrder ? "solid" : "outline"}
-                      onClick={() => {
-                        setShowOptimalOrder((v) => !v);
-                      }}
-                      disabled={!hasMounted || playlist.length === 0}
-                    >
-                      {showOptimalOrder
-                        ? "Show Original Order"
-                        : "Show Optimal Order"}
-                    </Button>
+                    <Menu.Root key="order-menu">
+                      <Menu.Trigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={!hasMounted || playlist.length === 0}
+                        >
+                          Order
+                        </Button>
+                      </Menu.Trigger>
+                      {/* <Portal> */}
+                      <Menu.Positioner>
+                        <Menu.Content>
+                          <Menu.Item
+                            value="original"
+                            onSelect={() => {
+                              // setShowOptimalOrder(false);
+                              setOptimalOrderType("original");
+                            }}
+                          >
+                            Original
+                          </Menu.Item>
+                          <Menu.Item
+                            value="greedy"
+                            onSelect={() => {
+                              // setShowOptimalOrder(true);
+                              setOptimalOrderType("greedy");
+                            }}
+                          >
+                            Greedy
+                          </Menu.Item>
+                          <Menu.Item
+                            value="genetic"
+                            onSelect={() => {
+                              // setShowOptimalOrder(true);
+                              setOptimalOrderType("genetic");
+                            }}
+                          >
+                            Genetic
+                          </Menu.Item>
+                        </Menu.Content>
+                      </Menu.Positioner>
+                      {/* </Portal> */}
+                    </Menu.Root>
                     <Button
                       size="sm"
                       variant={"outline"}
                       onClick={exportPlaylistToPDF}
                       disabled={!hasMounted || playlist.length === 0}
                     >
-                      Export PDF
+                      PDF
                     </Button>
                     <Button
                       variant="ghost"
@@ -408,14 +323,14 @@ export const PlaylistViewerDrawer = ({
           <Drawer.Body>
             <PlaylistViewer
               {...usePlaylistViewer({
-                playlist: optimalPlaylist,
+                playlist: playlist,
                 playlistCounts,
                 moveTrack,
                 setEditTrack: handleEditClick,
                 removeFromPlaylist,
                 playlistAvgEmbedding: playlistAvgEmbedding ?? undefined,
               })}
-              showOptimalOrder={showOptimalOrder}
+              optimalOrderType={optimalOrderType}
             />
             {/* Recommendations below playlist tracks */}
             {recommendations.length > 0 && (

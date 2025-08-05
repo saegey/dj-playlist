@@ -147,14 +147,17 @@ export function keyToCamelot(key: string | undefined | null): string {
   return key;
 }
 
+
+type OptimalOrderType = "original" | "greedy" | "genetic";
 interface PlaylistViewerProps {
   playlist: Track[];
   playlistCounts: Record<string, number>;
   moveTrack: (fromIdx: number, toIdx: number) => void;
   setEditTrack: (track: Track) => void;
   removeFromPlaylist: (trackId: string) => void;
-  showOptimalOrder?: boolean;
+  optimalOrderType?: OptimalOrderType;
 }
+
 
 const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
   playlist,
@@ -162,8 +165,12 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
   moveTrack,
   setEditTrack,
   removeFromPlaylist,
-  showOptimalOrder = false,
+  optimalOrderType = "original",
 }) => {
+  const [geneticPlaylist, setGeneticPlaylist] = React.useState<Track[] | null>(null);
+  const [loadingGenetic, setLoadingGenetic] = React.useState(false);
+
+  // Compute greedy order
   const updatedPlaylist: TrackWithCamelot[] = React.useMemo(() => {
     if (!playlist) return [];
     return playlist.map((track, idx) => {
@@ -187,6 +194,29 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
     [updatedPlaylist, compatibilityEdges]
   );
 
+  // Fetch genetic order if needed
+  React.useEffect(() => {
+    if (optimalOrderType !== "genetic" || playlist.length === 0) return;
+    setLoadingGenetic(true);
+    fetch("/api/playlists/genetic", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playlist }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setGeneticPlaylist(data);
+      })
+      .finally(() => setLoadingGenetic(false));
+  }, [optimalOrderType, playlist]);
+
+  let displayPlaylist: Track[] = playlist;
+  if (optimalOrderType === "greedy" && playlist.length > 0) {
+    displayPlaylist = optimalPath.map((orderIdx) => playlist[updatedPlaylist[orderIdx].idx]);
+  } else if (optimalOrderType === "genetic" && geneticPlaylist && geneticPlaylist.length > 0) {
+    displayPlaylist = geneticPlaylist;
+  }
+
   if (playlist.length === 0) {
     return (
       <Box overflowY="auto">
@@ -207,68 +237,13 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
     );
   }
 
-  if (showOptimalOrder) {
-    return (
-      <Box overflowY="auto">
-        {optimalPath.map((orderIdx) => {
-          const compatTrack = updatedPlaylist[orderIdx];
-          const origTrack = playlist[compatTrack.idx];
-          return (
-            <TrackResult
-              key={origTrack.track_id}
-              track={origTrack}
-              minimized
-              playlistCount={playlistCounts[origTrack.track_id]}
-              buttons={[
-                <Menu.Root key="menu">
-                  <Menu.Trigger asChild>
-                    <Button variant="plain" size="xs">
-                      <FiMoreVertical size={16} />
-                    </Button>
-                  </Menu.Trigger>
-                  <Menu.Positioner>
-                    <Menu.Content>
-                      <Menu.Item
-                        onSelect={() => moveTrack(compatTrack.idx, compatTrack.idx - 1)}
-                        value="up"
-                        disabled={compatTrack.idx === 0}
-                      >
-                        Move Up
-                      </Menu.Item>
-                      <Menu.Item
-                        onSelect={() => moveTrack(compatTrack.idx, compatTrack.idx + 1)}
-                        value="down"
-                        disabled={compatTrack.idx === updatedPlaylist.length - 1}
-                      >
-                        Move Down
-                      </Menu.Item>
-                      <Menu.Item
-                        onSelect={() => setEditTrack(origTrack)}
-                        value="edit"
-                      >
-                        Edit
-                      </Menu.Item>
-                      <Menu.Item
-                        onSelect={() => removeFromPlaylist(origTrack.track_id)}
-                        value="remove"
-                      >
-                        Remove
-                      </Menu.Item>
-                    </Menu.Content>
-                  </Menu.Positioner>
-                </Menu.Root>,
-              ]}
-            />
-          );
-        })}
-      </Box>
-    );
+  if (optimalOrderType === "genetic" && loadingGenetic) {
+    return <Box p={4}>Loading genetic order...</Box>;
   }
 
-  // Default: show original order
   return (
     <Box overflowY="auto">
-      {playlist.map((track, idx) => (
+      {displayPlaylist.map((track, idx) => (
         <TrackResult
           key={track.track_id}
           track={track}
@@ -293,7 +268,7 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
                   <Menu.Item
                     onSelect={() => moveTrack(idx, idx + 1)}
                     value="down"
-                    disabled={idx === playlist.length - 1}
+                    disabled={idx === displayPlaylist.length - 1}
                   >
                     Move Down
                   </Menu.Item>
