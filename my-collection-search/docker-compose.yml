@@ -77,6 +77,13 @@ services:
     container_name: essentia-api
     ports:
       - "8001:8001"
+  
+  ga-service:
+    build:
+      context: ../ga-service
+    container_name: ga-service
+    ports:
+      - "8002:8002"
 
 volumes:
   db_data:
