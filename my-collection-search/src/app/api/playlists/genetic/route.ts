@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    console.log("Received data for genetic optimization:", data);
-    const res = await fetch(`http://192.168.2.98:8003/optimize`, {
+    // console.log("Received data for genetic optimization:", data);
+    const res = await fetch(`http://ga-service:8002/optimize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -1,4 +1,12 @@
-import React, { useState, useCallback, useEffect, useMemo, useContext, createContext, ReactNode } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useContext,
+  createContext,
+  ReactNode,
+} from "react";
 import type { Playlist, Track } from "@/types/track";
 
 export interface PlaylistInfo {
@@ -24,6 +32,10 @@ interface PlaylistsContextType {
   setPlaylistInfo: React.Dispatch<React.SetStateAction<PlaylistInfo>>;
   playlist: TrackWithEmbedding[];
   setPlaylist: React.Dispatch<React.SetStateAction<TrackWithEmbedding[]>>;
+  displayPlaylist: TrackWithEmbedding[];
+  setDisplayPlaylist: React.Dispatch<
+    React.SetStateAction<TrackWithEmbedding[]>
+  >;
   fetchPlaylists: () => Promise<void>;
   handleCreatePlaylist: () => Promise<void>;
   handleLoadPlaylist: (trackIds: Array<string>) => Promise<void>;
@@ -37,7 +49,9 @@ interface PlaylistsContextType {
   getRecommendations: (k?: number) => Promise<Track[]>;
 }
 
-const PlaylistsContext = createContext<PlaylistsContextType | undefined>(undefined);
+const PlaylistsContext = createContext<PlaylistsContextType | undefined>(
+  undefined
+);
 
 export function PlaylistsProvider({ children }: { children: ReactNode }) {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -51,6 +65,9 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     }
     return [];
   });
+  const [displayPlaylist, setDisplayPlaylist] = useState<TrackWithEmbedding[]>(
+    []
+  );
 
   // Memoized average embedding for playlist
   const playlistAvgEmbedding = useMemo(() => {
@@ -168,9 +185,11 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
 
   // Export playlist as JSON file
   const exportPlaylist = useCallback(() => {
+    const playlistToExport =
+      displayPlaylist.length > 0 ? displayPlaylist : playlist;
     const dataStr =
       "data:text/json;charset=utf-8," +
-      encodeURIComponent(JSON.stringify(playlist, null, 2));
+      encodeURIComponent(JSON.stringify(playlistToExport, null, 2));
     const downloadAnchorNode = document.createElement("a");
     downloadAnchorNode.setAttribute("href", dataStr);
     const filename = playlistInfo.name
@@ -180,7 +199,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
-  }, [playlist, playlistInfo]);
+  }, [playlist, playlistInfo, displayPlaylist]);
 
   // Clear playlist
   const clearPlaylist = useCallback(() => {
@@ -228,7 +247,9 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
         const index = meiliClient.index("tracks");
         const playlistIds = playlist.map((t) => t.track_id);
         // const playlistArtists = playlist.map((t) => `'${t.artist.replace(/'/g, "''")}'`);
-        const filter = `NOT track_id IN [${playlistIds.join(",")}] AND username = 'saegey'`;
+        const filter = `NOT track_id IN [${playlistIds.join(
+          ","
+        )}] AND username = 'saegey'`;
         // if (playlistArtists.length > 0) {
         //   filter += ` AND NOT artist IN [${playlistArtists.join(",")}]`;
         // }
@@ -238,7 +259,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
           limit: k,
           filter,
         });
-        return results.hits as Track[] || [];
+        return (results.hits as Track[]) || [];
       } catch (err) {
         console.error("Error fetching recommendations:", err);
         return [];
@@ -264,6 +285,8 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     setPlaylistInfo,
     playlist,
     setPlaylist,
+    displayPlaylist,
+    setDisplayPlaylist,
     fetchPlaylists,
     handleCreatePlaylist,
     handleLoadPlaylist,
@@ -288,6 +311,5 @@ export function usePlaylists() {
   }
   return ctx;
 }
-
 
 export default PlaylistsProvider;

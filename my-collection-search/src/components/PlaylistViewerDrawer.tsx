@@ -12,26 +12,19 @@ import {
   Drawer,
   Menu,
 } from "@chakra-ui/react";
-import PlaylistViewer, { keyToCamelot } from "@/components/PlaylistViewer";
-import { useMemo } from "react";
+import PlaylistViewer from "@/components/PlaylistViewer";
 
 import TrackResult from "@/components/TrackResult";
 import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
 import type { Track } from "@/types/track";
-import {
-  FiChevronLeft,
-  FiChevronRight,
-  FiMoreVertical,
-  FiPause,
-  FiPlay,
-} from "react-icons/fi";
+import { FiMoreVertical } from "react-icons/fi";
 import { usePlaylists } from "@/hooks/usePlaylists";
-import { usePlaylistPlayer } from "@/hooks/usePlaylistPlayer";
 
 import { formatSeconds, parseDurationToSeconds } from "@/lib/trackUtils";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { MeiliSearch } from "meilisearch";
 import { useSelectedUsername } from "@/hooks/useSelectedUsername";
+import PlaylistPlayer from "./PlaylistPlayer";
 
 export const PlaylistViewerDrawer = ({
   hasMounted,
@@ -45,6 +38,7 @@ export const PlaylistViewerDrawer = ({
   const {
     playlist,
     setPlaylist,
+    displayPlaylist,
     exportPlaylist,
     addToPlaylist,
     removeFromPlaylist,
@@ -55,16 +49,6 @@ export const PlaylistViewerDrawer = ({
   const [selectedUsername] = useSelectedUsername();
 
   // Playlist player state
-  const {
-    isPlaying,
-    currentTrackIndex,
-    currentTrack,
-    play,
-    pause,
-    playNext,
-    playPrev,
-    audioElement,
-  } = usePlaylistPlayer(playlist);
 
   const { playlistCounts } = useSearchResults({
     client: meiliClient,
@@ -107,7 +91,14 @@ export const PlaylistViewerDrawer = ({
 
   // PDF export handler
   const exportPlaylistToPDF = () => {
+    console.log("Exporting playlist to PDF", {
+      playlist,
+      displayPlaylist,
+      totalPlaytimeFormatted,
+    });
     if (!playlist.length) return;
+    const currentPlaylist =
+      displayPlaylist.length > 0 ? displayPlaylist : playlist;
     const doc = new jsPDF();
     doc.setFont("courier", "normal");
     doc.setFontSize(8);
@@ -117,7 +108,7 @@ export const PlaylistViewerDrawer = ({
     doc.setFontSize(8);
     doc.setLineHeightFactor(0.8);
 
-    playlist.forEach((track, idx) => {
+    currentPlaylist.forEach((track, idx) => {
       if (y > 270) {
         doc.addPage();
         y = 20;
@@ -267,57 +258,11 @@ export const PlaylistViewerDrawer = ({
                   </Flex>
                 </Box>
               </Box>
-              <Box>
-                {/* Playlist Player Controls */}
-                <Flex gap={2} alignItems="center" mt={2} mb={2}>
-                  <Button
-                    size="sm"
-                    onClick={playPrev}
-                    disabled={
-                      currentTrackIndex === null || currentTrackIndex <= 0
-                    }
-                  >
-                    <FiChevronLeft />
-                  </Button>
-                  {isPlaying ? (
-                    <Button
-                      size="sm"
-                      colorScheme="red"
-                      onClick={pause}
-                      disabled={currentTrackIndex === null}
-                    >
-                      <FiPause />
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      colorScheme="green"
-                      onClick={play}
-                      disabled={playlist.length === 0}
-                    >
-                      <FiPlay />
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    onClick={playNext}
-                    disabled={
-                      currentTrackIndex === null ||
-                      currentTrackIndex >= playlist.length - 1
-                    }
-                  >
-                    <FiChevronRight />
-                  </Button>
-                </Flex>
-              </Box>
-              <Box>
-                {currentTrack && (
-                  <Text fontSize="sm" color="blue.500" ml={2}>
-                    Now Playing: {currentTrack.artist} - {currentTrack.title}
-                  </Text>
-                )}
-              </Box>
-              <Box>{audioElement}</Box>
+              <PlaylistPlayer
+                playlist={
+                  displayPlaylist.length ? displayPlaylist : playlist ?? []
+                }
+              />
             </Drawer.Title>
           </Drawer.Header>
           <Drawer.Body>

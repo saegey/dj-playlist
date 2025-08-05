@@ -7,6 +7,7 @@ import { Box, Button, Menu, EmptyState, VStack } from "@chakra-ui/react";
 import { FiHeadphones, FiMoreVertical } from "react-icons/fi";
 import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
+import { usePlaylists } from "@/hooks/usePlaylists";
 
 // --- Types and Utilities ---
 type TrackCompat = Track & {
@@ -50,14 +51,23 @@ function camelotDistance(a: string, b: string): number {
   return numA === numB ? 1 : 2;
 }
 
-function transitionPenalty(from: TrackWithCamelot, to: TrackWithCamelot): number {
+function transitionPenalty(
+  from: TrackWithCamelot,
+  to: TrackWithCamelot
+): number {
   const bpmDiff = Math.abs((from.bpm ?? 0) - (to.bpm ?? 0));
   const energyJump = Math.abs((from.energy ?? 0) - (to.energy ?? 0));
-  const harmonicPenalty = camelotDistance(from.camelot_key ?? "", to.camelot_key ?? "");
+  const harmonicPenalty = camelotDistance(
+    from.camelot_key ?? "",
+    to.camelot_key ?? ""
+  );
   return 0.1 * bpmDiff + 1.5 * energyJump + 2.0 * harmonicPenalty;
 }
 
-function buildCompatibilityGraph(tracks: TrackWithCamelot[], alpha = 0.7): number[][] {
+function buildCompatibilityGraph(
+  tracks: TrackWithCamelot[],
+  alpha = 0.7
+): number[][] {
   const n = tracks.length;
   const edges: number[][] = Array.from({ length: n }, () => Array(n).fill(0));
   for (let i = 0; i < n; ++i) {
@@ -147,7 +157,6 @@ export function keyToCamelot(key: string | undefined | null): string {
   return key;
 }
 
-
 type OptimalOrderType = "original" | "greedy" | "genetic";
 interface PlaylistViewerProps {
   playlist: Track[];
@@ -158,7 +167,6 @@ interface PlaylistViewerProps {
   optimalOrderType?: OptimalOrderType;
 }
 
-
 const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
   playlist,
   playlistCounts,
@@ -167,8 +175,11 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
   removeFromPlaylist,
   optimalOrderType = "original",
 }) => {
-  const [geneticPlaylist, setGeneticPlaylist] = React.useState<Track[] | null>(null);
+  const [geneticPlaylist, setGeneticPlaylist] = React.useState<Track[] | null>(
+    null
+  );
   const [loadingGenetic, setLoadingGenetic] = React.useState(false);
+  const { displayPlaylist, setDisplayPlaylist } = usePlaylists();
 
   // Compute greedy order
   const updatedPlaylist: TrackWithCamelot[] = React.useMemo(() => {
@@ -210,12 +221,29 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
       .finally(() => setLoadingGenetic(false));
   }, [optimalOrderType, playlist]);
 
-  let displayPlaylist: Track[] = playlist;
-  if (optimalOrderType === "greedy" && playlist.length > 0) {
-    displayPlaylist = optimalPath.map((orderIdx) => playlist[updatedPlaylist[orderIdx].idx]);
-  } else if (optimalOrderType === "genetic" && geneticPlaylist && geneticPlaylist.length > 0) {
-    displayPlaylist = geneticPlaylist;
-  }
+  React.useEffect(() => {
+    if (optimalOrderType === "greedy" && playlist.length > 0) {
+      const greedyPlaylist = optimalPath.map(
+        (orderIdx) => playlist[updatedPlaylist[orderIdx].idx]
+      );
+      setDisplayPlaylist(greedyPlaylist);
+    } else if (
+      optimalOrderType === "genetic" &&
+      geneticPlaylist &&
+      geneticPlaylist.length > 0
+    ) {
+      setDisplayPlaylist(geneticPlaylist);
+    } else {
+      setDisplayPlaylist(playlist);
+    }
+  }, [
+    optimalOrderType,
+    playlist,
+    optimalPath,
+    updatedPlaylist,
+    geneticPlaylist,
+    setDisplayPlaylist,
+  ]);
 
   if (playlist.length === 0) {
     return (
@@ -241,9 +269,11 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
     return <Box p={4}>Loading genetic order...</Box>;
   }
 
+  const ds = displayPlaylist.length > 0 ? displayPlaylist : playlist;
+
   return (
     <Box overflowY="auto">
-      {displayPlaylist.map((track, idx) => (
+      {ds.map((track, idx) => (
         <TrackResult
           key={track.track_id}
           track={track}
@@ -272,10 +302,7 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
                   >
                     Move Down
                   </Menu.Item>
-                  <Menu.Item
-                    onSelect={() => setEditTrack(track)}
-                    value="edit"
-                  >
+                  <Menu.Item onSelect={() => setEditTrack(track)} value="edit">
                     Edit
                   </Menu.Item>
                   <Menu.Item
