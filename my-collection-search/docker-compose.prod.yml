@@ -87,3 +87,4 @@ volumes:
   music_data:
   db_dumps:
   discogs_exports:
+  spotify_exports:
