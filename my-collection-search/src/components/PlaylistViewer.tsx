@@ -216,7 +216,12 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
     })
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data)) setGeneticPlaylist(data);
+        // Ensure result is always an array
+        console.log(data.result)
+        const result = Array.isArray(data.result)
+          ? data.result
+          : Object.values(data.result);
+        setGeneticPlaylist(result);
       })
       .finally(() => setLoadingGenetic(false));
   }, [optimalOrderType, playlist]);
