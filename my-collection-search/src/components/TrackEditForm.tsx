@@ -43,6 +43,16 @@ export interface TrackEditFormProps {
   username: string; // Required for all tracks
 }
 
+type SpotifySearchTrack = {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  url: string;
+  artwork: string;
+  duration: number; // duration in milliseconds
+};
+
 function cleanSoundcloudUrl(url?: string) {
   if (!url) return url;
   try {
@@ -146,6 +156,10 @@ export default function TrackEditForm({
   const [youtubeResults, setYoutubeResults] = useState<YoutubeVideo[]>([]);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
+
+  const [spotifyResults, setSpotifyResults] = useState<SpotifySearchTrack[]>([]);
+  const [spotifyLoading, setSpotifyLoading] = useState(false);
+  const [showSpotifyModal, setShowSpotifyModal] = useState(false);
 
   const [appleResults, setAppleResults] = useState<AppleMusicResult[]>([]);
   const [appleLoading, setAppleLoading] = useState(false);
@@ -283,6 +297,29 @@ export default function TrackEditForm({
       alert("YouTube search error");
     }
     setYoutubeLoading(false);
+  };
+
+  const searchSpotify = async () => {
+    setSpotifyLoading(true);
+    setShowSpotifyModal(true);
+    setSpotifyResults([]);
+    try {
+      const res = await fetch("/api/ai/spotify-track-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: form.title, artist: form.artist }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSpotifyResults(data.results || []);
+      } else {
+        alert("Spotify search failed");
+      }
+    } catch (err) {
+      console.error("Spotify search error:", err);
+      alert("Spotify search error");
+    }
+    setSpotifyLoading(false);
   };
 
   const handleYoutubeSelect = (video: YoutubeVideo) => {
@@ -425,6 +462,16 @@ export default function TrackEditForm({
                           {youtubeLoading
                             ? "Searching YouTube..."
                             : "Search YouTube"}
+                        </Menu.Item>
+
+                        <Menu.Item
+                          value="spotify"
+                          disabled={spotifyLoading}
+                          onSelect={searchSpotify}
+                        >
+                          {spotifyLoading
+                            ? "Searching Spotify..."
+                            : "Search Spotify"}
                         </Menu.Item>
                         <Menu.Item
                           value="analyze"
@@ -650,6 +697,84 @@ export default function TrackEditForm({
                                       e.stopPropagation();
                                       console.log(video);
                                       handleYoutubeSelect(video);
+                                    }}
+                                  >
+                                    Select
+                                  </Button>
+                                </Flex>
+                              ))}
+                            </Stack>
+                          )}
+                        </Dialog.Body>
+                      </Dialog.Content>
+                    </Dialog.Positioner>
+                  </Portal>
+                </Dialog.Root>
+
+                {/* --- Spotify Dialog --- */}
+                <Dialog.Root
+                  open={showSpotifyModal}
+                  onOpenChange={(details) => setShowSpotifyModal(details.open)}
+                  size={["full", "lg", "lg"]}
+                >
+                  <Portal>
+                    <Dialog.Backdrop />
+                    <Dialog.Positioner>
+                      <Dialog.Content>
+                        <Dialog.Header>
+                          <Dialog.Title>Select Spotify Track</Dialog.Title>
+                          <Dialog.CloseTrigger asChild>
+                            <CloseButton size="sm" />
+                          </Dialog.CloseTrigger>
+                        </Dialog.Header>
+                        <Dialog.Body>
+                          {spotifyLoading ? (
+                            <Text>Loading...</Text>
+                          ) : spotifyResults.length === 0 ? (
+                            <Text>No results found.</Text>
+                          ) : (
+                            <Stack>
+                              {spotifyResults.map((track) => (
+                                <Flex
+                                  key={track.id}
+                                  align="center"
+                                  gap={3}
+                                  borderWidth="1px"
+                                  borderRadius="md"
+                                  p={2}
+                                  _hover={{ bg: "gray.50", cursor: "pointer" }}
+                                  onClick={() => {
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      spotify_url: track.url,
+                                    }));
+                                    setShowSpotifyModal(false);
+                                  }}
+                                >
+                                  {track.artwork && (
+                                    <Image
+                                      src={track.artwork}
+                                      alt={track.title}
+                                      boxSize="60px"
+                                      borderRadius="md"
+                                    />
+                                  )}
+                                  <Box flex="1">
+                                    <Text fontWeight="bold">{track.title}</Text>
+                                    <Text fontSize="sm">
+                                      {track.artist} — {track.album}
+                                    </Text>
+                                  </Box>
+                                  <Button
+                                    colorScheme="green"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setForm((prev) => ({
+                                        ...prev,
+                                        spotify_url: track.url,
+                                      }));
+                                      setShowSpotifyModal(false);
                                     }}
                                   >
                                     Select

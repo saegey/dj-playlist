@@ -32,6 +32,8 @@ export async function GET(request: Request) {
     path: "/",
     maxAge: tokenData.expires_in,
   });
-  // Redirect to settings page (absolute URL required)
-  return NextResponse.redirect(new URL("/settings", request.url));
+  // Redirect to original page if state param is present, else fallback to /settings
+  const state = url.searchParams.get("state");
+  const redirectTo = state || "/settings";
+  return NextResponse.redirect(new URL(redirectTo, request.url));
 }
