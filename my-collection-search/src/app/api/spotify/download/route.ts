@@ -1,88 +1,41 @@
-
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import fs from "fs";
 import path from "path";
+import { SpotifyTrack } from "@/types/track";
 const OUTPUT_DIR = path.resolve(process.cwd(), "spotify_exports");
-const MANIFEST_PATH = path.join(OUTPUT_DIR, "manifest_spotify.json");
+const getManifestPath = (username?: string) =>
+  path.join(OUTPUT_DIR, `manifest_${username || "spotify"}.json`);
 
-function loadManifest() {
-  if (fs.existsSync(MANIFEST_PATH)) {
-    const data = fs.readFileSync(MANIFEST_PATH, "utf-8");
+function loadManifest(username?: string) {
+  const manifestPath = getManifestPath(username);
+  if (fs.existsSync(manifestPath)) {
+    const data = fs.readFileSync(manifestPath, "utf-8");
     const manifest = JSON.parse(data);
     return manifest.trackIds || [];
   }
   return [];
 }
 
-function saveManifest(trackIds: string[]) {
+function saveManifest(trackIds: string[], spotifyUsername?: string) {
+  const manifestPath = getManifestPath(spotifyUsername);
   const manifest = {
     trackIds: Array.from(new Set(trackIds)),
     lastSynced: new Date().toISOString(),
+    ...(spotifyUsername ? { spotifyUsername } : {}),
   };
-  fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 }
 
-
-// Spotify track type based on API response
-export type SpotifyTrack = {
-  added_at: string;
-  track: {
-    album: {
-      album_type: string;
-      artists: Array<{
-        external_urls: { spotify: string };
-        href: string;
-        id: string;
-        name: string;
-        type: string;
-        uri: string;
-      }>;
-      available_markets: string[];
-      external_urls: { spotify: string };
-      href: string;
-      id: string;
-      images: Array<{
-        height: number;
-        width: number;
-        url: string;
-      }>;
-      is_playable: boolean;
-      name: string;
-      release_date: string;
-      release_date_precision: string;
-      total_tracks: number;
-      type: string;
-      uri: string;
-    };
-    artists: Array<{
-      external_urls: { spotify: string };
-      href: string;
-      id: string;
-      name: string;
-      type: string;
-      uri: string;
-    }>;
-    available_markets: string[];
-    disc_number: number;
-    duration_ms: number;
-    explicit: boolean;
-    external_ids: { isrc: string };
-    external_urls: { spotify: string };
-    href: string;
-    id: string;
-    is_local: boolean;
-    is_playable: boolean;
-    name: string;
-    popularity: number;
-    preview_url: string | null;
-    track_number: number;
-    type: string;
-    uri: string;
-  };
-};
-
-export async function GET() {
+export async function GET(request: Request) {
+  // Get spotify_username from query param
+  let spotifyUsername = undefined;
+  if (request && typeof request.url === "string") {
+    try {
+      const urlObj = new URL(request.url, "http://localhost");
+      spotifyUsername = urlObj.searchParams.get("spotify_username") || undefined;
+    } catch {}
+  }
   // Get access token from cookie
   const cookieStore = cookies();
   const accessToken = (await cookieStore).get("spotify_access_token")?.value;
@@ -96,7 +49,7 @@ export async function GET() {
   if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR);
 
   // Load manifest
-  const manifestIds = loadManifest();
+  const manifestIds = loadManifest(spotifyUsername);
   const allIds: string[] = [];
   const newTracks: string[] = [];
   const errors: { trackId: string; error: string }[] = [];
@@ -132,8 +85,8 @@ export async function GET() {
       // Wait to avoid hitting rate limits
       await new Promise(r => setTimeout(r, 1200));
     }
-    // Update and save manifest
-    saveManifest([...manifestIds, ...newTracks]);
+    // Update and save manifest, now with spotifyUsername
+    saveManifest([...manifestIds, ...newTracks], spotifyUsername);
     return new NextResponse(JSON.stringify({
       message: "Spotify sync complete",
       newTracks,

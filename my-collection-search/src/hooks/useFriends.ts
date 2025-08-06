@@ -2,31 +2,36 @@ import { useCallback, useEffect, useState } from "react";
 
 interface UseFriendsOptions {
   showCurrentUser?: boolean;
+  showSpotifyUsernames?: boolean;
 }
 
 export function useFriends({
   showCurrentUser = false,
+  showSpotifyUsernames = false,
 }: UseFriendsOptions = {}) {
   const [friends, setFriends] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchFriends = useCallback(async (showCurrentUser: boolean = false) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = showCurrentUser
-        ? await fetch("/api/friends?showCurrentUser=true")
-        : await fetch("/api/friends");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Unknown error");
-      setFriends(data.friends || []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchFriends = useCallback(
+    async (showCurrentUser: boolean = false) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          `/api/friends?showCurrentUser=${showCurrentUser}&showSpotifyUsernames=${showSpotifyUsernames}`
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Unknown error");
+        setFriends(data.friends || []);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [showSpotifyUsernames]
+  );
 
   const addFriend = useCallback(
     async (username: string) => {

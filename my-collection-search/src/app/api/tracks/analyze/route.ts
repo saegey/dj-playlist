@@ -232,7 +232,7 @@ export async function POST(request: Request) {
             // console.debug("Track updated successfully:", rows[0]);
             try {
               const index = meiliClient.index("tracks");
-              const res = await index.updateDocuments([rows[0]]);
+              const res = await index.updateDocuments(rows);
               console.debug("MeiliSearch index updated successfully", res);
             } catch (meiliError) {
               console.error("Failed to update MeiliSearch:", meiliError);

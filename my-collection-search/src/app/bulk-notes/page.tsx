@@ -23,8 +23,11 @@ import { getMeiliClient } from "@/lib/meili";
 import { MeiliSearch } from "meilisearch";
 
 export default function BulkNotesPage() {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { friends: usernames } = useFriends({ showCurrentUser: true });
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const { friends: usernames } = useFriends({
+    showCurrentUser: true,
+    showSpotifyUsernames: true,
+  });
   const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const [bulkPrompt, setBulkPrompt] = useState("");
   const [bulkJson, setBulkJson] = useState("");
@@ -75,7 +78,7 @@ export default function BulkNotesPage() {
   // Toggle for filtering tracks with/without local_tags
   const handleToggleLocalTags = () => setFilterLocalTagsEmpty((v) => !v);
 
-  const toggleSelect = (id: string) =>
+  const toggleSelect = (id: number) =>
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -85,14 +88,14 @@ export default function BulkNotesPage() {
       }
       return next;
     });
-  const selectAll = () => setSelected(new Set(tracks.map((t) => t.track_id)));
+  const selectAll = () => setSelected(new Set(tracks.map((t) => t.id)));
   const deselectAll = () => setSelected(new Set());
   const selectFirst10 = () =>
-    setSelected(new Set(tracks.slice(0, 10).map((t) => t.track_id)));
+    setSelected(new Set(tracks.slice(0, 10).map((t) => t.id)));
 
   const handleGeneratePrompt = () => {
     const promptTracks = tracks
-      .filter((t) => selected.has(t.track_id))
+      .filter((t) => selected.has(t.id))
       .map((t) => {
         const url =
           t.discogs_url && t.discogs_url.trim() !== ""
@@ -138,7 +141,7 @@ Example:
   };
 
   const handleUpload = async () => {
-    setIsDataUploading(true); 
+    setIsDataUploading(true);
     let parsed;
     try {
       parsed = JSON.parse(bulkJson);
@@ -162,7 +165,7 @@ Example:
   };
 
   const UsernameSelect = useUsernameSelect({
-    usernames: ["spotify", ...usernames],
+    usernames: usernames,
     selectedUsername,
     setSelectedUsername,
     size: ["sm"],
@@ -258,13 +261,13 @@ Example:
             <Table.Body>
               {tracks.map((track) => (
                 <Table.Row
-                  key={track.track_id}
-                  data-selected={selected.has(track.track_id) ? "" : undefined}
+                  key={track.id}
+                  data-selected={selected.has(track.id) || undefined}
                 >
                   <Table.Cell>
                     <Checkbox.Root
-                      checked={selected.has(track.track_id)}
-                      onCheckedChange={() => toggleSelect(track.track_id)}
+                      checked={selected.has(track.id)}
+                      onCheckedChange={() => toggleSelect(track.id)}
                     >
                       <Checkbox.HiddenInput />
                       <Checkbox.Control />

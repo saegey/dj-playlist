@@ -6,7 +6,6 @@ import { Index, MeiliSearch } from "meilisearch";
 import { parseDurationToSeconds } from "@/lib/trackUtils";
 
 const DISCOGS_EXPORTS_DIR = path.resolve(process.cwd(), "discogs_exports");
-
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 interface DiscogsRelease {
@@ -49,10 +48,7 @@ interface Track {
   username: string;
 }
 
-interface Artist {
-  name: string;
-}
-
+interface Artist { name: string; }
 interface ProcessedTrack {
   position: string;
   title: string;
@@ -67,19 +63,9 @@ async function getOrCreateTracksIndex(
   meiliClient: MeiliSearch
 ): Promise<Index> {
   try {
-    console.log('[MeiliSearch] Attempting to get index "tracks"...');
-    const idx = await meiliClient.getIndex("tracks");
-    console.log('[MeiliSearch] Index "tracks" exists.');
-    return idx;
-  } catch (err) {
-    console.log("[MeiliSearch] Error getting index:", err);
-    console.log(
-      '[MeiliSearch] Index not found, creating index "tracks" with primaryKey "id"...'
-    );
+    return await meiliClient.getIndex("tracks");
+  } catch {
     await meiliClient.createIndex("tracks", { primaryKey: "id" });
-    console.log(
-      '[MeiliSearch] Index "tracks" created. Fetching index object...'
-    );
     return meiliClient.index("tracks");
   }
 }
@@ -88,166 +74,139 @@ export async function POST() {
   try {
     const { getMeiliClient } = await import("@/lib/meili");
     const meiliClient = getMeiliClient({ server: true });
+
     if (!fs.existsSync(DISCOGS_EXPORTS_DIR)) {
-      return NextResponse.json(
-        { error: "discogs_exports directory not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "discogs_exports not found" }, { status: 404 });
     }
-    // Gather all manifest_*.json files to get per-user releases
+
     const manifestFiles = fs
       .readdirSync(DISCOGS_EXPORTS_DIR)
       .filter((f) => /^manifest_.+\.json$/.test(f));
+
     if (!manifestFiles.length) {
-      return NextResponse.json(
-        { error: "No manifest JSON files found in discogs_exports" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "No manifest JSON files found" }, { status: 404 });
     }
 
     const allTracks: Track[] = [];
+
     for (const manifestFile of manifestFiles) {
       const manifest = JSON.parse(
         fs.readFileSync(path.join(DISCOGS_EXPORTS_DIR, manifestFile), "utf-8")
       );
       const username =
         manifest.username || manifestFile.replace(/^manifest_|\.json$/g, "");
-      console.log(
-        `[Discogs Index] Processing manifest for user: ${username} (${manifestFile})`
-      );
-      // console.log(`[Discogs Index] Manifest content: ${JSON.stringify(manifest, null, 2)}`);
-      // Ensure manifest has releases
-      const releaseFiles = manifest.releaseIds || [];
-      console.log(
-        `[Discogs Index] Found ${releaseFiles.length} release files for user: ${username}`
-      );
-      for (const releaseFile of releaseFiles) {
-        // console.log(
-        //   `[Discogs Index] Processing release file: ${releaseFile} for user: ${username}`
-        // );
-        // Support username-prefixed files for friends' collections
+
+      const releaseIds: string[] = manifest.releaseIds || [];
+      for (const releaseId of releaseIds) {
         let releasePath = path.join(
           DISCOGS_EXPORTS_DIR,
-          `release_${releaseFile}.json`
+          `release_${releaseId}.json`
         );
+
         if (
           !fs.existsSync(releasePath) &&
           username &&
           process.env.DISCOGS_USERNAME &&
           username !== process.env.DISCOGS_USERNAME
         ) {
-          // Try username-prefixed file if not the main user
-          const altPath = path.join(
+          const alt = path.join(
             DISCOGS_EXPORTS_DIR,
-            `${username}_release_${releaseFile}.json`
+            `${username}_release_${releaseId}.json`
           );
-          if (fs.existsSync(altPath)) {
-            releasePath = altPath;
+          if (fs.existsSync(alt)) {
+            releasePath = alt;
           }
         }
-        // console.log(`[Discogs Index] Checking release path: ${releasePath}`);
-        if (!fs.existsSync(releasePath)) continue;
+
+        if (!fs.existsSync(releasePath)) {
+          console.warn(`[Discogs Index] ❌ Release JSON not found: ${releasePath}`);
+          continue;
+        }
+
         const album = JSON.parse(
           fs.readFileSync(releasePath, "utf-8")
         ) as DiscogsRelease;
+
         const artist_name =
-          album["artists_sort"] ||
-          (album.artists && album.artists[0] && album.artists[0].name) ||
+          album.artists_sort ||
+          album.artists?.[0]?.name ||
           "Unknown Artist";
-        const album_title = album["title"];
-        const album_year = album["year"];
-        const album_styles = album["styles"] || [];
-        const album_genres = album["genres"] || [];
-        const discogs_url = album["uri"];
-        const thumbnail = album["thumb"];
-        (album["tracklist"] || []).forEach((track: ProcessedTrack) => {
-          let track_id = `${album["id"]}-${track["position"]}`;
-          // Clean track_id: remove spaces and enforce valid characters only
-          track_id = track_id.trim().replace(/[^a-zA-Z0-9\-_]/g, "");
+
+        album.tracklist.forEach((tr: ProcessedTrack) => {
+          const track_id = `${album.id}-${tr.position}`
+            .trim()
+            .replace(/[^A-Za-z0-9\-_]/g, "");
+
           allTracks.push({
             track_id,
-            title: track["title"],
-            artist: track["artists"]
-              ? track["artists"].map((a: Artist) => a.name).join(", ")
-              : artist_name,
-            album: album_title,
-            year: album_year,
-            styles: album_styles,
-            genres: album_genres,
-            duration: track["duration"],
-            discogs_url: discogs_url,
-            album_thumbnail: thumbnail,
-            position: track["position"] || "",
+            title: tr.title,
+            artist: tr.artists?.map((a) => a.name).join(", ") || artist_name,
+            album: album.title,
+            year: album.year,
+            styles: album.styles || [],
+            genres: album.genres || [],
+            duration: tr.duration,
+            discogs_url: album.uri,
+            album_thumbnail: album.thumb,
+            position: tr.position,
             duration_seconds:
-              typeof track["duration_seconds"] === "number"
-                ? track["duration_seconds"]
-                : parseDurationToSeconds(track["duration"]),
+              typeof tr.duration_seconds === "number"
+                ? tr.duration_seconds
+                : parseDurationToSeconds(tr.duration),
             bpm: null,
             key: null,
             notes: null,
             local_tags: [],
-            apple_music_url: track["apple_music_url"] || null,
-            local_audio_url: track["local_audio_url"] || null,
+            apple_music_url: tr.apple_music_url || null,
+            local_audio_url: tr.local_audio_url || null,
             username,
           });
         });
       }
     }
-    console.log(`[Discogs Index] Total tracks to upsert: ${allTracks.length}`);
-    // Always get or create the index using .index(), which is safe and idempotent
+
     const index = await getOrCreateTracksIndex(meiliClient);
-    // Set vector settings for the embedding field (MeiliSearch v1.7+)
-    // Set embedders for userProvided vectors (MeiliSearch v1.7+)
+
+    // configure embedders (unchanged)…
     try {
-      const embedderRes = await fetch(
+      await fetch(
         `${meiliClient.config.host}/indexes/tracks/settings/embedders`,
         {
           method: "PATCH",
-          headers: new Headers({
+          headers: {
             Authorization: `Bearer ${meiliClient.config.apiKey ?? ""}`,
             "Content-Type": "application/json",
-          }),
+          },
           body: JSON.stringify({
-            default: {
-              source: "userProvided",
-              dimensions: 1536,
-            },
+            default: { source: "userProvided", dimensions: 1536 },
           }),
         }
       );
-      if (!embedderRes.ok) {
-        console.warn(
-          "Failed to set MeiliSearch embedders:",
-          await embedderRes.text()
-        );
-      } else {
-        console.log(
-          "MeiliSearch embedders updated for userProvided vectors.",
-          embedderRes
-        );
-      }
     } catch (err) {
       console.warn("Error setting MeiliSearch embedders:", err);
     }
 
-    const upserted: Record<string, ProcessedTrack>[] = [];
-    for (const [i, track] of allTracks.entries()) {
-      if (i % 100 === 0)
-        console.log(
-          `[Discogs Index] Upserting track ${i + 1}/${allTracks.length}`
-        );
-      // Upsert track, but only update username on conflict
-      await pool.query(
+    // 1) Upsert via RETURNING *
+    const upserted: Track[] = [];
+    for (const track of allTracks) {
+      const { rows: insertedRows } = await pool.query(
         `
-      INSERT INTO tracks (
-        track_id, title, artist, album, year, styles, genres, duration, position, discogs_url, album_thumbnail, bpm, key, notes, local_tags, apple_music_url, duration_seconds, username
-      ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18
-      )
-      ON CONFLICT (track_id) DO UPDATE SET
-        username = EXCLUDED.username
-      RETURNING *
-      `,
+        INSERT INTO tracks (
+          track_id, title, artist, album, year,
+          styles, genres, duration, position,
+          discogs_url, album_thumbnail,
+          bpm, key, notes, local_tags,
+          apple_music_url, duration_seconds, username
+        ) VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,
+          $10,$11,$12,$13,$14,$15,$16,$17,$18
+        )
+        ON CONFLICT (track_id, username)
+        DO UPDATE SET
+          discogs_url     = EXCLUDED.discogs_url,
+          album_thumbnail = EXCLUDED.album_thumbnail
+        RETURNING *;
+        `,
         [
           track.track_id,
           track.title,
@@ -269,94 +228,45 @@ export async function POST() {
           track.username,
         ]
       );
-      // Fetch the full row from the DB to get all fields (including custom fields)
-      const { rows } = await pool.query(
-        "SELECT * FROM tracks WHERE track_id = $1",
-        [track.track_id]
-      );
-      if (rows && rows[0]) {
-        upserted.push(rows[0]);
+
+      if (insertedRows.length !== 1) {
+        console.warn(
+          `[Discogs Index] Expected 1 row for ${track.track_id}@${track.username}, got ${insertedRows.length}`
+        );
       }
+      upserted.push(insertedRows[0]);
     }
 
+    // 2) Update Meili settings & index
     await index.updateSearchableAttributes([
-      "local_tags",
-      "artist",
-      "album",
-      "styles",
-      "title",
-      "notes",
-      "genres",
+      "local_tags", "artist", "album", "styles", "title", "notes", "genres",
     ]);
-    // using meilisearch-js
     await index.updateFilterableAttributes([
-      "title",
-      "artist",
-      "album",
-      "bpm",
-      "genres",
-      "key",
-      "local_tags",
-      "styles",
-      "year",
-      "track_id",
-      "local_audio_url",
-      "username",
-      "notes",
-      "apple_music_url",
-      "youtube_url",
-      "hasVectors",
+      "track_id", "username", "bpm", "genres", "key", "year",
+      "local_tags", "styles", "local_audio_url", "apple_music_url", "hasVectors",
     ]);
-
     await index.updateRankingRules([
-      "words",
-      "typo",
-      "proximity",
-      "attribute",
-      "sort",
-      "exactness",
+      "words", "typo", "proximity", "attribute", "sort", "exactness"
     ]);
-    console.log(
-      `[Discogs Index] Adding ${upserted.length} tracks to MeiliSearch index...`
-    );
 
-    const { taskUid } = await index.addDocuments(
+    await index.addDocuments(
       upserted.map((t) => {
-        // Remove embedding, keep _vectors as array
-        const { embedding, ...rest } = t;
-        let vectorArr = null;
-        if (embedding) {
-          if (Array.isArray(embedding)) {
-            vectorArr = embedding;
-          } else if (typeof embedding === "string") {
-            try {
-              vectorArr = JSON.parse(embedding);
-            } catch {
-              vectorArr = null;
-            }
-          }
+        const { embedding, ...rest } = t as Track & { embedding?: number[] | string };
+        let vectorArr: number[] | null = null;
+        if (Array.isArray(embedding)) vectorArr = embedding;
+        else if (typeof embedding === "string") {
+          try { vectorArr = JSON.parse(embedding); } catch {}
         }
         return {
           ...rest,
-          notes: t.notes ? t.notes : null,
-          local_tags: t.local_tags ? t.local_tags : [],
           _vectors: { default: vectorArr },
-          hasVectors: vectorArr ? true : false,
+          hasVectors: !!vectorArr,
         };
       })
     );
 
-    console.log(
-      `🚀 Added ${upserted.length} tracks to MeiliSearch (task UID: ${taskUid})`
-    );
-
-    // await index.waitForTask(task.taskUid);
-    console.log(
-      `[Discogs Index] Done. Upserted and indexed ${upserted.length} tracks.`
-    );
-
     return NextResponse.json({
-      message: `Upserted and indexed ${upserted.length} tracks from discogs_exports.`,
+      message: `Upserted & indexed ${upserted.length} tracks.`,
     });
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));

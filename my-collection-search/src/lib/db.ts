@@ -31,6 +31,7 @@ export async function getPlaylistCountsForTracks(
 // Update a track by track_id, allowing partial updates (e.g. tags, metadata)
 export async function updateTrack(data: {
   track_id: string;
+  username: string;
   title?: string;
   artist?: string;
   album?: string;
@@ -39,8 +40,8 @@ export async function updateTrack(data: {
   local_audio_url?: string;
   duration_seconds?: number;
 }) {
-  const { track_id, ...fields } = data;
-  if (!track_id) return null;
+  const { track_id, username, ...fields } = data;
+  if (!track_id || !username) return null;
   // Remove undefined fields
   const filteredFields: Record<string, unknown> = {};
   Object.keys(fields).forEach((key) => {
@@ -52,8 +53,8 @@ export async function updateTrack(data: {
   if (Object.keys(filteredFields).length === 0) {
     // No fields to update, return current
     const currentRes = await pool.query(
-      "SELECT * FROM tracks WHERE track_id = $1",
-      [track_id]
+      "SELECT * FROM tracks WHERE track_id = $1 AND username = $2",
+      [track_id, username]
     );
     return currentRes.rows[0] || null;
   }
@@ -67,9 +68,10 @@ export async function updateTrack(data: {
     idx++;
   });
   values.push(track_id);
+  values.push(username);
   const query = `UPDATE tracks SET ${setClauses.join(
     ", "
-  )} WHERE track_id = $${idx} RETURNING *`;
+  )} WHERE track_id = $${idx} AND username = $${idx + 1} RETURNING *`;
   const { rows } = await pool.query(query, values);
   return rows[0] || null;
 }

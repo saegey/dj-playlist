@@ -1,4 +1,5 @@
 export type Track = {
+  id: number,
   track_id: string;
   isrc?: string;
   title: string;
@@ -29,6 +30,64 @@ export type Track = {
   star_rating?: number;
   username?: string; // Username of the user who added this track
   _semanticScore?: number; // Optional semantic score for AI recommendations
+};
+
+// Spotify track type based on API response
+export type SpotifyTrack = {
+  added_at: string;
+  track: {
+    album: {
+      album_type: string;
+      artists: Array<{
+        external_urls: { spotify: string };
+        href: string;
+        id: string;
+        name: string;
+        type: string;
+        uri: string;
+      }>;
+      available_markets: string[];
+      external_urls: { spotify: string };
+      href: string;
+      id: string;
+      images: Array<{
+        height: number;
+        width: number;
+        url: string;
+      }>;
+      is_playable: boolean;
+      name: string;
+      release_date: string;
+      release_date_precision: string;
+      total_tracks: number;
+      type: string;
+      uri: string;
+    };
+    artists: Array<{
+      external_urls: { spotify: string };
+      href: string;
+      id: string;
+      name: string;
+      type: string;
+      uri: string;
+    }>;
+    available_markets: string[];
+    disc_number: number;
+    duration_ms: number;
+    explicit: boolean;
+    external_ids: { isrc: string };
+    external_urls: { spotify: string };
+    href: string;
+    id: string;
+    is_local: boolean;
+    is_playable: boolean;
+    name: string;
+    popularity: number;
+    preview_url: string | null;
+    track_number: number;
+    type: string;
+    uri: string;
+  };
 };
 
 export type YoutubeVideo = {

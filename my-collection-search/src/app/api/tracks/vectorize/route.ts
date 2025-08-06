@@ -6,25 +6,27 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-
-async function getTrack(track_id: string): Promise<Track | null> {
-  const res = await pool.query("SELECT * FROM tracks WHERE track_id = $1", [
-    track_id,
-  ]);
+async function getTrack(
+  track_id: string,
+  username: string
+): Promise<Track | null> {
+  const res = await pool.query(
+    "SELECT * FROM tracks WHERE track_id = $1 AND username = $2",
+    [track_id, username]
+  );
   return res.rows[0] || null;
 }
-
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { track_id } = body;
+    const { track_id, username } = body;
     if (!track_id) {
       return new Response(JSON.stringify({ error: "Missing track_id" }), {
         status: 400,
       });
     }
-    const track = await getTrack(track_id);
+    const track = await getTrack(track_id, username);
     if (!track) {
       return new Response(JSON.stringify({ error: "Track not found" }), {
         status: 404,
@@ -34,10 +36,10 @@ export async function POST(request: Request) {
     const embedding = await getTrackEmbedding(track);
     // Convert JS array to Postgres vector format: [0.1,0.2,...]
     const pgVector = `[${embedding.join(",")}]`;
-    await pool.query("UPDATE tracks SET embedding = $1 WHERE track_id = $2", [
-      pgVector,
-      track_id,
-    ]);
+    await pool.query(
+      "UPDATE tracks SET embedding = $1 WHERE track_id = $2 AND username = $3",
+      [pgVector, track_id, username]
+    );
 
     // Update MeiliSearch index with new embedding
     try {
@@ -46,8 +48,9 @@ export async function POST(request: Request) {
       const index = meiliClient.index("tracks");
       await index.updateDocuments([
         {
-          track_id,
-          _vectors: { default: embedding }, // Use default vector field
+          ...track,
+          hasVectors: true,
+          _vectors: { default: embedding },
         },
       ]);
     } catch (err) {
