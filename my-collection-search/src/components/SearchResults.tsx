@@ -60,7 +60,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     }
   };
   const usernameSelect = useUsernameSelect({
-    usernames: friends,
+    usernames: ["spotify", ...friends],
     selectedUsername,
     setSelectedUsername,
     size: ["sm", "md", "md"],

@@ -159,6 +159,7 @@ export default function BackfillAudioPage() {
             apple_music_url: updated[idx].apple_music_url,
             youtube_url: updated[idx].youtube_url,
             soundcloud_url: updated[idx].soundcloud_url,
+            spotify_url: updated[idx].spotify_url,
           }),
         });
         if (!res.ok) throw new Error((await res.json()).error || "Failed");
@@ -200,7 +201,7 @@ export default function BackfillAudioPage() {
   };
 
   const UsernameSelect = useUsernameSelect({
-    usernames,
+    usernames: ["spotify", ...usernames],
     selectedUsername,
     setSelectedUsername,
     size: ["sm", "md", "md"],

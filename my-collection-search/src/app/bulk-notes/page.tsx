@@ -31,6 +31,7 @@ export default function BulkNotesPage() {
   const [filterLocalTagsEmpty, setFilterLocalTagsEmpty] = useState(true);
   const [artistSearch, setArtistSearch] = useState("");
   const [meiliClient, setMeiliClient] = useState<MeiliSearch | null>(null);
+  const [isDataUploading, setIsDataUploading] = useState(false);
 
   React.useEffect(() => {
     try {
@@ -92,10 +93,13 @@ export default function BulkNotesPage() {
   const handleGeneratePrompt = () => {
     const promptTracks = tracks
       .filter((t) => selected.has(t.track_id))
-      .map(
-        (t) =>
-          `Track ID: ${t.track_id}\nTitle: ${t.title}\nArtist: ${t.artist}\nAlbum: ${t.album}\nDiscogs URL: ${t.discogs_url}\n---`
-      )
+      .map((t) => {
+        const url =
+          t.discogs_url && t.discogs_url.trim() !== ""
+            ? t.discogs_url
+            : t.spotify_url;
+        return `Track ID: ${t.track_id}\nTitle: ${t.title}\nArtist: ${t.artist}\nAlbum: ${t.album}\nDiscogs/Spotify URL: ${url}\n---`;
+      })
       .join("\n");
     const fullPrompt = `You are a DJ music metadata assistant. For each track below, return a JSON object with the following fields: track_id, local tags, notes. The notes don't use the name of the track and instead just This track.
 Example:
@@ -134,6 +138,7 @@ Example:
   };
 
   const handleUpload = async () => {
+    setIsDataUploading(true); 
     let parsed;
     try {
       parsed = JSON.parse(bulkJson);
@@ -148,6 +153,7 @@ Example:
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ updates: parsed }),
     });
+    setIsDataUploading(false);
     // no-op: loading handled by hook
     toaster.create({
       title: res.ok ? "Tracks updated" : "Update failed",
@@ -156,7 +162,7 @@ Example:
   };
 
   const UsernameSelect = useUsernameSelect({
-    usernames,
+    usernames: ["spotify", ...usernames],
     selectedUsername,
     setSelectedUsername,
     size: ["sm"],
@@ -302,7 +308,7 @@ Example:
             <Button
               colorPalette="blue"
               onClick={handleUpload}
-              loading={loading}
+              loading={isDataUploading}
             >
               Upload Results
             </Button>
