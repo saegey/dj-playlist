@@ -2,33 +2,9 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { Pool } from "pg";
-import { SpotifyTrack } from "../download/route";
-import { Track } from "@/types/track";
+import { SpotifyTrack, Track } from "@/types/track";
 const EXPORT_DIR = path.resolve(process.cwd(), "spotify_exports");
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-// --- Types for reference ---
-// interface Track {
-//   track_id: string;
-//   title: string;
-//   artist: string;
-//   album: string;
-//   year: number | null;
-//   styles: string[];
-//   genres: string[];
-//   duration: string | null;
-//   discogs_url: string | null;
-//   album_thumbnail: string | null;
-//   position: string;
-//   duration_seconds: number | null;
-//   bpm: number | null;
-//   key: string | null;
-//   notes: string | null;
-//   local_tags: string[];
-//   apple_music_url: string | null;
-//   local_audio_url: string | null;
-//   username: string;
-// }
 
 // --- Converter function ---
 /**
@@ -96,13 +72,23 @@ export async function POST() {
         { status: 404 }
       );
     }
+    // Read username from manifest
+    let manifestUsername = "spotify";
+    try {
+      const manifestRaw = fs.readFileSync(path.join(EXPORT_DIR, "manifest_spotify.json"), "utf-8");
+      const manifest = JSON.parse(manifestRaw);
+      if (manifest.spotifyUsername && typeof manifest.spotifyUsername === "string") {
+        manifestUsername = manifest.spotifyUsername;
+      }
+    } catch {}
+
     const allTracks: Track[] = [];
     const errors: { file: string; error: string }[] = [];
     for (const file of files) {
       try {
         const raw = fs.readFileSync(path.join(EXPORT_DIR, file), "utf-8");
         const spotifyTrack = JSON.parse(raw);
-        const track = spotifyToTrack(spotifyTrack, "spotify");
+        const track = spotifyToTrack(spotifyTrack, manifestUsername);
         allTracks.push(track);
       } catch (e) {
         errors.push({ file, error: (e as Error).message });

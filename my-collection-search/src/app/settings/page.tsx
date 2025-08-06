@@ -17,6 +17,8 @@ import {
   CloseButton,
   FileUpload,
   Skeleton,
+  Dialog,
+  Portal,
 } from "@chakra-ui/react";
 import { HiUpload } from "react-icons/hi";
 import { toaster, Toaster } from "@/components/ui/toaster";
@@ -35,8 +37,12 @@ type SyncResult = {
 type IndexResult = { message?: string };
 
 export default function DiscogsSyncPage() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [spotifyUsername, setSpotifyUsername] = useState("");
+  const [syncingSpotify, setSyncingSpotify] = useState(false);
   const [updatingSpotifyIndex, setUpdatingSpotifyIndex] = useState(false);
   const [showSyncAlert, setShowSyncAlert] = useState(false);
+  const [spotifySyncStatus, setSpotifySyncStatus] = useState<SyncResult | null>(null);
   // Backfill embeddings state
   const [backfilling, setBackfilling] = useState(false);
   const [backfillResult, setBackfillResult] = useState<null | {
@@ -377,6 +383,23 @@ export default function DiscogsSyncPage() {
           </Alert.Root>
         )}
 
+        {spotifySyncStatus && (
+          <Alert.Root status="success" title="Success" mb={4}>
+            <Alert.Indicator />
+            <Alert.Content>
+              <Alert.Title>Spotify Sync Status</Alert.Title>
+              <Alert.Description>{JSON.stringify({ ...spotifySyncStatus, alreadyHave: undefined }, null, 2)}</Alert.Description>
+            </Alert.Content>
+            <CloseButton
+              pos="relative"
+              top="-2"
+              insetEnd="-2"
+              onClick={() => setSpotifySyncStatus(null)}
+            />
+          </Alert.Root>
+        )}
+
+
         {error && (
           <Alert.Root status="error" title="Error">
             <Alert.Indicator />
@@ -393,21 +416,32 @@ export default function DiscogsSyncPage() {
           </Alert.Root>
         )}
         {backupResult && (
-          <Alert.Root status="success" title="Backup Complete">
+          <Alert.Root status="success" title="Backup Complete" mb={4}>
             <Alert.Indicator />
             <Alert.Title>Backup Complete</Alert.Title>
             <Alert.Description>{backupResult}</Alert.Description>
+            <CloseButton
+              pos="relative"
+              top="-2"
+              insetEnd="-2"
+              onClick={() => setBackupResult(null)}
+            />
           </Alert.Root>
         )}
-        <SimpleGrid gap={4} columns={{ base: 1, md: 4 }}>
+        <SimpleGrid gap={4} columns={{ base: 1, md: 3 }}>
           <Button
             colorScheme="green"
             onClick={async () => {
               setUpdatingSpotifyIndex(true);
               try {
-                const res = await fetch("/api/spotify/index", { method: "POST" });
+                const res = await fetch("/api/spotify/index", {
+                  method: "POST",
+                });
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Failed to update Spotify index");
+                if (!res.ok)
+                  throw new Error(
+                    data.error || "Failed to update Spotify index"
+                  );
                 toaster.create({
                   title: "Spotify Index Updated",
                   type: "success",
@@ -454,39 +488,82 @@ export default function DiscogsSyncPage() {
           >
             Backup Database
           </Button>
-          <Button
-            colorScheme="teal"
-            onClick={async () => {
-              try {
-                const res = await fetch("/api/spotify/download");
-                if (res.status === 401) {
-                  window.location.href = "/api/spotify/login";
-                  return;
-                }
-                if (!res.ok) throw new Error("Failed to download Spotify library");
-                const blob = await res.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "spotify-library.json";
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-              } catch (e) {
-                toaster.create({
-                  title: "Spotify Download Failed",
-                  type: "error",
-                  description: e instanceof Error ? e.message : String(e),
-                });
-              }
-            }}
-            disabled={indexing || backingUp}
+          <Dialog.Root
+            open={dialogOpen}
+            onOpenChange={(details) => setDialogOpen(details.open)}
           >
-            Sync Spotify
-          </Button>
-          
-          
+            <Dialog.Trigger asChild>
+              <Button colorScheme="teal" disabled={indexing || backingUp}>
+                Sync Spotify
+              </Button>
+            </Dialog.Trigger>
+            <Portal>
+              <Dialog.Backdrop />
+              <Dialog.Positioner>
+                <Dialog.Content>
+                  <Dialog.Header>
+                    <Dialog.Title>Sync Spotify Library</Dialog.Title>
+                  </Dialog.Header>
+                  <Dialog.Body>
+                    <Text mb={2}>
+                      Enter your Spotify username to sync and export your
+                      library.
+                    </Text>
+                    <Input
+                      placeholder="Spotify username"
+                      value={spotifyUsername}
+                      onChange={(e) => setSpotifyUsername(e.target.value)}
+                      autoFocus
+                    />
+                  </Dialog.Body>
+                  <Dialog.Footer>
+                    <Dialog.ActionTrigger asChild>
+                      <Button variant="outline">Cancel</Button>
+                    </Dialog.ActionTrigger>
+                    <Button
+                      colorScheme="teal"
+                      loading={syncingSpotify}
+                      disabled={!spotifyUsername.trim() || syncingSpotify}
+                      onClick={async () => {
+                        setSyncingSpotify(true);
+                        try {
+                          const res = await fetch(
+                            `/api/spotify/download?spotify_username=${encodeURIComponent(
+                              spotifyUsername
+                            )}`
+                          );
+                          if (res.status === 401) {
+                            window.location.href = "/api/spotify/login";
+                            return;
+                          }
+                          if (!res.ok)
+                            throw new Error(
+                              "Failed to download Spotify library"
+                            );
+                          setSpotifySyncStatus(await res.json());
+                          setDialogOpen(false);
+                        } catch (e) {
+                          toaster.create({
+                            title: "Spotify Download Failed",
+                            type: "error",
+                            description:
+                              e instanceof Error ? e.message : String(e),
+                          });
+                        } finally {
+                          setSyncingSpotify(false);
+                        }
+                      }}
+                    >
+                      Download
+                    </Button>
+                  </Dialog.Footer>
+                  <Dialog.CloseTrigger asChild>
+                    <CloseButton size="sm" />
+                  </Dialog.CloseTrigger>
+                </Dialog.Content>
+              </Dialog.Positioner>
+            </Portal>
+          </Dialog.Root>
           <Button
             colorScheme="pink"
             onClick={handleBackfillEmbeddings}
