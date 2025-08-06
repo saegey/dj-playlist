@@ -28,6 +28,7 @@ services:
       - music_data:/app/audio
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
+      - spotify_exports:/app/spotify_exports
 
   db:
     image: pgvector/pgvector:pg15
@@ -87,3 +88,4 @@ volumes:
   music_data:
   db_dumps:
   discogs_exports:
+  spotify_exports:
