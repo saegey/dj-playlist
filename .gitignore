@@ -10,5 +10,7 @@ discogs_exports/
 tmp/
 my-collection-search/public/audio*
 my-collection-search/dumps/*
+my-collection-search/spotify_exports
+
 djplaylist_backup_*
 *.pyc

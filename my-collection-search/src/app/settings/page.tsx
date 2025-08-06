@@ -35,6 +35,7 @@ type SyncResult = {
 type IndexResult = { message?: string };
 
 export default function DiscogsSyncPage() {
+  const [updatingSpotifyIndex, setUpdatingSpotifyIndex] = useState(false);
   const [showSyncAlert, setShowSyncAlert] = useState(false);
   // Backfill embeddings state
   const [backfilling, setBackfilling] = useState(false);
@@ -398,7 +399,35 @@ export default function DiscogsSyncPage() {
             <Alert.Description>{backupResult}</Alert.Description>
           </Alert.Root>
         )}
-        <SimpleGrid gap={4} columns={{ base: 1, md: 3 }}>
+        <SimpleGrid gap={4} columns={{ base: 1, md: 4 }}>
+          <Button
+            colorScheme="green"
+            onClick={async () => {
+              setUpdatingSpotifyIndex(true);
+              try {
+                const res = await fetch("/api/spotify/index", { method: "POST" });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Failed to update Spotify index");
+                toaster.create({
+                  title: "Spotify Index Updated",
+                  type: "success",
+                  description: data.message || "Spotify index update complete",
+                });
+              } catch (e) {
+                toaster.create({
+                  title: "Spotify Index Update Failed",
+                  type: "error",
+                  description: e instanceof Error ? e.message : String(e),
+                });
+              } finally {
+                setUpdatingSpotifyIndex(false);
+              }
+            }}
+            loading={updatingSpotifyIndex}
+            disabled={updatingSpotifyIndex || indexing || backingUp}
+          >
+            Update Spotify Index
+          </Button>
           <Button
             colorScheme="blue"
             onClick={() => handleSync()}
@@ -425,6 +454,39 @@ export default function DiscogsSyncPage() {
           >
             Backup Database
           </Button>
+          <Button
+            colorScheme="teal"
+            onClick={async () => {
+              try {
+                const res = await fetch("/api/spotify/download");
+                if (res.status === 401) {
+                  window.location.href = "/api/spotify/login";
+                  return;
+                }
+                if (!res.ok) throw new Error("Failed to download Spotify library");
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "spotify-library.json";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+              } catch (e) {
+                toaster.create({
+                  title: "Spotify Download Failed",
+                  type: "error",
+                  description: e instanceof Error ? e.message : String(e),
+                });
+              }
+            }}
+            disabled={indexing || backingUp}
+          >
+            Sync Spotify
+          </Button>
+          
+          
           <Button
             colorScheme="pink"
             onClick={handleBackfillEmbeddings}
