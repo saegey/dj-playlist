@@ -40,6 +40,7 @@ export interface TrackEditFormProps {
   soundcloud_url?: string;
   star_rating?: number;
   duration_seconds?: number; // Optional for new tracks
+  username: string; // Required for all tracks
 }
 
 function cleanSoundcloudUrl(url?: string) {
@@ -117,6 +118,7 @@ export default function TrackEditForm({
     soundcloud_url: track.soundcloud_url || "",
     star_rating: typeof track.star_rating === "number" ? track.star_rating : 0,
     duration_seconds: track.duration_seconds || undefined, // Optional for new tracks
+    username: track.username,
   });
 
   React.useEffect(() => {
@@ -137,6 +139,7 @@ export default function TrackEditForm({
       star_rating:
         typeof track.star_rating === "number" ? track.star_rating : 0,
       duration_seconds: track.duration_seconds || undefined,
+      username: track.username,
     });
   }, [track]);
 

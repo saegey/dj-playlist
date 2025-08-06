@@ -1,15 +1,16 @@
-
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import fs from "fs";
 import path from "path";
 import { SpotifyTrack } from "@/types/track";
 const OUTPUT_DIR = path.resolve(process.cwd(), "spotify_exports");
-const MANIFEST_PATH = path.join(OUTPUT_DIR, "manifest_spotify.json");
+const getManifestPath = (username?: string) =>
+  path.join(OUTPUT_DIR, `manifest_${username || "spotify"}.json`);
 
-function loadManifest() {
-  if (fs.existsSync(MANIFEST_PATH)) {
-    const data = fs.readFileSync(MANIFEST_PATH, "utf-8");
+function loadManifest(username?: string) {
+  const manifestPath = getManifestPath(username);
+  if (fs.existsSync(manifestPath)) {
+    const data = fs.readFileSync(manifestPath, "utf-8");
     const manifest = JSON.parse(data);
     return manifest.trackIds || [];
   }
@@ -17,12 +18,13 @@ function loadManifest() {
 }
 
 function saveManifest(trackIds: string[], spotifyUsername?: string) {
+  const manifestPath = getManifestPath(spotifyUsername);
   const manifest = {
     trackIds: Array.from(new Set(trackIds)),
     lastSynced: new Date().toISOString(),
     ...(spotifyUsername ? { spotifyUsername } : {}),
   };
-  fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 }
 
 export async function GET(request: Request) {
@@ -47,7 +49,7 @@ export async function GET(request: Request) {
   if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR);
 
   // Load manifest
-  const manifestIds = loadManifest();
+  const manifestIds = loadManifest(spotifyUsername);
   const allIds: string[] = [];
   const newTracks: string[] = [];
   const errors: { trackId: string; error: string }[] = [];

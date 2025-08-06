@@ -24,7 +24,10 @@ import { MeiliSearch } from "meilisearch";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { friends: usernames } = useFriends({ showCurrentUser: true });
+  const { friends: usernames } = useFriends({
+    showCurrentUser: true,
+    showSpotifyUsernames: true,
+  });
   const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const [bulkPrompt, setBulkPrompt] = useState("");
   const [bulkJson, setBulkJson] = useState("");
@@ -138,7 +141,7 @@ Example:
   };
 
   const handleUpload = async () => {
-    setIsDataUploading(true); 
+    setIsDataUploading(true);
     let parsed;
     try {
       parsed = JSON.parse(bulkJson);
@@ -162,7 +165,7 @@ Example:
   };
 
   const UsernameSelect = useUsernameSelect({
-    usernames: ["spotify", ...usernames],
+    usernames: usernames,
     selectedUsername,
     setSelectedUsername,
     size: ["sm"],

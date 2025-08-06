@@ -37,6 +37,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 }) => {
   const { friends } = useFriends({
     showCurrentUser: true,
+    showSpotifyUsernames: true,
   });
   const lastResultRef = React.useRef<HTMLDivElement | null>(null);
   const observer = React.useRef<IntersectionObserver | null>(null);
@@ -60,12 +61,12 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     }
   };
   const usernameSelect = useUsernameSelect({
-    usernames: ["spotify", ...friends],
+    usernames: friends,
     selectedUsername,
     setSelectedUsername,
     size: ["sm", "md", "md"],
     variant: "subtle",
-    width: "120px",
+    width: "200px",
     includeAllOption: true,
   });
 

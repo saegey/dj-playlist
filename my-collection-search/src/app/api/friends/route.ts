@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     // Next.js API Route Request may have nextUrl property for URL parsing
     const searchParams = request.nextUrl.searchParams;
     const showCurrentUser = searchParams.get("showCurrentUser") === "true"; // example usage
+    const showSpotifyUsernames =
+      searchParams.get("showSpotifyUsernames") === "true";
 
     let rows;
     if (showCurrentUser) {
@@ -25,6 +27,37 @@ export async function GET(request: NextRequest) {
         [process.env.DISCOGS_USERNAME]
       ));
     }
+
+    // Add Spotify usernames from manifest files
+    if (showSpotifyUsernames) {
+      console.debug("Including Spotify usernames from manifest files");
+      try {
+        const fs = await import("fs");
+        const path = await import("path");
+        const EXPORT_DIR = path.resolve(process.cwd(), "spotify_exports");
+        const manifestFiles = fs
+          .readdirSync(EXPORT_DIR)
+          .filter((f) => f.startsWith("manifest_") && f.endsWith(".json"));
+        for (const manifestFile of manifestFiles) {
+          try {
+            const manifestRaw = fs.readFileSync(
+              path.join(EXPORT_DIR, manifestFile),
+              "utf-8"
+            );
+            const manifest = JSON.parse(manifestRaw);
+            if (
+              manifest.spotifyUsername &&
+              typeof manifest.spotifyUsername === "string"
+            ) {
+              if (!rows.some((r) => r.username === manifest.spotifyUsername)) {
+                rows.push({ username: manifest.spotifyUsername });
+              }
+            }
+          } catch {}
+        }
+      } catch {}
+    }
+
     const friends = rows.map((r) => r.username);
     return NextResponse.json({ friends });
   } catch (e) {

@@ -42,7 +42,7 @@ export default function BackfillAudioPage() {
   const [showMissingAudio, setShowMissingAudio] = useState(true);
   const [showMissingVectors, setShowMissingVectors] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { friends: usernames } = useFriends({ showCurrentUser: true });
+  const { friends: usernames } = useFriends({ showCurrentUser: true, showSpotifyUsernames: true });
   const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -201,7 +201,7 @@ export default function BackfillAudioPage() {
   };
 
   const UsernameSelect = useUsernameSelect({
-    usernames: ["spotify", ...usernames],
+    usernames: usernames,
     selectedUsername,
     setSelectedUsername,
     size: ["sm", "md", "md"],

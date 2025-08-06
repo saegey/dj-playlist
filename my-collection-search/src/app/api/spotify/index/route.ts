@@ -63,36 +63,40 @@ export async function POST() {
   try {
     const { getMeiliClient } = await import("@/lib/meili");
     const meiliClient = getMeiliClient({ server: true });
-    const files = fs
-      .readdirSync(EXPORT_DIR)
-      .filter((f) => f.startsWith("track_") && f.endsWith(".json"));
-    if (!files.length) {
-      return NextResponse.json(
-        { error: "No Spotify track files found in spotify_exports" },
-        { status: 404 }
-      );
-    }
-    // Read username from manifest
-    let manifestUsername = "spotify";
-    try {
-      const manifestRaw = fs.readFileSync(path.join(EXPORT_DIR, "manifest_spotify.json"), "utf-8");
-      const manifest = JSON.parse(manifestRaw);
-      if (manifest.spotifyUsername && typeof manifest.spotifyUsername === "string") {
-        manifestUsername = manifest.spotifyUsername;
-      }
-    } catch {}
-
+    // Process all manifest files for all usernames
+    const manifestFiles = fs.readdirSync(EXPORT_DIR).filter(f => f.startsWith("manifest_") && f.endsWith(".json"));
     const allTracks: Track[] = [];
     const errors: { file: string; error: string }[] = [];
-    for (const file of files) {
+    for (const manifestFile of manifestFiles) {
+      let manifestUsername = manifestFile.replace(/^manifest_(.+)\.json$/, "$1");
       try {
-        const raw = fs.readFileSync(path.join(EXPORT_DIR, file), "utf-8");
-        const spotifyTrack = JSON.parse(raw);
-        const track = spotifyToTrack(spotifyTrack, manifestUsername);
-        allTracks.push(track);
+        const manifestRaw = fs.readFileSync(path.join(EXPORT_DIR, manifestFile), "utf-8");
+        const manifest = JSON.parse(manifestRaw);
+        if (manifest.spotifyUsername && typeof manifest.spotifyUsername === "string") {
+          manifestUsername = manifest.spotifyUsername;
+        }
+        // For each trackId in manifest, load the track file
+        for (const trackId of manifest.trackIds || []) {
+          try {
+            const trackFile = path.join(EXPORT_DIR, `track_${trackId}.json`);
+            if (!fs.existsSync(trackFile)) continue;
+            const raw = fs.readFileSync(trackFile, "utf-8");
+            const spotifyTrack = JSON.parse(raw);
+            const track = spotifyToTrack(spotifyTrack, manifestUsername);
+            allTracks.push(track);
+          } catch (e) {
+            errors.push({ file: `track_${trackId}.json`, error: (e as Error).message });
+          }
+        }
       } catch (e) {
-        errors.push({ file, error: (e as Error).message });
+        errors.push({ file: manifestFile, error: (e as Error).message });
       }
+    }
+    if (!allTracks.length) {
+      return NextResponse.json(
+        { error: "No Spotify track files found in any manifest" },
+        { status: 404 }
+      );
     }
     // Upsert tracks into DB
     const upserted: Track[] = [];
@@ -108,7 +112,7 @@ export async function POST() {
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
       )
-      ON CONFLICT (track_id) DO UPDATE SET
+      ON CONFLICT (track_id, username) DO UPDATE SET
         username = EXCLUDED.username,
         spotify_url = EXCLUDED.spotify_url
       RETURNING *
@@ -137,8 +141,8 @@ export async function POST() {
         ]
       );
       const { rows } = await pool.query(
-        "SELECT * FROM tracks WHERE track_id = $1",
-        [track.track_id]
+        "SELECT * FROM tracks WHERE track_id = $1 AND username = $2",
+        [track.track_id, track.username]
       );
       if (rows && rows[0]) {
         upserted.push(rows[0]);
@@ -161,7 +165,7 @@ export async function POST() {
     return NextResponse.json({
       message: `Upserted and indexed ${upserted.length} Spotify tracks.`,
       errors,
-      totalFiles: files.length,
+      totalFiles: manifestFiles.length,
     });
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));

@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 
 interface UseFriendsOptions {
   showCurrentUser?: boolean;
+  showSpotifyUsernames?: boolean;
 }
 
 export function useFriends({
   showCurrentUser = false,
+  showSpotifyUsernames = false,
 }: UseFriendsOptions = {}) {
   const [friends, setFriends] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -15,9 +17,9 @@ export function useFriends({
     setLoading(true);
     setError(null);
     try {
-      const res = showCurrentUser
-        ? await fetch("/api/friends?showCurrentUser=true")
-        : await fetch("/api/friends");
+      const res = await fetch(
+        `/api/friends?showCurrentUser=${showCurrentUser}&showSpotifyUsernames=${showSpotifyUsernames}`
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unknown error");
       setFriends(data.friends || []);
