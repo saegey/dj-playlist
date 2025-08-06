@@ -1,4 +1,5 @@
 export type Track = {
+  id: number;
   track_id: string;
   isrc?: string;
   title: string;

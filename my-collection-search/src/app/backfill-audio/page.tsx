@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import {
   Switch,
   ActionBar,
@@ -42,7 +42,10 @@ export default function BackfillAudioPage() {
   const [showMissingAudio, setShowMissingAudio] = useState(true);
   const [showMissingVectors, setShowMissingVectors] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { friends: usernames } = useFriends({ showCurrentUser: true, showSpotifyUsernames: true });
+  const { friends: usernames } = useFriends({
+    showCurrentUser: true,
+    showSpotifyUsernames: true,
+  });
   const [selectedUsername, setSelectedUsername] = useSelectedUsername();
   const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -124,6 +127,7 @@ export default function BackfillAudioPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             track_id: updated[idx].track_id,
+            username: updated[idx].username,
             // add other fields if needed
           }),
         });
@@ -168,6 +172,7 @@ export default function BackfillAudioPage() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            username: updated[idx].username,
             track_id: updated[idx].track_id,
             bpm:
               data.rhythm && typeof data.rhythm.bpm === "number"
@@ -386,6 +391,14 @@ export default function BackfillAudioPage() {
                           rel="noopener noreferrer"
                         >
                           SoundCloud
+                        </a>
+                      ) : track.spotify_url ? (
+                        <a
+                          href={track.spotify_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Spotify
                         </a>
                       ) : (
                         <Text color="gray.400">—</Text>
