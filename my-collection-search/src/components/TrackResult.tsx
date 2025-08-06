@@ -12,7 +12,7 @@ import {
   Badge,
   SimpleGrid,
 } from "@chakra-ui/react";
-import { SiDiscogs, SiApplemusic, SiYoutube } from "react-icons/si";
+import { SiDiscogs, SiApplemusic, SiYoutube, SiSpotify } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
 import { keyToCamelot } from "./PlaylistViewer";
@@ -231,9 +231,16 @@ export default function TrackResult({
 
         {/* Links and audio */}
         <Flex gap={2} mt={2}>
-          <Link href={track.discogs_url} target="_blank" aria-label="Discogs">
-            <SiDiscogs size={20} style={{ verticalAlign: "middle" }} />
-          </Link>
+          {track.discogs_url && (
+            <Link href={track.discogs_url} target="_blank" aria-label="Discogs">
+              <SiDiscogs size={20} style={{ verticalAlign: "middle" }} />
+            </Link>
+          )}
+          {track.spotify_url && (
+            <Link href={track.spotify_url} target="_blank">
+              <SiSpotify size={20} style={{ verticalAlign: "middle" }} />
+            </Link>
+          )}
           {track.apple_music_url && (
             <Link href={track.apple_music_url} target="_blank">
               <SiApplemusic size={20} style={{ verticalAlign: "middle" }} />

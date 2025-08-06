@@ -35,6 +35,7 @@ export interface TrackEditFormProps {
   key?: string | undefined | null;
   danceability?: string | null;
   apple_music_url?: string;
+  spotify_url?: string;
   youtube_url?: string;
   soundcloud_url?: string;
   star_rating?: number;
@@ -112,6 +113,7 @@ export default function TrackEditForm({
     danceability: track.danceability || "",
     apple_music_url: track.apple_music_url || "",
     youtube_url: track.youtube_url || "",
+    spotify_url: track.spotify_url || "",
     soundcloud_url: track.soundcloud_url || "",
     star_rating: typeof track.star_rating === "number" ? track.star_rating : 0,
     duration_seconds: track.duration_seconds || undefined, // Optional for new tracks
@@ -130,6 +132,7 @@ export default function TrackEditForm({
       danceability: track.danceability || "",
       apple_music_url: track.apple_music_url || "",
       youtube_url: track.youtube_url || "",
+      spotify_url: track.spotify_url || "",
       soundcloud_url: track.soundcloud_url || "",
       star_rating:
         typeof track.star_rating === "number" ? track.star_rating : 0,
@@ -329,6 +332,7 @@ export default function TrackEditForm({
           youtube_url: form.youtube_url,
           soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
           track_id: form.track_id,
+          spotify_url: form.spotify_url,
         }),
       });
       if (res.ok) {
@@ -425,7 +429,8 @@ export default function TrackEditForm({
                             analyzing ||
                             (!form.apple_music_url &&
                               !form.youtube_url &&
-                              !form.soundcloud_url)
+                              !form.soundcloud_url &&
+                              !form.spotify_url)
                           }
                           onSelect={handleAnalyzeAudio}
                         >
@@ -547,6 +552,12 @@ export default function TrackEditForm({
                     label="YouTube URL"
                     name="youtube_url"
                     value={form.youtube_url || ""}
+                    onChange={handleChange}
+                  />
+                  <LabeledInput
+                    label="Spotify URL"
+                    name="spotify_url"
+                    value={form.spotify_url || ""}
                     onChange={handleChange}
                   />
                   <LabeledInput

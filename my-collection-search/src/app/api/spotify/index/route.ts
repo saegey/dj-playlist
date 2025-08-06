@@ -1,0 +1,184 @@
+import { NextResponse } from "next/server";
+import fs from "fs";
+import path from "path";
+import { Pool } from "pg";
+import { SpotifyTrack } from "../download/route";
+import { Track } from "@/types/track";
+const EXPORT_DIR = path.resolve(process.cwd(), "spotify_exports");
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+// --- Types for reference ---
+// interface Track {
+//   track_id: string;
+//   title: string;
+//   artist: string;
+//   album: string;
+//   year: number | null;
+//   styles: string[];
+//   genres: string[];
+//   duration: string | null;
+//   discogs_url: string | null;
+//   album_thumbnail: string | null;
+//   position: string;
+//   duration_seconds: number | null;
+//   bpm: number | null;
+//   key: string | null;
+//   notes: string | null;
+//   local_tags: string[];
+//   apple_music_url: string | null;
+//   local_audio_url: string | null;
+//   username: string;
+// }
+
+// --- Converter function ---
+/**
+ * Convert one SpotifyTrack into your internal Track shape.
+ *
+ * @param spotifyTrack  the raw object from Spotify’s API
+ * @param username      the local username to stamp on this record
+ */
+function spotifyToTrack(spotifyTrack: SpotifyTrack, username: string): Track {
+  const t = spotifyTrack.track;
+
+  // 1) Year → parse from release_date (first 4 chars)
+  let year: number | null = null;
+  if (t.album.release_date && t.album.release_date.length >= 4) {
+    const y = parseInt(t.album.release_date.slice(0, 4), 10);
+    if (!isNaN(y)) year = y;
+  }
+
+  // 2) Duration formatting
+  const durationSeconds =
+    typeof t.duration_ms === "number" ? Math.floor(t.duration_ms / 1000) : null;
+
+  const duration =
+    durationSeconds !== null
+      ? `${Math.floor(durationSeconds / 60)}:${String(
+          durationSeconds % 60
+        ).padStart(2, "0")}`
+      : null;
+
+  // 3) Build the Track
+  return {
+    track_id: t.id,
+    title: t.name,
+    artist: t.artists.map((a) => a.name).join(", "),
+    album: t.album.name,
+    year: year !== null ? year : "",
+    styles: [], // Spotify doesn’t expose “styles”
+    genres: [], // neither does it expose “genres” at track level
+    duration: duration !== null ? duration : "",
+    discogs_url: "", // no Discogs link from Spotify
+    album_thumbnail: t.album.images.length > 0 ? t.album.images[0].url : undefined,
+    position: t.track_number,
+    duration_seconds: durationSeconds !== null ? durationSeconds : undefined,
+    bpm: null, // Spotify’s audio-features endpoint has BPM, but not here
+    key: null, // likewise, you'd need a separate call for key
+    notes: null, // you can fill this in later if you like
+    local_tags: "", // your tags, not provided by Spotify
+    apple_music_url: "", // you'd need a separate lookup
+    local_audio_url: t.preview_url !== null ? t.preview_url : undefined,
+    username,
+    spotify_url: t.external_urls.spotify || "", // Spotify URL
+  };
+}
+
+export async function POST() {
+  try {
+    const { getMeiliClient } = await import("@/lib/meili");
+    const meiliClient = getMeiliClient({ server: true });
+    const files = fs
+      .readdirSync(EXPORT_DIR)
+      .filter((f) => f.startsWith("track_") && f.endsWith(".json"));
+    if (!files.length) {
+      return NextResponse.json(
+        { error: "No Spotify track files found in spotify_exports" },
+        { status: 404 }
+      );
+    }
+    const allTracks: Track[] = [];
+    const errors: { file: string; error: string }[] = [];
+    for (const file of files) {
+      try {
+        const raw = fs.readFileSync(path.join(EXPORT_DIR, file), "utf-8");
+        const spotifyTrack = JSON.parse(raw);
+        const track = spotifyToTrack(spotifyTrack, "spotify");
+        allTracks.push(track);
+      } catch (e) {
+        errors.push({ file, error: (e as Error).message });
+      }
+    }
+    // Upsert tracks into DB
+    const upserted: Track[] = [];
+    for (const [i, track] of allTracks.entries()) {
+      if (i % 100 === 0)
+        console.log(
+          `[Spotify Index] Upserting track ${i + 1}/${allTracks.length}`
+        );
+      await pool.query(
+        `
+      INSERT INTO tracks (
+        track_id, title, artist, album, year, styles, genres, duration, position, discogs_url, album_thumbnail, bpm, key, notes, local_tags, apple_music_url, duration_seconds, username, local_audio_url, spotify_url
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
+      )
+      ON CONFLICT (track_id) DO UPDATE SET
+        username = EXCLUDED.username,
+        spotify_url = EXCLUDED.spotify_url
+      RETURNING *
+      `,
+        [
+          track.track_id,
+          track.title,
+          track.artist,
+          track.album,
+          track.year,
+          track.styles,
+          track.genres,
+          track.duration,
+          track.position,
+          track.discogs_url,
+          track.album_thumbnail,
+          track.bpm,
+          track.key,
+          track.notes,
+          track.local_tags,
+          track.apple_music_url,
+          track.duration_seconds,
+          track.username,
+          track.local_audio_url,
+          track.spotify_url,
+        ]
+      );
+      const { rows } = await pool.query(
+        "SELECT * FROM tracks WHERE track_id = $1",
+        [track.track_id]
+      );
+      if (rows && rows[0]) {
+        upserted.push(rows[0]);
+      }
+    }
+    // Index in MeiliSearch
+    const index = await meiliClient.index("tracks");
+    const { taskUid } = await index.addDocuments(
+      upserted.map((t) => ({
+        ...t,
+        notes: t.notes ? t.notes : null,
+        local_tags: t.local_tags ? t.local_tags : [],
+        _vectors: { default: null },
+        hasVectors: false,
+      }))
+    );
+    console.log(
+      `🚀 Added ${upserted.length} Spotify tracks to MeiliSearch (task UID: ${taskUid})`
+    );
+    return NextResponse.json({
+      message: `Upserted and indexed ${upserted.length} Spotify tracks.`,
+      errors,
+      totalFiles: files.length,
+    });
+  } catch (e) {
+    const err = e instanceof Error ? e : new Error(String(e));
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
