@@ -11,3 +11,4 @@ tmp/
 my-collection-search/public/audio*
 my-collection-search/dumps/*
 djplaylist_backup_*
+*.pyc
