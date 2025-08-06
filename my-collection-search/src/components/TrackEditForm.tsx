@@ -309,6 +309,11 @@ export default function TrackEditForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: form.title, artist: form.artist }),
       });
+      if (res.status === 401) {
+        // Redirect to Spotify authorization
+        window.location.href = "/api/spotify/login?state=" + encodeURIComponent(window.location.pathname);
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setSpotifyResults(data.results || []);
