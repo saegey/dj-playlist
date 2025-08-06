@@ -182,7 +182,12 @@ export default function MissingAppleMusicPage() {
             overrideQuery={overrideQuery}
             setOverrideTrackId={setOverrideTrackId}
             setOverrideQuery={setOverrideQuery}
-            handleSaveTrack={handleSaveTrack}
+            handleSaveTrack={(data) =>
+              handleSaveTrack({
+                ...data,
+                username: data.username ?? selectedUsername ?? "",
+              })
+            }
             setCurrentIndex={setCurrentIndex}
           />
         )}

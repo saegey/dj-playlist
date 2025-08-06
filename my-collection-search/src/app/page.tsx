@@ -226,9 +226,9 @@ const SearchPage = () => {
           />
         </Drawer.Root>
       </Flex>
-      {editTrack && (
+      {editTrack && editTrack.username && (
         <TrackEditForm
-          track={editTrack}
+          track={{ ...editTrack, username: editTrack.username }}
           onSave={handleSaveTrack}
           dialogOpen={dialogOpen}
           setDialogOpen={setDialogOpen}

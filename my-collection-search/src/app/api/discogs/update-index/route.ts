@@ -133,7 +133,7 @@ export async function POST() {
           "Unknown Artist";
 
         album.tracklist.forEach((tr: ProcessedTrack) => {
-          let track_id = `${album.id}-${tr.position}`
+          const track_id = `${album.id}-${tr.position}`
             .trim()
             .replace(/[^A-Za-z0-9\-_]/g, "");
 
@@ -251,7 +251,7 @@ export async function POST() {
 
     await index.addDocuments(
       upserted.map((t) => {
-        const { embedding, ...rest } = t as any;
+        const { embedding, ...rest } = t as Track & { embedding?: number[] | string };
         let vectorArr: number[] | null = null;
         if (Array.isArray(embedding)) vectorArr = embedding;
         else if (typeof embedding === "string") {

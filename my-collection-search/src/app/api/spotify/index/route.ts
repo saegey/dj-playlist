@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { Pool } from "pg";
-import { SpotifyTrack, Track } from "@/types/track";
+import { SpotifyTrack, Track as BaseTrack } from "@/types/track";
+// Locally redefine Track type for this file, omitting 'id'
+type Track = Omit<BaseTrack, "id">;
 const EXPORT_DIR = path.resolve(process.cwd(), "spotify_exports");
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 

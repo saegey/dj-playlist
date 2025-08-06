@@ -1,6 +1,6 @@
 "use client";
 
-import React, { use, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Switch,
   ActionBar,
@@ -165,7 +165,7 @@ export default function BackfillAudioPage() {
             soundcloud_url: updated[idx].soundcloud_url,
             spotify_url: updated[idx].spotify_url,
           }),
-        });
+        })
         if (!res.ok) throw new Error((await res.json()).error || "Failed");
         const data = await res.json();
         await fetch("/api/tracks/update", {
