@@ -17,7 +17,11 @@ import PlaylistViewer from "@/components/PlaylistViewer";
 import TrackResult from "@/components/TrackResult";
 import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
 import type { Track } from "@/types/track";
-import { FiMoreVertical } from "react-icons/fi";
+import { FiMoreVertical, FiSave, FiShuffle } from "react-icons/fi";
+import { GiTakeMyMoney } from "react-icons/gi";
+import { PiDna, PiFilePdf } from "react-icons/pi";
+import { MdOutlineClearAll } from "react-icons/md";
+
 import { usePlaylists } from "@/hooks/usePlaylists";
 
 import { formatSeconds, parseDurationToSeconds } from "@/lib/trackUtils";
@@ -177,32 +181,14 @@ export const PlaylistViewerDrawer = ({
               <Box mt={2}>
                 <Box>
                   <Flex gap={2} alignItems="center" mb={4} mt={4}>
-                    {/* <Button
-                      variant="solid"
-                      size="sm"
-                      onClick={() => {
-                        setGeneticPlaylistOrder((v) => !v);
-                      }}
-                      disabled={!hasMounted || playlist.length === 0}
-                    >
-                      {geneticPlaylistOrder ? "Original" : "Genetic"}
-                    </Button> */}
-                    <Button
-                      size="sm"
-                      variant={"outline"}
-                      onClick={exportPlaylist}
-                      disabled={!hasMounted || playlist.length === 0}
-                    >
-                      JSON
-                    </Button>
                     <Menu.Root key="order-menu">
                       <Menu.Trigger asChild>
                         <Button
                           size="sm"
-                          variant="outline"
+                          // variant="outline"
                           disabled={!hasMounted || playlist.length === 0}
                         >
-                          Order
+                          <FiShuffle /> Optimize Order
                         </Button>
                       </Menu.Trigger>
                       {/* <Portal> */}
@@ -224,7 +210,7 @@ export const PlaylistViewerDrawer = ({
                               setOptimalOrderType("greedy");
                             }}
                           >
-                            Greedy
+                            <GiTakeMyMoney /> Greedy
                           </Menu.Item>
                           <Menu.Item
                             value="genetic"
@@ -233,7 +219,7 @@ export const PlaylistViewerDrawer = ({
                               setOptimalOrderType("genetic");
                             }}
                           >
-                            Genetic
+                            <PiDna /> Genetic
                           </Menu.Item>
                         </Menu.Content>
                       </Menu.Positioner>
@@ -242,18 +228,27 @@ export const PlaylistViewerDrawer = ({
                     <Button
                       size="sm"
                       variant={"outline"}
+                      onClick={exportPlaylist}
+                      disabled={!hasMounted || playlist.length === 0}
+                    >
+                      <FiSave /> JSON
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant={"outline"}
                       onClick={exportPlaylistToPDF}
                       disabled={!hasMounted || playlist.length === 0}
                     >
-                      PDF
+                      <PiFilePdf /> PDF
                     </Button>
                     <Button
-                      variant="ghost"
+                      colorPalette={"red"}
                       size="sm"
                       onClick={() => setPlaylist([])}
                       disabled={!hasMounted || playlist.length === 0}
                     >
-                      Clear
+                      <MdOutlineClearAll /> Clear
                     </Button>
                   </Flex>
                 </Box>

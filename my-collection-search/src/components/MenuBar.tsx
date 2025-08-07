@@ -20,9 +20,16 @@ const menuItems = [
 
 export default function TopMenuBar({ current }: TopMenuBarProps) {
   return (
-    <Flex as="nav" bgColor={"gray.subtle"} color="brand.menuText" p="4" mb="4">
+    <Flex
+      as="nav"
+      bgColor={"gray.subtle"}
+      color="brand.menuText"
+      p="4"
+      mb="4"
+      justify="center"
+    >
       <Container>
-        <Group gap={4} align="center" grow>
+        <Group gap={4} align="center" justify="center" grow>
           {menuItems.map((item) => (
             <Link
               key={item.href}
@@ -34,58 +41,60 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
               px={2}
               as={NextLink}
             >
-              {item.href === "/" && (
-                <Box>
-                  <TbPlaylist
-                    size={25}
-                    color={
-                      current === item.href ? "blue" : "brand.menuActiveText"
-                    }
-                  />
-                </Box>
-              )}
-              {item.href === "/missing-apple-music" && (
-                <Box>
-                  <SiApplemusic
-                    size={25}
-                    color={
-                      current === item.href ? "blue" : "brand.menuActiveText"
-                    }
-                  />
-                </Box>
-              )}
-              {item.href === "/backfill-audio" && (
-                <Box>
-                  <LuAudioLines
-                    size={25}
-                    color={
-                      current === item.href ? "blue" : "brand.menuActiveText"
-                    }
-                  />
-                </Box>
-              )}
-              {item.href === "/bulk-notes" && (
-                <Box>
-                  <IoBookSharp
-                    size={25}
-                    color={
-                      current === item.href ? "blue" : "brand.menuActiveText"
-                    }
-                  />
-                </Box>
-              )}
+              <Flex width={"100%"} justifyContent={"center"} verticalAlign={"center"} gap={2}>
+                {item.href === "/" && (
+                  <Box>
+                    <TbPlaylist
+                      size={25}
+                      color={
+                        current === item.href ? "blue" : "brand.menuActiveText"
+                      }
+                    />
+                  </Box>
+                )}
+                {item.href === "/missing-apple-music" && (
+                  <Box>
+                    <SiApplemusic
+                      size={25}
+                      color={
+                        current === item.href ? "blue" : "brand.menuActiveText"
+                      }
+                    />
+                  </Box>
+                )}
+                {item.href === "/backfill-audio" && (
+                  <Box>
+                    <LuAudioLines
+                      size={25}
+                      color={
+                        current === item.href ? "blue" : "brand.menuActiveText"
+                      }
+                    />
+                  </Box>
+                )}
+                {item.href === "/bulk-notes" && (
+                  <Box>
+                    <IoBookSharp
+                      size={25}
+                      color={
+                        current === item.href ? "blue" : "brand.menuActiveText"
+                      }
+                    />
+                  </Box>
+                )}
 
-              {item.href === "/settings" && (
-                <Box>
-                  <IoMdSettings
-                    size={25}
-                    color={
-                      current === item.href ? "blue" : "brand.menuActiveText"
-                    }
-                  />
-                </Box>
-              )}
-              <Text hideBelow="md">{item.label}</Text>
+                {item.href === "/settings" && (
+                  <Box>
+                    <IoMdSettings
+                      size={25}
+                      color={
+                        current === item.href ? "blue" : "brand.menuActiveText"
+                      }
+                    />
+                  </Box>
+                )}
+                <Text hideBelow="md" as={"div"}>{item.label}</Text>
+              </Flex>
             </Link>
           ))}
         </Group>

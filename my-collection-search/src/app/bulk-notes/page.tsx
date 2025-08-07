@@ -13,6 +13,7 @@ import {
   SimpleGrid,
   Group,
   Container,
+  InputGroup,
 } from "@chakra-ui/react";
 import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import { toaster, Toaster } from "@/components/ui/toaster";
@@ -21,6 +22,8 @@ import TopMenuBar from "@/components/MenuBar";
 import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 import { getMeiliClient } from "@/lib/meili";
 import { MeiliSearch } from "meilisearch";
+import { LuSearch } from "react-icons/lu";
+import { FiCheck, FiCopy, FiMoreHorizontal, FiUpload } from "react-icons/fi";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -90,8 +93,19 @@ export default function BulkNotesPage() {
     });
   const selectAll = () => setSelected(new Set(tracks.map((t) => t.id)));
   const deselectAll = () => setSelected(new Set());
-  const selectFirst10 = () =>
-    setSelected(new Set(tracks.slice(0, 10).map((t) => t.id)));
+  const selectFirst10 = () => {
+    const first10Ids = tracks.slice(0, 10).map((t) => t.id);
+    const allSelected = first10Ids.every((id) => selected.has(id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        first10Ids.forEach((id) => next.delete(id));
+      } else {
+        first10Ids.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
 
   const handleGeneratePrompt = () => {
     const promptTracks = tracks
@@ -179,6 +193,17 @@ Example:
       <TopMenuBar current="/bulk-notes" />
       <Container>
         <SimpleGrid gap={2} mb={4} columns={[1, 1, 4]}>
+          <InputGroup startElement={<LuSearch size={16} />}>
+            <Input
+              placeholder="Search"
+              value={artistSearch}
+              onChange={(e) => setArtistSearch(e.target.value)}
+              size="sm"
+              variant="subtle"
+              width="100%"
+              mb={0}
+            />
+          </InputGroup>
           <Box display="flex" alignItems="center">
             <Checkbox.Root
               checked={filterLocalTagsEmpty}
@@ -191,28 +216,20 @@ Example:
               </Text>
             </Checkbox.Root>
           </Box>
-          <Box>
-            <Input
-              placeholder="Search by artist..."
-              value={artistSearch}
-              onChange={(e) => setArtistSearch(e.target.value)}
-              size="sm"
-              variant="subtle"
-              width="100%"
-              mb={0}
-            />
-          </Box>
+
           {UsernameSelect}
           {/* Master checkbox will replace select all/deselect all buttons */}
           <Group grow>
             <Button onClick={selectFirst10} size="sm">
-              Select First 10
+              <FiCheck />
+              Select 10
             </Button>
             <Button
               onClick={handleGeneratePrompt}
               size="sm"
               disabled={!selected.size}
             >
+              <FiCopy />
               Copy Prompt
             </Button>
           </Group>
@@ -226,15 +243,12 @@ Example:
           <Table.Root
             size="sm"
             variant="outline"
-            striped
             showColumnBorder
-            interactive
-            mb={4}
             fontSize={["xs", "sm", "sm"]}
           >
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader>
+                <Table.ColumnHeader width={"5%"}>
                   <Checkbox.Root
                     checked={
                       selected.size === tracks.length && tracks.length > 0
@@ -252,8 +266,8 @@ Example:
                     <Checkbox.Control />
                   </Checkbox.Root>
                 </Table.ColumnHeader>
-                <Table.ColumnHeader>Title</Table.ColumnHeader>
-                <Table.ColumnHeader>Artist</Table.ColumnHeader>
+                <Table.ColumnHeader width={"45%"}>Title</Table.ColumnHeader>
+                <Table.ColumnHeader width={"25%"}>Artist</Table.ColumnHeader>
                 <Table.ColumnHeader>Album</Table.ColumnHeader>
                 {/* <Table.ColumnHeader>Discogs</Table.ColumnHeader> */}
               </Table.Row>
@@ -282,10 +296,10 @@ Example:
           </Table.Root>
         )}
 
-        <Box mb={4}>
+        {/* <Box mb={4}>
           <Text fontWeight="bold">Bulk Prompt for ChatGPT</Text>
           <Textarea value={bulkPrompt} rows={10} readOnly fontSize="sm" />
-        </Box>
+        </Box> */}
 
         <Box
           position="fixed"
@@ -313,6 +327,7 @@ Example:
               onClick={handleUpload}
               loading={isDataUploading}
             >
+              <FiUpload />
               Upload Results
             </Button>
           </Container>

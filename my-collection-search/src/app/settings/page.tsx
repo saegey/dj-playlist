@@ -23,7 +23,8 @@ import {
 import { HiUpload } from "react-icons/hi";
 import { toaster, Toaster } from "@/components/ui/toaster";
 import TopMenuBar from "@/components/MenuBar";
-import { FiDownload } from "react-icons/fi";
+import { FiBriefcase, FiDatabase, FiDownload, FiRefreshCcw, FiTrash } from "react-icons/fi";
+import { SiDiscogs, SiSpotify } from "react-icons/si";
 
 type SyncResult = {
   message?: string;
@@ -42,7 +43,9 @@ export default function DiscogsSyncPage() {
   const [syncingSpotify, setSyncingSpotify] = useState(false);
   const [updatingSpotifyIndex, setUpdatingSpotifyIndex] = useState(false);
   const [showSyncAlert, setShowSyncAlert] = useState(false);
-  const [spotifySyncStatus, setSpotifySyncStatus] = useState<SyncResult | null>(null);
+  const [spotifySyncStatus, setSpotifySyncStatus] = useState<SyncResult | null>(
+    null
+  );
   // Backfill embeddings state
   const [backfilling, setBackfilling] = useState(false);
   const [backfillResult, setBackfillResult] = useState<null | {
@@ -227,7 +230,7 @@ export default function DiscogsSyncPage() {
   return (
     <>
       <Toaster />
-      <TopMenuBar current={"/discogs"} />
+      <TopMenuBar current={"/settings"} />
       <Box maxW="700px" mx="auto" p={8}>
         <Heading mb={6} size="lg">
           Vinyl Playlist Maker Pro Edition Settings
@@ -388,7 +391,13 @@ export default function DiscogsSyncPage() {
             <Alert.Indicator />
             <Alert.Content>
               <Alert.Title>Spotify Sync Status</Alert.Title>
-              <Alert.Description>{JSON.stringify({ ...spotifySyncStatus, alreadyHave: undefined }, null, 2)}</Alert.Description>
+              <Alert.Description>
+                {JSON.stringify(
+                  { ...spotifySyncStatus, alreadyHave: undefined },
+                  null,
+                  2
+                )}
+              </Alert.Description>
             </Alert.Content>
             <CloseButton
               pos="relative"
@@ -398,7 +407,6 @@ export default function DiscogsSyncPage() {
             />
           </Alert.Root>
         )}
-
 
         {error && (
           <Alert.Root status="error" title="Error">
@@ -460,15 +468,7 @@ export default function DiscogsSyncPage() {
             loading={updatingSpotifyIndex}
             disabled={updatingSpotifyIndex || indexing || backingUp}
           >
-            Update Spotify Index
-          </Button>
-          <Button
-            colorScheme="blue"
-            onClick={() => handleSync()}
-            loading={!!syncing["me"]}
-            disabled={!!syncing["me"] || indexing}
-          >
-            Sync My Collection
+            <FiDatabase /> Ingest Spotify Data
           </Button>
           <Button
             colorScheme="purple"
@@ -476,8 +476,19 @@ export default function DiscogsSyncPage() {
             loading={indexing}
             disabled={indexing || Object.values(syncing).some(Boolean)}
           >
-            Update Index
+            <FiDatabase />
+            Ingest Discogs Data
           </Button>
+          <Button
+            colorScheme="blue"
+            onClick={() => handleSync()}
+            loading={!!syncing["me"]}
+            disabled={!!syncing["me"] || indexing}
+          >
+            <SiDiscogs />
+            Sync Discogs
+          </Button>
+
           <Button
             colorScheme="orange"
             onClick={handleBackup}
@@ -486,6 +497,7 @@ export default function DiscogsSyncPage() {
               backingUp || Object.values(syncing).some(Boolean) || indexing
             }
           >
+            <FiBriefcase />
             Backup Database
           </Button>
           <Dialog.Root
@@ -494,6 +506,7 @@ export default function DiscogsSyncPage() {
           >
             <Dialog.Trigger asChild>
               <Button colorScheme="teal" disabled={indexing || backingUp}>
+                <SiSpotify />
                 Sync Spotify
               </Button>
             </Dialog.Trigger>
@@ -564,7 +577,7 @@ export default function DiscogsSyncPage() {
               </Dialog.Positioner>
             </Portal>
           </Dialog.Root>
-          <Button
+          {/* <Button
             colorScheme="pink"
             onClick={handleBackfillEmbeddings}
             loading={backfilling}
@@ -577,7 +590,7 @@ export default function DiscogsSyncPage() {
             title="Recompute all track embeddings and update MeiliSearch"
           >
             Backfill Embeddings
-          </Button>
+          </Button> */}
         </SimpleGrid>
         {backfillError && (
           <Alert.Root status="error" title="Backfill Error">
@@ -666,15 +679,16 @@ export default function DiscogsSyncPage() {
                       loading={!!syncing[username]}
                       disabled={!!syncing[username] || indexing}
                     >
-                      Sync
+                      
+                      <FiRefreshCcw />
                     </Button>
                     <Button
                       size="xs"
-                      colorScheme="red"
-                      variant="outline"
+                      colorPalette="red"
+                      // variant="outline"
                       onClick={() => handleRemoveFriend(username)}
                     >
-                      Remove
+                      <FiTrash />
                     </Button>
                   </HStack>
                 </HStack>

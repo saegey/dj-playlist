@@ -1,10 +1,19 @@
 import React from "react";
 import { useFriends } from "@/hooks/useFriends";
-import { Box, Input, Text, Button, Portal, Menu } from "@chakra-ui/react";
+import {
+  Box,
+  Input,
+  Text,
+  Button,
+  Portal,
+  Menu,
+  InputGroup,
+} from "@chakra-ui/react";
 import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import TrackResult from "@/components/TrackResult";
 import { Track } from "@/types/track";
 import { FiMoreVertical } from "react-icons/fi";
+import { LuSearch } from "react-icons/lu";
 
 interface SearchResultsProps {
   query: string;
@@ -91,13 +100,15 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   return (
     <Box>
       <Box display="flex" gap={3} mb={3}>
-        <Input
-          placeholder="Search tracks..."
-          value={debouncedValue}
-          onChange={(e) => setDebouncedValue(e.target.value)}
-          flex="1"
-          variant={"subtle"}
-        />
+        <InputGroup startElement={<LuSearch size={16} />}>
+          <Input
+            placeholder="Search (name, genres, instruments, etc.)"
+            value={debouncedValue}
+            onChange={(e) => setDebouncedValue(e.target.value)}
+            flex="1"
+            variant={"subtle"}
+          />
+        </InputGroup>
         {onUsernameChange ? usernameSelect : null}
       </Box>
 

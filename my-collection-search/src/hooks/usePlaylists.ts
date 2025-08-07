@@ -27,7 +27,7 @@ interface PlaylistsContextType {
   setPlaylists: React.Dispatch<React.SetStateAction<Playlist[]>>;
   playlistName: string;
   setPlaylistName: React.Dispatch<React.SetStateAction<string>>;
-  loadingPlaylists: boolean;
+  loadingPlaylists: { id: number } | boolean;
   playlistInfo: PlaylistInfo;
   setPlaylistInfo: React.Dispatch<React.SetStateAction<PlaylistInfo>>;
   playlist: TrackWithEmbedding[];
@@ -38,7 +38,7 @@ interface PlaylistsContextType {
   >;
   fetchPlaylists: () => Promise<void>;
   handleCreatePlaylist: () => Promise<void>;
-  handleLoadPlaylist: (trackIds: Array<string>) => Promise<void>;
+  handleLoadPlaylist: (trackIds: Array<string>, id: number) => Promise<void>;
   savePlaylist: () => Promise<void>;
   exportPlaylist: () => void;
   clearPlaylist: () => void;
@@ -56,7 +56,9 @@ const PlaylistsContext = createContext<PlaylistsContextType | undefined>(
 export function PlaylistsProvider({ children }: { children: ReactNode }) {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [playlistName, setPlaylistName] = useState("");
-  const [loadingPlaylists, setLoadingPlaylists] = useState(false);
+  const [loadingPlaylists, setLoadingPlaylists] = useState<
+    { id: number } | false
+  >(false);
   const [playlistInfo, setPlaylistInfo] = useState<PlaylistInfo>({ name: "" });
   const [playlist, setPlaylist] = useState<TrackWithEmbedding[]>(() => {
     if (typeof window !== "undefined") {
@@ -84,7 +86,6 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
 
   // Fetch playlists from backend
   const fetchPlaylists = useCallback(async () => {
-    setLoadingPlaylists(true);
     try {
       const res = await fetch("/api/playlists");
       if (res.ok) {
@@ -122,13 +123,14 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
 
   // Load a playlist (replace current playlist)
   const handleLoadPlaylist = useCallback(
-    async (trackIds: Array<string>) => {
+    async (trackIds: Array<string>, id: number) => {
       if (!trackIds || trackIds.length === 0) {
         setPlaylist([]);
         setPlaylistInfo({ name: "" });
         return;
       }
       try {
+        setLoadingPlaylists({ id });
         // Fetch full track objects from backend by IDs
         const res = await fetch("/api/tracks/batch", {
           method: "POST",
@@ -157,6 +159,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
         console.error("Error loading playlist tracks:", e);
         alert("Error loading playlist tracks");
       }
+      setLoadingPlaylists(false);
     },
     [playlists]
   );

@@ -121,6 +121,7 @@ const SearchPage = () => {
           open={sidebarDrawerOpen}
           onOpenChange={(e) => setSidebarDrawerOpen(e.open)}
           placement={"start"}
+          size={["full", "md", "md"]}
         >
           <Drawer.Trigger asChild>
             <Button
@@ -141,22 +142,15 @@ const SearchPage = () => {
             <Drawer.Positioner>
               <Drawer.Content>
                 <Drawer.Header>
-                  <Drawer.Title>Playlists</Drawer.Title>
+                  <Drawer.Title>Saved Playlists</Drawer.Title>
                 </Drawer.Header>
                 <Drawer.Body>
                   <Box>
                     {meiliClient && (
                       <PlaylistManager
-                        playlists={playlists}
-                        loadingPlaylists={loadingPlaylists}
-                        playlistName={playlistName}
-                        setPlaylistName={setPlaylistName}
-                        handleCreatePlaylist={handleCreatePlaylist}
-                        handleLoadPlaylist={handleLoadPlaylistWithToast}
                         xmlImportModalOpen={xmlImportModalOpen}
                         setXmlImportModalOpen={setXmlImportModalOpen}
                         client={meiliClient}
-                        fetchPlaylists={fetchPlaylists}
                       />
                     )}
                   </Box>

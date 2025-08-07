@@ -18,6 +18,7 @@ import {
   Stack,
   Pagination,
   Table,
+  InputGroup,
 } from "@chakra-ui/react";
 
 import {
@@ -25,6 +26,7 @@ import {
   LuMusic,
   LuChevronLeft,
   LuChevronRight,
+  LuSearch,
 } from "react-icons/lu";
 import { useFriends } from "@/hooks/useFriends";
 import { useUsernameSelect } from "@/hooks/useUsernameSelect";
@@ -165,7 +167,7 @@ export default function BackfillAudioPage() {
             soundcloud_url: updated[idx].soundcloud_url,
             spotify_url: updated[idx].spotify_url,
           }),
-        })
+        });
         if (!res.ok) throw new Error((await res.json()).error || "Failed");
         const data = await res.json();
         await fetch("/api/tracks/update", {
@@ -221,15 +223,17 @@ export default function BackfillAudioPage() {
         {/* Pagination UI */}
 
         <SimpleGrid columns={[1, null, 5]} gap={4} mb={4}>
-          <Input
-            type="text"
-            placeholder="Search"
-            value={artistSearch}
-            onChange={(e) => setArtistSearch(e.target.value)}
-            disabled={analyzing}
-            size={["sm", "md", "md"]}
-            variant={"subtle"}
-          />
+          <InputGroup startElement={<LuSearch size={16} />}>
+            <Input
+              type="text"
+              placeholder="Search"
+              value={artistSearch}
+              onChange={(e) => setArtistSearch(e.target.value)}
+              disabled={analyzing}
+              size={["sm", "md", "md"]}
+              variant={"subtle"}
+            />
+          </InputGroup>
           <Switch.Root
             checked={showMissingAudio}
             onCheckedChange={(e) => setShowMissingAudio(e.checked)}

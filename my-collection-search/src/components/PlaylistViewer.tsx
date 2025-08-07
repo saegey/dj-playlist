@@ -4,7 +4,15 @@
 
 import React from "react";
 import { Box, Button, Menu, EmptyState, VStack } from "@chakra-ui/react";
-import { FiHeadphones, FiMoreVertical } from "react-icons/fi";
+import {
+  FiArrowDown,
+  FiArrowUp,
+  FiDelete,
+  FiEdit,
+  FiHeadphones,
+  FiMoreVertical,
+  FiTrash,
+} from "react-icons/fi";
 import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
 import { usePlaylists } from "@/hooks/usePlaylists";
@@ -217,7 +225,7 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
       .then((res) => res.json())
       .then((data) => {
         // Ensure result is always an array
-        console.log(data.result)
+        console.log(data.result);
         const result = Array.isArray(data.result)
           ? data.result
           : Object.values(data.result);
@@ -298,6 +306,7 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
                     value="up"
                     disabled={idx === 0}
                   >
+                    <FiArrowUp />
                     Move Up
                   </Menu.Item>
                   <Menu.Item
@@ -305,15 +314,20 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
                     value="down"
                     disabled={idx === displayPlaylist.length - 1}
                   >
+                    <FiArrowDown />
                     Move Down
                   </Menu.Item>
                   <Menu.Item onSelect={() => setEditTrack(track)} value="edit">
+                    <FiEdit />
                     Edit
                   </Menu.Item>
                   <Menu.Item
                     onSelect={() => removeFromPlaylist(track.track_id)}
-                    value="remove"
+                    value="delete"
+                    color="fg.error"
+                    _hover={{ bg: "bg.error", color: "fg.error" }}
                   >
+                    <FiTrash />
                     Remove
                   </Menu.Item>
                 </Menu.Content>

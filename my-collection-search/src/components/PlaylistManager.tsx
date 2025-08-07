@@ -13,44 +13,42 @@ import {
   Stack,
   EmptyState,
   VStack,
+  HStack,
 } from "@chakra-ui/react";
 import { MeiliSearch } from "meilisearch";
 
 import { Toaster, toaster } from "@/components/ui/toaster"; // See below
 import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
-import { FiHeadphones } from "react-icons/fi";
+import { FiBookOpen, FiHeadphones, FiTrash } from "react-icons/fi";
+import { TbFileImport } from "react-icons/tb";
+import { usePlaylists } from "@/hooks/usePlaylists";
 
 export type Playlist = { id: number; name: string; tracks: string[] };
 
 type Props = {
-  playlists: Playlist[];
-  loadingPlaylists: boolean;
-  playlistName: string;
-  setPlaylistName: (name: string) => void;
-  handleCreatePlaylist: () => void;
-  handleLoadPlaylist: (trackIds: string[]) => void;
   xmlImportModalOpen: boolean;
   setXmlImportModalOpen: (open: boolean) => void;
   client: MeiliSearch | null;
-  fetchPlaylists: () => void;
 };
 
 export default function PlaylistManager({
-  playlists,
-  loadingPlaylists,
-  playlistName,
-  setPlaylistName,
-  handleCreatePlaylist,
-  handleLoadPlaylist,
   xmlImportModalOpen,
   setXmlImportModalOpen,
   client,
-  fetchPlaylists,
 }: Props) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<number | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    playlists,
+    loadingPlaylists,
+    playlistName,
+    setPlaylistName,
+    fetchPlaylists,
+    handleCreatePlaylist,
+    handleLoadPlaylist,
+  } = usePlaylists();
 
   const notify = (opts: Parameters<typeof toaster.create>[0]) =>
     toaster.create(opts);
@@ -136,9 +134,7 @@ export default function PlaylistManager({
         bg="bg.subtle"
         separator={<Box borderBottomWidth="1px" borderColor="bg.emphasis" />}
       >
-        {loadingPlaylists ? (
-          <Text fontSize="sm">Loading...</Text>
-        ) : playlists.length === 0 ? (
+        {playlists.length === 0 ? (
           <EmptyState.Root size={"sm"}>
             <EmptyState.Content>
               <EmptyState.Indicator>
@@ -154,29 +150,43 @@ export default function PlaylistManager({
           </EmptyState.Root>
         ) : (
           playlists.map((pl) => (
-            <Flex key={pl.id} direction="column" mb={2}>
+            <Flex key={pl.id} direction="row" mb={2} alignItems="center">
               <Text fontSize="sm" fontWeight="bold">
                 {pl.name}
               </Text>
-              <Flex mt={1}>
+              <Flex mt={1} ml="auto" gap={1}>
                 <Button
                   size="xs"
                   variant="solid"
-                  colorScheme="primary"
+                  colorPalette="primary"
+                  disabled={
+                    typeof loadingPlaylists === "object" &&
+                    loadingPlaylists !== null &&
+                    pl.id === loadingPlaylists.id
+                  }
+                  loading={
+                    typeof loadingPlaylists === "object" &&
+                    loadingPlaylists !== null &&
+                    pl.id === loadingPlaylists.id
+                  }
                   mr={1}
-                  onClick={() => handleLoadPlaylist(pl.tracks)}
+                  onClick={async () => {
+                    await handleLoadPlaylist(pl.tracks, pl.id);
+                    notify({ title: "Playlist loaded.", type: "success" });
+                    console.log(loadingPlaylists);
+                  }}
                 >
-                  Load
+                  <FiBookOpen />
                 </Button>
                 <Button
                   size="xs"
-                  variant="subtle"
+                  colorPalette={"red"}
                   onClick={() => {
                     setPlaylistToDelete(pl.id);
                     setDeleteDialogOpen(true);
                   }}
                 >
-                  Delete
+                  <FiTrash />
                 </Button>
               </Flex>
             </Flex>
@@ -224,37 +234,39 @@ export default function PlaylistManager({
           </Dialog.Positioner>
         </Portal>
       </Dialog.Root>
-      <Button
-        mt={6}
-        variant="surface"
-        size="sm"
-        width="100%"
-        onClick={() => setXmlImportModalOpen(true)}
-      >
-        Import Apple Music XML
-      </Button>
-      <Button
-        mt={2}
-        variant="solid"
-        size="sm"
-        width="100%"
-        onClick={() => fileInputRef.current?.click()}
-      >
-        Import Playlist JSON
-      </Button>
+      <HStack mt={4} gap={4}>
+        <Button
+          // mt={6}
+          variant="surface"
+          size="sm"
+          // width="100%"
+          onClick={() => setXmlImportModalOpen(true)}
+        >
+          <TbFileImport /> Apple Music XML
+        </Button>
+        <Button
+          // mt={2}
+          variant="solid"
+          size="sm"
+          // width="100%"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <TbFileImport /> Playlist JSON
+        </Button>
+
+        <AppleMusicXmlImport
+          isOpen={xmlImportModalOpen}
+          onClose={() => setXmlImportModalOpen(false)}
+          client={client}
+          fetchPlaylists={fetchPlaylists}
+        />
+      </HStack>
       <input
         type="file"
         accept="application/json"
         ref={fileInputRef}
         style={{ display: "none" }}
         onChange={handleImportJson}
-      />
-
-      <AppleMusicXmlImport
-        isOpen={xmlImportModalOpen}
-        onClose={() => setXmlImportModalOpen(false)}
-        client={client}
-        fetchPlaylists={fetchPlaylists}
       />
 
       <Toaster />
