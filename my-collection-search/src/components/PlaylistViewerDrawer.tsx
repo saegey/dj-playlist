@@ -10,13 +10,14 @@ import {
   CloseButton,
   Drawer,
   Menu,
+  Flex,
 } from "@chakra-ui/react";
 import PlaylistViewer from "@/components/PlaylistViewer";
 
 import TrackResult from "@/components/TrackResult";
 import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
 import type { Track } from "@/types/track";
-import { FiMoreVertical, FiSave } from "react-icons/fi";
+import { FiMoreVertical, FiSave, FiShuffle } from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
 import { MdOutlineClearAll } from "react-icons/md";
@@ -54,21 +55,16 @@ export const PlaylistViewerDrawer = ({
     savePlaylist,
     playlistName,
     setPlaylistName,
+    optimalOrderType,
+    setOptimalOrderType,
   } = usePlaylists();
   const [selectedUsername] = useSelectedUsername();
-
-  // const [playlistName, setPlaylistName] = useState("");
-
-  // Playlist player state
 
   const { playlistCounts } = useSearchResults({
     client: meiliClient,
     username: selectedUsername,
   });
 
-  const [optimalOrderType, setOptimalOrderType] = useState<
-    "original" | "greedy" | "genetic"
-  >("original");
   const [recommendations, setRecommendations] = useState<Track[]>([]);
 
   const totalPlaytimeSeconds = playlist.reduce((sum, track) => {
@@ -158,15 +154,15 @@ export const PlaylistViewerDrawer = ({
               </Menu.Trigger>
               <Menu.Positioner>
                 <Menu.Content>
-                  <Box
+                  <Flex
                     px={3}
                     py={1}
                     fontWeight="bold"
                     fontSize="sm"
                     color="gray.500"
                   >
-                    Playlist Actions
-                  </Box>
+                    Playlist Sort
+                  </Flex>
                   <Box
                     as="hr"
                     my={1}
@@ -174,12 +170,6 @@ export const PlaylistViewerDrawer = ({
                     borderWidth={0}
                     borderTopWidth={1}
                   />
-                  <Menu.Item
-                    value="sort-original"
-                    onSelect={() => setOptimalOrderType("original")}
-                  >
-                    Original Order
-                  </Menu.Item>
                   <Menu.Item
                     value="sort-greedy"
                     onSelect={() => setOptimalOrderType("greedy")}
