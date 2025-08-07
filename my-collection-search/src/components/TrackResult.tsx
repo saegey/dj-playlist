@@ -15,8 +15,8 @@ import {
 import { SiDiscogs, SiApplemusic, SiYoutube, SiSpotify } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
-import { keyToCamelot } from "./PlaylistViewer";
 import { FiPlay } from "react-icons/fi";
+import { keyToCamelot } from "@/lib/playlistOrder";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -109,9 +109,7 @@ export default function TrackResult({
   }
 
   const score =
-    track._semanticScore !== undefined
-      ? (track._semanticScore * 100)
-      : undefined;
+    track._semanticScore !== undefined ? track._semanticScore * 100 : undefined;
 
   // Expanded view
   return (
@@ -139,7 +137,9 @@ export default function TrackResult({
             {track.title}{" "}
             {score && (
               <Badge
-                colorPalette={score > 90 ? "green" : score > 75 ? "yellow" : "red"}
+                colorPalette={
+                  score > 90 ? "green" : score > 75 ? "yellow" : "red"
+                }
                 size={["xs", "sm", "sm"]}
               >
                 {score.toFixed(2)}%
@@ -288,7 +288,7 @@ export default function TrackResult({
                 onClick={() =>
                   setPlayingUrl(`/api/audio?filename=${track.local_audio_url}`)
                 }
-                size="sm"
+                size={["xs", "sm"]}
                 mt={1}
               >
                 <FiPlay /> Play

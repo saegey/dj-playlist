@@ -16,7 +16,6 @@ import {
   Dialog,
   CloseButton,
   RatingGroup,
-  Menu,
   FileUpload,
   Spinner,
   SimpleGrid,
@@ -27,7 +26,6 @@ import { HiUpload } from "react-icons/hi";
 import { FiDownload } from "react-icons/fi";
 import {
   SiApplemusic,
-  SiC,
   SiChatbot,
   SiSpotify,
   SiYoutube,
@@ -179,28 +177,7 @@ export default function TrackEditForm({
   const [analyzing, setAnalyzing] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [vectorLoading, setVectorLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const handleFetchVector = async () => {
-    setVectorLoading(true);
-    try {
-      const res = await fetch("/api/tracks/vectorize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ track_id: form.track_id }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setForm((prev) => ({ ...prev, embedding: data.embedding }));
-      } else {
-        alert("Failed to fetch vector");
-      }
-    } catch (err) {
-      console.error("Error fetching vector:", err);
-      alert("Error fetching vector");
-    }
-    setVectorLoading(false);
-  };
 
   const handleFileUpload = async () => {
     // alert("File upload started", JSON.stringify(file));
@@ -492,7 +469,7 @@ export default function TrackEditForm({
                           }
                           onClick={handleAnalyzeAudio}
                         >
-                          <FiDownload /> Fetch Audio from URLs
+                          <FiDownload /> Fetch Audio
                         </Button>
                         <FileUpload.Root
                           disabled={uploading}

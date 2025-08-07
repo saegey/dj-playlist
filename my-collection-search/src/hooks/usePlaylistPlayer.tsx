@@ -134,7 +134,7 @@ export function usePlaylistPlayer(playlist: Track[] = []) {
   }, [playNext]);
 
   const audioElement = (
-    <audio ref={audioRef} preload="auto" controls style={{ width: "100%" }} />
+    <audio ref={audioRef} preload="auto" controls/>
   );
 
   return {

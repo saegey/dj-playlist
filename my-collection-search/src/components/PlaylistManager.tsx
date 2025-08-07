@@ -1,15 +1,13 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import DeletePlaylistDialog from "@/components/DeletePlaylistDialog";
+import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import {
   Box,
   Flex,
-  Input,
   Text,
   Button,
-  Dialog,
-  Portal,
-  CloseButton,
   Stack,
   EmptyState,
   VStack,
@@ -22,8 +20,7 @@ import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
 import { FiBookOpen, FiHeadphones, FiTrash } from "react-icons/fi";
 import { TbFileImport } from "react-icons/tb";
 import { usePlaylists } from "@/hooks/usePlaylists";
-
-export type Playlist = { id: number; name: string; tracks: string[] };
+import { importPlaylist } from "@/services/playlistService";
 
 type Props = {
   xmlImportModalOpen: boolean;
@@ -36,38 +33,23 @@ export default function PlaylistManager({
   setXmlImportModalOpen,
   client,
 }: Props) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [playlistToDelete, setPlaylistToDelete] = useState<number | null>(null);
-  const cancelRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const {
-    playlists,
-    loadingPlaylists,
-    playlistName,
-    setPlaylistName,
-    fetchPlaylists,
-    handleCreatePlaylist,
-    handleLoadPlaylist,
-  } = usePlaylists();
+  const { playlists, loadingPlaylists, fetchPlaylists, handleLoadPlaylist } =
+    usePlaylists();
 
   const notify = (opts: Parameters<typeof toaster.create>[0]) =>
     toaster.create(opts);
 
-  const confirmDeletePlaylist = async () => {
-    if (playlistToDelete == null) return;
-    try {
-      await fetch(`/api/playlists?id=${playlistToDelete}`, {
-        method: "DELETE",
-      });
-      notify({ title: "Playlist deleted.", type: "success" });
-      fetchPlaylists();
-    } catch {
-      notify({ title: "Failed to delete playlist.", type: "error" });
-    } finally {
-      setDeleteDialogOpen(false);
-      setPlaylistToDelete(null);
-    }
-  };
+  // Delete dialog state and handler moved to DeletePlaylistDialog below
+  const [deleteDialogState, setDeleteDialogState] = useState<{
+    open: boolean;
+    playlistId: number | null;
+  }>({ open: false, playlistId: null });
+
+  // State for import playlist dialog
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importedTracks, setImportedTracks] = useState<string[]>([]);
+  const [importedName, setImportedName] = useState("Imported Playlist");
 
   const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -81,18 +63,18 @@ export default function PlaylistManager({
       if (Array.isArray(data)) {
         tracks = data.map((t) => t.track_id).filter(Boolean);
         if (!tracks.length) throw new Error("No valid tracks");
-        name = window.prompt("Name your playlist:", name) || name;
+        setImportedName(name);
+        setImportedTracks(tracks);
+        setImportDialogOpen(true);
+        return;
       } else if (data.name && Array.isArray(data.tracks)) {
         ({ name, tracks } = data);
+        // Directly import if name and tracks present
       } else {
         throw new Error("Invalid playlist format");
       }
 
-      const res = await fetch("/api/playlists", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, tracks }),
-      });
+      const res = await importPlaylist(name, tracks);
 
       if (res.ok) {
         notify({ title: `Imported '${name}'`, type: "success" });
@@ -107,25 +89,28 @@ export default function PlaylistManager({
     }
   };
 
+  // Handler for confirming import with name
+  const handleConfirmImport = async () => {
+    if (!importedTracks.length || !importedName.trim()) return;
+    try {
+      const res = await importPlaylist(importedName, importedTracks);
+      if (res.ok) {
+        notify({ title: `Imported '${importedName}'`, type: "success" });
+        fetchPlaylists();
+      } else {
+        notify({ title: "Failed to import playlist", type: "error" });
+      }
+    } catch {
+      notify({ title: "Error importing playlist", type: "error" });
+    } finally {
+      setImportDialogOpen(false);
+      setImportedTracks([]);
+      setImportedName("Imported Playlist");
+    }
+  };
+
   return (
     <Box minW="220px" mr={4}>
-      <Flex mb={2} gap={2}>
-        <Input
-          size="sm"
-          placeholder="New playlist name"
-          value={playlistName}
-          onChange={(e) => setPlaylistName(e.target.value)}
-        />
-        <Button
-          size="sm"
-          variant={"solid"}
-          disabled={!playlistName.trim()}
-          onClick={handleCreatePlaylist}
-        >
-          Save
-        </Button>
-      </Flex>
-
       <Stack
         overflowY="auto"
         borderWidth="1px"
@@ -181,10 +166,9 @@ export default function PlaylistManager({
                 <Button
                   size="xs"
                   colorPalette={"red"}
-                  onClick={() => {
-                    setPlaylistToDelete(pl.id);
-                    setDeleteDialogOpen(true);
-                  }}
+                  onClick={() =>
+                    setDeleteDialogState({ open: true, playlistId: pl.id })
+                  }
                 >
                   <FiTrash />
                 </Button>
@@ -193,62 +177,24 @@ export default function PlaylistManager({
           ))
         )}
       </Stack>
-
-      <Dialog.Root
-        open={deleteDialogOpen}
-        onOpenChange={(details) => {
-          setDeleteDialogOpen(details.open);
-          if (!details.open) setPlaylistToDelete(null);
-        }}
-        role="alertdialog"
-        initialFocusEl={() => cancelRef.current}
-      >
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Delete Playlist</Dialog.Title>
-
-                <Dialog.CloseTrigger asChild>
-                  <CloseButton
-                    ref={cancelRef}
-                    size="sm"
-                    onClick={() => setDeleteDialogOpen(false)}
-                  />
-                </Dialog.CloseTrigger>
-              </Dialog.Header>
-              <Dialog.Body>
-                Are you sure? This action cannot be undone.
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Button
-                  colorPalette="red"
-                  ml={3}
-                  onClick={confirmDeletePlaylist}
-                >
-                  Delete
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
+      <DeletePlaylistDialog
+        open={deleteDialogState.open}
+        playlistId={deleteDialogState.playlistId}
+        onClose={() => setDeleteDialogState({ open: false, playlistId: null })}
+        fetchPlaylists={fetchPlaylists}
+        notify={notify}
+      />
       <HStack mt={4} gap={4}>
         <Button
-          // mt={6}
           variant="surface"
           size="sm"
-          // width="100%"
           onClick={() => setXmlImportModalOpen(true)}
         >
           <TbFileImport /> Apple Music XML
         </Button>
         <Button
-          // mt={2}
           variant="solid"
           size="sm"
-          // width="100%"
           onClick={() => fileInputRef.current?.click()}
         >
           <TbFileImport /> Playlist JSON
@@ -268,8 +214,16 @@ export default function PlaylistManager({
         style={{ display: "none" }}
         onChange={handleImportJson}
       />
-
       <Toaster />
+      <NamePlaylistDialog
+        open={importDialogOpen}
+        name={importedName}
+        setName={setImportedName}
+        trackCount={importedTracks.length}
+        onConfirm={handleConfirmImport}
+        onCancel={() => setImportDialogOpen(false)}
+        confirmLabel="Import"
+      />
     </Box>
   );
 }

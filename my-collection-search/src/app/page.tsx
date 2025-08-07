@@ -26,7 +26,7 @@ import { TrackEditFormProps } from "../components/TrackEditForm";
 import { MeiliSearch } from "meilisearch";
 import { FiList } from "react-icons/fi";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
-import { toaster, Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/toaster";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
@@ -64,19 +64,8 @@ const SearchPage = () => {
     needsRefresh,
     loading,
   } = useSearchResults({ client: meiliClient, username: selectedUsername });
-  console.log("SearchPage results:", loading, results.length, estimatedResults);
 
-  const {
-    playlists,
-    loadingPlaylists,
-    playlistName,
-    setPlaylistName,
-    playlist,
-    fetchPlaylists,
-    handleCreatePlaylist,
-    handleLoadPlaylist,
-    addToPlaylist,
-  } = usePlaylists();
+  const { playlist, addToPlaylist } = usePlaylists();
 
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -103,12 +92,6 @@ const SearchPage = () => {
     } else {
       alert("Failed to update track");
     }
-  };
-
-  // Wrap handleLoadPlaylist to show toast
-  const handleLoadPlaylistWithToast = async (trackIds: Array<string>) => {
-    await handleLoadPlaylist(trackIds);
-    toaster.create({ title: "Playlist loaded!", type: "success" });
   };
 
   return (

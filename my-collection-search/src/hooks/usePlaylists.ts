@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import type { Playlist, Track } from "@/types/track";
+import { importPlaylist } from "@/services/playlistService";
 
 export interface PlaylistInfo {
   id?: number;
@@ -166,23 +167,14 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
 
   // Save playlist to backend (update or create)
   const savePlaylist = useCallback(async () => {
-    if (!playlistName.trim() || playlist.length === 0) {
-      alert("Please enter a playlist name and add tracks.");
-      return;
-    }
-    const res = await fetch("/api/playlists", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: playlistName,
-        tracks: playlist.map((t) => t.track_id),
-      }),
-    });
+    const res = await importPlaylist(
+      playlistName,
+      playlist.map((t) => t.track_id)
+    );
     if (res.ok) {
       fetchPlaylists();
-      alert("Playlist saved!");
     } else {
-      alert("Failed to save playlist");
+      throw new Error("Failed to save playlist");
     }
   }, [playlistName, playlist, fetchPlaylists]);
 

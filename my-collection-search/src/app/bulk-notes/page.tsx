@@ -23,7 +23,7 @@ import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 import { getMeiliClient } from "@/lib/meili";
 import { MeiliSearch } from "meilisearch";
 import { LuSearch } from "react-icons/lu";
-import { FiCheck, FiCopy, FiMoreHorizontal, FiUpload } from "react-icons/fi";
+import { FiCheck, FiCopy, FiUpload } from "react-icons/fi";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -32,7 +32,6 @@ export default function BulkNotesPage() {
     showSpotifyUsernames: true,
   });
   const [selectedUsername, setSelectedUsername] = useSelectedUsername();
-  const [bulkPrompt, setBulkPrompt] = useState("");
   const [bulkJson, setBulkJson] = useState("");
   const [filterLocalTagsEmpty, setFilterLocalTagsEmpty] = useState(true);
   const [artistSearch, setArtistSearch] = useState("");
@@ -122,7 +121,6 @@ export default function BulkNotesPage() {
 Example:
 {"track_id":"123","local_tags":"House","notes":"Great for warmup sets, uplifting vibe."}. In "notes", include a longer DJ-focused description with vibe, energy, suggested set placement, transition tips, and any emotional or cultural context. In local_tags, it is the genre or style of the actual track and not the album. 
  Tracks:\n${promptTracks}`;
-    setBulkPrompt(fullPrompt);
     // Robust clipboard copy with fallback
     const copyToClipboard = async (text: string) => {
       try {

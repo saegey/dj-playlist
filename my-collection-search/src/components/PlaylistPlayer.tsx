@@ -2,7 +2,7 @@
 "use client";
 
 import React from "react";
-import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Text, VStack } from "@chakra-ui/react";
 import { FiPause, FiPlay, FiSkipBack, FiSkipForward } from "react-icons/fi";
 import { usePlaylistPlayer } from "@/hooks/usePlaylistPlayer";
 import type { Track } from "@/types/track";
@@ -24,9 +24,18 @@ const PlaylistPlayer: React.FC<PlaylistPlayerProps> = ({ playlist }) => {
   } = usePlaylistPlayer(playlist);
 
   return (
-    <Stack mt={2} bg="bg.subtle" p={4} borderRadius="md" borderWidth="1px">
+    <VStack
+      mt={2}
+      bg="bg.subtle"
+      p={2}
+      borderRadius="md"
+      borderWidth="1px"
+      w="100%"
+      maxW="100%"
+      overflowX="hidden"
+    >
       {/* {currentTrack && ( */}
-      <Text fontSize="sm" ml={2}>
+      <Text fontSize="sm" ml={2} truncate as="div">
         {currentTrack
           ? `${currentTrack.artist} - ${currentTrack.title}`
           : "No track playing"}
@@ -76,7 +85,7 @@ const PlaylistPlayer: React.FC<PlaylistPlayerProps> = ({ playlist }) => {
       </Flex>
 
       <Box>{audioElement}</Box>
-    </Stack>
+    </VStack>
   );
 };
 
