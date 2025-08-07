@@ -24,6 +24,10 @@ export interface TrackWithEmbedding extends Track {
 
 // Context types
 interface PlaylistsContextType {
+  optimalOrderType: "original" | "greedy" | "genetic";
+  setOptimalOrderType: React.Dispatch<
+    React.SetStateAction<"original" | "greedy" | "genetic">
+  >;
   playlists: Playlist[];
   setPlaylists: React.Dispatch<React.SetStateAction<Playlist[]>>;
   playlistName: string;
@@ -55,6 +59,9 @@ const PlaylistsContext = createContext<PlaylistsContextType | undefined>(
 );
 
 export function PlaylistsProvider({ children }: { children: ReactNode }) {
+  const [optimalOrderType, setOptimalOrderType] = useState<
+    "original" | "greedy" | "genetic"
+  >("original");
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [playlistName, setPlaylistName] = useState("");
   const [loadingPlaylists, setLoadingPlaylists] = useState<
@@ -125,6 +132,8 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   // Load a playlist (replace current playlist)
   const handleLoadPlaylist = useCallback(
     async (trackIds: Array<string>, id: number) => {
+      setOptimalOrderType("original");
+
       if (!trackIds || trackIds.length === 0) {
         setPlaylist([]);
         setPlaylistInfo({ name: "" });
@@ -141,6 +150,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
         if (res.ok) {
           const data = await res.json();
           setPlaylist(data);
+          setDisplayPlaylist(data);
           // Try to find the playlist name from loaded playlists
           const loaded = playlists.find(
             (pl: Playlist) =>
@@ -169,7 +179,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   const savePlaylist = useCallback(async () => {
     const res = await importPlaylist(
       playlistName,
-      playlist.map((t) => t.track_id)
+      displayPlaylist.map((t) => t.track_id)
     );
     if (res.ok) {
       fetchPlaylists();
@@ -203,11 +213,18 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
 
   // Remove track from playlist
   const removeFromPlaylist = useCallback((trackId: string) => {
+    setDisplayPlaylist((prev) => prev.filter((t) => t.track_id !== trackId));
     setPlaylist((prev) => prev.filter((t) => t.track_id !== trackId));
   }, []);
 
   // Add track to playlist
   const addToPlaylist = useCallback((track: TrackWithEmbedding) => {
+    setDisplayPlaylist((prev) => {
+      if (!prev.some((t) => t.track_id === track.track_id)) {
+        return [...prev, track];
+      }
+      return prev;
+    });
     setPlaylist((prev) => {
       if (!prev.some((t) => t.track_id === track.track_id)) {
         return [...prev, track];
@@ -218,7 +235,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
 
   // Move track in playlist
   const moveTrack = useCallback((fromIdx: number, toIdx: number) => {
-    setPlaylist((prev) => {
+    setDisplayPlaylist((prev) => {
       if (toIdx < 0 || toIdx >= prev.length) return prev;
       const updated = [...prev];
       const [removed] = updated.splice(fromIdx, 1);
@@ -271,6 +288,8 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   }, [playlist]);
 
   const value: PlaylistsContextType = {
+    optimalOrderType,
+    setOptimalOrderType,
     playlists,
     setPlaylists,
     playlistName,

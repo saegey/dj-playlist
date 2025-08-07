@@ -41,7 +41,8 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
     null
   );
   const [loadingGenetic, setLoadingGenetic] = React.useState(false);
-  const { displayPlaylist, setDisplayPlaylist } = usePlaylists();
+  const { displayPlaylist, setDisplayPlaylist, setOptimalOrderType } =
+    usePlaylists();
 
   // Compute greedy order
   const updatedPlaylist: TrackWithCamelot[] = React.useMemo(() => {
@@ -85,23 +86,19 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
           : Object.values(data.result);
         setGeneticPlaylist(result);
       })
-      .finally(() => setLoadingGenetic(false));
-  }, [optimalOrderType, playlist]);
+      .finally(() => {
+        setLoadingGenetic(false);
+        setOptimalOrderType("original");
+      });
+  }, [optimalOrderType, playlist, setOptimalOrderType, displayPlaylist]);
 
   React.useEffect(() => {
     if (optimalOrderType === "greedy" && playlist.length > 0) {
       const greedyPlaylist = optimalPath.map(
-        (orderIdx) => playlist[updatedPlaylist[orderIdx].idx]
+        (orderIdx) => displayPlaylist[updatedPlaylist[orderIdx].idx]
       );
       setDisplayPlaylist(greedyPlaylist);
-    } else if (
-      optimalOrderType === "genetic" &&
-      geneticPlaylist &&
-      geneticPlaylist.length > 0
-    ) {
-      setDisplayPlaylist(geneticPlaylist);
-    } else {
-      setDisplayPlaylist(playlist);
+      setOptimalOrderType("original");
     }
   }, [
     optimalOrderType,
@@ -110,6 +107,7 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
     updatedPlaylist,
     geneticPlaylist,
     setDisplayPlaylist,
+    displayPlaylist
   ]);
 
   if (playlist.length === 0) {
