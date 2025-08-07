@@ -1,75 +1,55 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import DeletePlaylistDialog from "@/components/DeletePlaylistDialog";
+import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import {
   Box,
   Flex,
-  Input,
   Text,
   Button,
-  Dialog,
-  Portal,
-  CloseButton,
   Stack,
   EmptyState,
   VStack,
+  HStack,
 } from "@chakra-ui/react";
 import { MeiliSearch } from "meilisearch";
 
 import { Toaster, toaster } from "@/components/ui/toaster"; // See below
 import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
-import { FiHeadphones } from "react-icons/fi";
-
-export type Playlist = { id: number; name: string; tracks: string[] };
+import { FiBookOpen, FiHeadphones, FiTrash } from "react-icons/fi";
+import { TbFileImport } from "react-icons/tb";
+import { usePlaylists } from "@/hooks/usePlaylists";
+import { importPlaylist } from "@/services/playlistService";
 
 type Props = {
-  playlists: Playlist[];
-  loadingPlaylists: boolean;
-  playlistName: string;
-  setPlaylistName: (name: string) => void;
-  handleCreatePlaylist: () => void;
-  handleLoadPlaylist: (trackIds: string[]) => void;
   xmlImportModalOpen: boolean;
   setXmlImportModalOpen: (open: boolean) => void;
   client: MeiliSearch | null;
-  fetchPlaylists: () => void;
 };
 
 export default function PlaylistManager({
-  playlists,
-  loadingPlaylists,
-  playlistName,
-  setPlaylistName,
-  handleCreatePlaylist,
-  handleLoadPlaylist,
   xmlImportModalOpen,
   setXmlImportModalOpen,
   client,
-  fetchPlaylists,
 }: Props) {
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [playlistToDelete, setPlaylistToDelete] = useState<number | null>(null);
-  const cancelRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { playlists, loadingPlaylists, fetchPlaylists, handleLoadPlaylist } =
+    usePlaylists();
 
   const notify = (opts: Parameters<typeof toaster.create>[0]) =>
     toaster.create(opts);
 
-  const confirmDeletePlaylist = async () => {
-    if (playlistToDelete == null) return;
-    try {
-      await fetch(`/api/playlists?id=${playlistToDelete}`, {
-        method: "DELETE",
-      });
-      notify({ title: "Playlist deleted.", type: "success" });
-      fetchPlaylists();
-    } catch {
-      notify({ title: "Failed to delete playlist.", type: "error" });
-    } finally {
-      setDeleteDialogOpen(false);
-      setPlaylistToDelete(null);
-    }
-  };
+  // Delete dialog state and handler moved to DeletePlaylistDialog below
+  const [deleteDialogState, setDeleteDialogState] = useState<{
+    open: boolean;
+    playlistId: number | null;
+  }>({ open: false, playlistId: null });
+
+  // State for import playlist dialog
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importedTracks, setImportedTracks] = useState<string[]>([]);
+  const [importedName, setImportedName] = useState("Imported Playlist");
 
   const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,18 +63,18 @@ export default function PlaylistManager({
       if (Array.isArray(data)) {
         tracks = data.map((t) => t.track_id).filter(Boolean);
         if (!tracks.length) throw new Error("No valid tracks");
-        name = window.prompt("Name your playlist:", name) || name;
+        setImportedName(name);
+        setImportedTracks(tracks);
+        setImportDialogOpen(true);
+        return;
       } else if (data.name && Array.isArray(data.tracks)) {
         ({ name, tracks } = data);
+        // Directly import if name and tracks present
       } else {
         throw new Error("Invalid playlist format");
       }
 
-      const res = await fetch("/api/playlists", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, tracks }),
-      });
+      const res = await importPlaylist(name, tracks);
 
       if (res.ok) {
         notify({ title: `Imported '${name}'`, type: "success" });
@@ -109,25 +89,28 @@ export default function PlaylistManager({
     }
   };
 
+  // Handler for confirming import with name
+  const handleConfirmImport = async () => {
+    if (!importedTracks.length || !importedName.trim()) return;
+    try {
+      const res = await importPlaylist(importedName, importedTracks);
+      if (res.ok) {
+        notify({ title: `Imported '${importedName}'`, type: "success" });
+        fetchPlaylists();
+      } else {
+        notify({ title: "Failed to import playlist", type: "error" });
+      }
+    } catch {
+      notify({ title: "Error importing playlist", type: "error" });
+    } finally {
+      setImportDialogOpen(false);
+      setImportedTracks([]);
+      setImportedName("Imported Playlist");
+    }
+  };
+
   return (
     <Box minW="220px" mr={4}>
-      <Flex mb={2} gap={2}>
-        <Input
-          size="sm"
-          placeholder="New playlist name"
-          value={playlistName}
-          onChange={(e) => setPlaylistName(e.target.value)}
-        />
-        <Button
-          size="sm"
-          variant={"solid"}
-          disabled={!playlistName.trim()}
-          onClick={handleCreatePlaylist}
-        >
-          Save
-        </Button>
-      </Flex>
-
       <Stack
         overflowY="auto"
         borderWidth="1px"
@@ -136,9 +119,7 @@ export default function PlaylistManager({
         bg="bg.subtle"
         separator={<Box borderBottomWidth="1px" borderColor="bg.emphasis" />}
       >
-        {loadingPlaylists ? (
-          <Text fontSize="sm">Loading...</Text>
-        ) : playlists.length === 0 ? (
+        {playlists.length === 0 ? (
           <EmptyState.Root size={"sm"}>
             <EmptyState.Content>
               <EmptyState.Indicator>
@@ -154,94 +135,78 @@ export default function PlaylistManager({
           </EmptyState.Root>
         ) : (
           playlists.map((pl) => (
-            <Flex key={pl.id} direction="column" mb={2}>
+            <Flex key={pl.id} direction="row" mb={2} alignItems="center">
               <Text fontSize="sm" fontWeight="bold">
                 {pl.name}
               </Text>
-              <Flex mt={1}>
+              <Flex mt={1} ml="auto" gap={1}>
                 <Button
                   size="xs"
                   variant="solid"
-                  colorScheme="primary"
+                  colorPalette="primary"
+                  disabled={
+                    typeof loadingPlaylists === "object" &&
+                    loadingPlaylists !== null &&
+                    pl.id === loadingPlaylists.id
+                  }
+                  loading={
+                    typeof loadingPlaylists === "object" &&
+                    loadingPlaylists !== null &&
+                    pl.id === loadingPlaylists.id
+                  }
                   mr={1}
-                  onClick={() => handleLoadPlaylist(pl.tracks)}
+                  onClick={async () => {
+                    await handleLoadPlaylist(pl.tracks, pl.id);
+                    notify({ title: "Playlist loaded.", type: "success" });
+                    console.log(loadingPlaylists);
+                  }}
                 >
-                  Load
+                  <FiBookOpen />
                 </Button>
                 <Button
                   size="xs"
-                  variant="subtle"
-                  onClick={() => {
-                    setPlaylistToDelete(pl.id);
-                    setDeleteDialogOpen(true);
-                  }}
+                  colorPalette={"red"}
+                  onClick={() =>
+                    setDeleteDialogState({ open: true, playlistId: pl.id })
+                  }
                 >
-                  Delete
+                  <FiTrash />
                 </Button>
               </Flex>
             </Flex>
           ))
         )}
       </Stack>
+      <DeletePlaylistDialog
+        open={deleteDialogState.open}
+        playlistId={deleteDialogState.playlistId}
+        onClose={() => setDeleteDialogState({ open: false, playlistId: null })}
+        fetchPlaylists={fetchPlaylists}
+        notify={notify}
+      />
+      <HStack mt={4} gap={4}>
+        <Button
+          variant="surface"
+          size="sm"
+          onClick={() => setXmlImportModalOpen(true)}
+        >
+          <TbFileImport /> Apple Music XML
+        </Button>
+        <Button
+          variant="solid"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <TbFileImport /> Playlist JSON
+        </Button>
 
-      <Dialog.Root
-        open={deleteDialogOpen}
-        onOpenChange={(details) => {
-          setDeleteDialogOpen(details.open);
-          if (!details.open) setPlaylistToDelete(null);
-        }}
-        role="alertdialog"
-        initialFocusEl={() => cancelRef.current}
-      >
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Delete Playlist</Dialog.Title>
-
-                <Dialog.CloseTrigger asChild>
-                  <CloseButton
-                    ref={cancelRef}
-                    size="sm"
-                    onClick={() => setDeleteDialogOpen(false)}
-                  />
-                </Dialog.CloseTrigger>
-              </Dialog.Header>
-              <Dialog.Body>
-                Are you sure? This action cannot be undone.
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Button
-                  colorPalette="red"
-                  ml={3}
-                  onClick={confirmDeletePlaylist}
-                >
-                  Delete
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
-      <Button
-        mt={6}
-        variant="surface"
-        size="sm"
-        width="100%"
-        onClick={() => setXmlImportModalOpen(true)}
-      >
-        Import Apple Music XML
-      </Button>
-      <Button
-        mt={2}
-        variant="solid"
-        size="sm"
-        width="100%"
-        onClick={() => fileInputRef.current?.click()}
-      >
-        Import Playlist JSON
-      </Button>
+        <AppleMusicXmlImport
+          isOpen={xmlImportModalOpen}
+          onClose={() => setXmlImportModalOpen(false)}
+          client={client}
+          fetchPlaylists={fetchPlaylists}
+        />
+      </HStack>
       <input
         type="file"
         accept="application/json"
@@ -249,15 +214,16 @@ export default function PlaylistManager({
         style={{ display: "none" }}
         onChange={handleImportJson}
       />
-
-      <AppleMusicXmlImport
-        isOpen={xmlImportModalOpen}
-        onClose={() => setXmlImportModalOpen(false)}
-        client={client}
-        fetchPlaylists={fetchPlaylists}
-      />
-
       <Toaster />
+      <NamePlaylistDialog
+        open={importDialogOpen}
+        name={importedName}
+        setName={setImportedName}
+        trackCount={importedTracks.length}
+        onConfirm={handleConfirmImport}
+        onCancel={() => setImportDialogOpen(false)}
+        confirmLabel="Import"
+      />
     </Box>
   );
 }

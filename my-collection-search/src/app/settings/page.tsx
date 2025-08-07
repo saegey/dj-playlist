@@ -23,7 +23,8 @@ import {
 import { HiUpload } from "react-icons/hi";
 import { toaster, Toaster } from "@/components/ui/toaster";
 import TopMenuBar from "@/components/MenuBar";
-import { FiDownload } from "react-icons/fi";
+import { FiBriefcase, FiDatabase, FiDownload, FiRefreshCcw, FiTrash } from "react-icons/fi";
+import { SiDiscogs, SiSpotify } from "react-icons/si";
 
 type SyncResult = {
   message?: string;
@@ -42,43 +43,10 @@ export default function DiscogsSyncPage() {
   const [syncingSpotify, setSyncingSpotify] = useState(false);
   const [updatingSpotifyIndex, setUpdatingSpotifyIndex] = useState(false);
   const [showSyncAlert, setShowSyncAlert] = useState(false);
-  const [spotifySyncStatus, setSpotifySyncStatus] = useState<SyncResult | null>(null);
-  // Backfill embeddings state
-  const [backfilling, setBackfilling] = useState(false);
-  const [backfillResult, setBackfillResult] = useState<null | {
-    updated: number;
-    failed: string[];
-    error?: string;
-  }>(null);
-  const [backfillError, setBackfillError] = useState<string | null>(null);
+  const [spotifySyncStatus, setSpotifySyncStatus] = useState<SyncResult | null>(
+    null
+  );
 
-  const handleBackfillEmbeddings = async () => {
-    setBackfilling(true);
-    setBackfillResult(null);
-    setBackfillError(null);
-    try {
-      const res = await fetch("/api/tracks/backfill-embeddings", {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Unknown error");
-      setBackfillResult(data);
-      toaster.create({
-        title: "Backfill complete",
-        type: "success",
-        description: `Updated: ${data.updated}, Failed: ${data.failed.length}`,
-      });
-    } catch (e) {
-      setBackfillError(e instanceof Error ? e.message : String(e));
-      toaster.create({
-        title: "Backfill failed",
-        type: "error",
-        description: e instanceof Error ? e.message : String(e),
-      });
-    } finally {
-      setBackfilling(false);
-    }
-  };
   const [backups, setBackups] = useState<string[]>([]);
   const [showAllBackups, setShowAllBackups] = useState(false);
   const [loadingBackups, setLoadingBackups] = useState(false);
@@ -227,7 +195,7 @@ export default function DiscogsSyncPage() {
   return (
     <>
       <Toaster />
-      <TopMenuBar current={"/discogs"} />
+      <TopMenuBar current={"/settings"} />
       <Box maxW="700px" mx="auto" p={8}>
         <Heading mb={6} size="lg">
           Vinyl Playlist Maker Pro Edition Settings
@@ -388,7 +356,13 @@ export default function DiscogsSyncPage() {
             <Alert.Indicator />
             <Alert.Content>
               <Alert.Title>Spotify Sync Status</Alert.Title>
-              <Alert.Description>{JSON.stringify({ ...spotifySyncStatus, alreadyHave: undefined }, null, 2)}</Alert.Description>
+              <Alert.Description>
+                {JSON.stringify(
+                  { ...spotifySyncStatus, alreadyHave: undefined },
+                  null,
+                  2
+                )}
+              </Alert.Description>
             </Alert.Content>
             <CloseButton
               pos="relative"
@@ -398,7 +372,6 @@ export default function DiscogsSyncPage() {
             />
           </Alert.Root>
         )}
-
 
         {error && (
           <Alert.Root status="error" title="Error">
@@ -460,15 +433,7 @@ export default function DiscogsSyncPage() {
             loading={updatingSpotifyIndex}
             disabled={updatingSpotifyIndex || indexing || backingUp}
           >
-            Update Spotify Index
-          </Button>
-          <Button
-            colorScheme="blue"
-            onClick={() => handleSync()}
-            loading={!!syncing["me"]}
-            disabled={!!syncing["me"] || indexing}
-          >
-            Sync My Collection
+            <FiDatabase /> Ingest Spotify Data
           </Button>
           <Button
             colorScheme="purple"
@@ -476,8 +441,19 @@ export default function DiscogsSyncPage() {
             loading={indexing}
             disabled={indexing || Object.values(syncing).some(Boolean)}
           >
-            Update Index
+            <FiDatabase />
+            Ingest Discogs Data
           </Button>
+          <Button
+            colorScheme="blue"
+            onClick={() => handleSync()}
+            loading={!!syncing["me"]}
+            disabled={!!syncing["me"] || indexing}
+          >
+            <SiDiscogs />
+            Sync Discogs
+          </Button>
+
           <Button
             colorScheme="orange"
             onClick={handleBackup}
@@ -486,6 +462,7 @@ export default function DiscogsSyncPage() {
               backingUp || Object.values(syncing).some(Boolean) || indexing
             }
           >
+            <FiBriefcase />
             Backup Database
           </Button>
           <Dialog.Root
@@ -494,6 +471,7 @@ export default function DiscogsSyncPage() {
           >
             <Dialog.Trigger asChild>
               <Button colorScheme="teal" disabled={indexing || backingUp}>
+                <SiSpotify />
                 Sync Spotify
               </Button>
             </Dialog.Trigger>
@@ -564,51 +542,7 @@ export default function DiscogsSyncPage() {
               </Dialog.Positioner>
             </Portal>
           </Dialog.Root>
-          <Button
-            colorScheme="pink"
-            onClick={handleBackfillEmbeddings}
-            loading={backfilling}
-            disabled={
-              backfilling ||
-              Object.values(syncing).some(Boolean) ||
-              indexing ||
-              backingUp
-            }
-            title="Recompute all track embeddings and update MeiliSearch"
-          >
-            Backfill Embeddings
-          </Button>
         </SimpleGrid>
-        {backfillError && (
-          <Alert.Root status="error" title="Backfill Error">
-            <Alert.Indicator />
-            <Alert.Title>Backfill Error</Alert.Title>
-            <Alert.Description>{backfillError}</Alert.Description>
-          </Alert.Root>
-        )}
-        {backfillResult && (
-          <Box mt={6} p={4} borderWidth={1} borderRadius="md">
-            <Heading size="md" mb={2}>
-              Embedding Backfill Results
-            </Heading>
-            <Text>Updated: {backfillResult.updated}</Text>
-            <Text>Failed: {backfillResult.failed.length}</Text>
-            {backfillResult.failed.length > 0 && (
-              <Box mt={2} color="orange.600">
-                <b>Failed track IDs:</b>
-                <Code
-                  display="block"
-                  whiteSpace="pre"
-                  p={2}
-                  mt={2}
-                  fontSize="sm"
-                >
-                  {JSON.stringify(backfillResult.failed, null, 2)}
-                </Code>
-              </Box>
-            )}
-          </Box>
-        )}
 
         <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
           {/* Friends section and all alerts/results should be inside the main Box */}
@@ -666,15 +600,16 @@ export default function DiscogsSyncPage() {
                       loading={!!syncing[username]}
                       disabled={!!syncing[username] || indexing}
                     >
-                      Sync
+                      
+                      <FiRefreshCcw />
                     </Button>
                     <Button
                       size="xs"
-                      colorScheme="red"
-                      variant="outline"
+                      colorPalette="red"
+                      // variant="outline"
                       onClick={() => handleRemoveFriend(username)}
                     >
-                      Remove
+                      <FiTrash />
                     </Button>
                   </HStack>
                 </HStack>

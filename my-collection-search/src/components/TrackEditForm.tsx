@@ -16,13 +16,20 @@ import {
   Dialog,
   CloseButton,
   RatingGroup,
-  Menu,
   FileUpload,
   Spinner,
+  SimpleGrid,
 } from "@chakra-ui/react";
 
 import { AppleMusicResult, YoutubeVideo } from "@/types/track";
 import { HiUpload } from "react-icons/hi";
+import { FiDownload } from "react-icons/fi";
+import {
+  SiApplemusic,
+  SiChatbot,
+  SiSpotify,
+  SiYoutube,
+} from "react-icons/si";
 
 export interface TrackEditFormProps {
   track_id: string; // Optional for new tracks
@@ -42,6 +49,16 @@ export interface TrackEditFormProps {
   duration_seconds?: number; // Optional for new tracks
   username: string; // Required for all tracks
 }
+
+type SpotifySearchTrack = {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  url: string;
+  artwork: string;
+  duration: number; // duration in milliseconds
+};
 
 function cleanSoundcloudUrl(url?: string) {
   if (!url) return url;
@@ -147,6 +164,12 @@ export default function TrackEditForm({
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
 
+  const [spotifyResults, setSpotifyResults] = useState<SpotifySearchTrack[]>(
+    []
+  );
+  const [spotifyLoading, setSpotifyLoading] = useState(false);
+  const [showSpotifyModal, setShowSpotifyModal] = useState(false);
+
   const [appleResults, setAppleResults] = useState<AppleMusicResult[]>([]);
   const [appleLoading, setAppleLoading] = useState(false);
   const [showAppleModal, setShowAppleModal] = useState(false);
@@ -154,28 +177,7 @@ export default function TrackEditForm({
   const [analyzing, setAnalyzing] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [vectorLoading, setVectorLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const handleFetchVector = async () => {
-    setVectorLoading(true);
-    try {
-      const res = await fetch("/api/tracks/vectorize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ track_id: form.track_id }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setForm((prev) => ({ ...prev, embedding: data.embedding }));
-      } else {
-        alert("Failed to fetch vector");
-      }
-    } catch (err) {
-      console.error("Error fetching vector:", err);
-      alert("Error fetching vector");
-    }
-    setVectorLoading(false);
-  };
 
   const handleFileUpload = async () => {
     // alert("File upload started", JSON.stringify(file));
@@ -285,6 +287,36 @@ export default function TrackEditForm({
     setYoutubeLoading(false);
   };
 
+  const searchSpotify = async () => {
+    setSpotifyLoading(true);
+    setShowSpotifyModal(true);
+    setSpotifyResults([]);
+    try {
+      const res = await fetch("/api/ai/spotify-track-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: form.title, artist: form.artist }),
+      });
+      if (res.status === 401) {
+        // Redirect to Spotify authorization
+        window.location.href =
+          "/api/spotify/login?state=" +
+          encodeURIComponent(window.location.pathname);
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        setSpotifyResults(data.results || []);
+      } else {
+        alert("Spotify search failed");
+      }
+    } catch (err) {
+      console.error("Spotify search error:", err);
+      alert("Spotify search error");
+    }
+    setSpotifyLoading(false);
+  };
+
   const handleYoutubeSelect = (video: YoutubeVideo) => {
     setForm((prev) => ({ ...prev, youtube_url: video.url }));
     setShowYoutubeModal(false);
@@ -370,7 +402,7 @@ export default function TrackEditForm({
       onOpenChange={(details) => setDialogOpen(details.open)}
       initialFocusEl={() => initialFocusRef.current}
       role="dialog"
-      size={["full", "xl", "xl"]}
+      size={["full", "lg", "lg"]}
     >
       <Portal>
         <Dialog.Backdrop />
@@ -385,49 +417,49 @@ export default function TrackEditForm({
             <Dialog.Body>
               <Box as="form" onSubmit={handleSubmit}>
                 <Flex gap={4} direction="row">
-                  <Menu.Root>
-                    <Menu.Trigger asChild>
-                      <Button variant="outline" size="sm">
-                        Actions
-                      </Button>
-                    </Menu.Trigger>
-                    {/* <Portal> */}
-                    <Menu.Positioner>
-                      <Menu.Content>
-                        <Menu.Item
-                          value="vector"
-                          disabled={vectorLoading}
-                          onSelect={handleFetchVector}
-                        >
-                          {vectorLoading ? "Getting Vector..." : "Get Vector"}
-                        </Menu.Item>
-                        <Menu.Item
-                          value="ai"
+                  <Stack flex={1}>
+                    <Box as={"nav"}>
+                      <SimpleGrid columns={[2, 3]} gap={2}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          loading={fetching}
                           disabled={fetching}
-                          onSelect={fetchFromChatGPT}
+                          onClick={fetchFromChatGPT}
                         >
-                          {fetching ? "Fetching from AI..." : "Fetch from AI"}
-                        </Menu.Item>
-                        <Menu.Item
-                          value="apple"
+                          <SiChatbot /> Fetch from AI
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          loading={appleLoading}
                           disabled={appleLoading}
-                          onSelect={searchAppleMusic}
+                          onClick={searchAppleMusic}
                         >
-                          {appleLoading
-                            ? "Searching Apple Music..."
-                            : "Search Apple Music"}
-                        </Menu.Item>
-                        <Menu.Item
-                          value="youtube"
+                          <SiApplemusic /> Search Apple Music
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          loading={youtubeLoading}
                           disabled={youtubeLoading}
-                          onSelect={searchYouTube}
+                          onClick={searchYouTube}
                         >
-                          {youtubeLoading
-                            ? "Searching YouTube..."
-                            : "Search YouTube"}
-                        </Menu.Item>
-                        <Menu.Item
-                          value="analyze"
+                          <SiYoutube /> Search YouTube
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          loading={spotifyLoading}
+                          disabled={spotifyLoading}
+                          onClick={searchSpotify}
+                        >
+                          <SiSpotify /> Search Spotify
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          loading={analyzing}
                           disabled={
                             analyzing ||
                             (!form.apple_music_url &&
@@ -435,47 +467,38 @@ export default function TrackEditForm({
                               !form.soundcloud_url &&
                               !form.spotify_url)
                           }
-                          onSelect={handleAnalyzeAudio}
+                          onClick={handleAnalyzeAudio}
                         >
-                          {analyzing ? "Analyzing Audio..." : "Analyze Audio"}
-                        </Menu.Item>
-                        {/* <Menu.Item
-                        value="file"
-                        // onSelect={() => {
-                        //   if (fileInputRef.current)
-                        //     fileInputRef.current.click();
-                        // }}
-                      >
-                      </Menu.Item> */}
-                      </Menu.Content>
-                    </Menu.Positioner>
-                  </Menu.Root>
-
-                  <FileUpload.Root
-                    disabled={uploading}
-                    onFileChange={(files) => {
-                      // alert("File upload started");
-                      // Chakra UI v3 FileUpload: files.acceptedFiles is the correct property
-                      const file = files.acceptedFiles?.[0] || null;
-                      setFile(file);
-                      handleFileUpload();
-                    }}
-                  >
-                    <FileUpload.HiddenInput />
-                    <FileUpload.Trigger asChild>
-                      <Button variant="outline" size="sm">
-                        {uploading ? (
-                          <>
-                            <Spinner /> Uploading...
-                          </>
-                        ) : (
-                          <>
-                            <HiUpload /> Upload Audio
-                          </>
-                        )}
-                      </Button>
-                    </FileUpload.Trigger>
-                  </FileUpload.Root>
+                          <FiDownload /> Fetch Audio
+                        </Button>
+                        <FileUpload.Root
+                          disabled={uploading}
+                          onFileChange={(files) => {
+                            // alert("File upload started");
+                            // Chakra UI v3 FileUpload: files.acceptedFiles is the correct property
+                            const file = files.acceptedFiles?.[0] || null;
+                            setFile(file);
+                            handleFileUpload();
+                          }}
+                        >
+                          <FileUpload.HiddenInput />
+                          <FileUpload.Trigger asChild>
+                            <Button variant="outline" size="sm" width={"100%"}>
+                              {uploading ? (
+                                <>
+                                  <Spinner /> Uploading...
+                                </>
+                              ) : (
+                                <>
+                                  <HiUpload /> Upload Audio
+                                </>
+                              )}
+                            </Button>
+                          </FileUpload.Trigger>
+                        </FileUpload.Root>
+                      </SimpleGrid>
+                    </Box>
+                  </Stack>
                 </Flex>
 
                 <Stack
@@ -625,7 +648,7 @@ export default function TrackEditForm({
                                   borderWidth="1px"
                                   borderRadius="md"
                                   p={2}
-                                  _hover={{ bg: "gray.50", cursor: "pointer" }}
+                                  // _hover={{ bg: "gray.50", cursor: "pointer" }}
                                   onClick={() => {
                                     handleYoutubeSelect(video);
                                     console.log(video);
@@ -650,6 +673,84 @@ export default function TrackEditForm({
                                       e.stopPropagation();
                                       console.log(video);
                                       handleYoutubeSelect(video);
+                                    }}
+                                  >
+                                    Select
+                                  </Button>
+                                </Flex>
+                              ))}
+                            </Stack>
+                          )}
+                        </Dialog.Body>
+                      </Dialog.Content>
+                    </Dialog.Positioner>
+                  </Portal>
+                </Dialog.Root>
+
+                {/* --- Spotify Dialog --- */}
+                <Dialog.Root
+                  open={showSpotifyModal}
+                  onOpenChange={(details) => setShowSpotifyModal(details.open)}
+                  size={["full", "lg", "lg"]}
+                >
+                  <Portal>
+                    <Dialog.Backdrop />
+                    <Dialog.Positioner>
+                      <Dialog.Content>
+                        <Dialog.Header>
+                          <Dialog.Title>Select Spotify Track</Dialog.Title>
+                          <Dialog.CloseTrigger asChild>
+                            <CloseButton size="sm" />
+                          </Dialog.CloseTrigger>
+                        </Dialog.Header>
+                        <Dialog.Body>
+                          {spotifyLoading ? (
+                            <Text>Loading...</Text>
+                          ) : spotifyResults.length === 0 ? (
+                            <Text>No results found.</Text>
+                          ) : (
+                            <Stack>
+                              {spotifyResults.map((track) => (
+                                <Flex
+                                  key={track.id}
+                                  align="center"
+                                  gap={3}
+                                  borderWidth="1px"
+                                  borderRadius="md"
+                                  p={2}
+                                  // _hover={{ bg: "gray.50", cursor: "pointer" }}
+                                  onClick={() => {
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      spotify_url: track.url,
+                                    }));
+                                    setShowSpotifyModal(false);
+                                  }}
+                                >
+                                  {track.artwork && (
+                                    <Image
+                                      src={track.artwork}
+                                      alt={track.title}
+                                      boxSize="60px"
+                                      borderRadius="md"
+                                    />
+                                  )}
+                                  <Box flex="1">
+                                    <Text fontWeight="bold">{track.title}</Text>
+                                    <Text fontSize="sm">
+                                      {track.artist} — {track.album}
+                                    </Text>
+                                  </Box>
+                                  <Button
+                                    colorScheme="green"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setForm((prev) => ({
+                                        ...prev,
+                                        spotify_url: track.url,
+                                      }));
+                                      setShowSpotifyModal(false);
                                     }}
                                   >
                                     Select
@@ -695,7 +796,7 @@ export default function TrackEditForm({
                                   borderWidth="1px"
                                   borderRadius="md"
                                   p={2}
-                                  _hover={{ bg: "gray.50", cursor: "pointer" }}
+                                  // _hover={{ bg: "gray.50", cursor: "pointer" }}
                                   onClick={() => handleAppleSelect(song)}
                                 >
                                   {song.artwork && (

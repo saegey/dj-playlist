@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import jsPDF from "jspdf";
+import { exportPlaylistToPDF } from "@/lib/exportPlaylistPdf";
 import {
   Box,
-  Flex,
   Text,
   Button,
   Portal,
@@ -17,7 +16,11 @@ import PlaylistViewer from "@/components/PlaylistViewer";
 import TrackResult from "@/components/TrackResult";
 import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
 import type { Track } from "@/types/track";
-import { FiMoreVertical } from "react-icons/fi";
+import { FiMoreVertical, FiSave } from "react-icons/fi";
+import { GiTakeMyMoney } from "react-icons/gi";
+import { PiDna, PiFilePdf } from "react-icons/pi";
+import { MdOutlineClearAll } from "react-icons/md";
+
 import { usePlaylists } from "@/hooks/usePlaylists";
 
 import { formatSeconds, parseDurationToSeconds } from "@/lib/trackUtils";
@@ -25,6 +28,9 @@ import { useSearchResults } from "@/hooks/useSearchResults";
 import { MeiliSearch } from "meilisearch";
 import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 import PlaylistPlayer from "./PlaylistPlayer";
+import { LuFileJson } from "react-icons/lu";
+import NamePlaylistDialog from "./NamePlaylistDialog";
+import { toaster } from "./ui/toaster";
 
 export const PlaylistViewerDrawer = ({
   hasMounted,
@@ -45,8 +51,13 @@ export const PlaylistViewerDrawer = ({
     moveTrack,
     playlistAvgEmbedding,
     getRecommendations,
+    savePlaylist,
+    playlistName,
+    setPlaylistName,
   } = usePlaylists();
   const [selectedUsername] = useSelectedUsername();
+
+  // const [playlistName, setPlaylistName] = useState("");
 
   // Playlist player state
 
@@ -67,6 +78,8 @@ export const PlaylistViewerDrawer = ({
     return sum + parseDurationToSeconds(track.duration);
   }, 0);
   const totalPlaytimeFormatted = formatSeconds(totalPlaytimeSeconds);
+
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   React.useEffect(() => {
     console.log("Fetching recommendations for playlist", {
@@ -90,76 +103,31 @@ export const PlaylistViewerDrawer = ({
   }, [playlist, getRecommendations, playlistAvgEmbedding]);
 
   // PDF export handler
-  const exportPlaylistToPDF = () => {
-    console.log("Exporting playlist to PDF", {
+  const handleExportPlaylistToPDF = () => {
+    exportPlaylistToPDF({
       playlist,
       displayPlaylist,
       totalPlaytimeFormatted,
+      filename: "playlist.pdf",
     });
-    if (!playlist.length) return;
-    const currentPlaylist =
-      displayPlaylist.length > 0 ? displayPlaylist : playlist;
-    const doc = new jsPDF();
-    doc.setFont("courier", "normal");
-    doc.setFontSize(8);
-    doc.text(`Total Tracks: ${playlist.length}`, 10, 15);
-    doc.text(`Total Playtime: ${totalPlaytimeFormatted}`, 10, 18);
-    let y = 25;
-    doc.setFontSize(8);
-    doc.setLineHeightFactor(0.8);
+  };
 
-    currentPlaylist.forEach((track, idx) => {
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
-      const indexStr = idx + 1 < 10 ? ` ${idx + 1}` : `${idx + 1}`;
-      doc.text(
-        `${indexStr}. ${track.artist || "Unknown Artist"} - ${
-          track.title || "Untitled"
-        }`,
-        10,
-        y
-      );
-      y += 3;
-      if (track.album) {
-        doc.text(`   Album: ${track.album}`, 12, y);
-        y += 3;
-      }
-      if (track.bpm || track.key) {
-        doc.text(
-          `   BPM: ${track.bpm || "-"}   Key: ${track.key || "-"}`,
-          12,
-          y
-        );
-        y += 3;
-      }
-      // if (track.danceability) {
-      //   doc.text(`   Danceability: ${track.danceability}`, 12, y);
-      //   y += 5;
-      // }
-      if (track.duration_seconds) {
-        doc.text(
-          `   Duration: ${formatSeconds(track.duration_seconds)} / Position: ${
-            track.position
-          }`,
-          12,
-          y
-        );
-        y += 3;
-      }
-      if (track.local_tags) {
-        // Remove problematic characters (newlines, tabs, excessive spaces, non-printable, and non-ASCII)
-        const cleanTags = String(track.local_tags)
-          .replace(/[^\x20-\x7E]+/g, " ") // keep only printable ASCII
-          .replace(/\s+/g, " ") // collapse all whitespace
-          .trim();
-        doc.text(`   Tags: ${cleanTags}`, 12, y);
-        y += 3;
-      }
-      y += 2;
-    });
-    doc.save("playlist.pdf");
+  const handleSavePlaylist = async () => {
+    try {
+      await savePlaylist();
+      toaster.create({
+        title: "Playlist saved successfully",
+        type: "success",
+      });
+      setIsSaveModalOpen(false);
+      // Optionally, you can refresh the playlist or show a success message
+    } catch (error) {
+      console.error("Failed to save playlist:", error);
+      toaster.create({
+        title: "Failed to save playlist",
+        type: "error",
+      });
+    }
   };
 
   return (
@@ -168,102 +136,95 @@ export const PlaylistViewerDrawer = ({
       <Drawer.Positioner>
         <Drawer.Content>
           <Drawer.Header>
-            <Drawer.Title>
+            <Drawer.Title flex="1">
               Playlist ({hasMounted ? playlist.length : 0})
               <Text fontSize="sm" color="gray.500" mb={2}>
                 Total Playtime: {hasMounted ? totalPlaytimeFormatted : "--:--"}
                 {/* Playlist Recommendations */}
               </Text>
-              <Box mt={2}>
-                <Box>
-                  <Flex gap={2} alignItems="center" mb={4} mt={4}>
-                    {/* <Button
-                      variant="solid"
-                      size="sm"
-                      onClick={() => {
-                        setGeneticPlaylistOrder((v) => !v);
-                      }}
-                      disabled={!hasMounted || playlist.length === 0}
-                    >
-                      {geneticPlaylistOrder ? "Original" : "Genetic"}
-                    </Button> */}
-                    <Button
-                      size="sm"
-                      variant={"outline"}
-                      onClick={exportPlaylist}
-                      disabled={!hasMounted || playlist.length === 0}
-                    >
-                      JSON
-                    </Button>
-                    <Menu.Root key="order-menu">
-                      <Menu.Trigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={!hasMounted || playlist.length === 0}
-                        >
-                          Order
-                        </Button>
-                      </Menu.Trigger>
-                      {/* <Portal> */}
-                      <Menu.Positioner>
-                        <Menu.Content>
-                          <Menu.Item
-                            value="original"
-                            onSelect={() => {
-                              // setShowOptimalOrder(false);
-                              setOptimalOrderType("original");
-                            }}
-                          >
-                            Original
-                          </Menu.Item>
-                          <Menu.Item
-                            value="greedy"
-                            onSelect={() => {
-                              // setShowOptimalOrder(true);
-                              setOptimalOrderType("greedy");
-                            }}
-                          >
-                            Greedy
-                          </Menu.Item>
-                          <Menu.Item
-                            value="genetic"
-                            onSelect={() => {
-                              // setShowOptimalOrder(true);
-                              setOptimalOrderType("genetic");
-                            }}
-                          >
-                            Genetic
-                          </Menu.Item>
-                        </Menu.Content>
-                      </Menu.Positioner>
-                      {/* </Portal> */}
-                    </Menu.Root>
-                    <Button
-                      size="sm"
-                      variant={"outline"}
-                      onClick={exportPlaylistToPDF}
-                      disabled={!hasMounted || playlist.length === 0}
-                    >
-                      PDF
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPlaylist([])}
-                      disabled={!hasMounted || playlist.length === 0}
-                    >
-                      Clear
-                    </Button>
-                  </Flex>
-                </Box>
-              </Box>
-              <PlaylistPlayer
-                playlist={
-                  displayPlaylist.length ? displayPlaylist : playlist ?? []
-                }
-              />
             </Drawer.Title>
+            <Menu.Root>
+              <Menu.Trigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  aria-label="Playlist actions"
+                  px={2}
+                  disabled={!hasMounted || playlist.length === 0}
+                  mt={4}
+                >
+                  <FiMoreVertical />
+                </Button>
+              </Menu.Trigger>
+              <Menu.Positioner>
+                <Menu.Content>
+                  <Box
+                    px={3}
+                    py={1}
+                    fontWeight="bold"
+                    fontSize="sm"
+                    color="gray.500"
+                  >
+                    Playlist Actions
+                  </Box>
+                  <Box
+                    as="hr"
+                    my={1}
+                    borderColor="gray.200"
+                    borderWidth={0}
+                    borderTopWidth={1}
+                  />
+                  <Menu.Item
+                    value="sort-original"
+                    onSelect={() => setOptimalOrderType("original")}
+                  >
+                    Original Order
+                  </Menu.Item>
+                  <Menu.Item
+                    value="sort-greedy"
+                    onSelect={() => setOptimalOrderType("greedy")}
+                  >
+                    <GiTakeMyMoney /> Greedy Order
+                  </Menu.Item>
+                  <Menu.Item
+                    value="sort-genetic"
+                    onSelect={() => setOptimalOrderType("genetic")}
+                  >
+                    <PiDna /> Genetic Order
+                  </Menu.Item>
+                  <Box
+                    as="hr"
+                    my={1}
+                    borderColor="gray.200"
+                    borderWidth={0}
+                    borderTopWidth={1}
+                  />
+                  <Menu.Item value="export-json" onSelect={exportPlaylist}>
+                    <LuFileJson /> Export JSON
+                  </Menu.Item>
+                  <Menu.Item
+                    value="export-pdf"
+                    onSelect={handleExportPlaylistToPDF}
+                  >
+                    <PiFilePdf /> Export PDF
+                  </Menu.Item>
+                  <Menu.Item
+                    value="save"
+                    onSelect={() => setIsSaveModalOpen(true)}
+                  >
+                    <FiSave /> Save Playlist
+                  </Menu.Item>
+                  <Menu.Item
+                    value="clear"
+                    onSelect={() => setPlaylist([])}
+                    color="fg.error"
+                    _hover={{ bg: "bg.error", color: "fg.error" }}
+                  >
+                    <MdOutlineClearAll /> Clear Playlist
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu.Positioner>
+            </Menu.Root>
           </Drawer.Header>
           <Drawer.Body>
             <PlaylistViewer
@@ -321,13 +282,29 @@ export const PlaylistViewerDrawer = ({
               </Box>
             )}
           </Drawer.Body>
+          <Drawer.CloseTrigger asChild>
+            <CloseButton size="sm" />
+          </Drawer.CloseTrigger>
           <Drawer.Footer>
-            <Drawer.CloseTrigger asChild>
-              <CloseButton size="sm" />
-            </Drawer.CloseTrigger>
+            <PlaylistPlayer
+              playlist={
+                displayPlaylist.length ? displayPlaylist : playlist ?? []
+              }
+            />
           </Drawer.Footer>
         </Drawer.Content>
       </Drawer.Positioner>
+      <NamePlaylistDialog
+        open={isSaveModalOpen}
+        name={playlistName}
+        setName={setPlaylistName}
+        trackCount={playlist.length}
+        onConfirm={() => {
+          handleSavePlaylist();
+        }}
+        onCancel={() => setIsSaveModalOpen(false)}
+        confirmLabel="Save Playlist"
+      />
     </Portal>
   );
 };

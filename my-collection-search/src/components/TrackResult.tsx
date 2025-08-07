@@ -15,7 +15,8 @@ import {
 import { SiDiscogs, SiApplemusic, SiYoutube, SiSpotify } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
-import { keyToCamelot } from "./PlaylistViewer";
+import { FiPlay } from "react-icons/fi";
+import { keyToCamelot } from "@/lib/playlistOrder";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -107,6 +108,9 @@ export default function TrackResult({
     );
   }
 
+  const score =
+    track._semanticScore !== undefined ? track._semanticScore * 100 : undefined;
+
   // Expanded view
   return (
     <Flex
@@ -131,7 +135,16 @@ export default function TrackResult({
         <Flex direction="column" flex={1}>
           <Text fontSize={["sm", "md", "md"]} fontWeight="bold">
             {track.title}{" "}
-            {track._semanticScore ? `(${track._semanticScore.toFixed(2)})` : ""}
+            {score && (
+              <Badge
+                colorPalette={
+                  score > 90 ? "green" : score > 75 ? "yellow" : "red"
+                }
+                size={["xs", "sm", "sm"]}
+              >
+                {score.toFixed(2)}%
+              </Badge>
+            )}
           </Text>
           <Text fontSize={["sm", "md", "md"]}>{track.artist}</Text>
           <Text fontSize={["xs", "sm", "sm"]} color="brand.muted">
@@ -259,17 +272,7 @@ export default function TrackResult({
         </Flex>
 
         {track.local_audio_url && (
-          <Box
-            mt={2}
-            // borderWidth="1px"
-            // borderRadius="md"
-            // bg="gray.50"
-            // p={2}
-            // display="flex"
-            // alignItems="center"
-            width="100%"
-            flexDir="column"
-          >
+          <Box mt={2} width="100%" flexDir="column">
             {playingUrl === `/api/audio?filename=${track.local_audio_url}` ? (
               <audio
                 ref={audioRef}
@@ -285,10 +288,10 @@ export default function TrackResult({
                 onClick={() =>
                   setPlayingUrl(`/api/audio?filename=${track.local_audio_url}`)
                 }
-                size="sm"
+                size={["xs", "sm"]}
                 mt={1}
               >
-                ▶ Play
+                <FiPlay /> Play
               </Button>
             )}
           </Box>

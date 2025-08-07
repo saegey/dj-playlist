@@ -44,6 +44,7 @@ export function useUsernameSelect({
       size={size}
       variant={variant}
     >
+      {/* <Select.Label>Select library</Select.Label> */}
       <Select.HiddenSelect />
       <Select.Control>
         <Select.Trigger>
@@ -51,6 +52,7 @@ export function useUsernameSelect({
         </Select.Trigger>
         <Select.IndicatorGroup>
           <Select.Indicator />
+          <Select.ClearTrigger />
         </Select.IndicatorGroup>
       </Select.Control>
       <Portal>

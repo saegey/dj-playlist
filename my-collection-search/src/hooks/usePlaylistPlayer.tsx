@@ -7,15 +7,22 @@ export function usePlaylistPlayer(playlist: Track[] = []) {
     playlistRef.current = playlist;
   }, [playlist]);
 
-  const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(null);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(
+    null
+  );
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Reset when playlist content (not just reference) changes
   const prevPlaylistHashRef = useRef<string | null>(null);
   useEffect(() => {
-    const playlistHash = JSON.stringify((playlist ?? []).map((t) => t.track_id));
-    if (prevPlaylistHashRef.current && prevPlaylistHashRef.current !== playlistHash) {
+    const playlistHash = JSON.stringify(
+      (playlist ?? []).map((t) => t.track_id)
+    );
+    if (
+      prevPlaylistHashRef.current &&
+      prevPlaylistHashRef.current !== playlistHash
+    ) {
       setCurrentTrackIndex(null);
       setIsPlaying(false);
     }
@@ -33,6 +40,9 @@ export function usePlaylistPlayer(playlist: Track[] = []) {
 
   const pause = useCallback(() => {
     setIsPlaying(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
   }, []);
 
   const stop = useCallback(() => {
@@ -75,7 +85,11 @@ export function usePlaylistPlayer(playlist: Track[] = []) {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (isPlaying && currentTrackIndex !== null && playlist[currentTrackIndex]) {
+    if (
+      isPlaying &&
+      currentTrackIndex !== null &&
+      playlist[currentTrackIndex]
+    ) {
       audio.play().catch(() => {});
     } else {
       audio.pause();
@@ -120,13 +134,14 @@ export function usePlaylistPlayer(playlist: Track[] = []) {
   }, [playNext]);
 
   const audioElement = (
-    <audio ref={audioRef} preload="auto" controls style={{ width: "100%" }} />
+    <audio ref={audioRef} preload="auto" controls/>
   );
 
   return {
     isPlaying,
     currentTrackIndex,
-    currentTrack: currentTrackIndex !== null ? playlist[currentTrackIndex] : null,
+    currentTrack:
+      currentTrackIndex !== null ? playlist[currentTrackIndex] : null,
     play,
     pause,
     stop,

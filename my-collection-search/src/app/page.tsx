@@ -26,7 +26,7 @@ import { TrackEditFormProps } from "../components/TrackEditForm";
 import { MeiliSearch } from "meilisearch";
 import { FiList } from "react-icons/fi";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
-import { toaster, Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/toaster";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
@@ -64,19 +64,8 @@ const SearchPage = () => {
     needsRefresh,
     loading,
   } = useSearchResults({ client: meiliClient, username: selectedUsername });
-  console.log("SearchPage results:", loading, results.length, estimatedResults);
 
-  const {
-    playlists,
-    loadingPlaylists,
-    playlistName,
-    setPlaylistName,
-    playlist,
-    fetchPlaylists,
-    handleCreatePlaylist,
-    handleLoadPlaylist,
-    addToPlaylist,
-  } = usePlaylists();
+  const { playlist, addToPlaylist } = usePlaylists();
 
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -105,12 +94,6 @@ const SearchPage = () => {
     }
   };
 
-  // Wrap handleLoadPlaylist to show toast
-  const handleLoadPlaylistWithToast = async (trackIds: Array<string>) => {
-    await handleLoadPlaylist(trackIds);
-    toaster.create({ title: "Playlist loaded!", type: "success" });
-  };
-
   return (
     <>
       <Toaster />
@@ -121,6 +104,7 @@ const SearchPage = () => {
           open={sidebarDrawerOpen}
           onOpenChange={(e) => setSidebarDrawerOpen(e.open)}
           placement={"start"}
+          size={["full", "md", "md"]}
         >
           <Drawer.Trigger asChild>
             <Button
@@ -141,22 +125,15 @@ const SearchPage = () => {
             <Drawer.Positioner>
               <Drawer.Content>
                 <Drawer.Header>
-                  <Drawer.Title>Playlists</Drawer.Title>
+                  <Drawer.Title>Saved Playlists</Drawer.Title>
                 </Drawer.Header>
                 <Drawer.Body>
                   <Box>
                     {meiliClient && (
                       <PlaylistManager
-                        playlists={playlists}
-                        loadingPlaylists={loadingPlaylists}
-                        playlistName={playlistName}
-                        setPlaylistName={setPlaylistName}
-                        handleCreatePlaylist={handleCreatePlaylist}
-                        handleLoadPlaylist={handleLoadPlaylistWithToast}
                         xmlImportModalOpen={xmlImportModalOpen}
                         setXmlImportModalOpen={setXmlImportModalOpen}
                         client={meiliClient}
-                        fetchPlaylists={fetchPlaylists}
                       />
                     )}
                   </Box>
