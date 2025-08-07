@@ -17,7 +17,7 @@ import PlaylistViewer from "@/components/PlaylistViewer";
 import TrackResult from "@/components/TrackResult";
 import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
 import type { Track } from "@/types/track";
-import { FiMoreVertical, FiSave, FiShuffle } from "react-icons/fi";
+import { FiMoreVertical, FiSave } from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
 import { MdOutlineClearAll } from "react-icons/md";

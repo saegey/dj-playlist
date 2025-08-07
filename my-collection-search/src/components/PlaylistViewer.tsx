@@ -90,7 +90,7 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
         setLoadingGenetic(false);
         setOptimalOrderType("original");
       });
-  }, [optimalOrderType, playlist]);
+  }, [optimalOrderType, playlist, setOptimalOrderType, displayPlaylist]);
 
   React.useEffect(() => {
     if (optimalOrderType === "greedy" && playlist.length > 0) {
@@ -107,6 +107,7 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
     updatedPlaylist,
     geneticPlaylist,
     setDisplayPlaylist,
+    displayPlaylist
   ]);
 
   if (playlist.length === 0) {
