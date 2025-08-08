@@ -190,7 +190,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     } else {
       throw new Error("Failed to save playlist");
     }
-  }, [playlistName, playlist, fetchPlaylists]);
+  }, [playlistName, fetchPlaylists, displayPlaylist]);
 
   // Export playlist as JSON file
   const exportPlaylist = useCallback(() => {

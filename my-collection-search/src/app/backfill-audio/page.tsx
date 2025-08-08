@@ -31,7 +31,6 @@ import {
 import { useFriends } from "@/hooks/useFriends";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
-import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 import { useMeili } from "@/providers/MeiliProvider";
 import UsernameSelect from "@/components/UsernameSelect";
 import { useUsername } from "@/providers/UsernameProvider";
@@ -101,6 +100,8 @@ export default function BackfillAudioPage() {
     showMissingAudio,
     showMissingVectors,
     page,
+    meiliClient,
+    ready
   ]);
 
   const toggleSelect = (trackId: string) => {

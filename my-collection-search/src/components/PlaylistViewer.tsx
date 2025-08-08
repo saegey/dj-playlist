@@ -102,6 +102,7 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
     }
   }, [
     optimalOrderType,
+    setOptimalOrderType,
     playlist,
     optimalPath,
     updatedPlaylist,

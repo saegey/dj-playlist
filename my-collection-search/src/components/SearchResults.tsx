@@ -9,7 +9,6 @@ import {
   Menu,
   InputGroup,
 } from "@chakra-ui/react";
-import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import TrackResult from "@/components/TrackResult";
 import { Track } from "@/types/track";
 import { FiMoreVertical } from "react-icons/fi";

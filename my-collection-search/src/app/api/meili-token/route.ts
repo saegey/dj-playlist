@@ -1,8 +1,7 @@
 // app/api/meili-token/route.ts
-import { NextRequest } from "next/server";
 import jwt from "jsonwebtoken"; // or use meilisearch's signTenantToken helper
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const host = process.env.MEILISEARCH_HOST!;
   const parentKey = process.env.MEILI_PARENT_KEY!;
   const parentKeyUid = process.env.MEILI_PARENT_KEY_UID!;

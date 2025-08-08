@@ -46,8 +46,7 @@ const SearchPage = () => {
     setHasMounted(true);
   }, []);
 
-  const { username: selectedUsername, setUsername: setSelectedUsername } =
-    useUsername();
+  const { username: selectedUsername } = useUsername();
   const {
     query,
     onQueryChange,

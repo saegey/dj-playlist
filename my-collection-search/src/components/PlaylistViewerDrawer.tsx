@@ -27,11 +27,11 @@ import { usePlaylists } from "@/hooks/usePlaylists";
 import { formatSeconds, parseDurationToSeconds } from "@/lib/trackUtils";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { MeiliSearch } from "meilisearch";
-import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 import PlaylistPlayer from "./PlaylistPlayer";
 import { LuFileJson } from "react-icons/lu";
 import NamePlaylistDialog from "./NamePlaylistDialog";
 import { toaster } from "./ui/toaster";
+import { useUsername } from "@/providers/UsernameProvider";
 
 export const PlaylistViewerDrawer = ({
   hasMounted,
@@ -58,7 +58,7 @@ export const PlaylistViewerDrawer = ({
     optimalOrderType,
     setOptimalOrderType,
   } = usePlaylists();
-  const [selectedUsername] = useSelectedUsername();
+  const { username: selectedUsername} = useUsername();
 
   const { playlistCounts } = useSearchResults({
     client: meiliClient,
@@ -78,11 +78,6 @@ export const PlaylistViewerDrawer = ({
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
   React.useEffect(() => {
-    console.log("Fetching recommendations for playlist", {
-      playlistAvgEmbedding,
-      k: 10,
-      playlist,
-    });
     let cancelled = false;
     async function fetchRecommendations() {
       if (playlist.length === 0) {
