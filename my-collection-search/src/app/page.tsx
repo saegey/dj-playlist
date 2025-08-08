@@ -2,7 +2,6 @@
 
 import React, { useState, useRef } from "react";
 
-import { useSelectedUsername } from "@/hooks/useSelectedUsername";
 import {
   Box,
   Flex,
@@ -21,12 +20,12 @@ import PlaylistsProvider, { usePlaylists } from "@/hooks/usePlaylists";
 import PlaylistManager from "@/components/PlaylistManager";
 import type { Track } from "@/types/track";
 import TopMenuBar from "@/components/MenuBar";
-import { getMeiliClient } from "@/lib/meili";
 import { TrackEditFormProps } from "../components/TrackEditForm";
-import { MeiliSearch } from "meilisearch";
 import { FiList } from "react-icons/fi";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
 import { Toaster } from "@/components/ui/toaster";
+import { useMeili } from "@/providers/MeiliProvider";
+import { useUsername } from "@/providers/UsernameProvider";
 
 const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
   ssr: false,
@@ -34,16 +33,11 @@ const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
 const SearchPage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
-  const [meiliClient, setMeiliClient] = useState<MeiliSearch | null>(null);
+  const { client: meiliClient, ready } = useMeili();
 
   React.useEffect(() => {
-    try {
-      const client = getMeiliClient();
-      setMeiliClient(client);
-    } catch (err) {
-      console.warn("Skipping MeiliSearch: ", err);
-    }
-  }, []);
+    if (!ready || !meiliClient) return;
+  }, [ready, meiliClient]);
 
   const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
   // Prevent hydration mismatch for playlist count and playtime
@@ -52,7 +46,7 @@ const SearchPage = () => {
     setHasMounted(true);
   }, []);
 
-  const [selectedUsername, setSelectedUsername] = useSelectedUsername();
+  const { username: selectedUsername } = useUsername();
   const {
     query,
     onQueryChange,
@@ -160,10 +154,6 @@ const SearchPage = () => {
             handleEditClick={handleEditClick}
             hasMore={hasMore}
             loadMore={loadMore}
-            selectedUsername={selectedUsername}
-            onUsernameChange={(username) => {
-              setSelectedUsername(username);
-            }}
             loading={loading}
           />
         </Container>

@@ -4,7 +4,7 @@ import { getTrackEmbedding } from "@/lib/track-embedding";
 
 export async function PATCH(req: Request) {
   const { getMeiliClient } = await import("@/lib/meili");
-  const meiliClient = getMeiliClient({ server: true });
+  const meiliClient = getMeiliClient();
 
   try {
     const data = await req.json();

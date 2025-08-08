@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     // Update MeiliSearch index with new embedding
     try {
       const { getMeiliClient } = await import("@/lib/meili");
-      const meiliClient = getMeiliClient({ server: true });
+      const meiliClient = getMeiliClient();
       const index = meiliClient.index("tracks");
       await index.updateDocuments([
         {

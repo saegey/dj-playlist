@@ -7,7 +7,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 // POST: bulk update notes/genre
 export async function POST(request: Request) {
   const { getMeiliClient } = await import("@/lib/meili");
-  const meiliClient = getMeiliClient({ server: true });
+  const meiliClient = getMeiliClient();
 
   try {
     const { updates } = await request.json();

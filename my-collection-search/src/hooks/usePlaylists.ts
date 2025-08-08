@@ -9,6 +9,8 @@ import React, {
 } from "react";
 import type { Playlist, Track } from "@/types/track";
 import { importPlaylist } from "@/services/playlistService";
+import { useMeili } from "@/providers/MeiliProvider";
+import { useUsername } from "@/providers/UsernameProvider";
 
 export interface PlaylistInfo {
   id?: number;
@@ -78,6 +80,8 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   const [displayPlaylist, setDisplayPlaylist] = useState<TrackWithEmbedding[]>(
     []
   );
+  const { client: meiliClient, ready } = useMeili();
+  const { username: selectedUsername } = useUsername();
 
   // Memoized average embedding for playlist
   const playlistAvgEmbedding = useMemo(() => {
@@ -186,7 +190,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     } else {
       throw new Error("Failed to save playlist");
     }
-  }, [playlistName, playlist, fetchPlaylists]);
+  }, [playlistName, fetchPlaylists, displayPlaylist]);
 
   // Export playlist as JSON file
   const exportPlaylist = useCallback(() => {
@@ -254,18 +258,19 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
         playlist,
       });
       try {
-        const { getMeiliClient } = await import("@/lib/meili");
-        const meiliClient = getMeiliClient();
+        if (!ready || !meiliClient) return [];
         const index = meiliClient.index("tracks");
         const playlistIds = playlist.map((t) => t.track_id);
         // const playlistArtists = playlist.map((t) => `'${t.artist.replace(/'/g, "''")}'`);
-        const filter = `NOT track_id IN [${playlistIds.join(
-          ","
-        )}] AND username = 'saegey'`;
+        let filter = `NOT track_id IN [${playlistIds.join(",")}]`;
+        if (selectedUsername) {
+          filter += ` AND username = '${selectedUsername}'`;
+        }
+        console.log("selectedUsername", selectedUsername);
         // if (playlistArtists.length > 0) {
         //   filter += ` AND NOT artist IN [${playlistArtists.join(",")}]`;
         // }
-        console.log(playlistAvgEmbedding);
+        // console.log(playlistAvgEmbedding);
         const results = await index.search(undefined, {
           vector: playlistAvgEmbedding,
           limit: k,
@@ -277,7 +282,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
         return [];
       }
     },
-    [playlistAvgEmbedding, playlist]
+    [playlistAvgEmbedding, playlist, meiliClient, ready, selectedUsername]
   );
 
   // Persist playlist to localStorage

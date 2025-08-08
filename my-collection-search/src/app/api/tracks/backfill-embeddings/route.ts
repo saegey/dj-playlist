@@ -4,7 +4,7 @@ export const maxDuration = 300; // allow up to 5 minutes for this route
 
 export async function POST() {
   const { getMeiliClient } = await import("@/lib/meili");
-  const meiliClient = getMeiliClient({ server: true });
+  const meiliClient = getMeiliClient();
   const { getTrackEmbedding } = await import("@/lib/track-embedding");
   const { Pool } = await import("pg");
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });

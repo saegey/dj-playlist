@@ -1,15 +1,8 @@
 import { MeiliSearch } from "meilisearch";
 
-export function getMeiliClient({ server = false } = {}) {
-  const host =
-    (server
-      ? process.env.MEILISEARCH_HOST
-      : process.env.NEXT_PUBLIC_MEILISEARCH_HOST) || "https://meili.vinylplay.cc";
-  const apiKey =
-    (server
-      ? process.env.MEILISEARCH_API_KEY
-      : process.env.NEXT_PUBLIC_MEILISEARCH_API_KEY) || "default_api_key";
-
+export function getMeiliClient() {
+  const host = process.env.MEILISEARCH_HOST || "http://localhost:7700";
+  const apiKey = process.env.MEILISEARCH_API_KEY  || "mysupersecretkey";
 
   return new MeiliSearch({ host, apiKey });
 }

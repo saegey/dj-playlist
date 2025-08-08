@@ -1,50 +1,68 @@
+// components/UsernameSelect.tsx
+"use client";
+
 import * as React from "react";
 import { Select, Portal, createListCollection } from "@chakra-ui/react";
-export type UseUsernameSelectProps = {
+import { useUsername } from "@/providers/UsernameProvider";
+
+export type UsernameSelectProps = {
   usernames: string[];
-  selectedUsername: string;
-  setSelectedUsername: (username: string) => void;
-  size?: ("sm" | "md" | "lg" | "xs")[];
+  includeAllOption?: boolean;
+  /** Chakra responsive size array is fine here */
+  size?: ("xs" | "sm" | "md" | "lg")[];
   variant?: "subtle" | "outline";
   width?: string;
-  includeAllOption?: boolean;
+  /**
+   * Optional override: control the value externally.
+   * If omitted, the component uses UsernameProvider's value.
+   */
+  value?: string;
+  onChange?: (username: string) => void;
 };
 
-
-export function useUsernameSelect({
+export default function UsernameSelect({
   usernames,
-  selectedUsername,
-  setSelectedUsername,
+  includeAllOption = false,
   size = ["sm", "md", "md"],
   variant = "subtle",
   width = "100%",
-  includeAllOption = false,
-}: UseUsernameSelectProps) {
+  value,
+  onChange,
+}: UsernameSelectProps) {
+  const { username: ctxValue, setUsername: setCtxValue } = useUsername();
+
+  // Allow controlled usage via props, else fall back to context
+  const selectedUsername = value ?? ctxValue;
+  const setSelectedUsername = onChange ?? setCtxValue;
+
   const items = React.useMemo(
     () =>
       includeAllOption
-        ? [{ label: "All Libraries", value: "" }, ...usernames.map((u) => ({ label: u, value: u }))]
+        ? [
+            { label: "All Libraries", value: "" },
+            ...usernames.map((u) => ({ label: u, value: u })),
+          ]
         : usernames.map((u) => ({ label: u, value: u })),
     [usernames, includeAllOption]
   );
 
-  const usernameCollection = React.useMemo(
-    () => createListCollection({
-      items,
-    }),
+  const collection = React.useMemo(
+    () =>
+      createListCollection({
+        items,
+      }),
     [items]
   );
 
   return (
     <Select.Root
-      collection={usernameCollection}
+      collection={collection}
       value={selectedUsername ? [selectedUsername] : []}
       onValueChange={(vals) => setSelectedUsername(vals.value[0] || "")}
       width={width}
       size={size}
       variant={variant}
     >
-      {/* <Select.Label>Select library</Select.Label> */}
       <Select.HiddenSelect />
       <Select.Control>
         <Select.Trigger>

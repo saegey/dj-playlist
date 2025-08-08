@@ -14,7 +14,7 @@ if (!fs.existsSync(tmpDir)) {
 
 export async function POST(request: Request) {
   const { getMeiliClient } = await import("@/lib/meili");
-  const meiliClient = getMeiliClient({ server: true });
+  const meiliClient = getMeiliClient();
 
   try {
     const body = await request.json();
