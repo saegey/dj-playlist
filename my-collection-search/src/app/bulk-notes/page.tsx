@@ -15,15 +15,14 @@ import {
   Container,
   InputGroup,
 } from "@chakra-ui/react";
-import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import { toaster, Toaster } from "@/components/ui/toaster";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import TopMenuBar from "@/components/MenuBar";
-import { useSelectedUsername } from "@/hooks/useSelectedUsername";
-import { getMeiliClient } from "@/lib/meili";
-import { MeiliSearch } from "meilisearch";
 import { LuSearch } from "react-icons/lu";
 import { FiCheck, FiCopy, FiUpload } from "react-icons/fi";
+import { useMeili } from "@/providers/MeiliProvider";
+import { useUsername } from "@/providers/UsernameProvider";
+import UsernameSelect from "@/components/UsernameSelect";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -31,21 +30,16 @@ export default function BulkNotesPage() {
     showCurrentUser: true,
     showSpotifyUsernames: true,
   });
-  const [selectedUsername, setSelectedUsername] = useSelectedUsername();
+  const { username: selectedUsername } = useUsername();
   const [bulkJson, setBulkJson] = useState("");
   const [filterLocalTagsEmpty, setFilterLocalTagsEmpty] = useState(true);
   const [artistSearch, setArtistSearch] = useState("");
-  const [meiliClient, setMeiliClient] = useState<MeiliSearch | null>(null);
   const [isDataUploading, setIsDataUploading] = useState(false);
+  const { client: meiliClient, ready } = useMeili();
 
   React.useEffect(() => {
-    try {
-      const client = getMeiliClient();
-      setMeiliClient(client);
-    } catch (err) {
-      console.warn("Skipping MeiliSearch: ", err);
-    }
-  }, []);
+    if (!ready || !meiliClient) return;
+  }, [ready, meiliClient]);
 
   // Build filter string for MeiliSearch
   let filter = undefined;
@@ -176,15 +170,6 @@ Example:
     });
   };
 
-  const UsernameSelect = useUsernameSelect({
-    usernames: usernames,
-    selectedUsername,
-    setSelectedUsername,
-    size: ["sm"],
-    variant: "subtle",
-    width: "100%",
-  });
-
   return (
     <>
       <Toaster />
@@ -215,7 +200,7 @@ Example:
             </Checkbox.Root>
           </Box>
 
-          {UsernameSelect}
+          <UsernameSelect usernames={usernames} />
           {/* Master checkbox will replace select all/deselect all buttons */}
           <Group grow>
             <Button onClick={selectFirst10} size="sm">

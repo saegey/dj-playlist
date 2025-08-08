@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
     );
     if (rows && rows[0]) {
       try {
-        const meiliClient = getMeiliClient({ server: true });
+        const meiliClient = getMeiliClient();
         const index = meiliClient.index("tracks");
         await index.updateDocuments([rows[0]]);
       } catch (meiliError) {

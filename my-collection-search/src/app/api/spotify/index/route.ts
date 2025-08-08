@@ -64,7 +64,7 @@ function spotifyToTrack(spotifyTrack: SpotifyTrack, username: string): Track {
 export async function POST() {
   try {
     const { getMeiliClient } = await import("@/lib/meili");
-    const meiliClient = getMeiliClient({ server: true });
+    const meiliClient = getMeiliClient();
     // Process all manifest files for all usernames
     const manifestFiles = fs.readdirSync(EXPORT_DIR).filter(f => f.startsWith("manifest_") && f.endsWith(".json"));
     const allTracks: Track[] = [];

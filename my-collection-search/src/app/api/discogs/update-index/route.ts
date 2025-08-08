@@ -73,7 +73,7 @@ async function getOrCreateTracksIndex(
 export async function POST() {
   try {
     const { getMeiliClient } = await import("@/lib/meili");
-    const meiliClient = getMeiliClient({ server: true });
+    const meiliClient = getMeiliClient();
 
     if (!fs.existsSync(DISCOGS_EXPORTS_DIR)) {
       return NextResponse.json({ error: "discogs_exports not found" }, { status: 404 });

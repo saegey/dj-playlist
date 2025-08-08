@@ -14,11 +14,11 @@ import {
   HStack,
   Container,
 } from "@chakra-ui/react";
-import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import TrackResult from "../../components/TrackResult";
 import TopMenuBar from "@/components/MenuBar";
 import { TrackEditFormProps } from "../../components/TrackEditForm";
-import { useSelectedUsername } from "@/hooks/useSelectedUsername";
+import { useUsername } from "@/providers/UsernameProvider";
+import UsernameSelect from "@/components/UsernameSelect";
 
 interface AppleMusicResult {
   id: string;
@@ -35,8 +35,8 @@ export default function MissingAppleMusicPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const { friends: usernames } = useFriends({showCurrentUser: true});
-  const [selectedUsername, setSelectedUsername] = useSelectedUsername();
+  const { friends: usernames } = useFriends({ showCurrentUser: true });
+  const { username: selectedUsername } = useUsername();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const [appleResults, setAppleResults] = useState<
@@ -147,21 +147,12 @@ export default function MissingAppleMusicPage() {
     }
   };
 
-  const UsernameSelect = useUsernameSelect({
-    usernames,
-    selectedUsername,
-    setSelectedUsername,
-    size: ["sm", "md", "md"],
-    variant: "subtle",
-    width: "320px",
-  });
-
   return (
     <>
       <TopMenuBar current="/missing-apple-music" />
       <Container maxW={["8xl", "2xl", "2xl"]}>
         <HStack mb={4} align="flex-end">
-          {UsernameSelect}
+          <UsernameSelect usernames={usernames} />
         </HStack>
         {typeof total === "number" && (
           <Text fontSize="md" color="gray.600" mb={4}>

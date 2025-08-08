@@ -14,6 +14,7 @@ import TrackResult from "@/components/TrackResult";
 import { Track } from "@/types/track";
 import { FiMoreVertical } from "react-icons/fi";
 import { LuSearch } from "react-icons/lu";
+import UsernameSelect from "./UsernameSelect";
 
 interface SearchResultsProps {
   query: string;
@@ -25,8 +26,6 @@ interface SearchResultsProps {
   handleEditClick: (track: Track) => void;
   hasMore: boolean;
   loadMore: () => void;
-  selectedUsername?: string;
-  onUsernameChange?: (username: string) => void;
   loading?: boolean;
 }
 
@@ -40,8 +39,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   handleEditClick,
   hasMore,
   loadMore,
-  selectedUsername = "",
-  onUsernameChange,
   loading = false,
 }) => {
   const { friends } = useFriends({
@@ -63,21 +60,6 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     observer.current.observe(lastResultRef.current);
     return () => observer.current?.disconnect();
   }, [results, hasMore, loadMore]);
-
-  const setSelectedUsername = (username: string) => {
-    if (onUsernameChange) {
-      onUsernameChange(username);
-    }
-  };
-  const usernameSelect = useUsernameSelect({
-    usernames: friends,
-    selectedUsername,
-    setSelectedUsername,
-    size: ["sm", "md", "md"],
-    variant: "subtle",
-    width: "200px",
-    includeAllOption: true,
-  });
 
   // Debounced input state
   const [debouncedValue, setDebouncedValue] = React.useState(query);
@@ -109,7 +91,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             variant={"subtle"}
           />
         </InputGroup>
-        {onUsernameChange ? usernameSelect : null}
+        <UsernameSelect usernames={friends} />
       </Box>
 
       {loading ? (
@@ -130,7 +112,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             const isLast = idx === results.length - 1;
             const trackResult = (
               <TrackResult
-                key={track.track_id}
+                key={track.id}
                 track={track}
                 allowMinimize={false}
                 playlistCount={playlistCounts[track.track_id]}

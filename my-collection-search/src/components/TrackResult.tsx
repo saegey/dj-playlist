@@ -193,13 +193,23 @@ export default function TrackResult({
               ))}
             </>
           )}
-          {track.local_tags && track.local_tags !== "{}" && (
+          {((typeof track.local_tags === "string" &&
+            track.local_tags !== "{}" &&
+            track.local_tags !== "") ||
+            (Array.isArray(track.local_tags) &&
+              track.local_tags.length > 0)) && (
             <Badge
-              key={track.local_tags}
+              key={
+                Array.isArray(track.local_tags)
+                  ? track.local_tags.join(",")
+                  : track.local_tags
+              }
               size={["xs", "sm", "sm"]}
               variant="solid"
             >
-              {track.local_tags}
+              {Array.isArray(track.local_tags)
+                ? track.local_tags.join(", ")
+                : track.local_tags}
             </Badge>
           )}
         </Flex>
@@ -211,12 +221,17 @@ export default function TrackResult({
               { label: "Pos", value: track.position },
               {
                 label: "Dur",
-                value: formatSeconds(track.duration_seconds || 0),
+                value:
+                  track.duration_seconds && track.duration_seconds > 0
+                    ? formatSeconds(track.duration_seconds || 0)
+                    : null,
               },
               { label: "BPM", value: track.bpm },
               {
                 label: "Key",
-                value: `${track.key} - ${keyToCamelot(track.key)}`,
+                value: track.key
+                  ? `${track.key} - ${keyToCamelot(track.key)}`
+                  : null,
               },
               { label: "Dance", value: track.danceability },
               { label: "Happy", value: track.mood_happy },

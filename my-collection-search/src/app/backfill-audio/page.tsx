@@ -29,10 +29,12 @@ import {
   LuSearch,
 } from "react-icons/lu";
 import { useFriends } from "@/hooks/useFriends";
-import { useUsernameSelect } from "@/hooks/useUsernameSelect";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
 import { useSelectedUsername } from "@/hooks/useSelectedUsername";
+import { useMeili } from "@/providers/MeiliProvider";
+import UsernameSelect from "@/components/UsernameSelect";
+import { useUsername } from "@/providers/UsernameProvider";
 
 interface BackfillTrack extends Track {
   status?: "pending" | "analyzing" | "success" | "error";
@@ -48,7 +50,7 @@ export default function BackfillAudioPage() {
     showCurrentUser: true,
     showSpotifyUsernames: true,
   });
-  const [selectedUsername, setSelectedUsername] = useSelectedUsername();
+  const { username: selectedUsername } =  useUsername()
   const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -56,6 +58,7 @@ export default function BackfillAudioPage() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
   const [total, setTotal] = useState(0);
+  const { client: meiliClient, ready } = useMeili();
 
   // Reset page to 1 when filters or search change
   useEffect(() => {
@@ -65,8 +68,7 @@ export default function BackfillAudioPage() {
   useEffect(() => {
     setLoading(true);
     const fetchTracks = async () => {
-      const { getMeiliClient } = await import("@/lib/meili");
-      const meiliClient = getMeiliClient();
+      if (!ready || !meiliClient) return;
       const index = meiliClient.index("tracks");
       const filter = [];
       if (selectedUsername) filter.push(`username = '${selectedUsername}'`);
@@ -207,15 +209,6 @@ export default function BackfillAudioPage() {
     setAnalyzing(false);
   };
 
-  const UsernameSelect = useUsernameSelect({
-    usernames: usernames,
-    selectedUsername,
-    setSelectedUsername,
-    size: ["sm", "md", "md"],
-    variant: "subtle",
-    width: "100%",
-  });
-
   return (
     <>
       <TopMenuBar current="/backfill-audio" />
@@ -256,7 +249,7 @@ export default function BackfillAudioPage() {
             </Switch.Control>
             <Switch.Label />
           </Switch.Root>
-          {UsernameSelect}
+          <UsernameSelect usernames={usernames} />
         </SimpleGrid>
 
         {/* ActionBar appears when items are selected */}
@@ -346,7 +339,7 @@ export default function BackfillAudioPage() {
               <Table.Body>
                 {tracks.map((track) => (
                   <Table.Row
-                    key={track.track_id}
+                    key={track.id}
                     data-selected={
                       selected.has(track.track_id) ? "" : undefined
                     }
