@@ -6,6 +6,8 @@ services:
         NEXT_PUBLIC_MEILISEARCH_HOST: ${NEXT_PUBLIC_MEILISEARCH_HOST}
         NEXT_PUBLIC_MEILISEARCH_API_KEY: ${NEXT_PUBLIC_MEILISEARCH_API_KEY}
     container_name: myapp
+    labels:
+      - "deployed.revision=*${GIT_SHA:-dev}"  # change on every commit → forces recreate
     ports:
       - "3000:3000"
     environment:
