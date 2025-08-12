@@ -2,7 +2,7 @@
 import jwt from "jsonwebtoken"; // or use meilisearch's signTenantToken helper
 
 export async function GET() {
-  const host = process.env.MEILISEARCH_HOST!;
+  const host = process.env.MEILISEARCH_EXTERNAL_HOST!;
   const parentKey = process.env.MEILI_PARENT_KEY!;
   const parentKeyUid = process.env.MEILI_PARENT_KEY_UID!;
 

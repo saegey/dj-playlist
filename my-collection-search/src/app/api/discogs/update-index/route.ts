@@ -48,7 +48,9 @@ interface Track {
   username: string;
 }
 
-interface Artist { name: string; }
+interface Artist {
+  name: string;
+}
 interface ProcessedTrack {
   position: string;
   title: string;
@@ -76,7 +78,10 @@ export async function POST() {
     const meiliClient = getMeiliClient();
 
     if (!fs.existsSync(DISCOGS_EXPORTS_DIR)) {
-      return NextResponse.json({ error: "discogs_exports not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "discogs_exports not found" },
+        { status: 404 }
+      );
     }
 
     const manifestFiles = fs
@@ -84,7 +89,10 @@ export async function POST() {
       .filter((f) => /^manifest_.+\.json$/.test(f));
 
     if (!manifestFiles.length) {
-      return NextResponse.json({ error: "No manifest JSON files found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "No manifest JSON files found" },
+        { status: 404 }
+      );
     }
 
     const allTracks: Track[] = [];
@@ -119,7 +127,9 @@ export async function POST() {
         }
 
         if (!fs.existsSync(releasePath)) {
-          console.warn(`[Discogs Index] ❌ Release JSON not found: ${releasePath}`);
+          console.warn(
+            `[Discogs Index] ❌ Release JSON not found: ${releasePath}`
+          );
           continue;
         }
 
@@ -128,9 +138,7 @@ export async function POST() {
         ) as DiscogsRelease;
 
         const artist_name =
-          album.artists_sort ||
-          album.artists?.[0]?.name ||
-          "Unknown Artist";
+          album.artists_sort || album.artists?.[0]?.name || "Unknown Artist";
 
         album.tracklist.forEach((tr: ProcessedTrack) => {
           const track_id = `${album.id}-${tr.position}`
@@ -239,23 +247,50 @@ export async function POST() {
 
     // 2) Update Meili settings & index
     await index.updateSearchableAttributes([
-      "local_tags", "artist", "album", "styles", "title", "notes", "genres",
+      "local_tags",
+      "artist",
+      "album",
+      "styles",
+      "title",
+      "notes",
+      "genres",
     ]);
     await index.updateFilterableAttributes([
-      "track_id", "username", "bpm", "genres", "key", "year",
-      "local_tags", "styles", "local_audio_url", "apple_music_url", "hasVectors",
+      "track_id",
+      "username",
+      "bpm",
+      "genres",
+      "key",
+      "year",
+      "local_tags",
+      "styles",
+      "local_audio_url",
+      "apple_music_url",
+      "hasVectors",
+      "youtube_url",
+      "spotify_url",
+      "soundcloud_url",
     ]);
     await index.updateRankingRules([
-      "words", "typo", "proximity", "attribute", "sort", "exactness"
+      "words",
+      "typo",
+      "proximity",
+      "attribute",
+      "sort",
+      "exactness",
     ]);
 
     await index.addDocuments(
       upserted.map((t) => {
-        const { embedding, ...rest } = t as Track & { embedding?: number[] | string };
+        const { embedding, ...rest } = t as Track & {
+          embedding?: number[] | string;
+        };
         let vectorArr: number[] | null = null;
         if (Array.isArray(embedding)) vectorArr = embedding;
         else if (typeof embedding === "string") {
-          try { vectorArr = JSON.parse(embedding); } catch {}
+          try {
+            vectorArr = JSON.parse(embedding);
+          } catch {}
         }
         return {
           ...rest,

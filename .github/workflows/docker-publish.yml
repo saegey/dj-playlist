@@ -45,6 +45,7 @@ jobs:
             DATABASE_URL=postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
             MEILISEARCH_HOST=http://meili:7700
             MEILISEARCH_API_KEY=mysupersecretkey
+            MEILISEARCH_EXTERNAL_HOST: http://localhost:7000
             YOUTUBE_API_KEY=dummyyoutubeapikey
 
       - name: Image digest

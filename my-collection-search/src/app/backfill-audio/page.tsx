@@ -49,7 +49,7 @@ export default function BackfillAudioPage() {
     showCurrentUser: true,
     showSpotifyUsernames: true,
   });
-  const { username: selectedUsername } =  useUsername()
+  const { username: selectedUsername } = useUsername();
   const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -72,7 +72,9 @@ export default function BackfillAudioPage() {
       const filter = [];
       if (selectedUsername) filter.push(`username = '${selectedUsername}'`);
       if (showMissingAudio) {
-        filter.push("local_audio_url IS NULL");
+        filter.push(
+          "local_audio_url IS NULL AND (apple_music_url IS NOT NULL OR youtube_url IS NOT NULL OR soundcloud_url IS NOT NULL)"
+        );
       } else {
         filter.push("local_audio_url IS NOT NULL");
       }
@@ -101,7 +103,7 @@ export default function BackfillAudioPage() {
     showMissingVectors,
     page,
     meiliClient,
-    ready
+    ready,
   ]);
 
   const toggleSelect = (trackId: string) => {
