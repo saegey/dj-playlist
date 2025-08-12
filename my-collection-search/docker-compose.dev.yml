@@ -1,10 +1,101 @@
 services:
   app:
-    command: npm run dev
-    volumes:
-      - .:/app
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_MEILISEARCH_HOST: ${NEXT_PUBLIC_MEILISEARCH_HOST}
+        NEXT_PUBLIC_MEILISEARCH_API_KEY: ${NEXT_PUBLIC_MEILISEARCH_API_KEY}
+    container_name: myapp
+    ports:
+      - "3000:3000"
     environment:
-      NEXT_PUBLIC_NODE_ENV: development
-      # Add any other dev-specific env vars here
+      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
+      MEILISEARCH_HOST: ${MEILISEARCH_HOST}
+      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY}
+      MEILI_PARENT_KEY: ${MEILI_PARENT_KEY}
+      MEILI_PARENT_KEY_UID: ${MEILI_PARENT_KEY_UID}
+      MEILISEARCH_EXTERNAL_HOST: ${MEILISEARCH_EXTERNAL_HOST}
+      APPLE_MUSIC_TEAM_ID: ${APPLE_MUSIC_TEAM_ID}
+      APPLE_MUSIC_KEY_ID: ${APPLE_MUSIC_KEY_ID}
+      APPLE_MUSIC_PRIVATE_KEY_PATH: ${APPLE_MUSIC_PRIVATE_KEY_PATH}
+      DISCOGS_USER_TOKEN: ${DISCOGS_USER_TOKEN}
+      DISCOGS_USERNAME: ${DISCOGS_USERNAME}
+      DISCOGS_FOLDER_ID: ${DISCOGS_FOLDER_ID}
+      NEXT_PUBLIC_MEILISEARCH_HOST: ${NEXT_PUBLIC_MEILISEARCH_HOST}
+      NEXT_PUBLIC_MEILISEARCH_API_KEY: ${NEXT_PUBLIC_MEILISEARCH_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
+      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
+      SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI}
+    depends_on:
+      - db
+      - meili
+    volumes:
+      - music_data:/app/audio
+      - db_dumps:/app/dumps
+      - discogs_exports:/app/discogs_exports
+      - spotify_exports:/app/spotify_exports  
+  
+  migrate:
+    build:
+      context: .
+    image: node:20
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
+    entrypoint: ["sh", "-c", "npx wait-port db:5432 && npx node-pg-migrate up"]
+    depends_on:
+      - db
 
-# You can override other services or settings as needed for dev
+  db:
+    image: pgvector/pgvector:pg15
+    restart: always
+    environment:
+      POSTGRES_USER: djplaylist
+      POSTGRES_PASSWORD: djplaylistpassword
+      POSTGRES_DB: djplaylist
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  meili:
+    image: getmeili/meilisearch:v1.6
+    restart: always
+    environment:
+      MEILI_MASTER_KEY: mysupersecretkey
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili_data:/meili_data
+
+  watchtower:
+    image: containrrr/watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=3600 # Check hourly
+    depends_on:
+      - app
+  
+  essentia:
+    build:
+      context: ../essentia-api
+    container_name: essentia-api
+    ports:
+      - "8001:8001"
+  
+  ga-service:
+    build:
+      context: ../ga-service
+    container_name: ga-service
+    ports:
+      - "8002:8002"
+
+volumes:
+  db_data:
+  meili_data:
+  music_data:
+  db_dumps:
+  discogs_exports:
+  spotify_exports:
