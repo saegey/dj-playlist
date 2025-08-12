@@ -1,6 +1,10 @@
 services:
   app:
-    image: ghcr.io/saegey/myapp:v1.0.62 # Use your published tag, e.g. v1.0.0
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_MEILISEARCH_HOST: ${NEXT_PUBLIC_MEILISEARCH_HOST}
+        NEXT_PUBLIC_MEILISEARCH_API_KEY: ${NEXT_PUBLIC_MEILISEARCH_API_KEY}
     container_name: myapp
     ports:
       - "3000:3000"
@@ -8,9 +12,9 @@ services:
       DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
       MEILISEARCH_HOST: ${MEILISEARCH_HOST}
       MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY}
-      MEILISEARCH_EXTERNAL_HOST: ${MEILISEARCH_EXTERNAL_HOST}
       MEILI_PARENT_KEY: ${MEILI_PARENT_KEY}
       MEILI_PARENT_KEY_UID: ${MEILI_PARENT_KEY_UID}
+      MEILISEARCH_EXTERNAL_HOST: ${MEILISEARCH_EXTERNAL_HOST}
       APPLE_MUSIC_TEAM_ID: ${APPLE_MUSIC_TEAM_ID}
       APPLE_MUSIC_KEY_ID: ${APPLE_MUSIC_KEY_ID}
       APPLE_MUSIC_PRIVATE_KEY_PATH: ${APPLE_MUSIC_PRIVATE_KEY_PATH}
@@ -23,7 +27,6 @@ services:
       SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
       SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
       SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI}
-
     depends_on:
       - db
       - meili
@@ -31,7 +34,18 @@ services:
       - music_data:/app/audio
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
-      - spotify_exports:/app/spotify_exports
+      - spotify_exports:/app/spotify_exports  
+  
+  migrate:
+    build:
+      context: .
+    image: node:20
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
+    entrypoint: ["sh", "-c", "npx wait-port db:5432 && npx node-pg-migrate up"]
+    depends_on:
+      - db
 
   db:
     image: pgvector/pgvector:pg15
@@ -43,15 +57,6 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
-  migrate:
-    image: ghcr.io/saegey/myapp:v1.0.62 # Use your published tag, e.g. v1.0.0
-    working_dir: /app
-    environment:
-      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
-    entrypoint: ["sh", "-c", "npx wait-port db:5432 && npx node-pg-migrate up"]
-    depends_on:
-      - db
-
   meili:
     image: getmeili/meilisearch:v1.6
     restart: always
@@ -61,18 +66,6 @@ services:
       - "7700:7700"
     volumes:
       - meili_data:/meili_data
-
-  essentia:
-    image: ghcr.io/saegey/essentia-api:v1.0.57 # Use your published tag, e.g. v1.0.0
-    container_name: essentia-api
-    ports:
-      - "8001:8001"
-
-  ga-service:
-    image: ghcr.io/saegey/ga-service:v1.0.57 # Use your published tag, e.g. v1.0.0
-    container_name: ga-service
-    ports:
-      - "8002:8002"
 
   watchtower:
     image: containrrr/watchtower
@@ -84,6 +77,20 @@ services:
       - WATCHTOWER_POLL_INTERVAL=3600 # Check hourly
     depends_on:
       - app
+  
+  essentia:
+    build:
+      context: ../essentia-api
+    container_name: essentia-api
+    ports:
+      - "8001:8001"
+  
+  ga-service:
+    build:
+      context: ../ga-service
+    container_name: ga-service
+    ports:
+      - "8002:8002"
 
 volumes:
   db_data:
