@@ -1,6 +1,13 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Track } from "@/types/track";
 import { AppleMusicResult } from "@/types/apple";
 import { useFriends } from "@/hooks/useFriends";
@@ -26,6 +33,8 @@ type MissingAppleState = {
   // override search
   overrideTrackId: string | null;
   overrideQuery: string;
+  // discogs cache
+  discogsByTrack: Record<string, DiscogsLookupResult | null>;
 };
 
 type MissingAppleActions = {
@@ -34,13 +43,56 @@ type MissingAppleActions = {
   goTo: (globalIndex: number) => void; // 0-based
   prev: () => void;
   next: () => void;
-  saveTrack: (data: Partial<Track> & { track_id: string; username?: string }) => Promise<void>;
+  saveTrack: (
+    data: Partial<Track> & { track_id: string; username?: string }
+  ) => Promise<void>;
   searchAppleFor: (track: Track) => Promise<void>;
+  lookupDiscogs: (trackId?: string) => Promise<DiscogsLookupResult | null>;
 };
 
-const MissingAppleContext = createContext<(MissingAppleState & MissingAppleActions) | null>(null);
+const MissingAppleContext = createContext<
+  (MissingAppleState & MissingAppleActions) | null
+>(null);
 
-export function MissingAppleProvider({ children }: { children: React.ReactNode }) {
+// Types for the Discogs lookup endpoint
+export type DiscogsVideo = {
+  uri?: string;
+  url?: string;
+  title?: string;
+  duration?: number | string;
+  description?: string;
+};
+export type DiscogsLookupRelease = {
+  id: string | number;
+  title: string;
+  artists?: { name: string }[];
+  artists_sort?: string;
+  year?: number | null;
+  styles?: string[];
+  genres?: string[];
+  uri?: string | null;
+  thumb?: string | null;
+  videos?: DiscogsVideo[]; // Discogs exports often use 'videos'
+  video?: DiscogsVideo[]; // being defensive if singular is used in some dumps
+};
+type DiscogsLookupTrack = {
+  position: string;
+  title: string;
+  duration: string;
+  artists?: { name: string }[];
+};
+export type DiscogsLookupResult = {
+  releaseId: string;
+  filePath: string;
+  release: DiscogsLookupRelease; // returned as full release in the endpoint
+  matchedTrack: DiscogsLookupTrack | null;
+};
+
+export function MissingAppleProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { friends: usernames } = useFriends({ showCurrentUser: true });
   const { username: selectedUsername } = useUsername();
 
@@ -59,6 +111,10 @@ export function MissingAppleProvider({ children }: { children: React.ReactNode }
 
   // apple results cache
   const [appleResults, setAppleResults] = useState<AppleResultsMap>({});
+  // discogs cache
+  const [discogsByTrack, setDiscogsByTrack] = useState<
+    Record<string, DiscogsLookupResult | null>
+  >({});
 
   // derived
   const currentGlobalIndex = useMemo(
@@ -72,7 +128,8 @@ export function MissingAppleProvider({ children }: { children: React.ReactNode }
       setLoading(true);
       try {
         let url = `/api/tracks/missing-apple-music?page=${page}&pageSize=${pageSize}`;
-        if (selectedUsername) url += `&username=${encodeURIComponent(selectedUsername)}`;
+        if (selectedUsername)
+          url += `&username=${encodeURIComponent(selectedUsername)}`;
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
@@ -81,7 +138,9 @@ export function MissingAppleProvider({ children }: { children: React.ReactNode }
             setTotal(data.length);
           } else if (data && Array.isArray(data.tracks)) {
             setTracks(data.tracks);
-            setTotal(typeof data.total === "number" ? data.total : data.tracks.length);
+            setTotal(
+              typeof data.total === "number" ? data.total : data.tracks.length
+            );
           } else {
             setTracks([]);
             setTotal(0);
@@ -150,26 +209,62 @@ export function MissingAppleProvider({ children }: { children: React.ReactNode }
     [page, pageSize, total]
   );
 
-  const prev = useCallback(() => goTo(currentGlobalIndex - 1), [currentGlobalIndex, goTo]);
-  const next = useCallback(() => goTo(currentGlobalIndex + 1), [currentGlobalIndex, goTo]);
+  const prev = useCallback(
+    () => goTo(currentGlobalIndex - 1),
+    [currentGlobalIndex, goTo]
+  );
+  const next = useCallback(
+    () => goTo(currentGlobalIndex + 1),
+    [currentGlobalIndex, goTo]
+  );
 
-  const saveTrack = useCallback(async (data: Partial<Track> & { track_id: string; username?: string }) => {
-    const res = await fetch("/api/tracks/update", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...data,
-        username: data.username ?? selectedUsername ?? "",
-      }),
-    });
-    if (res.ok) {
-      setTracks((prev) => prev.map((t) => (t.track_id === data.track_id ? { ...t, ...data } : t)));
-      // advance
-      if (typeof total === "number") goTo(currentGlobalIndex + 1);
-    } else {
-      alert("Failed to update track");
-    }
-  }, [selectedUsername, total, currentGlobalIndex, goTo]);
+  const saveTrack = useCallback(
+    async (data: Partial<Track> & { track_id: string; username?: string }) => {
+      const res = await fetch("/api/tracks/update", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          username: data.username ?? selectedUsername ?? "",
+        }),
+      });
+      if (res.ok) {
+        // setTracks((prev) =>
+        //   prev.map((t) =>
+        //     t.track_id === data.track_id ? { ...t, ...data } : t
+        //   )
+        // );
+        // advance
+        if (typeof total === "number") goTo(currentGlobalIndex + 1);
+      } else {
+        alert("Failed to update track");
+      }
+    },
+    [selectedUsername, total, currentGlobalIndex, goTo]
+  );
+
+  const lookupDiscogs = useCallback(
+    async (trackId?: string): Promise<DiscogsLookupResult | null> => {
+      const id = trackId ?? tracks[currentIndex]?.track_id;
+      if (!id) return null;
+
+      if (Object.prototype.hasOwnProperty.call(discogsByTrack, id)) {
+        return discogsByTrack[id];
+      }
+
+      const params = new URLSearchParams({ track_id: id });
+      if (selectedUsername) params.set("username", selectedUsername);
+      const res = await fetch(`/api/ai/discogs?${params.toString()}`);
+      if (!res.ok) {
+        setDiscogsByTrack((prev) => ({ ...prev, [id]: null }));
+        return null;
+      }
+      const data: DiscogsLookupResult = await res.json();
+      setDiscogsByTrack((prev) => ({ ...prev, [id]: data }));
+      return data;
+    },
+    [tracks, currentIndex, selectedUsername, discogsByTrack]
+  );
 
   const value = useMemo(
     () => ({
@@ -185,7 +280,8 @@ export function MissingAppleProvider({ children }: { children: React.ReactNode }
       selectedUsername,
       appleResults,
       overrideTrackId,
-      overrideQuery,
+  overrideQuery,
+      discogsByTrack,
       // actions
       setOverrideTrackId,
       setOverrideQuery,
@@ -194,6 +290,7 @@ export function MissingAppleProvider({ children }: { children: React.ReactNode }
       next,
       saveTrack,
       searchAppleFor,
+      lookupDiscogs,
     }),
     [
       tracks,
@@ -208,19 +305,26 @@ export function MissingAppleProvider({ children }: { children: React.ReactNode }
       appleResults,
       overrideTrackId,
       overrideQuery,
+      discogsByTrack,
       goTo,
       prev,
       next,
       saveTrack,
       searchAppleFor,
+      lookupDiscogs,
     ]
   );
 
-  return <MissingAppleContext.Provider value={value}>{children}</MissingAppleContext.Provider>;
+  return (
+    <MissingAppleContext.Provider value={value}>
+      {children}
+    </MissingAppleContext.Provider>
+  );
 }
 
 export function useMissingApple() {
   const ctx = useContext(MissingAppleContext);
-  if (!ctx) throw new Error("useMissingApple must be used within MissingAppleProvider");
+  if (!ctx)
+    throw new Error("useMissingApple must be used within MissingAppleProvider");
   return ctx;
 }

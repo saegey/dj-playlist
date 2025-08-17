@@ -1,25 +1,60 @@
 "use client";
 
-import React from "react";
-import { Text, Spinner, HStack, Container } from "@chakra-ui/react";
+import React, { useRef, useState } from "react";
+import { Text, Spinner, HStack, Container, Box } from "@chakra-ui/react";
 import TopMenuBar from "@/components/MenuBar";
 import UsernameSelect from "@/components/UsernameSelect";
 import SingleTrackUI from "@/components/SingleTrackUI";
-import { MissingAppleProvider, useMissingApple } from "@/providers/MissingAppleContext";
+import { Toaster } from "@/components/ui/toaster";
+import {
+  MissingAppleProvider,
+  useMissingApple,
+} from "@/providers/MissingAppleContext";
+import TrackEditDialog from "@/components/TrackEditDialog";
+import { TrackEditFormProps } from "@/components/TrackEditForm";
 
 function MissingAppleInner() {
   const { usernames } = useMissingApple();
-  const { total, loading, tracks } = useMissingApple();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const initialFocusRef = useRef<HTMLButtonElement>(null);
+  const { total, loading, tracks, currentIndex } = useMissingApple();
+
+  const handleSaveTrack = async (data: TrackEditFormProps) => {
+    const res = await fetch("/api/tracks/update", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (res.ok) {
+      // setEditTrack(null);
+      setDialogOpen(false);
+      // needsRefresh();
+      // Refresh search results after saving track
+    } else {
+      alert("Failed to update track");
+    }
+  };
+
   return (
     <>
       <TopMenuBar current="/missing-apple-music" />
       <Container maxW={["8xl", "2xl", "2xl"]}>
-        <HStack mb={4} align="flex-end">
-          <UsernameSelect usernames={usernames} />
+        <HStack mb={4}>
+          <Box>
+            <Text fontSize="xs" mb={2}>
+              Selected Library:
+            </Text>
+            <UsernameSelect
+              usernames={usernames}
+              width="200px"
+              variant="outline"
+            />
+          </Box>
         </HStack>
         {typeof total === "number" && (
-          <Text fontSize="md" color="gray.600" mb={4}>
-            {total} track{total === 1 ? "" : "s"} missing a music URL (Apple Music, SoundCloud, YouTube)
+          <Text fontSize="sm" color="gray.600" mb={4}>
+            {total} track{total === 1 ? "" : "s"} missing a music URL
           </Text>
         )}
         {loading ? (
@@ -27,9 +62,16 @@ function MissingAppleInner() {
         ) : tracks.length === 0 ? (
           <Text color="gray.500">All tracks have Apple Music URLs!</Text>
         ) : (
-          <SingleTrackUI />
+          <SingleTrackUI setEditDialogOpen={setDialogOpen} />
         )}
       </Container>
+      <TrackEditDialog
+        editTrack={tracks[currentIndex]}
+        dialogOpen={dialogOpen}
+        setDialogOpen={setDialogOpen}
+        initialFocusRef={initialFocusRef}
+        onSave={handleSaveTrack}
+      />
     </>
   );
 }
@@ -38,6 +80,7 @@ export default function MissingAppleMusicPage() {
   return (
     <MissingAppleProvider>
       <MissingAppleInner />
+      <Toaster />
     </MissingAppleProvider>
   );
 }

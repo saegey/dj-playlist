@@ -10,13 +10,25 @@ import {
   HStack,
   Grid,
   Skeleton,
+  Menu,
+  Portal,
 } from "@chakra-ui/react";
 import TrackResult from "@/components/TrackResult";
 import AppleResultRow from "@/components/AppleResultRow";
 import { useMissingApple } from "@/providers/MissingAppleContext";
 import { AppleMusicResult } from "@/types/apple";
+import {
+  DiscogsLookupRelease,
+  DiscogsVideo,
+} from "@/providers/MissingAppleContext";
+import { FiChevronLeft, FiChevronRight, FiMoreVertical } from "react-icons/fi";
+import { toaster } from "@/components/ui/toaster";
 
-export default function SingleTrackUI() {
+export default function SingleTrackUI({
+  setEditDialogOpen,
+}: {
+  setEditDialogOpen: (open: boolean) => void;
+}) {
   const {
     tracks,
     currentIndex,
@@ -32,6 +44,8 @@ export default function SingleTrackUI() {
     prev,
     next,
     page,
+    lookupDiscogs,
+    discogsByTrack,
   } = useMissingApple();
   const track = tracks[currentIndex];
   const [overrideResults, setOverrideResults] = useState<
@@ -39,6 +53,7 @@ export default function SingleTrackUI() {
   >(null);
   const [savingById, setSavingById] = useState<Record<string, boolean>>({});
   const [gotoValue, setGotoValue] = useState<string | undefined>(undefined);
+  const [toggleDiscogs, setToggleDiscogs] = useState(false);
 
   console.log(page);
 
@@ -50,10 +65,19 @@ export default function SingleTrackUI() {
   const appleList = appleResults[track.track_id];
   const isOverride = overrideTrackId === track.track_id;
 
-  const handleSaveFor = async (id: string, url: string) => {
+  const handleSaveFor = async (
+    id: string,
+    url: string,
+    type: "apple" | "youtube"
+  ) => {
     setSavingById((prev) => ({ ...prev, [id]: true }));
-    await saveTrack({ ...track, apple_music_url: url });
-    setSavingById((prev) => ({ ...prev, [id]: false }));
+    if (type === "apple") {
+      await saveTrack({ ...track, apple_music_url: url });
+    } else if (type === "youtube") {
+      await saveTrack({ ...track, youtube_url: url });
+    }
+
+    // setSavingById((prev) => ({ ...prev, [id]: false }));
   };
 
   const goToIndex = () => {
@@ -66,7 +90,31 @@ export default function SingleTrackUI() {
   return (
     <Box>
       <Flex align="center" gap={4} direction="column">
-        <TrackResult track={track} allowMinimize={false} />
+        <TrackResult
+          track={track}
+          allowMinimize={false}
+          buttons={[
+            <Menu.Root key="menu">
+              <Menu.Trigger asChild>
+                <Button variant="plain" size={["xs", "sm", "md"]}>
+                  <FiMoreVertical />
+                </Button>
+              </Menu.Trigger>
+              <Portal>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    <Menu.Item
+                      onSelect={() => setEditDialogOpen(true)}
+                      value="edit"
+                    >
+                      Edit Track
+                    </Menu.Item>
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Portal>
+            </Menu.Root>,
+          ]}
+        />
 
         <Box minW="240px" w="100%">
           <Flex mt={4} align="center" gap={4}>
@@ -80,26 +128,51 @@ export default function SingleTrackUI() {
                 setOverrideTrackId(track.track_id);
                 setOverrideQuery(`${track.title} ${track.artist}`);
               }}
+              colorPalette="orange"
             >
               {isOverride ? "Manual Search" : "Override Search"}
             </Button>
-      <Flex flex="1 1 auto" w="100%" align="center" justifyContent="flex-end" gap={3}>
+            <Button
+              size="xs"
+              mt={2}
+              mb={2}
+              variant="outline"
+              colorPalette="purple"
+              onClick={async () => {
+                const data = await lookupDiscogs(track.track_id);
+                const rel = data?.release as DiscogsLookupRelease | undefined;
+                const vids: DiscogsVideo[] = (rel?.videos ??
+                  rel?.video ??
+                  []) as DiscogsVideo[];
+                if (!vids || vids.length === 0) {
+                  toaster.create({ title: "No videos found", type: "warning" });
+                } else {
+                  setToggleDiscogs((v) => !v);
+                }
+              }}
+            >
+              {toggleDiscogs ? "Hide" : "Show"} Discogs
+            </Button>
+            <Flex
+              flex="1 1 auto"
+              w="100%"
+              align="center"
+              justifyContent="flex-end"
+              gap={3}
+            >
               <Button
-        onClick={prev}
-        disabled={currentGlobalIndex === 0}
+                onClick={prev}
+                disabled={currentGlobalIndex === 0}
                 size="sm"
                 variant="outline"
               >
-                Prev
+                <FiChevronLeft />
               </Button>
               <HStack gap={2} align="center">
-                <Text fontSize="sm" color="gray.500">
-                  Go to
-                </Text>
                 <Input
-                  type="number"
+                  //   type="number"
                   size="sm"
-                  width="90px"
+                  width="60px"
                   value={gotoValue ? gotoValue : page}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setGotoValue(e.target.value);
@@ -108,21 +181,64 @@ export default function SingleTrackUI() {
                     if (e.key === "Enter") goToIndex();
                   }}
                 />
-                <Text fontSize="sm" color="gray.500">/ {typeof total === "number" ? total : tracks.length}</Text>
+                <Text fontSize="sm" color="gray.500">
+                  / {typeof total === "number" ? total : tracks.length}
+                </Text>
                 <Button size="sm" onClick={goToIndex}>
                   Go
                 </Button>
               </HStack>
               <Button
                 onClick={next}
-                disabled={typeof total === "number" ? currentGlobalIndex === total - 1 : currentIndex === tracks.length - 1}
+                disabled={
+                  typeof total === "number"
+                    ? currentGlobalIndex === total - 1
+                    : currentIndex === tracks.length - 1
+                }
                 size="sm"
                 variant="outline"
               >
-                Next
+                <FiChevronRight />
               </Button>
             </Flex>
           </Flex>
+
+          {/* Discogs videos, if available */}
+          {toggleDiscogs &&
+            discogsByTrack?.[track.track_id]?.release &&
+            (() => {
+              const rel = discogsByTrack[track.track_id]!
+                .release as DiscogsLookupRelease;
+              const vids: DiscogsVideo[] = (rel.videos ??
+                rel.video ??
+                []) as DiscogsVideo[];
+              if (!vids || vids.length === 0) return null;
+              return (
+                <Box mt={3} mb={2}>
+                  <Text fontWeight="semibold" fontSize="sm" mb={2}>
+                    Discogs Videos
+                  </Text>
+                  {vids.map((v, i) => (
+                    <AppleResultRow
+                      key={i}
+                      result={{
+                        id: String(i),
+                        title: v.title || track.title,
+                        artist: track.artist,
+                        album: track.album,
+                        url: (v.uri || v.url) ?? "#",
+                        // Discogs durations are in seconds; AppleResultRow expects ms
+                        duration:
+                          typeof v.duration === "number"
+                            ? v.duration * 1000
+                            : undefined,
+                      }}
+                      onSave={(url) => handleSaveFor(String(i), url, "youtube")}
+                    />
+                  ))}
+                </Box>
+              );
+            })()}
 
           {isOverride && (
             <Box mt={2} mb={2} bg="gray.50" borderRadius="md">
@@ -179,11 +295,14 @@ export default function SingleTrackUI() {
               </Text>
             ) : (
               <Box>
+                <Text fontWeight="semibold" fontSize="sm" mb={2}>
+                  Apple Music Results
+                </Text>
                 {overrideResults.map((r) => (
                   <AppleResultRow
                     key={r.id}
                     result={r}
-                    onSave={(url) => handleSaveFor(r.id, url)}
+                    onSave={(url) => handleSaveFor(r.id, url, "apple")}
                     saving={!!savingById[r.id]}
                   />
                 ))}
@@ -210,18 +329,28 @@ export default function SingleTrackUI() {
               ))}
             </Box>
           ) : appleList === null ? (
-            <Text color="red.500" fontSize="sm">
-              No match
-            </Text>
+            <>
+              <Text fontWeight="semibold" fontSize="sm" mb={2}>
+                Apple Music Results
+              </Text>
+              <Text color="red.500" fontSize="sm">
+                No match
+              </Text>
+            </>
           ) : (
             <Box>
+              <Text fontWeight="semibold" fontSize="sm" mb={2}>
+                Apple Music Results
+              </Text>
               {appleList.map((apple) => (
-                <AppleResultRow
-                  key={apple.id}
-                  result={apple}
-                  onSave={(url) => handleSaveFor(apple.id, url)}
-                  saving={!!savingById[apple.id]}
-                />
+                <>
+                  <AppleResultRow
+                    key={apple.id}
+                    result={apple}
+                    onSave={(url) => handleSaveFor(apple.id, url, "apple")}
+                    saving={!!savingById[apple.id]}
+                  />
+                </>
               ))}
             </Box>
           )}
