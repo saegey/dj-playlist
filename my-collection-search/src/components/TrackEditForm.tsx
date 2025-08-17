@@ -19,17 +19,13 @@ import {
   FileUpload,
   Spinner,
   SimpleGrid,
+  Skeleton,
 } from "@chakra-ui/react";
 
 import { AppleMusicResult, YoutubeVideo } from "@/types/track";
 import { HiUpload } from "react-icons/hi";
 import { FiDownload } from "react-icons/fi";
-import {
-  SiApplemusic,
-  SiChatbot,
-  SiSpotify,
-  SiYoutube,
-} from "react-icons/si";
+import { SiApplemusic, SiChatbot, SiSpotify, SiYoutube } from "react-icons/si";
 
 export interface TrackEditFormProps {
   track_id: string; // Optional for new tracks
@@ -109,7 +105,7 @@ export default function TrackEditForm({
   setDialogOpen,
   initialFocusRef,
 }: {
-  track: TrackEditFormProps;
+  track: TrackEditFormProps | null;
   onSave: (data: TrackEditFormProps) => void;
   dialogOpen: boolean;
   setDialogOpen: (open: boolean) => void;
@@ -120,35 +116,37 @@ export default function TrackEditForm({
   const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({
-    track_id: track.track_id || "",
-    album: track.album || "",
-    title: track.title || "",
-    artist: track.artist || "",
-    local_tags: track.local_tags || "",
-    notes: track.notes || "",
-    bpm: track.bpm || "",
-    key: track.key || "",
-    danceability: track.danceability || "",
-    apple_music_url: track.apple_music_url || "",
-    youtube_url: track.youtube_url || "",
-    spotify_url: track.spotify_url || "",
-    soundcloud_url: track.soundcloud_url || "",
-    star_rating: typeof track.star_rating === "number" ? track.star_rating : 0,
-    duration_seconds: track.duration_seconds || undefined, // Optional for new tracks
-    username: track.username,
+    track_id: track?.track_id || "",
+    album: track?.album || "",
+    title: track?.title || "",
+    artist: track?.artist || "",
+    local_tags: (track?.local_tags as string | undefined) || "",
+    notes: (track?.notes as string | undefined) || "",
+    bpm: (track?.bpm as string | undefined) || "",
+    key: (track?.key as string | undefined) || "",
+    danceability: (track?.danceability as string | undefined) || "",
+    apple_music_url: track?.apple_music_url || "",
+    youtube_url: track?.youtube_url || "",
+    spotify_url: track?.spotify_url || "",
+    soundcloud_url: track?.soundcloud_url || "",
+    star_rating:
+      typeof track?.star_rating === "number" ? track!.star_rating : 0,
+    duration_seconds: track?.duration_seconds || undefined, // Optional for new tracks
+    username: track?.username || "",
   });
 
   React.useEffect(() => {
+    if (!track) return;
     setForm({
       track_id: track.track_id || "",
       album: track.album || "",
       title: track.title || "",
       artist: track.artist || "",
-      local_tags: track.local_tags || "",
-      notes: track.notes || "",
-      bpm: track.bpm || "",
-      key: track.key || "",
-      danceability: track.danceability || "",
+      local_tags: (track.local_tags as string | undefined) || "",
+      notes: (track.notes as string | undefined) || "",
+      bpm: (track.bpm as string | undefined) || "",
+      key: (track.key as string | undefined) || "",
+      danceability: (track.danceability as string | undefined) || "",
       apple_music_url: track.apple_music_url || "",
       youtube_url: track.youtube_url || "",
       spotify_url: track.spotify_url || "",
@@ -297,6 +295,7 @@ export default function TrackEditForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: form.title, artist: form.artist }),
       });
+      console.log("[spotify-track-search] response status:", res.status);
       if (res.status === 401) {
         // Redirect to Spotify authorization
         window.location.href =
@@ -415,337 +414,351 @@ export default function TrackEditForm({
               </Dialog.CloseTrigger>
             </Dialog.Header>
             <Dialog.Body>
-              <Box as="form" onSubmit={handleSubmit}>
-                <Flex gap={4} direction="row">
-                  <Stack flex={1}>
-                    <Box as={"nav"}>
-                      <SimpleGrid columns={[2, 3]} gap={2}>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          loading={fetching}
-                          disabled={fetching}
-                          onClick={fetchFromChatGPT}
-                        >
-                          <SiChatbot /> Fetch from AI
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          loading={appleLoading}
-                          disabled={appleLoading}
-                          onClick={searchAppleMusic}
-                        >
-                          <SiApplemusic /> Search Apple Music
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          loading={youtubeLoading}
-                          disabled={youtubeLoading}
-                          onClick={searchYouTube}
-                        >
-                          <SiYoutube /> Search YouTube
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          loading={spotifyLoading}
-                          disabled={spotifyLoading}
-                          onClick={searchSpotify}
-                        >
-                          <SiSpotify /> Search Spotify
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          loading={analyzing}
-                          disabled={
-                            analyzing ||
-                            (!form.apple_music_url &&
-                              !form.youtube_url &&
-                              !form.soundcloud_url &&
-                              !form.spotify_url)
-                          }
-                          onClick={handleAnalyzeAudio}
-                        >
-                          <FiDownload /> Fetch Audio
-                        </Button>
-                        <FileUpload.Root
-                          disabled={uploading}
-                          onFileChange={(files) => {
-                            // alert("File upload started");
-                            // Chakra UI v3 FileUpload: files.acceptedFiles is the correct property
-                            const file = files.acceptedFiles?.[0] || null;
-                            setFile(file);
-                            handleFileUpload();
-                          }}
-                        >
-                          <FileUpload.HiddenInput />
-                          <FileUpload.Trigger asChild>
-                            <Button variant="outline" size="sm" width={"100%"}>
-                              {uploading ? (
-                                <>
-                                  <Spinner /> Uploading...
-                                </>
-                              ) : (
-                                <>
-                                  <HiUpload /> Upload Audio
-                                </>
-                              )}
-                            </Button>
-                          </FileUpload.Trigger>
-                        </FileUpload.Root>
-                      </SimpleGrid>
+              {!track ? (
+                <Stack gap={4}>
+                  <SimpleGrid columns={[2, 3]} gap={2}>
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Button key={i} variant="outline" size="sm" disabled>
+                        <Spinner size="xs" mr={2} /> Loading...
+                      </Button>
+                    ))}
+                  </SimpleGrid>
+                  <Stack borderWidth="1px" borderRadius="md" padding={4}>
+                    <Stack gap={2}>
+                      <Box>
+                        <Skeleton height="28px" width="60%" mb={2} />
+                        <Skeleton height="28px" width="70%" mb={2} />
+                        <Skeleton height="28px" width="65%" />
+                      </Box>
+                      <Flex gap={2}>
+                        <Skeleton height="38px" flex={1} />
+                        <Skeleton height="38px" flex={1} />
+                        <Skeleton height="38px" flex={1} />
+                        <Skeleton height="38px" flex={1} />
+                      </Flex>
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <Skeleton key={i} height="38px" />
+                      ))}
+                      <Skeleton height="24px" width="96px" />
+                    </Stack>
+                  </Stack>
+                </Stack>
+              ) : (
+                <Box as="form" onSubmit={handleSubmit}>
+                  <Flex gap={4} direction="row">
+                    <Stack flex={1}>
+                      <Box as={"nav"}>
+                        <SimpleGrid columns={[2, 3]} gap={2}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            loading={fetching}
+                            disabled={fetching}
+                            onClick={fetchFromChatGPT}
+                          >
+                            <SiChatbot /> Fetch from AI
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            loading={appleLoading}
+                            disabled={appleLoading}
+                            onClick={searchAppleMusic}
+                          >
+                            <SiApplemusic /> Search Apple Music
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            loading={youtubeLoading}
+                            disabled={youtubeLoading}
+                            onClick={searchYouTube}
+                          >
+                            <SiYoutube /> Search YouTube
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            loading={spotifyLoading}
+                            disabled={spotifyLoading}
+                            onClick={searchSpotify}
+                          >
+                            <SiSpotify /> Search Spotify
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            loading={analyzing}
+                            disabled={
+                              analyzing ||
+                              (!form.apple_music_url &&
+                                !form.youtube_url &&
+                                !form.soundcloud_url &&
+                                !form.spotify_url)
+                            }
+                            onClick={handleAnalyzeAudio}
+                          >
+                            <FiDownload /> Fetch Audio
+                          </Button>
+                          <FileUpload.Root
+                            disabled={uploading}
+                            onFileChange={(files) => {
+                              // alert("File upload started");
+                              // Chakra UI v3 FileUpload: files.acceptedFiles is the correct property
+                              const file = files.acceptedFiles?.[0] || null;
+                              setFile(file);
+                              handleFileUpload();
+                            }}
+                          >
+                            <FileUpload.HiddenInput />
+                            <FileUpload.Trigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                width={"100%"}
+                              >
+                                {uploading ? (
+                                  <>
+                                    <Spinner /> Uploading...
+                                  </>
+                                ) : (
+                                  <>
+                                    <HiUpload /> Upload Audio
+                                  </>
+                                )}
+                              </Button>
+                            </FileUpload.Trigger>
+                          </FileUpload.Root>
+                        </SimpleGrid>
+                      </Box>
+                    </Stack>
+                  </Flex>
+
+                  <Stack
+                    borderWidth="1px"
+                    borderRadius="md"
+                    padding={4}
+                    marginBottom={4}
+                    marginTop={4}
+                  >
+                    <LabeledInput
+                      label="Title"
+                      name="title"
+                      value={form.title}
+                      onChange={handleChange}
+                    />
+                    <LabeledInput
+                      label="Artist"
+                      name="artist"
+                      value={form.artist}
+                      onChange={handleChange}
+                    />
+                    <LabeledInput
+                      label="Album"
+                      name="album"
+                      value={form.album}
+                      onChange={handleChange}
+                    />
+                    <Flex gap={2}>
+                      <LabeledInput
+                        label="BPM"
+                        name="bpm"
+                        value={form.bpm}
+                        onChange={handleChange}
+                        type="number"
+                      />
+                      <LabeledInput
+                        label="Key"
+                        name="key"
+                        value={form.key}
+                        onChange={handleChange}
+                      />
+                      <LabeledInput
+                        label="Danceability"
+                        name="danceability"
+                        value={form.danceability ?? ""}
+                        onChange={handleChange}
+                        type="number"
+                      />
+                      <LabeledInput
+                        label="Duration (seconds)"
+                        name="duration_seconds"
+                        value={form.duration_seconds ?? ""}
+                        onChange={handleChange}
+                        type="number"
+                      />
+                    </Flex>
+                    <LabeledInput
+                      label="Genre (comma separated)"
+                      name="local_tags"
+                      value={form.local_tags}
+                      onChange={handleChange}
+                    />
+                    <LabeledTextarea
+                      label="Notes"
+                      name="notes"
+                      value={form.notes}
+                      height={"100px"}
+                      onChange={handleChange}
+                    />
+                    <LabeledInput
+                      label="Apple Music URL"
+                      name="apple_music_url"
+                      value={form.apple_music_url || ""}
+                      onChange={handleChange}
+                    />
+                    <LabeledInput
+                      label="YouTube URL"
+                      name="youtube_url"
+                      value={form.youtube_url || ""}
+                      onChange={handleChange}
+                    />
+                    <LabeledInput
+                      label="Spotify URL"
+                      name="spotify_url"
+                      value={form.spotify_url || ""}
+                      onChange={handleChange}
+                    />
+                    <LabeledInput
+                      label="SoundCloud URL"
+                      name="soundcloud_url"
+                      value={form.soundcloud_url || ""}
+                      onChange={handleChange}
+                    />
+
+                    <Box>
+                      <Text mb={1} fontSize="sm">
+                        Rating
+                      </Text>
+                      <RatingGroup.Root
+                        value={form.star_rating}
+                        onValueChange={({ value }) => handleStarRating(value)}
+                        size="md"
+                        count={5}
+                      >
+                        <RatingGroup.HiddenInput />
+                        <RatingGroup.Control />
+                      </RatingGroup.Root>
                     </Box>
                   </Stack>
-                </Flex>
+                  <Button
+                    type="submit"
+                    loading={loading}
+                    disabled={loading}
+                    size={"sm"}
+                  >
+                    Save
+                  </Button>
 
-                <Stack
-                  borderWidth="1px"
-                  borderRadius="md"
-                  padding={4}
-                  marginBottom={4}
-                  marginTop={4}
-                >
-                  <LabeledInput
-                    label="Title"
-                    name="title"
-                    value={form.title}
-                    onChange={handleChange}
-                  />
-                  <LabeledInput
-                    label="Artist"
-                    name="artist"
-                    value={form.artist}
-                    onChange={handleChange}
-                  />
-                  <LabeledInput
-                    label="Album"
-                    name="album"
-                    value={form.album}
-                    onChange={handleChange}
-                  />
-                  <Flex gap={2}>
-                    <LabeledInput
-                      label="BPM"
-                      name="bpm"
-                      value={form.bpm}
-                      onChange={handleChange}
-                      type="number"
-                    />
-                    <LabeledInput
-                      label="Key"
-                      name="key"
-                      value={form.key}
-                      onChange={handleChange}
-                    />
-                    <LabeledInput
-                      label="Danceability"
-                      name="danceability"
-                      value={form.danceability ?? ""}
-                      onChange={handleChange}
-                      type="number"
-                    />
-                    <LabeledInput
-                      label="Duration (seconds)"
-                      name="duration_seconds"
-                      value={form.duration_seconds ?? ""}
-                      onChange={handleChange}
-                      type="number"
-                    />
-                  </Flex>
-                  <LabeledInput
-                    label="Genre (comma separated)"
-                    name="local_tags"
-                    value={form.local_tags}
-                    onChange={handleChange}
-                  />
-                  <LabeledTextarea
-                    label="Notes"
-                    name="notes"
-                    value={form.notes}
-                    height={"100px"}
-                    onChange={handleChange}
-                  />
-                  <LabeledInput
-                    label="Apple Music URL"
-                    name="apple_music_url"
-                    value={form.apple_music_url || ""}
-                    onChange={handleChange}
-                  />
-                  <LabeledInput
-                    label="YouTube URL"
-                    name="youtube_url"
-                    value={form.youtube_url || ""}
-                    onChange={handleChange}
-                  />
-                  <LabeledInput
-                    label="Spotify URL"
-                    name="spotify_url"
-                    value={form.spotify_url || ""}
-                    onChange={handleChange}
-                  />
-                  <LabeledInput
-                    label="SoundCloud URL"
-                    name="soundcloud_url"
-                    value={form.soundcloud_url || ""}
-                    onChange={handleChange}
-                  />
-
-                  <Box>
-                    <Text mb={1} fontSize="sm">
-                      Rating
-                    </Text>
-                    <RatingGroup.Root
-                      value={form.star_rating}
-                      onValueChange={({ value }) => handleStarRating(value)}
-                      size="md"
-                      count={5}
-                    >
-                      <RatingGroup.HiddenInput />
-                      <RatingGroup.Control />
-                    </RatingGroup.Root>
-                  </Box>
-                </Stack>
-                <Button
-                  type="submit"
-                  loading={loading}
-                  disabled={loading}
-                  size={"sm"}
-                >
-                  Save
-                </Button>
-
-                {/* --- YouTube Dialog --- */}
-                <Dialog.Root
-                  open={showYoutubeModal}
-                  onOpenChange={(details) => setShowYoutubeModal(details.open)}
-                  size={["full", "lg", "lg"]}
-                >
-                  <Portal>
-                    <Dialog.Backdrop />
-                    <Dialog.Positioner>
-                      <Dialog.Content>
-                        <Dialog.Header>
-                          <Dialog.Title>Select YouTube Video</Dialog.Title>
-                          <Dialog.CloseTrigger asChild>
-                            <CloseButton size="sm" />
-                          </Dialog.CloseTrigger>
-                        </Dialog.Header>
-                        <Dialog.Body>
-                          {youtubeLoading ? (
-                            <Text>Loading...</Text>
-                          ) : youtubeResults.length === 0 ? (
-                            <Text>No results found.</Text>
-                          ) : (
-                            <Stack>
-                              {youtubeResults.map((video) => (
-                                <Flex
-                                  key={video.id}
-                                  align="center"
-                                  gap={3}
-                                  borderWidth="1px"
-                                  borderRadius="md"
-                                  p={2}
-                                  // _hover={{ bg: "gray.50", cursor: "pointer" }}
-                                  onClick={() => {
-                                    handleYoutubeSelect(video);
-                                    console.log(video);
-                                  }}
-                                >
-                                  {video.thumbnail && (
-                                    <Image
-                                      src={video.thumbnail}
-                                      alt={video.title}
-                                      boxSize="60px"
-                                      borderRadius="md"
-                                    />
-                                  )}
-                                  <Box flex="1">
-                                    <Text fontWeight="bold">{video.title}</Text>
-                                    <Text fontSize="sm">{video.channel}</Text>
-                                  </Box>
-                                  <Button
-                                    colorScheme="blue"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      console.log(video);
+                  {/* --- YouTube Dialog --- */}
+                  <Dialog.Root
+                    open={showYoutubeModal}
+                    onOpenChange={(details) =>
+                      setShowYoutubeModal(details.open)
+                    }
+                    size={["full", "lg", "lg"]}
+                  >
+                    <Portal>
+                      <Dialog.Backdrop />
+                      <Dialog.Positioner>
+                        <Dialog.Content>
+                          <Dialog.Header>
+                            <Dialog.Title>Select YouTube Video</Dialog.Title>
+                            <Dialog.CloseTrigger asChild>
+                              <CloseButton size="sm" />
+                            </Dialog.CloseTrigger>
+                          </Dialog.Header>
+                          <Dialog.Body>
+                            {youtubeLoading ? (
+                              <Text>Loading...</Text>
+                            ) : youtubeResults.length === 0 ? (
+                              <Text>No results found.</Text>
+                            ) : (
+                              <Stack>
+                                {youtubeResults.map((video) => (
+                                  <Flex
+                                    key={video.id}
+                                    align="center"
+                                    gap={3}
+                                    borderWidth="1px"
+                                    borderRadius="md"
+                                    p={2}
+                                    // _hover={{ bg: "gray.50", cursor: "pointer" }}
+                                    onClick={() => {
                                       handleYoutubeSelect(video);
+                                      console.log(video);
                                     }}
                                   >
-                                    Select
-                                  </Button>
-                                </Flex>
-                              ))}
-                            </Stack>
-                          )}
-                        </Dialog.Body>
-                      </Dialog.Content>
-                    </Dialog.Positioner>
-                  </Portal>
-                </Dialog.Root>
+                                    {video.thumbnail && (
+                                      <Image
+                                        src={video.thumbnail}
+                                        alt={video.title}
+                                        boxSize="60px"
+                                        borderRadius="md"
+                                      />
+                                    )}
+                                    <Box flex="1">
+                                      <Text fontWeight="bold">
+                                        {video.title}
+                                      </Text>
+                                      <Text fontSize="sm">{video.channel}</Text>
+                                    </Box>
+                                    <Button
+                                      colorScheme="blue"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        console.log(video);
+                                        handleYoutubeSelect(video);
+                                      }}
+                                    >
+                                      Select
+                                    </Button>
+                                  </Flex>
+                                ))}
+                              </Stack>
+                            )}
+                          </Dialog.Body>
+                        </Dialog.Content>
+                      </Dialog.Positioner>
+                    </Portal>
+                  </Dialog.Root>
 
-                {/* --- Spotify Dialog --- */}
-                <Dialog.Root
-                  open={showSpotifyModal}
-                  onOpenChange={(details) => setShowSpotifyModal(details.open)}
-                  size={["full", "lg", "lg"]}
-                >
-                  <Portal>
-                    <Dialog.Backdrop />
-                    <Dialog.Positioner>
-                      <Dialog.Content>
-                        <Dialog.Header>
-                          <Dialog.Title>Select Spotify Track</Dialog.Title>
-                          <Dialog.CloseTrigger asChild>
-                            <CloseButton size="sm" />
-                          </Dialog.CloseTrigger>
-                        </Dialog.Header>
-                        <Dialog.Body>
-                          {spotifyLoading ? (
-                            <Text>Loading...</Text>
-                          ) : spotifyResults.length === 0 ? (
-                            <Text>No results found.</Text>
-                          ) : (
-                            <Stack>
-                              {spotifyResults.map((track) => (
-                                <Flex
-                                  key={track.id}
-                                  align="center"
-                                  gap={3}
-                                  borderWidth="1px"
-                                  borderRadius="md"
-                                  p={2}
-                                  // _hover={{ bg: "gray.50", cursor: "pointer" }}
-                                  onClick={() => {
-                                    setForm((prev) => ({
-                                      ...prev,
-                                      spotify_url: track.url,
-                                    }));
-                                    setShowSpotifyModal(false);
-                                  }}
-                                >
-                                  {track.artwork && (
-                                    <Image
-                                      src={track.artwork}
-                                      alt={track.title}
-                                      boxSize="60px"
-                                      borderRadius="md"
-                                    />
-                                  )}
-                                  <Box flex="1">
-                                    <Text fontWeight="bold">{track.title}</Text>
-                                    <Text fontSize="sm">
-                                      {track.artist} — {track.album}
-                                    </Text>
-                                  </Box>
-                                  <Button
-                                    colorScheme="green"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
+                  {/* --- Spotify Dialog --- */}
+                  <Dialog.Root
+                    open={showSpotifyModal}
+                    onOpenChange={(details) =>
+                      setShowSpotifyModal(details.open)
+                    }
+                    size={["full", "lg", "lg"]}
+                  >
+                    <Portal>
+                      <Dialog.Backdrop />
+                      <Dialog.Positioner>
+                        <Dialog.Content>
+                          <Dialog.Header>
+                            <Dialog.Title>Select Spotify Track</Dialog.Title>
+                            <Dialog.CloseTrigger asChild>
+                              <CloseButton size="sm" />
+                            </Dialog.CloseTrigger>
+                          </Dialog.Header>
+                          <Dialog.Body>
+                            {spotifyLoading ? (
+                              <Text>Loading...</Text>
+                            ) : spotifyResults.length === 0 ? (
+                              <Text>No results found.</Text>
+                            ) : (
+                              <Stack>
+                                {spotifyResults.map((track) => (
+                                  <Flex
+                                    key={track.id}
+                                    align="center"
+                                    gap={3}
+                                    borderWidth="1px"
+                                    borderRadius="md"
+                                    p={2}
+                                    // _hover={{ bg: "gray.50", cursor: "pointer" }}
+                                    onClick={() => {
                                       setForm((prev) => ({
                                         ...prev,
                                         spotify_url: track.url,
@@ -753,89 +766,122 @@ export default function TrackEditForm({
                                       setShowSpotifyModal(false);
                                     }}
                                   >
-                                    Select
-                                  </Button>
-                                </Flex>
-                              ))}
-                            </Stack>
-                          )}
-                        </Dialog.Body>
-                      </Dialog.Content>
-                    </Dialog.Positioner>
-                  </Portal>
-                </Dialog.Root>
+                                    {track.artwork && (
+                                      <Image
+                                        src={track.artwork}
+                                        alt={track.title}
+                                        boxSize="60px"
+                                        borderRadius="md"
+                                      />
+                                    )}
+                                    <Box flex="1">
+                                      <Text fontWeight="bold">
+                                        {track.title}
+                                      </Text>
+                                      <Text fontSize="sm">
+                                        {track.artist} — {track.album}
+                                      </Text>
+                                    </Box>
+                                    <Button
+                                      colorScheme="green"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setForm((prev) => ({
+                                          ...prev,
+                                          spotify_url: track.url,
+                                        }));
+                                        setShowSpotifyModal(false);
+                                      }}
+                                    >
+                                      Select
+                                    </Button>
+                                  </Flex>
+                                ))}
+                              </Stack>
+                            )}
+                          </Dialog.Body>
+                        </Dialog.Content>
+                      </Dialog.Positioner>
+                    </Portal>
+                  </Dialog.Root>
 
-                {/* --- Apple Music Dialog --- */}
-                <Dialog.Root
-                  open={showAppleModal}
-                  onOpenChange={(details) => setShowAppleModal(details.open)}
-                  size={["full", "lg", "lg"]}
-                >
-                  <Portal>
-                    <Dialog.Backdrop />
-                    <Dialog.Positioner>
-                      <Dialog.Content>
-                        <Dialog.Header>
-                          <Dialog.Title>Select Apple Music Track</Dialog.Title>
-                          <Dialog.CloseTrigger asChild>
-                            <CloseButton size="sm" />
-                          </Dialog.CloseTrigger>
-                        </Dialog.Header>
-                        <Dialog.Body>
-                          {appleLoading ? (
-                            <Text>Loading...</Text>
-                          ) : appleResults.length === 0 ? (
-                            <Text>No results found.</Text>
-                          ) : (
-                            <Stack>
-                              {appleResults.map((song) => (
-                                <Flex
-                                  key={song.id}
-                                  align="center"
-                                  gap={3}
-                                  borderWidth="1px"
-                                  borderRadius="md"
-                                  p={2}
-                                  // _hover={{ bg: "gray.50", cursor: "pointer" }}
-                                  onClick={() => handleAppleSelect(song)}
-                                >
-                                  {song.artwork && (
-                                    <Image
-                                      src={song.artwork.replace(
-                                        "{w}x{h}bb",
-                                        "60x60bb"
-                                      )}
-                                      alt={song.title}
-                                      boxSize="60px"
-                                      borderRadius="md"
-                                    />
-                                  )}
-                                  <Box flex="1">
-                                    <Text fontWeight="bold">{song.title}</Text>
-                                    <Text fontSize="sm">
-                                      {song.artist} — {song.album}
-                                    </Text>
-                                  </Box>
-                                  <Button
-                                    colorScheme="blue"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAppleSelect(song);
-                                    }}
+                  {/* --- Apple Music Dialog --- */}
+                  <Dialog.Root
+                    open={showAppleModal}
+                    onOpenChange={(details) => setShowAppleModal(details.open)}
+                    size={["full", "lg", "lg"]}
+                  >
+                    <Portal>
+                      <Dialog.Backdrop />
+                      <Dialog.Positioner>
+                        <Dialog.Content>
+                          <Dialog.Header>
+                            <Dialog.Title>
+                              Select Apple Music Track
+                            </Dialog.Title>
+                            <Dialog.CloseTrigger asChild>
+                              <CloseButton size="sm" />
+                            </Dialog.CloseTrigger>
+                          </Dialog.Header>
+                          <Dialog.Body>
+                            {appleLoading ? (
+                              <Text>Loading...</Text>
+                            ) : appleResults.length === 0 ? (
+                              <Text>No results found.</Text>
+                            ) : (
+                              <Stack>
+                                {appleResults.map((song) => (
+                                  <Flex
+                                    key={song.id}
+                                    align="center"
+                                    gap={3}
+                                    borderWidth="1px"
+                                    borderRadius="md"
+                                    p={2}
+                                    // _hover={{ bg: "gray.50", cursor: "pointer" }}
+                                    onClick={() => handleAppleSelect(song)}
                                   >
-                                    Select
-                                  </Button>
-                                </Flex>
-                              ))}
-                            </Stack>
-                          )}
-                        </Dialog.Body>
-                      </Dialog.Content>
-                    </Dialog.Positioner>
-                  </Portal>
-                </Dialog.Root>
-              </Box>
+                                    {song.artwork && (
+                                      <Image
+                                        src={song.artwork.replace(
+                                          "{w}x{h}bb",
+                                          "60x60bb"
+                                        )}
+                                        alt={song.title}
+                                        boxSize="60px"
+                                        borderRadius="md"
+                                      />
+                                    )}
+                                    <Box flex="1">
+                                      <Text fontWeight="bold">
+                                        {song.title}
+                                      </Text>
+                                      <Text fontSize="sm">
+                                        {song.artist} — {song.album}
+                                      </Text>
+                                    </Box>
+                                    <Button
+                                      colorScheme="blue"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAppleSelect(song);
+                                      }}
+                                    >
+                                      Select
+                                    </Button>
+                                  </Flex>
+                                ))}
+                              </Stack>
+                            )}
+                          </Dialog.Body>
+                        </Dialog.Content>
+                      </Dialog.Positioner>
+                    </Portal>
+                  </Dialog.Root>
+                </Box>
+              )}
             </Dialog.Body>
           </Dialog.Content>
         </Dialog.Positioner>

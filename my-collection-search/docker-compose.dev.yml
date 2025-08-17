@@ -2,9 +2,6 @@ services:
   app:
     build:
       context: .
-      args:
-        NEXT_PUBLIC_MEILISEARCH_HOST: ${NEXT_PUBLIC_MEILISEARCH_HOST}
-        NEXT_PUBLIC_MEILISEARCH_API_KEY: ${NEXT_PUBLIC_MEILISEARCH_API_KEY}
     container_name: myapp
     ports:
       - "3000:3000"
@@ -27,14 +24,25 @@ services:
       SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
       SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
       SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI}
+      # Make file watching reliable in Docker on macOS/Windows
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      # Optional: adjust polling interval (ms)
+      # WATCHPACK_POLLING_INTERVAL: "1000"
     depends_on:
       - db
       - meili
     volumes:
+      # Mount source code for live reload
+      - .:/app:delegated
+      # Keep node_modules inside the container image
+      - /app/node_modules
       - music_data:/app/audio
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
       - spotify_exports:/app/spotify_exports  
+    # Run Next.js in dev mode and listen on all interfaces
+    command: npm run dev -- -H 0.0.0.0 -p 3000
   
   migrate:
     build:

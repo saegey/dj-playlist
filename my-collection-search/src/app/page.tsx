@@ -13,7 +13,6 @@ import {
   Float,
   Circle,
 } from "@chakra-ui/react";
-import dynamic from "next/dynamic";
 import SearchResults from "@/components/SearchResults";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import PlaylistsProvider, { usePlaylists } from "@/hooks/usePlaylists";
@@ -21,15 +20,14 @@ import PlaylistManager from "@/components/PlaylistManager";
 import type { Track } from "@/types/track";
 import TopMenuBar from "@/components/MenuBar";
 import { TrackEditFormProps } from "../components/TrackEditForm";
+import TrackEditDialog from "@/components/TrackEditDialog";
 import { FiList } from "react-icons/fi";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
 import { Toaster } from "@/components/ui/toaster";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 
-const TrackEditForm = dynamic(() => import("../components/TrackEditForm"), {
-  ssr: false,
-});
+// TrackEditForm is used via TrackEditDialog
 const SearchPage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
@@ -193,15 +191,13 @@ const SearchPage = () => {
           />
         </Drawer.Root>
       </Flex>
-      {editTrack && editTrack.username && (
-        <TrackEditForm
-          track={{ ...editTrack, username: editTrack.username }}
-          onSave={handleSaveTrack}
-          dialogOpen={dialogOpen}
-          setDialogOpen={setDialogOpen}
-          initialFocusRef={initialFocusRef}
-        />
-      )}
+      <TrackEditDialog
+        editTrack={editTrack}
+        dialogOpen={dialogOpen}
+        setDialogOpen={setDialogOpen}
+        initialFocusRef={initialFocusRef}
+        onSave={handleSaveTrack}
+      />
     </>
   );
 };
