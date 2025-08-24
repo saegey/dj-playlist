@@ -97,7 +97,8 @@ export async function POST(request: Request) {
           // Download audio as .m4a using yt-dlp
           const ytOut = path.join(tmpDir, `youtube_${Date.now()}.m4a`);
           await execAsync(
-            `yt-dlp -f bestaudio[ext=m4a] --extract-audio --audio-format m4a -o "${ytOut}" "${youtube_url}"`
+            // Use a tolerant selector: download best available audio and transcode to m4a
+            `yt-dlp -f bestaudio/best -x --audio-format m4a -o "${ytOut}" "${youtube_url}"`
           );
           if (fs.existsSync(ytOut) && fs.statSync(ytOut).size > 0) {
             filePath = ytOut;
