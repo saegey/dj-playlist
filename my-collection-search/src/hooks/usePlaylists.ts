@@ -194,11 +194,14 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
 
   // Export playlist as JSON file
   const exportPlaylist = useCallback(() => {
-    const playlistToExport =
-      displayPlaylist.length > 0 ? displayPlaylist : playlist;
-    const dataStr =
-      "data:text/json;charset=utf-8," +
-      encodeURIComponent(JSON.stringify(playlistToExport, null, 2));
+    const base = displayPlaylist.length > 0 ? displayPlaylist : playlist;
+    // Exclude heavy embedding vectors from export via JSON replacer
+    const json = JSON.stringify(
+      base,
+      (key, value) => (key === "_vectors" ? undefined : value),
+      2
+    );
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(json);
     const downloadAnchorNode = document.createElement("a");
     downloadAnchorNode.setAttribute("href", dataStr);
     const filename = playlistInfo.name
