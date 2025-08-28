@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Box, Button, Menu, EmptyState, VStack } from "@chakra-ui/react";
 import {
@@ -11,6 +13,16 @@ import {
 import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
 import { usePlaylists } from "@/hooks/usePlaylists";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+  DroppableProvided,
+  DraggableProvided,
+  DraggableStateSnapshot,
+} from "@hello-pangea/dnd";
+
 import {
   TrackCompat,
   TrackWithCamelot,
@@ -68,6 +80,21 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
     [updatedPlaylist, compatibilityEdges]
   );
 
+  // DnD handler must be declared before any early return to satisfy hooks rules
+  const onDragEnd = React.useCallback(
+    (result: DropResult) => {
+      const { destination, source } = result;
+      if (!destination) return;
+      if (
+        destination.droppableId === source.droppableId &&
+        destination.index === source.index
+      )
+        return;
+      moveTrack(source.index, destination.index);
+    },
+    [moveTrack]
+  );
+
   // Fetch genetic order if needed
   React.useEffect(() => {
     if (optimalOrderType !== "genetic" || playlist.length === 0) return;
@@ -108,7 +135,7 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
     updatedPlaylist,
     geneticPlaylist,
     setDisplayPlaylist,
-    displayPlaylist
+    displayPlaylist,
   ]);
 
   if (playlist.length === 0) {
@@ -137,62 +164,96 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
 
   const ds = displayPlaylist.length > 0 ? displayPlaylist : playlist;
 
-  console.log('Display Playlist:', displayPlaylist);
-  console.log('Original Playlist:', playlist);
+  console.log("Display Playlist:", displayPlaylist);
+  console.log("Original Playlist:", playlist);
 
   return (
-    <Box overflowY="auto">
-      {ds.map((track, idx) => (
-        <TrackResult
-          key={track.track_id}
-          track={track}
-          minimized
-          playlistCount={playlistCounts[track.track_id]}
-          buttons={[
-            <Menu.Root key="menu">
-              <Menu.Trigger asChild>
-                <Button variant="plain" size="xs">
-                  <FiMoreVertical size={16} />
-                </Button>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content>
-                  <Menu.Item
-                    onSelect={() => moveTrack(idx, idx - 1)}
-                    value="up"
-                    disabled={idx === 0}
+    <DragDropContext onDragEnd={onDragEnd}>
+      <Droppable droppableId="playlist-droppable">
+        {(provided: DroppableProvided) => (
+          <Box
+            overflowY="auto"
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+          >
+            {ds.map((track, idx) => (
+              <Draggable
+                key={`${track.username ?? ""}:${track.track_id}`}
+                draggableId={`${track.username ?? ""}:${track.track_id}`}
+                index={idx}
+              >
+                {(
+                  dragProvided: DraggableProvided,
+                  snapshot: DraggableStateSnapshot
+                ) => (
+                  <Box
+                    ref={dragProvided.innerRef}
+                    {...dragProvided.draggableProps}
+                    {...dragProvided.dragHandleProps}
+                    opacity={snapshot.isDragging ? 0.9 : 1}
                   >
-                    <FiArrowUp />
-                    Move Up
-                  </Menu.Item>
-                  <Menu.Item
-                    onSelect={() => moveTrack(idx, idx + 1)}
-                    value="down"
-                    disabled={idx === displayPlaylist.length - 1}
-                  >
-                    <FiArrowDown />
-                    Move Down
-                  </Menu.Item>
-                  <Menu.Item onSelect={() => setEditTrack(track)} value="edit">
-                    <FiEdit />
-                    Edit
-                  </Menu.Item>
-                  <Menu.Item
-                    onSelect={() => removeFromPlaylist(track.track_id)}
-                    value="delete"
-                    color="fg.error"
-                    _hover={{ bg: "bg.error", color: "fg.error" }}
-                  >
-                    <FiTrash />
-                    Remove
-                  </Menu.Item>
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>,
-          ]}
-        />
-      ))}
-    </Box>
+                    <TrackResult
+                      key={track.track_id}
+                      track={track}
+                      minimized
+                      playlistCount={playlistCounts[track.track_id]}
+                      buttons={[
+                        <Menu.Root key="menu">
+                          <Menu.Trigger asChild>
+                            <Button variant="plain" size="xs">
+                              <FiMoreVertical size={16} />
+                            </Button>
+                          </Menu.Trigger>
+                          <Menu.Positioner>
+                            <Menu.Content>
+                              <Menu.Item
+                                onSelect={() => moveTrack(idx, idx - 1)}
+                                value="up"
+                                disabled={idx === 0}
+                              >
+                                <FiArrowUp />
+                                Move Up
+                              </Menu.Item>
+                              <Menu.Item
+                                onSelect={() => moveTrack(idx, idx + 1)}
+                                value="down"
+                                disabled={idx === ds.length - 1}
+                              >
+                                <FiArrowDown />
+                                Move Down
+                              </Menu.Item>
+                              <Menu.Item
+                                onSelect={() => setEditTrack(track)}
+                                value="edit"
+                              >
+                                <FiEdit />
+                                Edit
+                              </Menu.Item>
+                              <Menu.Item
+                                onSelect={() =>
+                                  removeFromPlaylist(track.track_id)
+                                }
+                                value="delete"
+                                color="fg.error"
+                                _hover={{ bg: "bg.error", color: "fg.error" }}
+                              >
+                                <FiTrash />
+                                Remove
+                              </Menu.Item>
+                            </Menu.Content>
+                          </Menu.Positioner>
+                        </Menu.Root>,
+                      ]}
+                    />
+                  </Box>
+                )}
+              </Draggable>
+            ))}
+            {provided.placeholder}
+          </Box>
+        )}
+      </Droppable>
+    </DragDropContext>
   );
 };
 

@@ -40,7 +40,7 @@ services:
       - discogs_exports:/app/discogs_exports
       - spotify_exports:/app/spotify_exports  
     # Run Next.js in dev mode and listen on all interfaces
-    command: npm run dev -- -H 0.0.0.0 -p 3000
+    command: sh -c "npm install && npm run dev -- -H 0.0.0.0 -p 3000"
   
   migrate:
     build:
