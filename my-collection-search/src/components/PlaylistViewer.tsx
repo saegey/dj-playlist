@@ -137,6 +137,9 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
 
   const ds = displayPlaylist.length > 0 ? displayPlaylist : playlist;
 
+  console.log('Display Playlist:', displayPlaylist);
+  console.log('Original Playlist:', playlist);
+
   return (
     <Box overflowY="auto">
       {ds.map((track, idx) => (
