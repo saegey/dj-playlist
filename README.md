@@ -1,5 +1,7 @@
 # Vinyl Playlist Maker Pro Edition
 
+![screenshot](https://github.com/saegey/personal-blog/blob/main/content/projects/vinyl-playlist-maker/vinylapp1.gif?raw=true)
+
 A full-stack Next.js app for managing, analyzing, and syncing vinyl music collections with Discogs, Apple Music, and more. Includes audio analysis, metadata enrichment, and robust backup/restore features.
 
 ## Features
