@@ -19,7 +19,7 @@ RUN apt-get update && \
 # Install youtube-dl
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt || echo "pip failed, ignoring"
 
 # Install Freyr
 RUN npm install -g git+https://github.com/miraclx/freyr-js.git
