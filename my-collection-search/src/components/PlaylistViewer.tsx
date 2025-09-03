@@ -107,7 +107,6 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
       .then((res) => res.json())
       .then((data) => {
         // Ensure result is always an array
-        console.log(data.result);
         const result = Array.isArray(data.result)
           ? data.result
           : Object.values(data.result);
@@ -163,9 +162,6 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
   }
 
   const ds = displayPlaylist.length > 0 ? displayPlaylist : playlist;
-
-  console.log("Display Playlist:", displayPlaylist);
-  console.log("Original Playlist:", playlist);
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
