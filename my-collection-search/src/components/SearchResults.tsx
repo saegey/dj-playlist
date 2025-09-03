@@ -1,5 +1,5 @@
 import React from "react";
-import { useFriends } from "@/hooks/useFriends";
+import { useFriends } from "@/hooks/useFriendsQuery";
 import {
   Box,
   Input,

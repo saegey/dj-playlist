@@ -10,7 +10,7 @@ import React, {
 } from "react";
 import { Track } from "@/types/track";
 import { AppleMusicResult } from "@/types/apple";
-import { useFriends } from "@/hooks/useFriends";
+import { useFriends } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
 
 type AppleResultsMap = Record<string, AppleMusicResult[] | null | undefined>;

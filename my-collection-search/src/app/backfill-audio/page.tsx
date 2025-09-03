@@ -28,7 +28,7 @@ import {
   LuChevronRight,
   LuSearch,
 } from "react-icons/lu";
-import { useFriends } from "@/hooks/useFriends";
+import { useFriends } from "@/hooks/useFriendsQuery";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
 import { useMeili } from "@/providers/MeiliProvider";

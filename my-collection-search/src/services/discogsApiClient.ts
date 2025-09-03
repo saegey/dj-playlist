@@ -147,6 +147,7 @@ export async function getCollectionPage(
   const res = await fetch(url, {
     headers: { Authorization: `Discogs token=${DISCOGS_USER_TOKEN}` },
   });
+  console.log(res);
 
   if (!res.ok)
     throw new Error(`Error fetching collection page ${page}: ${res.status}`);

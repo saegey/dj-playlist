@@ -1,0 +1,5 @@
+import { http } from "../http";
+
+export function backupDatabase() {
+  return http<{ message: string }>("/api/backup", { method: "POST" });
+}
