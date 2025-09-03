@@ -28,7 +28,7 @@ import {
   LuChevronRight,
   LuSearch,
 } from "react-icons/lu";
-import { useFriends } from "@/hooks/useFriendsQuery";
+import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { Track } from "../../types/track";
 import TopMenuBar from "@/components/MenuBar";
 import { useMeili } from "@/providers/MeiliProvider";
@@ -45,10 +45,8 @@ export default function BackfillAudioPage() {
   const [showMissingAudio, setShowMissingAudio] = useState(true);
   const [showMissingVectors, setShowMissingVectors] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const { friends: usernames } = useFriends({
-    showCurrentUser: true,
-    showSpotifyUsernames: true,
-  });
+  const { friends: usernames, friendsLoading: usernamesLoading } =
+    useFriendsQuery({ showCurrentUser: true, showSpotifyUsernames: true });
   const { username: selectedUsername } = useUsername();
   const [artistSearch, setArtistSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -252,7 +250,11 @@ export default function BackfillAudioPage() {
             </Switch.Control>
             <Switch.Label />
           </Switch.Root>
-          <UsernameSelect usernames={usernames} />
+          <UsernameSelect
+            usernames={usernames}
+            isLoading={usernamesLoading}
+            loadingText="Loading usernames..."
+          />
         </SimpleGrid>
 
         {/* ActionBar appears when items are selected */}

@@ -1,5 +1,4 @@
 import React from "react";
-import { useFriends } from "@/hooks/useFriendsQuery";
 import {
   Box,
   Input,
@@ -14,6 +13,7 @@ import { Track } from "@/types/track";
 import { FiMoreVertical } from "react-icons/fi";
 import { LuSearch } from "react-icons/lu";
 import UsernameSelect from "./UsernameSelect";
+import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 
 interface SearchResultsProps {
   query: string;
@@ -40,10 +40,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   loadMore,
   loading = false,
 }) => {
-  const { friends } = useFriends({
+  const { friends } = useFriendsQuery({
     showCurrentUser: true,
     showSpotifyUsernames: true,
   });
+
   const lastResultRef = React.useRef<HTMLDivElement | null>(null);
   const observer = React.useRef<IntersectionObserver | null>(null);
 
@@ -146,9 +147,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             );
             if (isLast) {
               return (
-                <div ref={lastResultRef} key={track.track_id}>
+                <Box ref={lastResultRef} key={track.track_id}>
                   {trackResult}
-                </div>
+                </Box>
               );
             }
             return trackResult;

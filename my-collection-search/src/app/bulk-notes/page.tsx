@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useFriends } from "@/hooks/useFriendsQuery";
+import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import {
   Box,
   Button,
@@ -26,10 +26,8 @@ import UsernameSelect from "@/components/UsernameSelect";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const { friends: usernames } = useFriends({
-    showCurrentUser: true,
-    showSpotifyUsernames: true,
-  });
+  const { friends: usernames, friendsLoading: usernamesLoading } =
+    useFriendsQuery({ showCurrentUser: true, showSpotifyUsernames: true });
   const { username: selectedUsername } = useUsername();
   const [bulkJson, setBulkJson] = useState("");
   const [filterLocalTagsEmpty, setFilterLocalTagsEmpty] = useState(true);
@@ -200,7 +198,11 @@ Example:
             </Checkbox.Root>
           </Box>
 
-          <UsernameSelect usernames={usernames} />
+          <UsernameSelect
+            usernames={usernames}
+            isLoading={usernamesLoading}
+            loadingText="Loading usernames..."
+          />
           {/* Master checkbox will replace select all/deselect all buttons */}
           <Group grow>
             <Button onClick={selectFirst10} size="sm">

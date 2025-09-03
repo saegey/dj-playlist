@@ -1,13 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { addFriendApi, fetchFriends, removeFriendApi } from "@/services/internalApi/friends";
+import {
+  addFriendApi,
+  fetchFriends,
+  removeFriendApi,
+} from "@/services/internalApi/friends";
 
-export function useFriendsQuery() {
+export function useFriendsQuery({
+  showCurrentUser = false,
+  showSpotifyUsernames = false,
+}: {
+  showCurrentUser?: boolean;
+  showSpotifyUsernames?: boolean;
+} = {}) {
   const qc = useQueryClient();
 
   const { data: friends = [], isLoading } = useQuery({
     queryKey: ["friends"],
-    queryFn: () => fetchFriends(),
+    queryFn: () => fetchFriends(!!showCurrentUser, !!showSpotifyUsernames),
   });
 
   const addFriend = useMutation({

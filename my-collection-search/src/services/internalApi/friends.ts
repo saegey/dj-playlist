@@ -30,11 +30,11 @@ export async function removeFriendApi(username: string) {
 }
 
 export async function fetchFriends(
-  showCurrentUser?: false,
-  showSpotifyUsernames?: false
+  showCurrentUser?: boolean,
+  showSpotifyUsernames?: boolean
 ) {
   const res = await fetch(
-    `/api/friends?showCurrentUser=${showCurrentUser}&showSpotifyUsernames=${showSpotifyUsernames}`
+    `/api/friends?showCurrentUser=${!!showCurrentUser}&showSpotifyUsernames=${!!showSpotifyUsernames}`
   );
   const data = await res.json();
   return data.friends;

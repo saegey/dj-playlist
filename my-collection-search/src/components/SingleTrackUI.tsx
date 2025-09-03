@@ -55,8 +55,6 @@ export default function SingleTrackUI({
   const [gotoValue, setGotoValue] = useState<string | undefined>(undefined);
   const [toggleDiscogs, setToggleDiscogs] = useState(false);
 
-  console.log(page);
-
   useEffect(() => {
     setOverrideResults(null);
   }, [overrideTrackId, currentIndex]);
@@ -76,8 +74,6 @@ export default function SingleTrackUI({
     } else if (type === "youtube") {
       await saveTrack({ ...track, youtube_url: url });
     }
-
-    // setSavingById((prev) => ({ ...prev, [id]: false }));
   };
 
   const goToIndex = () => {
