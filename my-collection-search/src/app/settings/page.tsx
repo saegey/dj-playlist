@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useFriends } from "@/hooks/useFriends";
 import {
   Box,
   Button,
@@ -9,22 +8,23 @@ import {
   Text,
   Alert,
   VStack,
-  HStack,
   Code,
   Input,
   Collapsible,
   SimpleGrid,
   CloseButton,
-  FileUpload,
-  Skeleton,
   Dialog,
   Portal,
 } from "@chakra-ui/react";
-import { HiUpload } from "react-icons/hi";
+
 import { toaster, Toaster } from "@/components/ui/toaster";
 import TopMenuBar from "@/components/MenuBar";
-import { FiBriefcase, FiDatabase, FiDownload, FiRefreshCcw, FiTrash } from "react-icons/fi";
+import { FiBriefcase, FiDatabase } from "react-icons/fi";
+import FriendsDiscogsSection from "@/components/FriendsDiscogsSection";
+import DatabaseBackups from "@/components/DatabaseBackups";
+import DatabaseRestore from "@/components/DatabaseRestore";
 import { SiDiscogs, SiSpotify } from "react-icons/si";
+import { useFriends } from "@/hooks/useFriends";
 
 type SyncResult = {
   message?: string;
@@ -47,33 +47,6 @@ export default function DiscogsSyncPage() {
     null
   );
 
-  const [backups, setBackups] = useState<string[]>([]);
-  const [showAllBackups, setShowAllBackups] = useState(false);
-  const [loadingBackups, setLoadingBackups] = useState(false);
-  const [backupListError, setBackupListError] = useState<string | null>(null);
-
-  // Fetch backups on mount
-  useEffect(() => {
-    const fetchBackups = async () => {
-      setLoadingBackups(true);
-      setBackupListError(null);
-      try {
-        const res = await fetch("/api/backups");
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Unknown error");
-        setBackups(
-          data.files.filter(
-            (file: string) => file !== "restore.sql" && file !== "clean.sql"
-          ) || []
-        );
-      } catch (e) {
-        setBackupListError(e instanceof Error ? e.message : String(e));
-      } finally {
-        setLoadingBackups(false);
-      }
-    };
-    fetchBackups();
-  }, []);
   const [showNewReleases, setShowNewReleases] = useState(false);
   const {
     friends,
@@ -85,6 +58,9 @@ export default function DiscogsSyncPage() {
   const [syncing, setSyncing] = useState<{ [username: string]: boolean }>({});
   const [result, setResult] = useState<SyncResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [syncStreamLines, setSyncStreamLines] = useState<string[]>([]);
+  const [syncStreamDone, setSyncStreamDone] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
@@ -96,26 +72,36 @@ export default function DiscogsSyncPage() {
     setSyncing((prev) => ({ ...prev, [key]: true }));
     setResult(null);
     setError(null);
+    setSyncStreamLines([]);
+    setSyncStreamDone(false);
+    setSyncDialogOpen(true);
     try {
       const url = username
         ? `/api/discogs?username=${encodeURIComponent(username)}`
         : "/api/discogs";
-      const res = await fetch(url, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Unknown error");
-      setResult(data);
-      setShowSyncAlert(true);
+      const res = await fetch(url, { method: "GET" });
+      if (!res.body) throw new Error("No response body for streaming");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let done = false;
+      while (!done) {
+        const { value, done: streamDone } = await reader.read();
+        if (value) {
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          setSyncStreamLines((prev) => [...prev, ...lines.filter(Boolean)]);
+        }
+        done = streamDone;
+      }
+      if (buffer) setSyncStreamLines((prev) => [...prev, buffer]);
+      setSyncStreamDone(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      setSyncStreamDone(true);
     } finally {
       setSyncing((prev) => ({ ...prev, [key]: false }));
-    }
-  };
-  const handleAddFriend = async () => {
-    const username = newFriend.trim();
-    if (username && !friends.includes(username)) {
-      await addFriend(username);
-      setNewFriend("");
     }
   };
 
@@ -163,77 +149,64 @@ export default function DiscogsSyncPage() {
     }
   };
 
-  const [restoreFile, setRestoreFile] = useState<File | null>(null);
-  const [restoring, setRestoring] = useState(false);
-  const [restoreResult, setRestoreResult] = useState<string | null>(null);
-  const [restoreError, setRestoreError] = useState<string | null>(null);
-
-  const handleRestore = async () => {
-    if (!restoreFile) return;
-    setRestoring(true);
-    setRestoreResult(null);
-    setRestoreError(null);
-    try {
-      const formData = new FormData();
-      formData.append("file", restoreFile);
-      const res = await fetch("/api/restore", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Unknown error");
-      setRestoreResult(data.message || "Restore complete");
-    } catch (e) {
-      setRestoreError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setRestoring(false);
-    }
-  };
-
   // Chakra UI color mode value must be called unconditionally
 
   return (
     <>
       <Toaster />
       <TopMenuBar current={"/settings"} />
+      {/* Streaming Sync Dialog */}
+      <Dialog.Root
+        open={syncDialogOpen}
+        onOpenChange={(d) => setSyncDialogOpen(d.open)}
+      >
+        <Dialog.Positioner>
+          <Dialog.Content maxW="600px">
+            <Dialog.Header>
+              <Dialog.Title>Discogs Sync Progress</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Box
+                maxH="350px"
+                overflowY="auto"
+                bg="gray.50"
+                p={2}
+                borderRadius="md"
+                fontFamily="mono"
+                fontSize="sm"
+              >
+                {syncStreamLines.length === 0 && (
+                  <Text color="gray.400">Waiting for sync output...</Text>
+                )}
+                {syncStreamLines.map((line, i) => (
+                  <Text key={i} whiteSpace="pre-wrap">
+                    {line}
+                  </Text>
+                ))}
+              </Box>
+              {error && (
+                <Alert.Root status="error" mt={3}>
+                  <Alert.Indicator />
+                  <Alert.Title>Error</Alert.Title>
+                  <Alert.Description>{error}</Alert.Description>
+                </Alert.Root>
+              )}
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button
+                onClick={() => setSyncDialogOpen(false)}
+                disabled={!syncStreamDone}
+              >
+                Close
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
       <Box maxW="700px" mx="auto" p={8}>
         <Heading mb={6} size="lg">
           Vinyl Playlist Maker Pro Edition Settings
         </Heading>
-        {restoreError && (
-          <>
-            <Alert.Root status="error" title="Error" mb={4}>
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Title>Restore Error</Alert.Title>
-                <Alert.Description>{restoreError}</Alert.Description>
-              </Alert.Content>
-              <CloseButton
-                pos="relative"
-                top="-2"
-                insetEnd="-2"
-                onClick={() => setRestoreError(null)}
-              />
-            </Alert.Root>
-          </>
-        )}
-        {restoreResult && (
-          <>
-            <Alert.Root status="success" title="Restore Complete" mb={4}>
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Title>Restore Complete</Alert.Title>
-                <Alert.Description>{restoreResult}</Alert.Description>
-              </Alert.Content>
-              <CloseButton
-                pos="relative"
-                top="-2"
-                insetEnd="-2"
-                onClick={() => setRestoreResult(null)}
-              />
-            </Alert.Root>
-          </>
-        )}
         {/* Sync Results Alert at the top, below the menu bar */}
         {result && showSyncAlert && (
           <Box maxW="700px" mx="auto" mt={4} mb={4}>
@@ -544,173 +517,26 @@ export default function DiscogsSyncPage() {
           </Dialog.Root>
         </SimpleGrid>
 
-        <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
-          {/* Friends section and all alerts/results should be inside the main Box */}
-          <Heading size="md" mb={2}>
-            Friends&apos; Discogs Collections
-          </Heading>
-          <Text mb={2}>
-            Add friends&apos; Discogs usernames to sync or browse their
-            collections for playlist collaboration or borrowing albums.
-          </Text>
-          <HStack mb={4}>
-            <Input
-              type="text"
-              placeholder="Add friend's username"
-              value={newFriend}
-              onChange={(e) => setNewFriend(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAddFriend();
-              }}
-            />
-            <Button
-              colorScheme="green"
-              onClick={handleAddFriend}
-              disabled={!newFriend.trim()}
-            >
-              Add
-            </Button>
-          </HStack>
-          <VStack align="stretch">
-            {initialLoad || friendsLoading ? (
-              [...Array(3)].map((_, i) => (
-                <HStack key={i} width="100%" justifyContent="space-between">
-                  <Skeleton height="20px" width="40%" />
-                  <HStack width="100%" justifyContent="flex-end" gap={2}>
-                    <Skeleton height="28px" width="48px" />
-                    <Skeleton height="28px" width="64px" />
-                  </HStack>
-                </HStack>
-              ))
-            ) : friends.length === 0 ? (
-              <Text color="gray.400">No friends added yet.</Text>
-            ) : (
-              friends.map((username) => (
-                <HStack
-                  key={username}
-                  width="100%"
-                  justifyContent="space-between"
-                >
-                  <Text fontWeight="medium">{username}</Text>
-                  <HStack justifyContent="flex-end" width="100%">
-                    <Button
-                      size="xs"
-                      colorScheme="blue"
-                      onClick={() => handleSync(username)}
-                      loading={!!syncing[username]}
-                      disabled={!!syncing[username] || indexing}
-                    >
-                      
-                      <FiRefreshCcw />
-                    </Button>
-                    <Button
-                      size="xs"
-                      colorPalette="red"
-                      // variant="outline"
-                      onClick={() => handleRemoveFriend(username)}
-                    >
-                      <FiTrash />
-                    </Button>
-                  </HStack>
-                </HStack>
-              ))
-            )}
-          </VStack>
-        </Box>
+        <FriendsDiscogsSection
+          friends={friends}
+          friendsLoading={friendsLoading}
+          newFriend={newFriend}
+          setNewFriend={setNewFriend}
+          handleAddFriend={async (onProgress?: (msg: string) => void) => {
+            if (!newFriend.trim()) return;
+            await addFriend(newFriend.trim(), onProgress);
+            setNewFriend("");
+          }}
+          handleRemoveFriend={handleRemoveFriend}
+          handleSync={handleSync}
+          syncing={syncing}
+          indexing={indexing}
+          initialLoad={initialLoad}
+        />
 
-        <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
-          <Heading size="md" mb={2}>
-            Database Backups
-          </Heading>
-          {initialLoad || loadingBackups ? (
-            <VStack align="stretch" gap={3}>
-              {[...Array(5)].map((_, i) => (
-                <HStack key={i} justify="space-between">
-                  <Skeleton height="20px" width="60%" />
-                  <Skeleton height="28px" width="40px" />
-                </HStack>
-              ))}
-            </VStack>
-          ) : backupListError ? (
-            <Box color="red.500" mb={2}>
-              <b>Error:</b> {backupListError}
-            </Box>
-          ) : backups.length === 0 ? (
-            <Text>No backups found in the directory.</Text>
-          ) : (
-            <>
-              <VStack align="stretch" gap={3}>
-                {(showAllBackups ? backups : backups.slice(0, 5)).map(
-                  (file) => (
-                    <HStack key={file} justify="space-between">
-                      <Text fontSize="sm">{file}</Text>
-                      <a
-                        href={`/api/backups/${encodeURIComponent(file)}`}
-                        download
-                        style={{ textDecoration: "none" }}
-                      >
-                        <Button colorScheme="blue" size="xs">
-                          <FiDownload />
-                        </Button>
-                      </a>
-                    </HStack>
-                  )
-                )}
-              </VStack>
-              {backups.length > 5 && (
-                <Button
-                  mt={3}
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="blue"
-                  onClick={() => setShowAllBackups((v) => !v)}
-                  alignSelf="flex-start"
-                >
-                  {showAllBackups
-                    ? "Show Less"
-                    : `Show All (${backups.length})`}
-                </Button>
-              )}
-            </>
-          )}
-        </Box>
+        <DatabaseBackups />
 
-        <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
-          <Heading size="md" mb={2}>
-            Restore Database from SQL File
-          </Heading>
-          <Text mb={2}>
-            Upload a SQL backup file to restore your database. This will
-            overwrite all current data.
-          </Text>
-          <HStack mb={4}>
-            <FileUpload.Root
-              accept=".sql"
-              onChange={(event) => {
-                const input = event.target as HTMLInputElement;
-                const fileList = input.files;
-                if (fileList && fileList[0]) setRestoreFile(fileList[0]);
-              }}
-              disabled={restoring}
-            >
-              <FileUpload.HiddenInput />
-              <FileUpload.Trigger asChild>
-                <Button variant="outline" size="sm">
-                  <HiUpload /> Upload file
-                </Button>
-              </FileUpload.Trigger>
-              <FileUpload.List />
-            </FileUpload.Root>
-            <Button
-              colorScheme="red"
-              onClick={handleRestore}
-              disabled={!restoreFile || restoring}
-              loading={restoring}
-            >
-              Restore Database
-            </Button>
-          </HStack>
-        </Box>
+        <DatabaseRestore />
       </Box>
     </>
   );

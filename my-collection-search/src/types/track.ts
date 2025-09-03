@@ -1,5 +1,5 @@
 export type Track = {
-  id: number,
+  id: number;
   track_id: string;
   isrc?: string;
   title: string;
@@ -125,3 +125,56 @@ export type SpotifyApiTrack = {
   external_urls: { spotify: string };
   duration_ms: number;
 };
+
+export interface DiscogsRelease {
+  id: string;
+  title: string;
+  artists: { name: string }[];
+  artists_sort?: string;
+  year: number;
+  styles: string[];
+  genres: string[];
+  uri: string;
+  thumb: string;
+  tracklist: {
+    position: string;
+    title: string;
+    duration: string;
+    artists: { name: string }[];
+  }[];
+}
+
+export interface DiscogsTrack {
+  track_id: string;
+  title: string;
+  artist: string;
+  album: string;
+  year: number | null;
+  styles: string[];
+  genres: string[];
+  duration: string;
+  discogs_url: string;
+  album_thumbnail: string;
+  position: string;
+  duration_seconds: number | null;
+  bpm: number | null;
+  key: string | null;
+  notes: string | null;
+  local_tags: string[];
+  apple_music_url: string | null;
+  local_audio_url: string | null;
+  username: string;
+}
+
+interface DiscogsArtist {
+  name: string;
+}
+export interface ProcessedTrack {
+  position: string;
+  title: string;
+  duration: string;
+  artists: DiscogsArtist[];
+  duration_seconds?: number | null;
+  apple_music_url?: string | null;
+  local_audio_url?: string | null;
+}

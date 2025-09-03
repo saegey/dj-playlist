@@ -33,22 +33,45 @@ export function useFriends({
     [showSpotifyUsernames]
   );
 
+  /**
+   * Add a friend and stream progress updates using Server-Sent Events (SSE).
+   * @param username The friend's username to add
+   * @param onProgress Optional callback for streaming progress messages
+   */
   const addFriend = useCallback(
-    async (username: string) => {
+    async (
+      username: string,
+      onProgress?: (message: string) => void
+    ) => {
       setLoading(true);
       setError(null);
+      let eventSource: EventSource | null = null;
       try {
-        const res = await fetch("/api/friends", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username }),
+        // Use SSE endpoint for streaming progress
+        eventSource = new EventSource(`/api/friends/stream-add?username=${encodeURIComponent(username)}`);
+        await new Promise<void>((resolve, reject) => {
+          eventSource!.onmessage = (event) => {
+            if (onProgress) onProgress(event.data);
+            // Convention: server sends { done: true } as JSON when finished
+            try {
+              const parsed = JSON.parse(event.data);
+              if (parsed.done) {
+                resolve();
+              }
+            } catch {
+              // Not JSON, just a message
+            }
+          };
+          eventSource!.onerror = () => {
+            eventSource!.close();
+            reject(new Error("Error receiving progress updates"));
+          };
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Unknown error");
         await fetchFriends();
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
+        if (eventSource) eventSource.close();
         setLoading(false);
       }
     },
