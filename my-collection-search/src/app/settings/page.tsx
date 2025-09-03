@@ -105,8 +105,49 @@ export default function DiscogsSyncPage() {
     }
   };
 
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [removeStreamLines, setRemoveStreamLines] = useState<string[]>([]);
+  const [removeStreamDone, setRemoveStreamDone] = useState(false);
+  const [removingUser, setRemovingUser] = useState<string | null>(null);
+
   const handleRemoveFriend = async (username: string) => {
-    await removeFriend(username);
+    setRemovingUser(username);
+    setRemoveStreamLines([]);
+    setRemoveStreamDone(false);
+    setRemoveDialogOpen(true);
+    try {
+      const res = await fetch(
+        `/api/friends?username=${encodeURIComponent(username)}`,
+        { method: "DELETE" }
+      );
+      if (!res.body) throw new Error("No response body for streaming");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let done = false;
+      while (!done) {
+        const { value, done: streamDone } = await reader.read();
+        if (value) {
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          setRemoveStreamLines((prev) => [...prev, ...lines.filter(Boolean)]);
+        }
+        done = streamDone;
+      }
+      if (buffer) setRemoveStreamLines((prev) => [...prev, buffer]);
+      setRemoveStreamDone(true);
+      // Optionally refresh friends list after removal
+      await removeFriend(username);
+    } catch (e) {
+      setRemoveStreamLines((prev) => [
+        ...prev,
+        `Error: ${e instanceof Error ? e.message : String(e)}`,
+      ]);
+      setRemoveStreamDone(true);
+    } finally {
+      setRemovingUser(null);
+    }
   };
 
   const [indexing, setIndexing] = useState(false);
@@ -196,6 +237,47 @@ export default function DiscogsSyncPage() {
               <Button
                 onClick={() => setSyncDialogOpen(false)}
                 disabled={!syncStreamDone}
+              >
+                Close
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+      {/* Streaming Remove Friend Dialog */}
+      <Dialog.Root
+        open={removeDialogOpen}
+        onOpenChange={(d) => setRemoveDialogOpen(d.open)}
+      >
+        <Dialog.Positioner>
+          <Dialog.Content maxW="600px">
+            <Dialog.Header>
+              <Dialog.Title>Remove Friend Progress</Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Box
+                maxH="350px"
+                overflowY="auto"
+                bg="gray.50"
+                p={2}
+                borderRadius="md"
+                fontFamily="mono"
+                fontSize="sm"
+              >
+                {removeStreamLines.length === 0 && (
+                  <Text color="gray.400">Waiting for removal output...</Text>
+                )}
+                {removeStreamLines.map((line, i) => (
+                  <Text key={i} whiteSpace="pre-wrap">
+                    {line}
+                  </Text>
+                ))}
+              </Box>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button
+                onClick={() => setRemoveDialogOpen(false)}
+                disabled={!removeStreamDone}
               >
                 Close
               </Button>

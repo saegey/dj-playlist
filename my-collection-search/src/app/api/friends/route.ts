@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { NextRequest, NextResponse } from "next/server";
+import { TextEncoder } from "util";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -89,4 +90,144 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function DELETE(request: Request) {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const url = new URL(request.url);
+        const username = url.searchParams.get("username");
+        if (!username || typeof username !== "string") {
+          controller.enqueue(encoder.encode("Missing or invalid username\n"));
+          controller.close();
+          return;
+        }
+
+        // Remove manifest and release files
+        try {
+          const {
+            getManifestPath,
+            getManifestReleaseIds,
+            getReleasePath,
+            DISCOGS_EXPORTS_DIR,
+          } = await import("@/services/discogsManifestService");
+          const fs = await import("fs");
+          const path = await import("path");
+          // Delete manifest file
+          const manifestPath = getManifestPath(username);
+          if (fs.existsSync(manifestPath)) {
+            fs.unlinkSync(manifestPath);
+            controller.enqueue(
+              encoder.encode(`Deleted manifest: ${manifestPath}\n`)
+            );
+          } else {
+            controller.enqueue(
+              encoder.encode(`Manifest not found: ${manifestPath}\n`)
+            );
+          }
+          // Delete all release files for this user
+          const releaseIds = getManifestReleaseIds(username);
+          for (const releaseId of releaseIds) {
+            const releasePath = getReleasePath(username, releaseId);
+            if (releasePath && fs.existsSync(releasePath)) {
+              fs.unlinkSync(releasePath);
+              controller.enqueue(
+                encoder.encode(`Deleted release: ${releasePath}\n`)
+              );
+            } else if (releasePath) {
+              controller.enqueue(
+                encoder.encode(`Release not found: ${releasePath}\n`)
+              );
+            }
+          }
+          // Also delete any files matching `${username}_release_*.json` (legacy)
+          const files = fs.readdirSync(DISCOGS_EXPORTS_DIR);
+          for (const file of files) {
+            if (
+              file.startsWith(`${username}_release_`) &&
+              file.endsWith(".json")
+            ) {
+              fs.unlinkSync(path.join(DISCOGS_EXPORTS_DIR, file));
+              controller.enqueue(
+                encoder.encode(`Deleted legacy release: ${file}\n`)
+              );
+            }
+          }
+        } catch (e) {
+          controller.enqueue(
+            encoder.encode(
+              `Error deleting manifest/release files: ${
+                e instanceof Error ? e.message : String(e)
+              }\n`
+            )
+          );
+        }
+
+        // Remove from MeiliSearch
+        try {
+          const { getMeiliClient } = await import("@/lib/meili");
+          const meiliClient = getMeiliClient();
+          const index = meiliClient.index("tracks");
+          await index.deleteDocuments({ filter: `username = '${username}'` });
+          controller.enqueue(
+            encoder.encode(
+              `Deleted tracks from MeiliSearch for user: ${username}\n`
+            )
+          );
+        } catch (e) {
+          controller.enqueue(
+            encoder.encode(
+              `Error deleting from MeiliSearch: ${
+                e instanceof Error ? e.message : String(e)
+              }\n`
+            )
+          );
+        }
+
+        // Remove from Postgres tracks table (if you store per-user tracks)
+        try {
+          await pool.query("DELETE FROM tracks WHERE username = $1", [
+            username,
+          ]);
+          controller.enqueue(
+            encoder.encode(
+              `Deleted tracks from Postgres for user: ${username}\n`
+            )
+          );
+        } catch (e) {
+          controller.enqueue(
+            encoder.encode(
+              `Error deleting user tracks from Postgres: ${
+                e instanceof Error ? e.message : String(e)
+              }\n`
+            )
+          );
+        }
+
+        // Remove from friends table
+        await pool.query("DELETE FROM friends WHERE username = $1", [username]);
+        controller.enqueue(encoder.encode(`Deleted friend: ${username}\n`));
+
+        controller.enqueue(encoder.encode(`DONE\n`));
+        controller.close();
+      } catch (e) {
+        controller.enqueue(
+          encoder.encode(
+            `Error: ${e instanceof Error ? e.message : String(e)}\n`
+          )
+        );
+        controller.close();
+      }
+    },
+  });
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Transfer-Encoding": "chunked",
+    },
+    status: 200,
+  });
 }
