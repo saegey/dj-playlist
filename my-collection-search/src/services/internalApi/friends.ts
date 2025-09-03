@@ -37,5 +37,5 @@ export async function fetchFriends(
     `/api/friends?showCurrentUser=${showCurrentUser}&showSpotifyUsernames=${showSpotifyUsernames}`
   );
   const data = await res.json();
-  return data;
+  return data.friends;
 }

@@ -61,7 +61,7 @@ export default function FriendsDiscogsSection() {
         <Input
           ref={inputRef}
           type="text"
-          placeholder="Add friend&apos;s username"
+          placeholder="Add friend's username"
           value={newFriend}
           onChange={(e) => setNewFriend(e.target.value)}
           onKeyDown={(e) => {
@@ -70,7 +70,12 @@ export default function FriendsDiscogsSection() {
             }
           }}
         />
-        <Button colorScheme="green" onClick={startAddFriend} disabled={!newFriend.trim() || disableAdd} loading={addFriendPending}>
+        <Button
+          colorScheme="green"
+          onClick={startAddFriend}
+          disabled={!newFriend.trim() || disableAdd}
+          loading={addFriendPending}
+        >
           Add
         </Button>
       </HStack>
@@ -89,7 +94,7 @@ export default function FriendsDiscogsSection() {
         ) : friends.length === 0 ? (
           <Text color="gray.400">No friends added yet.</Text>
         ) : (
-          friends.map(({ username }: { username: string }) => (
+          friends.map((username: string) => (
             <HStack key={username} width="100%" justifyContent="space-between">
               <Text fontWeight="medium">{username}</Text>
               <HStack justifyContent="flex-end" width="100%">

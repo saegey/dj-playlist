@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef } from "react";
 import { Box, Text, Button, Dialog, Alert } from "@chakra-ui/react";
 
 import { useSettingsDialogs } from "@/providers/SettingsDialogProvider";
@@ -7,6 +8,14 @@ import { useSyncStreams } from "@/providers/SyncStreamsProvider";
 export default function DiscogsSyncDialog() {
   const { discogsSyncOpen, setDiscogsSyncOpen } = useSettingsDialogs();
   const { discogs } = useSyncStreams();
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // Always scroll to bottom when new lines arrive
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [discogs.lines.length]);
 
   return (
     <Dialog.Root
@@ -20,6 +29,7 @@ export default function DiscogsSyncDialog() {
           </Dialog.Header>
           <Dialog.Body>
             <Box
+              ref={scrollRef}
               maxH="350px"
               overflowY="auto"
               bg="gray.50"

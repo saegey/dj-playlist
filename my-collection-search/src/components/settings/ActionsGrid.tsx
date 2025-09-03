@@ -6,18 +6,18 @@ import { SiDiscogs, SiSpotify } from "react-icons/si";
 import { toaster } from "@/components/ui/toaster";
 import { useUpdateDiscogsIndex, useSyncDiscogs } from "@/hooks/useDiscogsQuery";
 import { useIngestSpotifyIndex } from "@/hooks/useSpotifyQuery";
-import { useBackupDatabase } from "@/hooks/useBackupsQuery";
+import { useBackupsQuery } from "@/hooks/useBackupsQuery";
 import { useSettingsDialogs } from "@/providers/SettingsDialogProvider";
 
 export default function ActionsGrid() {
   const discogsIndex = useUpdateDiscogsIndex();
   const discogsSync = useSyncDiscogs();
   const spotifyIndex = useIngestSpotifyIndex();
-  const backup = useBackupDatabase();
+  const { addBackup, addBackupLoading } = useBackupsQuery();
   const { setSpotifySyncOpen } = useSettingsDialogs();
 
   const disableAll =
-    discogsIndex.isPending || discogsSync.isPending || backup.isPending;
+    discogsIndex.isPending || discogsSync.isPending || addBackupLoading;
 
   return (
     <SimpleGrid gap={4} columns={{ base: 1, md: 3 }}>
@@ -72,16 +72,12 @@ export default function ActionsGrid() {
           discogsSync.mutate(
             { username: undefined },
             {
-              onSuccess: (summary) => {
-                if (summary) {
-                  toaster.create({
-                    title: "Discogs Sync Finished",
-                    type: "success",
-                    description: `New: ${
-                      summary.newReleases?.length ?? 0
-                    } | Already: ${summary.alreadyHave?.length ?? 0}`,
-                  });
-                }
+              onSuccess: () => {
+                toaster.create({
+                  title: "Discogs Sync Finished",
+                  type: "success",
+                  description: `Discogs Sync Finished`,
+                });
               },
               onError: (e) =>
                 toaster.create({
@@ -100,7 +96,7 @@ export default function ActionsGrid() {
 
       <Button
         onClick={() =>
-          backup.mutate(undefined, {
+          addBackup.mutate(undefined, {
             onSuccess: (res) =>
               toaster.create({
                 title: "Backup Complete",
@@ -115,7 +111,7 @@ export default function ActionsGrid() {
               }),
           })
         }
-        loading={backup.isPending}
+        loading={addBackup.isPending}
         disabled={disableAll}
       >
         <FiBriefcase /> Backup Database

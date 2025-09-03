@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Box,
   Button,
@@ -9,46 +9,18 @@ import {
   Skeleton,
 } from "@chakra-ui/react";
 import { FiDownload } from "react-icons/fi";
+import { useBackupsQuery } from "@/hooks/useBackupsQuery";
 
 export default function DatabaseBackups() {
-  const [backups, setBackups] = useState<string[]>([]);
+  const { backups, backupsLoading } = useBackupsQuery();
   const [showAllBackups, setShowAllBackups] = useState(false);
-  const [loadingBackups, setLoadingBackups] = useState(false);
-  const [backupListError, setBackupListError] = useState<string | null>(null);
-  const [initialLoad, setInitialLoad] = useState(true);
-
-  useEffect(() => {
-    setInitialLoad(false);
-  }, []);
-
-  useEffect(() => {
-    const fetchBackups = async () => {
-      setLoadingBackups(true);
-      setBackupListError(null);
-      try {
-        const res = await fetch("/api/backups");
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Unknown error");
-        setBackups(
-          data.files.filter(
-            (file: string) => file !== "restore.sql" && file !== "clean.sql"
-          ) || []
-        );
-      } catch (e) {
-        setBackupListError(e instanceof Error ? e.message : String(e));
-      } finally {
-        setLoadingBackups(false);
-      }
-    };
-    fetchBackups();
-  }, []);
 
   return (
     <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
       <Heading size="md" mb={2}>
         Database Backups
       </Heading>
-      {initialLoad || loadingBackups ? (
+      {backupsLoading ? (
         <VStack align="stretch" gap={3}>
           {[...Array(5)].map((_, i) => (
             <HStack key={i} justify="space-between">
@@ -57,10 +29,6 @@ export default function DatabaseBackups() {
             </HStack>
           ))}
         </VStack>
-      ) : backupListError ? (
-        <Box color="red.500" mb={2}>
-          <b>Error:</b> {backupListError}
-        </Box>
       ) : backups.length === 0 ? (
         <Text>No backups found in the directory.</Text>
       ) : (
