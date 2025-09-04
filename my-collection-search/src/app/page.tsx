@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { Flex, Container, Box } from "@chakra-ui/react";
 
-import { Flex, Drawer, Container, Box, Collapsible } from "@chakra-ui/react";
+
 import SearchResults from "@/components/SearchResults";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import PlaylistsProvider, { usePlaylists } from "@/hooks/usePlaylists";
@@ -11,7 +12,6 @@ import TopMenuBar from "@/components/MenuBar";
 import { TrackEditFormProps } from "../components/TrackEditForm";
 import TrackEditDialog from "@/components/TrackEditDialog";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
-import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 import { Toaster } from "@/components/ui/toaster";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
@@ -25,11 +25,6 @@ const SearchPage = () => {
     if (!ready || !meiliClient) return;
   }, [ready, meiliClient]);
 
-  // Prevent hydration mismatch for playlist count and playtime
-  const [hasMounted, setHasMounted] = React.useState(false);
-  React.useEffect(() => {
-    setHasMounted(true);
-  }, []);
 
   const { username: selectedUsername } = useUsername();
   const playlistPortalRef = useRef<HTMLDivElement | null>(null);
@@ -50,7 +45,6 @@ const SearchPage = () => {
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const initialFocusRef = useRef<HTMLButtonElement>(null);
-  const { isOpen, setOpen } = usePlaylistDrawer();
 
   const handleEditClick = (track: Track) => {
     console.log("Editing track:", track);
@@ -80,12 +74,7 @@ const SearchPage = () => {
       <Toaster />
       <TopMenuBar current="/" />
       <Flex gap={4} direction="row">
-        <Box
-          pos="relative"
-          flex="1"
-          ref={playlistPortalRef}
-          zIndex={99}
-        >
+        <Box pos="relative" flex="1" ref={playlistPortalRef} zIndex={99}>
           {/* Search Results */}
           <Container maxW={["8xl", "2xl", "2xl"]}>
             <SearchResults
@@ -103,31 +92,11 @@ const SearchPage = () => {
           </Container>
 
           {/* Playlist Drawer renders within this container via Portal */}
-          <Box
-            id={"11"}
-            position="fixed"
-            left={0}
-            right={0}
-            bottom={0}
-            zIndex={20}
-            pointerEvents="auto"
-            backgroundColor="white"
-            display={ isOpen ? "block" : "none" }
-          >
-            <Collapsible.Root
-              open={isOpen}
-              onOpenChange={(e) => setOpen(e.open)}
-              // placement={"top"}
-              // placement="bottom"
-            >
-              <PlaylistViewerDrawer
-                hasMounted={hasMounted}
-                handleEditClick={handleEditClick}
-                meiliClient={meiliClient}
-                containerRef={playlistPortalRef}
-              />
-            </Collapsible.Root>
-          </Box>
+          <PlaylistViewerDrawer
+            handleEditClick={handleEditClick}
+            meiliClient={meiliClient}
+            containerRef={playlistPortalRef}
+          />
         </Box>
       </Flex>
       <TrackEditDialog

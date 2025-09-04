@@ -23,7 +23,6 @@ import {
   FiVolume2,
   FiVolume1,
   FiVolumeX,
-  FiList,
   FiArrowUp,
   FiArrowDown,
 } from "react-icons/fi";
