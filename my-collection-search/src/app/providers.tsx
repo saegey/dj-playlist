@@ -8,8 +8,13 @@ import { MeiliProvider } from "@/providers/MeiliProvider";
 import { UsernameProvider } from "@/providers/UsernameProvider";
 import PlaylistPlayer from "@/components/PlaylistPlayer";
 import { PlaylistPlayerProvider } from "@/providers/PlaylistPlayerProvider";
+import PlaylistDrawerProvider from "@/providers/PlaylistDrawer";
 
-export default function ClientProviders({ children }: { children: React.ReactNode }) {
+export default function ClientProviders({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [client] = useState(() => new QueryClient());
 
   return (
@@ -19,9 +24,11 @@ export default function ClientProviders({ children }: { children: React.ReactNod
           {/* Make BOTH pages and the player share the same app providers */}
           <MeiliProvider>
             <PlaylistPlayerProvider>
-              {children}
+              <PlaylistDrawerProvider>
+                {children}
+                <PlaylistPlayer />
+              </PlaylistDrawerProvider>
               {/* Fixed bottom player renders once at root, available everywhere */}
-              <PlaylistPlayer />
             </PlaylistPlayerProvider>
           </MeiliProvider>
         </UsernameProvider>

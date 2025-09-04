@@ -1,7 +1,7 @@
 // components/PlaylistPlayer.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
   Button,
@@ -11,7 +11,9 @@ import {
   Image,
   Text,
   VStack,
-  // useColorModeValue,
+  Popover,
+  Tooltip,
+  Slider,
 } from "@chakra-ui/react";
 import {
   FiPause,
@@ -19,10 +21,13 @@ import {
   FiSkipBack,
   FiSkipForward,
   FiVolume2,
+  FiVolume1,
+  FiVolumeX,
   FiList,
 } from "react-icons/fi";
 import { Track } from "@/types/track";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 
 const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -37,7 +42,7 @@ const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
       left={0}
       right={0}
       bottom={0}
-      zIndex={20}
+      zIndex={100}
       bg={bg}
       backdropFilter="saturate(180%) blur(16px)"
       borderTopWidth="1px"
@@ -78,22 +83,22 @@ const PlaylistPlayer: React.FC = () => {
     pause,
     playNext,
     playPrev,
-    audioElement,
-    playlist
+    playlist,
+    volume,
+    setVolume,
   } = usePlaylistPlayer();
+  const { setOpen, isOpen } = usePlaylistDrawer();
+
+  const VolumeIcon = useMemo(() => {
+    if (volume === 0) return FiVolumeX;
+    if (volume < 0.5) return FiVolume1;
+    return FiVolume2;
+  }, [volume]);
 
   const safeLen = mounted ? playlist.length : 0;
   const safeIndex = mounted ? currentTrackIndex : null;
   const canPrev = safeIndex !== null && safeIndex > 0;
   const canNext = safeIndex !== null && safeIndex < safeLen - 1;
-
-  console.log("PlaylistPlayer render:", {
-    mounted,
-    safeLen,
-    safeIndex,
-    canPrev,
-    canNext,
-  }); 
 
   return (
     <>
@@ -125,7 +130,9 @@ const PlaylistPlayer: React.FC = () => {
                 // noOfLines={1}
                 maxW={{ base: "45vw", md: "40vw" }}
               >
-                {mounted && currentTrack ? currentTrack.title : "No track playing"}
+                {mounted && currentTrack
+                  ? currentTrack.title
+                  : "No track playing"}
               </Text>
               <Text
                 color="fg.muted"
@@ -184,29 +191,76 @@ const PlaylistPlayer: React.FC = () => {
             </IconButton>
           </HStack>
 
-          {/* Right: extras (volume / queue placeholders) */}
+          {/* Right: extras (volume / queue) */}
           <HStack gap={1} justify="flex-end" flex="1">
-            <IconButton
-              aria-label="Volume"
-              size="sm"
-              variant="ghost"
-              title="Volume"
-            >
-              <FiVolume2 />
-            </IconButton>
+            <Popover.Root>
+              <Popover.Trigger>
+                <span>
+                  <Tooltip.Root>
+                    <Tooltip.Trigger>
+                      <span>
+                        <IconButton
+                          aria-label="Volume"
+                          size="sm"
+                          variant="ghost"
+                        >
+                          {React.createElement(VolumeIcon)}
+                        </IconButton>
+                      </span>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content>{`${Math.round(
+                      volume * 100
+                    )}%`}</Tooltip.Content>
+                  </Tooltip.Root>
+                </span>
+              </Popover.Trigger>
+              <Popover.Content w="240px" _focus={{ boxShadow: "lg" }}>
+                <Popover.Body>
+                  <HStack align="center" gap={3}>
+                    <IconButton
+                      aria-label={volume === 0 ? "Unmute" : "Mute"}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
+                    >
+                      {volume === 0 ? <FiVolumeX /> : <VolumeIcon />}
+                    </IconButton>
+                    <Slider.Root
+                      width="200px"
+                      defaultValue={[40]}
+                      onValueChange={(e) => {
+                        setVolume(e.value[0] / 100);
+                      }}
+                    >
+                      <HStack justify="space-between">
+                        <Slider.Label>Volume</Slider.Label>
+                        <Slider.ValueText />
+                      </HStack>
+                      <Slider.Control>
+                        <Slider.Track>
+                          <Slider.Range />
+                        </Slider.Track>
+                        <Slider.Thumbs rounded="l1" />
+                      </Slider.Control>
+                    </Slider.Root>
+                  </HStack>
+                </Popover.Body>
+              </Popover.Content>
+            </Popover.Root>
+
             <IconButton
               aria-label="Queue"
               size="sm"
               variant="ghost"
               title="Queue"
+              onClick={() => setOpen(isOpen ? false : true)}
             >
               <FiList />
             </IconButton>
           </HStack>
         </Flex>
 
-        {/* Hidden audio element (kept in DOM) */}
-        <Box display="none">{audioElement}</Box>
+        {/* audio element is mounted by PlaylistPlayerProvider; don't duplicate here */}
       </PlayerContainer>
     </>
   );

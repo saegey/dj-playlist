@@ -12,25 +12,19 @@ import React, {
 import type { Track } from "@/types/track";
 
 type ReplacePlaylistOptions = {
-  /** Keep playing same track_id if possible */
   preserveCurrent?: boolean;
-  /** Start playback at this zero-based index */
   startIndex?: number;
-  /** Start playback at first occurrence of this track_id */
   startTrackId?: string;
-  /** Start playing automatically (default: keep current state) */
   autoplay?: boolean;
 };
 
 type PlaylistPlayerContextValue = {
-  // state
   isPlaying: boolean;
   currentTrackIndex: number | null;
   currentTrack: Track | null;
   playlist: Track[];
   playlistLength: number;
 
-  // controls
   play: () => void;
   pause: () => void;
   stop: () => void;
@@ -38,13 +32,14 @@ type PlaylistPlayerContextValue = {
   playPrev: () => void;
   playTrack: (index: number) => void;
 
-  // queue mgmt
   replacePlaylist: (next: Track[], opts?: ReplacePlaylistOptions) => void;
   appendToQueue: (items: Track[] | Track) => void;
   enqueueNext: (items: Track[] | Track) => void;
   clearQueue: () => void;
 
-  // element
+  volume: number;
+  setVolume: (v: number) => void;
+
   audioElement: React.ReactNode;
 };
 
@@ -57,7 +52,6 @@ export function PlaylistPlayerProvider({
   initial = [],
 }: {
   children: React.ReactNode;
-  /** optional initial playlist */
   initial?: Track[];
 }) {
   const playlistRef = useRef<Track[]>(initial);
@@ -67,10 +61,9 @@ export function PlaylistPlayerProvider({
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(
     null
   );
-
   const [isPlaying, setIsPlaying] = useState(false);
-  // bump this when playlist changes to retrigger effects safely
   const [plVersion, setPlVersion] = useState(0);
+  const [volume, setVolumeState] = useState(1);
 
   const play = useCallback(() => {
     const pl = playlistRef.current;
@@ -97,19 +90,10 @@ export function PlaylistPlayerProvider({
         setIsPlaying(true);
         return idx + 1;
       }
-      // end of list
       setIsPlaying(false);
       return null;
     });
   }, []);
-
-  useEffect(() => {
-    if (currentTrackIndex !== null && playlistRef.current[currentTrackIndex]) {
-      setCurrentTrack(playlistRef.current[currentTrackIndex]);
-    } else {
-      setCurrentTrack(null);
-    }
-  }, [currentTrackIndex, plVersion]);
 
   const playPrev = useCallback(() => {
     setCurrentTrackIndex((idx) => {
@@ -143,7 +127,6 @@ export function PlaylistPlayerProvider({
       playlistRef.current = Array.isArray(next) ? next.slice() : [];
       setPlVersion((v) => v + 1);
 
-      // compute new index
       let newIndex: number | null = null;
       const pl = playlistRef.current;
 
@@ -170,7 +153,6 @@ export function PlaylistPlayerProvider({
       if (typeof autoplay === "boolean") {
         setIsPlaying(autoplay && newIndex !== null);
       } else {
-        // keep current isPlaying unless list became empty
         setIsPlaying((was) => (newIndex !== null ? was : false));
       }
     },
@@ -191,7 +173,6 @@ export function PlaylistPlayerProvider({
 
       const idx = currentTrackIndex ?? -1;
       if (idx < 0) {
-        // nothing playing → just replace and start
         replacePlaylist(toAdd, { startIndex: 0, autoplay: true });
         return;
       }
@@ -210,11 +191,27 @@ export function PlaylistPlayerProvider({
     setIsPlaying(false);
   }, []);
 
-  // Effect: play/pause based on state + current track
+  const setVolume = useCallback((v: number) => {
+    const clamped = Math.max(0, Math.min(1, v));
+    setVolumeState(clamped);
+    if (audioRef.current) {
+      audioRef.current.volume = clamped;
+    }
+  }, []);
+
+  // Keep currentTrack state in sync with index/playlist
+  useEffect(() => {
+    if (currentTrackIndex !== null && playlistRef.current[currentTrackIndex]) {
+      setCurrentTrack(playlistRef.current[currentTrackIndex]);
+    } else {
+      setCurrentTrack(null);
+    }
+  }, [currentTrackIndex, plVersion]);
+
+  // Effect: play/pause
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-
     const pl = playlistRef.current;
     if (isPlaying && currentTrackIndex !== null && pl[currentTrackIndex]) {
       audio.play().catch(() => {});
@@ -223,28 +220,42 @@ export function PlaylistPlayerProvider({
     }
   }, [isPlaying, currentTrackIndex, plVersion]);
 
-  // Effect: change audio src when track or playlist changes
+  // Effect: change src
+  const lastTrackIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const pl = playlistRef.current;
-    if (currentTrackIndex !== null && pl[currentTrackIndex]) {
-      const track = pl[currentTrackIndex];
-      const newSrc = `/api/audio?filename=${track.local_audio_url}`;
-      if (audio.src !== newSrc) {
-        audio.src = newSrc;
-      }
-      if (isPlaying) {
-        audio.play().catch(() => {});
-      }
+    const track = currentTrackIndex !== null ? pl[currentTrackIndex] : null;
+
+    if (!track) {
+      audio.pause();
+      // don't blank src here; keep it so pause retains position
+      return;
+    }
+
+    // Only swap src when the track changes
+    if (lastTrackIdRef.current !== track.track_id) {
+      audio.src = `/api/audio?filename=${track.local_audio_url}`;
+      lastTrackIdRef.current = track.track_id;
+    }
+
+    if (isPlaying) {
+      audio.play().catch(() => {});
     } else {
       audio.pause();
-      audio.src = "";
     }
   }, [currentTrackIndex, isPlaying, plVersion]);
 
-  // auto-next at end
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
+  }, [volume, plVersion]);
+
+  // Auto-next
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -256,6 +267,7 @@ export function PlaylistPlayerProvider({
   const audioElement = useMemo(
     () => (
       <audio
+        id="playlist-audio"
         ref={audioRef}
         preload="auto"
         controls
@@ -270,8 +282,7 @@ export function PlaylistPlayerProvider({
     return {
       isPlaying,
       currentTrackIndex,
-      currentTrack:
-        currentTrackIndex !== null ? pl[currentTrackIndex] ?? null : null,
+      currentTrack, // use state here
       playlist: pl,
       playlistLength: pl.length,
 
@@ -287,11 +298,16 @@ export function PlaylistPlayerProvider({
       enqueueNext,
       clearQueue,
 
+      volume,
+      setVolume,
+
       audioElement,
     };
   }, [
     isPlaying,
     currentTrackIndex,
+    currentTrack, // included in deps
+    plVersion, // include plVersion so playlist updates trigger
     play,
     pause,
     stop,
@@ -302,13 +318,14 @@ export function PlaylistPlayerProvider({
     appendToQueue,
     enqueueNext,
     clearQueue,
+    volume,
+    setVolume,
     audioElement,
   ]);
 
   return (
     <PlaylistPlayerContext.Provider value={value}>
       {children}
-      {/* keep the audio element mounted once at root */}
       {audioElement}
     </PlaylistPlayerContext.Provider>
   );

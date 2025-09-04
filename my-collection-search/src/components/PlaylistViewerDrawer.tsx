@@ -27,7 +27,6 @@ import { usePlaylists } from "@/hooks/usePlaylists";
 import { formatSeconds, parseDurationToSeconds } from "@/lib/trackUtils";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { MeiliSearch } from "meilisearch";
-import PlaylistPlayer from "./PlaylistPlayer";
 import { LuFileJson } from "react-icons/lu";
 import NamePlaylistDialog from "./NamePlaylistDialog";
 import { toaster } from "./ui/toaster";
@@ -58,7 +57,7 @@ export const PlaylistViewerDrawer = ({
     optimalOrderType,
     setOptimalOrderType,
   } = usePlaylists();
-  const { username: selectedUsername} = useUsername();
+  const { username: selectedUsername } = useUsername();
 
   const { playlistCounts } = useSearchResults({
     client: meiliClient,
@@ -270,13 +269,6 @@ export const PlaylistViewerDrawer = ({
           <Drawer.CloseTrigger asChild>
             <CloseButton size="sm" />
           </Drawer.CloseTrigger>
-          <Drawer.Footer>
-            {/* <PlaylistPlayer
-              playlist={
-                displayPlaylist.length ? displayPlaylist : playlist ?? []
-              }
-            /> */}
-          </Drawer.Footer>
         </Drawer.Content>
       </Drawer.Positioner>
       <NamePlaylistDialog
