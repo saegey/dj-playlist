@@ -271,11 +271,11 @@ export const PlaylistViewerDrawer = ({
             <CloseButton size="sm" />
           </Drawer.CloseTrigger>
           <Drawer.Footer>
-            <PlaylistPlayer
+            {/* <PlaylistPlayer
               playlist={
                 displayPlaylist.length ? displayPlaylist : playlist ?? []
               }
-            />
+            /> */}
           </Drawer.Footer>
         </Drawer.Content>
       </Drawer.Positioner>

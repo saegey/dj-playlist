@@ -335,7 +335,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
         if (selectedUsername) {
           filter += ` AND username = '${selectedUsername}'`;
         }
-        console.log("selectedUsername", selectedUsername);
+        // console.log("selectedUsername", selectedUsername);
         // if (playlistArtists.length > 0) {
         //   filter += ` AND NOT artist IN [${playlistArtists.join(",")}]`;
         // }

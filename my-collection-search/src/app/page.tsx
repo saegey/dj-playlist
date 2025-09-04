@@ -108,6 +108,7 @@ const SearchPage = () => {
               size="lg"
               borderRadius="full"
               boxShadow="md"
+              display="none"
             >
               Playlists
             </Button>
@@ -163,25 +164,24 @@ const SearchPage = () => {
           size={["sm", "md", "md"]}
         >
           <Drawer.Trigger asChild>
-            <Box position="fixed" right={6} bottom={6} zIndex={100}>
-              <Button
-                colorScheme="blue"
-                size="lg"
-                borderRadius="full"
-                boxShadow="md"
-                position="relative"
-                pr={hasMounted && playlist.length > 0 ? 8 : undefined}
-              >
-                <FiList size={25} />
-                {hasMounted && playlist.length > 0 && (
-                  <Float placement="top-end">
-                    <Circle size="6" bg="red.500" color="white" fontSize="sm">
-                      {playlist.length}
-                    </Circle>
-                  </Float>
-                )}
-              </Button>
-            </Box>
+            <Button
+              colorScheme="blue"
+              size="lg"
+              borderRadius="full"
+              boxShadow="md"
+              bottom={20}
+              position="relative"
+              pr={hasMounted && playlist.length > 0 ? 8 : undefined}
+            >
+              <FiList size={25} />
+              {hasMounted && playlist.length > 0 && (
+                <Float placement="top-end">
+                  <Circle size="6" bg="red.500" color="white" fontSize="sm">
+                    {playlist.length}
+                  </Circle>
+                </Float>
+              )}
+            </Button>
           </Drawer.Trigger>
 
           <PlaylistViewerDrawer

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, {   useState } from "react";
 import {
   Box,
   Flex,
@@ -17,6 +17,7 @@ import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
 import { FiPlay } from "react-icons/fi";
 import { keyToCamelot } from "@/lib/playlistOrder";
+import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -49,21 +50,21 @@ export default function TrackResult({
 }: TrackResultProps) {
   const [expanded, setExpanded] = useState(false);
   const [hasMounted, setHasMounted] = React.useState(false);
-  const [playingUrl, setPlayingUrl] = useState("");
   React.useEffect(() => {
     setHasMounted(true);
   }, []);
+  const { replacePlaylist } = usePlaylistPlayer();
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Start playback when audio is ready and URL is set
-  useEffect(() => {
-    if (playingUrl && audioRef.current) {
-      audioRef.current.play().catch((err) => {
-        console.error("Autoplay failed:", err);
-      });
-    }
-  }, [playingUrl]);
+  // // Start playback when audio is ready and URL is set
+  // useEffect(() => {
+  //   if (playingUrl && audioRef.current) {
+  //     audioRef.current.play().catch((err) => {
+  //       console.error("Autoplay failed:", err);
+  //     });
+  //   }
+  // }, [playingUrl]);
 
   // Prevent hydration mismatch: render a placeholder for minimized view until after mount
   if (minimized && !expanded && !hasMounted) {
@@ -288,7 +289,7 @@ export default function TrackResult({
 
         {track.local_audio_url && (
           <Box mt={2} width="100%" flexDir="column">
-            {playingUrl === `/api/audio?filename=${track.local_audio_url}` ? (
+            {/* {playingUrl === `/api/audio?filename=${track.local_audio_url}` ? (
               <audio
                 ref={audioRef}
                 controls
@@ -298,17 +299,19 @@ export default function TrackResult({
               >
                 Your browser does not support the audio element.
               </audio>
-            ) : (
-              <Button
-                onClick={() =>
-                  setPlayingUrl(`/api/audio?filename=${track.local_audio_url}`)
-                }
-                size={["xs", "sm"]}
-                mt={1}
-              >
-                <FiPlay /> Play
-              </Button>
-            )}
+            ) : ( */}
+            <Button
+              onClick={() => {
+                // setPlayingUrl(`/api/audio?filename=${track.local_audio_url}`)
+                console.log("Playing track:", track);
+                replacePlaylist([track], { autoplay: true, startIndex: 0 });
+              }}
+              size={["xs", "sm"]}
+              mt={1}
+            >
+              <FiPlay /> Play
+            </Button>
+            {/* )} */}
           </Box>
         )}
         {/* Minimize button */}
