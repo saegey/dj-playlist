@@ -41,27 +41,21 @@ export function PlaylistDrawerProvider({
   return (
     <PlaylistDrawerContext.Provider value={value}>
       {children}
-      <Drawer.Root open={isOpen} onOpenChange={(e) => setIsOpen(e.open)}>
-        <Portal>
-          <Drawer.Backdrop />
-          <Drawer.Positioner>
-            <Drawer.Content>
-              <PlaylistViewerDrawer
-                hasMounted={hasMounted}
-                handleEditClick={handleEditClick}
-                meiliClient={meiliClient}
-              />
-            </Drawer.Content>
-          </Drawer.Positioner>
-        </Portal>
-      </Drawer.Root>
+      <PlaylistViewerDrawer
+        hasMounted={hasMounted}
+        handleEditClick={handleEditClick}
+        meiliClient={meiliClient}
+      />
     </PlaylistDrawerContext.Provider>
   );
 }
 
 export function usePlaylistDrawer() {
   const ctx = useContext(PlaylistDrawerContext);
-  if (!ctx) throw new Error("usePlaylistDrawer must be used within PlaylistDrawerProvider");
+  if (!ctx)
+    throw new Error(
+      "usePlaylistDrawer must be used within PlaylistDrawerProvider"
+    );
   return ctx;
 }
 

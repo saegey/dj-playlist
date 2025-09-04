@@ -24,6 +24,8 @@ import {
   FiVolume1,
   FiVolumeX,
   FiList,
+  FiArrowUp,
+  FiArrowDown,
 } from "react-icons/fi";
 import { Track } from "@/types/track";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
@@ -112,6 +114,7 @@ const PlaylistPlayer: React.FC = () => {
           gap={{ base: 3, md: 4 }}
           justify="space-between"
           minH={{ base: "56px", md: "64px" }}
+          zIndex={100}
         >
           {/* Left: Artwork + track info */}
           <HStack minW={0} gap={3} flex="1">
@@ -253,9 +256,9 @@ const PlaylistPlayer: React.FC = () => {
               size="sm"
               variant="ghost"
               title="Queue"
-              onClick={() => setOpen(isOpen ? false : true)}
+              onClick={() => setOpen(!isOpen)}
             >
-              <FiList />
+              {isOpen ? <FiArrowDown /> : <FiArrowUp />}
             </IconButton>
           </HStack>
         </Flex>

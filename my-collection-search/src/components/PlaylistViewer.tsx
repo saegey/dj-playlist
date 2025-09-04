@@ -189,7 +189,7 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
                     opacity={snapshot.isDragging ? 0.9 : 1}
                   >
                     <TrackResult
-                      key={track.track_id}
+                      key={`playlist-${track.track_id}`}
                       track={track}
                       minimized
                       playlistCount={playlistCounts[track.track_id]}

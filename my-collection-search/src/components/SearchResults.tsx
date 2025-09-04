@@ -112,7 +112,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             const isLast = idx === results.length - 1;
             const trackResult = (
               <TrackResult
-                key={track.id}
+                key={`search-${track.id}`}
                 track={track}
                 allowMinimize={false}
                 playlistCount={playlistCounts[track.track_id]}

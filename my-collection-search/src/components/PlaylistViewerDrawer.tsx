@@ -6,11 +6,10 @@ import {
   Box,
   Text,
   Button,
-  Portal,
-  CloseButton,
-  Drawer,
   Menu,
   Flex,
+  Collapsible,
+  Container,
 } from "@chakra-ui/react";
 import PlaylistViewer from "@/components/PlaylistViewer";
 
@@ -40,6 +39,7 @@ export const PlaylistViewerDrawer = ({
   hasMounted: boolean;
   handleEditClick: (track: Track) => void;
   meiliClient: MeiliSearch | null;
+  containerRef?: React.MutableRefObject<HTMLDivElement | null>;
 }) => {
   const {
     playlist,
@@ -121,96 +121,114 @@ export const PlaylistViewerDrawer = ({
   };
 
   return (
-    <Portal>
-      <Drawer.Backdrop />
-      <Drawer.Positioner>
-        <Drawer.Content>
-          <Drawer.Header>
-            <Drawer.Title flex="1">
-              Playlist ({hasMounted ? playlist.length : 0})
-              <Text fontSize="sm" color="gray.500" mb={2}>
-                Total Playtime: {hasMounted ? totalPlaytimeFormatted : "--:--"}
-                {/* Playlist Recommendations */}
-              </Text>
-            </Drawer.Title>
-            <Menu.Root>
-              <Menu.Trigger asChild>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  aria-label="Playlist actions"
-                  px={2}
-                  disabled={!hasMounted || playlist.length === 0}
-                  mt={4}
-                >
-                  <FiMoreVertical />
-                </Button>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content>
-                  <Flex
-                    px={3}
-                    py={1}
-                    fontWeight="bold"
-                    fontSize="sm"
-                    color="gray.500"
-                  >
-                    Playlist Sort
-                  </Flex>
-                  <Box
-                    as="hr"
-                    my={1}
-                    borderColor="gray.200"
-                    borderWidth={0}
-                    borderTopWidth={1}
-                  />
-                  <Menu.Item
-                    value="sort-greedy"
-                    onSelect={() => setOptimalOrderType("greedy")}
-                  >
-                    <GiTakeMyMoney /> Greedy Order
-                  </Menu.Item>
-                  <Menu.Item
-                    value="sort-genetic"
-                    onSelect={() => setOptimalOrderType("genetic")}
-                  >
-                    <PiDna /> Genetic Order
-                  </Menu.Item>
-                  <Box
-                    as="hr"
-                    my={1}
-                    borderColor="gray.200"
-                    borderWidth={0}
-                    borderTopWidth={1}
-                  />
-                  <Menu.Item value="export-json" onSelect={exportPlaylist}>
-                    <LuFileJson /> Export JSON
-                  </Menu.Item>
-                  <Menu.Item
-                    value="export-pdf"
-                    onSelect={handleExportPlaylistToPDF}
-                  >
-                    <PiFilePdf /> Export PDF
-                  </Menu.Item>
-                  <Menu.Item
-                    value="save"
-                    onSelect={() => setIsSaveModalOpen(true)}
-                  >
-                    <FiSave /> Save Playlist
-                  </Menu.Item>
-                  <Menu.Item
-                    value="clear"
-                    onSelect={() => setPlaylist([])}
-                    color="fg.error"
-                    _hover={{ bg: "bg.error", color: "fg.error" }}
-                  >
-                    <MdOutlineClearAll /> Clear Playlist
-                  </Menu.Item>
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
-          </Drawer.Header>
-          <Drawer.Body>
+    <>
+      <Box
+        bg="bg"
+        borderTopWidth="1px"
+        shadow="lg"
+        left={0}
+        right={0}
+        top={0}
+        marginBottom={"88px"}
+        // maxH={"calc(100vh - 51px)"}
+        height={"calc(100vh - 88px)"}
+        maxHeight={"calc(100vh - 88px)"}
+        overflowY="auto" // <-- makes the playlist itself scroll
+        overscrollBehavior="contain" // keeps scroll from bubbling the page
+      >
+        <Container maxW={["8xl", "2xl", "2xl"]} mb={"88px"} mt={3}>
+          <Collapsible.Content>
+            <Flex align="flex-start" w="100%">
+              <Box>
+                <Text>Playlist ({hasMounted ? playlist.length : 0})</Text>
+                <Text fontSize="sm" color="gray.500" mb={2}>
+                  Total Playtime:{" "}
+                  {hasMounted ? totalPlaytimeFormatted : "--:--"}
+                  {/* Playlist Recommendations */}
+                </Text>
+              </Box>
+              <Flex
+                flexGrow={1}
+                justify="flex-end"
+                align="flex-start"
+              >
+                <Menu.Root>
+                  <Menu.Trigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      aria-label="Playlist actions"
+                      px={2}
+                      disabled={!hasMounted || playlist.length === 0}
+                    >
+                      <FiMoreVertical />
+                    </Button>
+                  </Menu.Trigger>
+                  <Menu.Positioner>
+                    <Menu.Content>
+                      <Flex
+                        px={3}
+                        py={1}
+                        fontWeight="bold"
+                        fontSize="sm"
+                        color="gray.500"
+                      >
+                        Playlist Sort
+                      </Flex>
+                      <Box
+                        as="hr"
+                        my={1}
+                        borderColor="gray.200"
+                        borderWidth={0}
+                        borderTopWidth={1}
+                      />
+                      <Menu.Item
+                        value="sort-greedy"
+                        onSelect={() => setOptimalOrderType("greedy")}
+                      >
+                        <GiTakeMyMoney /> Greedy Order
+                      </Menu.Item>
+                      <Menu.Item
+                        value="sort-genetic"
+                        onSelect={() => setOptimalOrderType("genetic")}
+                      >
+                        <PiDna /> Genetic Order
+                      </Menu.Item>
+                      <Box
+                        as="hr"
+                        my={1}
+                        borderColor="gray.200"
+                        borderWidth={0}
+                        borderTopWidth={1}
+                      />
+                      <Menu.Item value="export-json" onSelect={exportPlaylist}>
+                        <LuFileJson /> Export JSON
+                      </Menu.Item>
+                      <Menu.Item
+                        value="export-pdf"
+                        onSelect={handleExportPlaylistToPDF}
+                      >
+                        <PiFilePdf /> Export PDF
+                      </Menu.Item>
+                      <Menu.Item
+                        value="save"
+                        onSelect={() => setIsSaveModalOpen(true)}
+                      >
+                        <FiSave /> Save Playlist
+                      </Menu.Item>
+                      <Menu.Item
+                        value="clear"
+                        onSelect={() => setPlaylist([])}
+                        color="fg.error"
+                        _hover={{ bg: "bg.error", color: "fg.error" }}
+                      >
+                        <MdOutlineClearAll /> Clear Playlist
+                      </Menu.Item>
+                    </Menu.Content>
+                  </Menu.Positioner>
+                </Menu.Root>
+              </Flex>
+            </Flex>
             <PlaylistViewer
               {...usePlaylistViewer({
                 playlist: playlist,
@@ -232,7 +250,7 @@ export const PlaylistViewerDrawer = ({
                   {recommendations.map((rec: Track) => (
                     <TrackResult
                       allowMinimize={false}
-                      key={rec.track_id}
+                      key={`recommendation-${rec.track_id}`}
                       track={rec}
                       buttons={[
                         <Menu.Root key="menu">
@@ -265,12 +283,9 @@ export const PlaylistViewerDrawer = ({
                 </Box>
               </Box>
             )}
-          </Drawer.Body>
-          <Drawer.CloseTrigger asChild>
-            <CloseButton size="sm" />
-          </Drawer.CloseTrigger>
-        </Drawer.Content>
-      </Drawer.Positioner>
+          </Collapsible.Content>
+        </Container>
+      </Box>
       <NamePlaylistDialog
         open={isSaveModalOpen}
         name={playlistName}
@@ -282,6 +297,6 @@ export const PlaylistViewerDrawer = ({
         onCancel={() => setIsSaveModalOpen(false)}
         confirmLabel="Save Playlist"
       />
-    </Portal>
+    </>
   );
 };

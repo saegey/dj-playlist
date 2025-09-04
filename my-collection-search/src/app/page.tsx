@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 
-import { Flex, Drawer, Container } from "@chakra-ui/react";
+import { Flex, Drawer, Container, Box, Collapsible } from "@chakra-ui/react";
 import SearchResults from "@/components/SearchResults";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import PlaylistsProvider, { usePlaylists } from "@/hooks/usePlaylists";
@@ -25,7 +25,6 @@ const SearchPage = () => {
     if (!ready || !meiliClient) return;
   }, [ready, meiliClient]);
 
-  // const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
   // Prevent hydration mismatch for playlist count and playtime
   const [hasMounted, setHasMounted] = React.useState(false);
   React.useEffect(() => {
@@ -33,6 +32,7 @@ const SearchPage = () => {
   }, []);
 
   const { username: selectedUsername } = useUsername();
+  const playlistPortalRef = useRef<HTMLDivElement | null>(null);
   const {
     query,
     onQueryChange,
@@ -75,30 +75,60 @@ const SearchPage = () => {
     }
   };
 
-  console.log("isOpen:", isOpen);
-
   return (
     <>
       <Toaster />
       <TopMenuBar current="/" />
       <Flex gap={4} direction="row">
-        {/* Search Results */}
-        <Container maxW={["8xl", "2xl", "2xl"]}>
-          <SearchResults
-            query={query}
-            onQueryChange={onQueryChange}
-            estimatedResults={estimatedResults}
-            results={results}
-            playlistCounts={playlistCounts}
-            addToPlaylist={addToPlaylist}
-            handleEditClick={handleEditClick}
-            hasMore={hasMore}
-            loadMore={loadMore}
-            loading={loading}
-          />
-        </Container>
+        <Box
+          pos="relative"
+          flex="1"
+          ref={playlistPortalRef}
+          zIndex={99}
+        >
+          {/* Search Results */}
+          <Container maxW={["8xl", "2xl", "2xl"]}>
+            <SearchResults
+              query={query}
+              onQueryChange={onQueryChange}
+              estimatedResults={estimatedResults}
+              results={results}
+              playlistCounts={playlistCounts}
+              addToPlaylist={addToPlaylist}
+              handleEditClick={handleEditClick}
+              hasMore={hasMore}
+              loadMore={loadMore}
+              loading={loading}
+            />
+          </Container>
 
-        {/* Playlist Drawer Trigger */}
+          {/* Playlist Drawer renders within this container via Portal */}
+          <Box
+            id={"11"}
+            position="fixed"
+            left={0}
+            right={0}
+            bottom={0}
+            zIndex={20}
+            pointerEvents="auto"
+            backgroundColor="white"
+            display={ isOpen ? "block" : "none" }
+          >
+            <Collapsible.Root
+              open={isOpen}
+              onOpenChange={(e) => setOpen(e.open)}
+              // placement={"top"}
+              // placement="bottom"
+            >
+              <PlaylistViewerDrawer
+                hasMounted={hasMounted}
+                handleEditClick={handleEditClick}
+                meiliClient={meiliClient}
+                containerRef={playlistPortalRef}
+              />
+            </Collapsible.Root>
+          </Box>
+        </Box>
       </Flex>
       <TrackEditDialog
         editTrack={editTrack}
@@ -107,17 +137,6 @@ const SearchPage = () => {
         initialFocusRef={initialFocusRef}
         onSave={handleSaveTrack}
       />
-      <Drawer.Root
-        open={isOpen}
-        onOpenChange={(e) => setOpen(e.open)}
-        size={["sm", "md", "md"]}
-      >
-        <PlaylistViewerDrawer
-          hasMounted={hasMounted}
-          handleEditClick={handleEditClick}
-          meiliClient={meiliClient}
-        />
-      </Drawer.Root>
     </>
   );
 };
