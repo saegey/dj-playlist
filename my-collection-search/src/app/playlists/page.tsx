@@ -1,19 +1,19 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Flex, Container, Box } from "@chakra-ui/react";
+import { Flex, Container, Box, Text } from "@chakra-ui/react";
 
-import SearchResults from "@/components/SearchResults";
 import { useSearchResults } from "@/hooks/useSearchResults";
-import PlaylistsProvider, { usePlaylists } from "@/hooks/usePlaylists";
+import PlaylistsProvider from "@/hooks/usePlaylists";
 import type { Track } from "@/types/track";
 import TopMenuBar from "@/components/MenuBar";
-import { TrackEditFormProps } from "../components/TrackEditForm";
+import { TrackEditFormProps } from "../../components/TrackEditForm";
 import TrackEditDialog from "@/components/TrackEditDialog";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
 import { Toaster } from "@/components/ui/toaster";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
+import PlaylistManager from "@/components/PlaylistManager";
 
 // TrackEditForm is used via TrackEditDialog
 const SearchPage = () => {
@@ -26,19 +26,10 @@ const SearchPage = () => {
 
   const { username: selectedUsername } = useUsername();
   const playlistPortalRef = useRef<HTMLDivElement | null>(null);
-  const {
-    query,
-    onQueryChange,
-    estimatedResults,
-    results,
-    playlistCounts,
-    hasMore,
-    loadMore,
-    needsRefresh,
-    loading,
-  } = useSearchResults({ client: meiliClient, username: selectedUsername });
-
-  const { addToPlaylist } = usePlaylists();
+  const { needsRefresh } = useSearchResults({
+    client: meiliClient,
+    username: selectedUsername,
+  });
 
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -69,22 +60,20 @@ const SearchPage = () => {
   return (
     <>
       <Toaster />
-      <TopMenuBar current="/" />
+      <TopMenuBar current="/playlists" />
       <Flex gap={4} direction="row">
         <Box pos="relative" flex="1" ref={playlistPortalRef}>
           {/* Search Results */}
           <Container maxW={["8xl", "2xl", "2xl"]} pt={3}>
-            <SearchResults
-              query={query}
-              onQueryChange={onQueryChange}
-              estimatedResults={estimatedResults}
-              results={results}
-              playlistCounts={playlistCounts}
-              addToPlaylist={addToPlaylist}
-              handleEditClick={handleEditClick}
-              hasMore={hasMore}
-              loadMore={loadMore}
-              loading={loading}
+            <Text fontWeight="bold" fontSize="lg" mb={3}>
+              Playlists
+            </Text>
+            <PlaylistManager
+              xmlImportModalOpen={false}
+              setXmlImportModalOpen={function (open: boolean): void {
+                throw new Error("Function not implemented.");
+              }}
+              client={meiliClient}
             />
           </Container>
 

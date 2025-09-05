@@ -21,6 +21,8 @@ import { FiBookOpen, FiHeadphones, FiTrash } from "react-icons/fi";
 import { TbFileImport } from "react-icons/tb";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { importPlaylist } from "@/services/playlistService";
+import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import { FaPlay } from "react-icons/fa";
 
 type Props = {
   xmlImportModalOpen: boolean;
@@ -140,6 +142,16 @@ export default function PlaylistManager({
                 {pl.name}
               </Text>
               <Flex mt={1} ml="auto" gap={1}>
+                 <Button
+                  size="xs"
+                  colorPalette={"primary"}
+                  variant={"surface"}
+                  onClick={() =>
+                    console.log('clicked')
+                  }
+                >
+                  <FaPlay />
+                </Button>
                 <Button
                   size="xs"
                   variant="solid"

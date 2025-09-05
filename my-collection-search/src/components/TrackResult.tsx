@@ -1,5 +1,5 @@
 "use client";
-import React, {   useState } from "react";
+import React, { useState } from "react";
 import {
   Box,
   Flex,
@@ -7,6 +7,7 @@ import {
   Link,
   Image,
   Button,
+  Icon,
   RatingGroup,
   Float,
   Badge,
@@ -15,7 +16,7 @@ import {
 import { SiDiscogs, SiApplemusic, SiYoutube, SiSpotify } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
-import { FiPlay } from "react-icons/fi";
+import { FaPlay } from "react-icons/fa";
 import { keyToCamelot } from "@/lib/playlistOrder";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
@@ -54,17 +55,6 @@ export default function TrackResult({
     setHasMounted(true);
   }, []);
   const { replacePlaylist } = usePlaylistPlayer();
-
-  // const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // // Start playback when audio is ready and URL is set
-  // useEffect(() => {
-  //   if (playingUrl && audioRef.current) {
-  //     audioRef.current.play().catch((err) => {
-  //       console.error("Autoplay failed:", err);
-  //     });
-  //   }
-  // }, [playingUrl]);
 
   // Prevent hydration mismatch: render a placeholder for minimized view until after mount
   if (minimized && !expanded && !hasMounted) {
@@ -125,16 +115,72 @@ export default function TrackResult({
       width={"100%"}
     >
       <Flex gap={3} position={"relative"} width={"100%"}>
-        <Image
-          src={track.album_thumbnail}
-          alt={track.title}
-          boxSize={["50px", "60px", "70px"]}
-          objectFit="cover"
-          borderRadius="md"
-        />
+        {track.local_audio_url ? (
+          <Box
+            position="relative"
+            borderRadius="md"
+            overflow="hidden"
+            cursor="pointer"
+            tabIndex={0}
+            onClick={() =>
+              replacePlaylist([track], { autoplay: true, startIndex: 0 })
+            }
+            _hover={{ "& .overlay": { opacity: 1 } }} // <-- parent controls child
+          >
+            <Image
+              src={track.album_thumbnail}
+              alt={track.title}
+              boxSize={["50px", "60px", "70px"]}
+              objectFit="cover"
+              borderRadius="md"
+              transition="opacity 0.2s ease"
+              draggable={false}
+            />
+
+            <Box
+              className="overlay"
+              position="absolute"
+              inset={0}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              opacity={0}
+              transition="opacity 0.15s ease"
+              pointerEvents="none"
+              bg="blackAlpha.300"
+              zIndex={1}
+            >
+              <Flex
+                bg="blackAlpha.400"
+                width="100%"
+                height={"100%"}
+                boxShadow="md"
+                alignItems={"center"}
+                justifyContent={"center"}
+              >
+                <Icon as={FaPlay} boxSize={7} color="white" />
+              </Flex>
+            </Box>
+          </Box>
+        ) : (
+          <Image
+            src={track.album_thumbnail}
+            alt={track.title}
+            boxSize={["50px", "60px", "70px"]}
+            objectFit="cover"
+            borderRadius="md"
+          />
+        )}
 
         <Flex direction="column" flex={1}>
-          <Text fontSize={["sm", "md", "md"]} fontWeight="bold">
+          <Text
+            fontSize={["sm", "md", "md"]}
+            fontWeight="bold"
+            whiteSpace="nowrap"
+            maxLines={1}
+            overflow="hidden"
+            textOverflow="ellipsis"
+          >
             {track.title}{" "}
             {score && (
               <Badge
@@ -148,7 +194,14 @@ export default function TrackResult({
             )}
           </Text>
           <Text fontSize={["sm", "md", "md"]}>{track.artist}</Text>
-          <Text fontSize={["xs", "sm", "sm"]} color="brand.muted">
+          <Text
+            fontSize={["xs", "sm", "sm"]}
+            color="brand.muted"
+            whiteSpace="nowrap"
+            maxLines={1}
+            overflow="hidden"
+            textOverflow="ellipsis"
+          >
             {track.album} ({track.year})
           </Text>
         </Flex>
@@ -287,33 +340,6 @@ export default function TrackResult({
           )}
         </Flex>
 
-        {track.local_audio_url && (
-          <Box mt={2} width="100%" flexDir="column">
-            {/* {playingUrl === `/api/audio?filename=${track.local_audio_url}` ? (
-              <audio
-                ref={audioRef}
-                controls
-                style={{ width: "100%" }}
-                preload="none"
-                src={playingUrl}
-              >
-                Your browser does not support the audio element.
-              </audio>
-            ) : ( */}
-            <Button
-              onClick={() => {
-                // setPlayingUrl(`/api/audio?filename=${track.local_audio_url}`)
-                console.log("Playing track:", track);
-                replacePlaylist([track], { autoplay: true, startIndex: 0 });
-              }}
-              size={["xs", "sm"]}
-              mt={1}
-            >
-              <FiPlay /> Play
-            </Button>
-            {/* )} */}
-          </Box>
-        )}
         {/* Minimize button */}
         <Flex mt={2}>
           {allowMinimize && (

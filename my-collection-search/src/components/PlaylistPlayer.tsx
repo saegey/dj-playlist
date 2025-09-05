@@ -33,10 +33,6 @@ import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  // translucent surface similar to YT Music
-  const bg = "whiteAlpha.90";
-  const border = "gray.200";
-
   return (
     <Box
       position="fixed"
@@ -44,11 +40,10 @@ const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
       right={0}
       bottom={0}
       zIndex={100}
-      bg={bg}
-      backdropFilter="saturate(180%) blur(16px)"
+      bg={'bg'}
       borderTopWidth="1px"
-      borderColor={border}
-      boxShadow="0 -6px 24px rgba(0,0,0,0.12)"
+      borderColor={"brand.0"}
+      background={"bg"}
     >
       <Box
         maxW="1200px"
@@ -62,16 +57,29 @@ const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-const Artwork: React.FC<{ src?: string; alt?: string }> = ({ src, alt }) => (
-  <Image
-    src={src || "/images/placeholder-artwork.png"}
-    alt={alt || "Artwork"}
-    boxSize={{ base: "40px", md: "48px" }}
-    objectFit="cover"
-    borderRadius="md"
-    borderWidth="1px"
-  />
-);
+const Artwork: React.FC<{ src?: string; alt?: string }> = ({ src, alt }) => {
+  if (!src) {
+    return (
+      <Box
+        width={{ base: "40px", md: "48px" }}
+        height={{ base: "40px", md: "48px" }}
+        bg="bg.muted"
+        borderRadius="md"
+      />
+    );
+  }
+
+  return (
+    <Image
+      src={src || "/images/placeholder-artwork.png"}
+      alt={alt || "Artwork"}
+      boxSize={{ base: "40px", md: "48px" }}
+      objectFit="cover"
+      borderRadius="md"
+      borderWidth="1px"
+    />
+  );
+};
 
 const PlaylistPlayer: React.FC = () => {
   const [mounted, setMounted] = useState(false);

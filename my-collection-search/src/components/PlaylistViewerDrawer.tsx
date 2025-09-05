@@ -138,25 +138,26 @@ export const PlaylistViewerDrawer = ({
           shadow="lg"
           left={0}
           right={0}
-          top={0}
+          top={3}
           marginBottom={"88px"}
           // maxH={"calc(100vh - 51px)"}
           height={{
-            md: "calc(100vh - 72px)",
-            sm: "calc(100vh - 84px)",
-            lg: "calc(100vh - 84px)",
+            md: "calc(100vh - 72px - 56px)",
+            sm: "calc(100vh - 84px - 56px)",
+            lg: "calc(100vh - 84px - 56px)",
           }}
           maxHeight={{
-            md: "calc(100vh - 72px)",
-            sm: "calc(100vh - 84px)",
-            lg: "calc(100vh - 84px)",
+            md: "calc(100vh - 72px - 56px)",
+            sm: "calc(100vh - 84px - 56px)",
+            lg: "calc(100vh - 84px - 56px)",
           }}
+          marginTop={3}
           overflowY="auto" // <-- makes the playlist itself scroll
           overscrollBehavior="contain" // keeps scroll from bubbling the page
         >
           <Container maxW={["8xl", "2xl", "2xl"]} mb={"88px"} mt={3}>
             <Collapsible.Content>
-              <Flex align="flex-start" w="100%">
+              <Flex align="flex-start" w="100%" pt={3}>
                 <Box>
                   <Text>Playlist ({playlist.length})</Text>
                   <Text fontSize="sm" color="gray.500" mb={2}>
