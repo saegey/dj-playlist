@@ -81,14 +81,15 @@ const SearchResults: React.FC<SearchResultsProps> = ({
 
   return (
     <Box>
-      <Box display="flex" gap={3} mb={3}>
+      <Box display="flex" flexDirection={["column", "row"]} gap={3} mb={3}>
         <InputGroup startElement={<LuSearch size={16} />}>
           <Input
-            placeholder="Search (name, genres, instruments, etc.)"
+            placeholder="Search"
             value={debouncedValue}
             onChange={(e) => setDebouncedValue(e.target.value)}
             flex="1"
             variant={"subtle"}
+            fontSize="16px"
           />
         </InputGroup>
         <UsernameSelect usernames={friends} />

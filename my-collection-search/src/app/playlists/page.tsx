@@ -25,7 +25,6 @@ const SearchPage = () => {
   }, [ready, meiliClient]);
 
   const { username: selectedUsername } = useUsername();
-  const playlistPortalRef = useRef<HTMLDivElement | null>(null);
   const { needsRefresh } = useSearchResults({
     client: meiliClient,
     username: selectedUsername,
@@ -34,11 +33,6 @@ const SearchPage = () => {
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const initialFocusRef = useRef<HTMLButtonElement>(null);
-
-  const handleEditClick = (track: Track) => {
-    setEditTrack(track);
-    setDialogOpen(true);
-  };
 
   const handleSaveTrack = async (data: TrackEditFormProps) => {
     const res = await fetch("/api/tracks/update", {
@@ -61,30 +55,19 @@ const SearchPage = () => {
     <>
       <Toaster />
       <TopMenuBar current="/playlists" />
-      <Flex gap={4} direction="row">
-        <Box pos="relative" flex="1" ref={playlistPortalRef}>
-          {/* Search Results */}
-          <Container maxW={["8xl", "2xl", "2xl"]} pt={3}>
-            <Text fontWeight="bold" fontSize="lg" mb={3}>
-              Playlists
-            </Text>
-            <PlaylistManager
-              xmlImportModalOpen={false}
-              setXmlImportModalOpen={function (): void {
-                throw new Error("Function not implemented.");
-              }}
-              client={meiliClient}
-            />
-          </Container>
+      <Box maxW="700px" mx="auto" p={["12px", 8]}>
+        <Text fontWeight="bold" fontSize="lg" mb={3}>
+          Playlists
+        </Text>
+        <PlaylistManager
+          xmlImportModalOpen={false}
+          setXmlImportModalOpen={function (): void {
+            throw new Error("Function not implemented.");
+          }}
+          client={meiliClient}
+        />
+      </Box>
 
-          {/* Playlist Drawer renders within this container via Portal */}
-          <PlaylistViewerDrawer
-            handleEditClick={handleEditClick}
-            meiliClient={meiliClient}
-            containerRef={playlistPortalRef}
-          />
-        </Box>
-      </Flex>
       <TrackEditDialog
         editTrack={editTrack}
         dialogOpen={dialogOpen}

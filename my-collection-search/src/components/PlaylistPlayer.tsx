@@ -40,7 +40,7 @@ const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
       right={0}
       bottom={0}
       zIndex={100}
-      bg={'bg'}
+      bg={"bg"}
       borderTopWidth="1px"
       borderColor={"brand.0"}
       background={"bg"}
@@ -88,9 +88,9 @@ const PlaylistPlayer: React.FC = () => {
     isPlaying,
     currentTrackIndex,
     currentTrack,
-  currentTime,
-  duration,
-  seek,
+    currentTime,
+    duration,
+    seek,
     play,
     pause,
     playNext,
@@ -141,7 +141,8 @@ const PlaylistPlayer: React.FC = () => {
               value={[progress]}
               onValueChange={(e) => {
                 const pct = e.value[0] ?? 0;
-                const target = (Math.max(0, Math.min(100, pct)) / 100) * (duration || 0);
+                const target =
+                  (Math.max(0, Math.min(100, pct)) / 100) * (duration || 0);
                 if (Number.isFinite(target)) seek(target);
               }}
             >
@@ -157,6 +158,34 @@ const PlaylistPlayer: React.FC = () => {
             {fmt(duration || 0)}
           </Text>
         </HStack>
+        <Flex>
+          <VStack
+            align="start"
+            gap={1}
+            flex="1"
+            minW={0}
+            display={{ base: "flex", md: "none" }}
+          >
+            <Text
+              fontWeight="semibold"
+              fontSize={{ base: "sm", md: "md" }}
+              // noOfLines={1}
+              maxW={{ base: "45vw", md: "40vw" }}
+            >
+              {mounted && currentTrack
+                ? currentTrack.title
+                : "No track playing"}
+            </Text>
+            <Text
+              color="fg.muted"
+              fontSize="xs"
+              // noOfLines={1}
+              maxW={{ base: "45vw", md: "40vw" }}
+            >
+              {mounted && currentTrack ? currentTrack.artist : "—"}
+            </Text>
+          </VStack>
+        </Flex>
         <Flex
           align="center"
           gap={{ base: 3, md: 4 }}
@@ -174,7 +203,11 @@ const PlaylistPlayer: React.FC = () => {
                   : "Artwork"
               }
             />
-            <VStack align="start" minW={0}>
+            <VStack
+              align="start"
+              minW={0}
+              display={{ base: "none", md: "flex" }}
+            >
               <Text
                 fontWeight="semibold"
                 fontSize={{ base: "sm", md: "md" }}
@@ -244,60 +277,62 @@ const PlaylistPlayer: React.FC = () => {
 
           {/* Right: extras (volume / queue) */}
           <HStack gap={1} justify="flex-end" flex="1">
-            <Popover.Root>
-              <Popover.Trigger>
-                <span>
-                  <Tooltip.Root>
-                    <Tooltip.Trigger>
-                      <span>
-                        <IconButton
-                          aria-label="Volume"
-                          size="sm"
-                          variant="ghost"
-                        >
-                          {React.createElement(VolumeIcon)}
-                        </IconButton>
-                      </span>
-                    </Tooltip.Trigger>
-                    <Tooltip.Content>{`${Math.round(
-                      volume * 100
-                    )}%`}</Tooltip.Content>
-                  </Tooltip.Root>
-                </span>
-              </Popover.Trigger>
-              <Popover.Content w="240px" _focus={{ boxShadow: "lg" }}>
-                <Popover.Body>
-                  <HStack align="center" gap={3}>
-                    <IconButton
-                      aria-label={volume === 0 ? "Unmute" : "Mute"}
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
-                    >
-                      {volume === 0 ? <FiVolumeX /> : <VolumeIcon />}
-                    </IconButton>
-                    <Slider.Root
-                      width="200px"
-                      defaultValue={[40]}
-                      onValueChange={(e) => {
-                        setVolume(e.value[0] / 100);
-                      }}
-                    >
-                      <HStack justify="space-between">
-                        <Slider.Label>Volume</Slider.Label>
-                        <Slider.ValueText />
-                      </HStack>
-                      <Slider.Control>
-                        <Slider.Track>
-                          <Slider.Range />
-                        </Slider.Track>
-                        <Slider.Thumbs rounded="l1" />
-                      </Slider.Control>
-                    </Slider.Root>
-                  </HStack>
-                </Popover.Body>
-              </Popover.Content>
-            </Popover.Root>
+            <Box display={{ base: "none", md: "block" }}>
+              <Popover.Root>
+                <Popover.Trigger>
+                  <span>
+                    <Tooltip.Root>
+                      <Tooltip.Trigger>
+                        <span>
+                          <IconButton
+                            aria-label="Volume"
+                            size="sm"
+                            variant="ghost"
+                          >
+                            {React.createElement(VolumeIcon)}
+                          </IconButton>
+                        </span>
+                      </Tooltip.Trigger>
+                      <Tooltip.Content>{`${Math.round(
+                        volume * 100
+                      )}%`}</Tooltip.Content>
+                    </Tooltip.Root>
+                  </span>
+                </Popover.Trigger>
+                <Popover.Content w="240px" _focus={{ boxShadow: "lg" }}>
+                  <Popover.Body>
+                    <HStack align="center" gap={3}>
+                      <IconButton
+                        aria-label={volume === 0 ? "Unmute" : "Mute"}
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
+                      >
+                        {volume === 0 ? <FiVolumeX /> : <VolumeIcon />}
+                      </IconButton>
+                      <Slider.Root
+                        width="200px"
+                        defaultValue={[40]}
+                        onValueChange={(e) => {
+                          setVolume(e.value[0] / 100);
+                        }}
+                      >
+                        <HStack justify="space-between">
+                          <Slider.Label>Volume</Slider.Label>
+                          <Slider.ValueText />
+                        </HStack>
+                        <Slider.Control>
+                          <Slider.Track>
+                            <Slider.Range />
+                          </Slider.Track>
+                          <Slider.Thumbs rounded="l1" />
+                        </Slider.Control>
+                      </Slider.Root>
+                    </HStack>
+                  </Popover.Body>
+                </Popover.Content>
+              </Popover.Root>
+            </Box>
 
             <IconButton
               aria-label="Queue"

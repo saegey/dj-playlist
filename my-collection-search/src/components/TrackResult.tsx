@@ -105,9 +105,10 @@ export default function TrackResult({
   // Expanded view
   return (
     <Flex
-      borderWidth="1px"
-      borderRadius="md"
-      p={3}
+      borderWidth={[0, "1px"]}
+      borderBottomWidth={["1px", "1px"]}
+      borderRadius={[0, "md"]}
+      p={[0, 3]}
       mb={2}
       flexDirection="column"
       flexGrow={1}
@@ -200,6 +201,7 @@ export default function TrackResult({
             whiteSpace="nowrap"
             maxLines={1}
             overflow="hidden"
+            maxWidth={["250px", "350px", "450px"]}
             textOverflow="ellipsis"
           >
             {track.album} ({track.year})
@@ -269,8 +271,8 @@ export default function TrackResult({
         </Flex>
 
         {/* Details line */}
-        <Box bg={"gray.subtle"} pl={4} pb={2} borderRadius="md">
-          <SimpleGrid columns={[3, null, 3]} gap={1} mt={2}>
+        <Box bg={["bg", "bg.muted"]} pl={[0, 4]} pb={2} borderRadius="md">
+          <SimpleGrid columns={[2, null, 3]} gap={1} mt={2}>
             {[
               { label: "Pos", value: track.position },
               {
