@@ -4,7 +4,6 @@ import { Box, Heading } from "@chakra-ui/react";
 
 import { SettingsDialogsProvider } from "@/providers/SettingsDialogProvider";
 import { SyncStreamsProvider } from "@/providers/SyncStreamsProvider";
-import TopMenuBar from "@/components/MenuBar";
 import ActionsGrid from "@/components/settings/ActionsGrid";
 import FriendsDiscogsSection from "@/components/settings/FriendsDiscogsSection";
 import DatabaseBackups from "@/components/settings/DatabaseBackups";
@@ -17,8 +16,7 @@ export default function SettingsPage() {
   return (
     <SettingsDialogsProvider>
       <SyncStreamsProvider>
-        <TopMenuBar current="/settings" />
-        <Box maxW="700px" mx="auto" p={8}>
+        <Box maxW="700px" mx="auto" p={["12px", 8]} mb={"120px"}>
           <Heading mb={6} size="lg">
             Vinyl Playlist Maker Pro Edition Settings
           </Heading>

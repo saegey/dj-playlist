@@ -212,7 +212,6 @@ export default function BackfillAudioPage() {
 
   return (
     <>
-      <TopMenuBar current="/backfill-audio" />
       <Container>
         {/* Pagination UI */}
 

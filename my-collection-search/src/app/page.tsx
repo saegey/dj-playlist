@@ -7,11 +7,9 @@ import SearchResults from "@/components/SearchResults";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import PlaylistsProvider, { usePlaylists } from "@/hooks/usePlaylists";
 import type { Track } from "@/types/track";
-import TopMenuBar from "@/components/MenuBar";
 import { TrackEditFormProps } from "../components/TrackEditForm";
 import TrackEditDialog from "@/components/TrackEditDialog";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
-import { Toaster } from "@/components/ui/toaster";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 
@@ -68,8 +66,6 @@ const SearchPage = () => {
 
   return (
     <>
-      <Toaster />
-      <TopMenuBar current="/" />
       <Flex gap={4} direction="row">
         <Box pos="relative" flex="1" ref={playlistPortalRef}>
           {/* Search Results */}

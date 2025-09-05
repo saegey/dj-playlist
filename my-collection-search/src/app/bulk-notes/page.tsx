@@ -15,9 +15,8 @@ import {
   Container,
   InputGroup,
 } from "@chakra-ui/react";
-import { toaster, Toaster } from "@/components/ui/toaster";
+import { toaster } from "@/components/ui/toaster";
 import { useSearchResults } from "@/hooks/useSearchResults";
-import TopMenuBar from "@/components/MenuBar";
 import { LuSearch } from "react-icons/lu";
 import { FiCheck, FiCopy, FiUpload } from "react-icons/fi";
 import { useMeili } from "@/providers/MeiliProvider";
@@ -170,8 +169,6 @@ Example:
 
   return (
     <>
-      <Toaster />
-      <TopMenuBar current="/bulk-notes" />
       <Container>
         <SimpleGrid gap={2} columns={[1, 1, 4]} mt={3} mb={8}>
           <InputGroup startElement={<LuSearch size={16} />}>

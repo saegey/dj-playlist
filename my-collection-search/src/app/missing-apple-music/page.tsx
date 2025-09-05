@@ -2,7 +2,6 @@
 
 import React, { useRef, useState } from "react";
 import { Text, Spinner, HStack, Container, Box } from "@chakra-ui/react";
-import TopMenuBar from "@/components/MenuBar";
 import UsernameSelect from "@/components/UsernameSelect";
 import SingleTrackUI from "@/components/SingleTrackUI";
 import { Toaster } from "@/components/ui/toaster";
@@ -35,7 +34,6 @@ function MissingAppleInner() {
 
   return (
     <>
-      <TopMenuBar current="/missing-apple-music" />
       <Container maxW={["8xl", "2xl", "2xl"]} mt={3} mb={8}>
         <HStack mb={4}>
           <Box>

@@ -168,9 +168,9 @@ const PlaylistPlayer: React.FC = () => {
           >
             <Text
               fontWeight="semibold"
-              fontSize={{ base: "sm", md: "md" }}
+              fontSize={{ base: "sm" }}
               // noOfLines={1}
-              maxW={{ base: "45vw", md: "40vw" }}
+              maxW={{ base: "100vw" }}
             >
               {mounted && currentTrack
                 ? currentTrack.title

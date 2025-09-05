@@ -1,16 +1,13 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Flex, Container, Box, Text } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
 
 import { useSearchResults } from "@/hooks/useSearchResults";
 import PlaylistsProvider from "@/hooks/usePlaylists";
 import type { Track } from "@/types/track";
-import TopMenuBar from "@/components/MenuBar";
 import { TrackEditFormProps } from "../../components/TrackEditForm";
 import TrackEditDialog from "@/components/TrackEditDialog";
-import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
-import { Toaster } from "@/components/ui/toaster";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 import PlaylistManager from "@/components/PlaylistManager";
@@ -53,12 +50,7 @@ const SearchPage = () => {
 
   return (
     <>
-      <Toaster />
-      <TopMenuBar current="/playlists" />
       <Box maxW="700px" mx="auto" p={["12px", 8]}>
-        <Text fontWeight="bold" fontSize="lg" mb={3}>
-          Playlists
-        </Text>
         <PlaylistManager
           xmlImportModalOpen={false}
           setXmlImportModalOpen={function (): void {
