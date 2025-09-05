@@ -173,7 +173,7 @@ Example:
       <Toaster />
       <TopMenuBar current="/bulk-notes" />
       <Container>
-        <SimpleGrid gap={2} mb={4} columns={[1, 1, 4]}>
+        <SimpleGrid gap={2} columns={[1, 1, 4]} mt={3} mb={8}>
           <InputGroup startElement={<LuSearch size={16} />}>
             <Input
               placeholder="Search"
@@ -230,6 +230,7 @@ Example:
             variant="outline"
             showColumnBorder
             fontSize={["xs", "sm", "sm"]}
+            maxH={"200px"}
           >
             <Table.Header>
               <Table.Row>
@@ -258,7 +259,7 @@ Example:
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {tracks.map((track) => (
+              {tracks.slice(0, 15).map((track) => (
                 <Table.Row
                   key={track.id}
                   data-selected={selected.has(track.id) || undefined}
@@ -288,7 +289,7 @@ Example:
 
         <Box
           position="fixed"
-          bottom={0}
+          bottom={"116px"}
           left={0}
           right={0}
           bg="bg.subtle"

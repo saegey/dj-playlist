@@ -88,6 +88,9 @@ const PlaylistPlayer: React.FC = () => {
     isPlaying,
     currentTrackIndex,
     currentTrack,
+  currentTime,
+  duration,
+  seek,
     play,
     pause,
     playNext,
@@ -109,6 +112,17 @@ const PlaylistPlayer: React.FC = () => {
   const canPrev = safeIndex !== null && safeIndex > 0;
   const canNext = safeIndex !== null && safeIndex < safeLen - 1;
 
+  const progress = useMemo(() => {
+    if (!mounted || !duration || duration <= 0) return 0;
+    return Math.max(0, Math.min(100, (currentTime / duration) * 100));
+  }, [mounted, currentTime, duration]);
+
+  const fmt = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
   return (
     <>
       {/* Spacer so your page content isn't hidden behind the fixed bar */}
@@ -116,6 +130,33 @@ const PlaylistPlayer: React.FC = () => {
 
       {/* Remount internals when playlist changes to ensure fresh state */}
       <PlayerContainer>
+        {/* Playhead slider */}
+        <HStack gap={3} align="center" mb={2}>
+          <Text fontSize="xs" minW="36px" textAlign="right" color="fg.muted">
+            {fmt(currentTime || 0)}
+          </Text>
+          <Box flex="1">
+            <Slider.Root
+              width="100%"
+              value={[progress]}
+              onValueChange={(e) => {
+                const pct = e.value[0] ?? 0;
+                const target = (Math.max(0, Math.min(100, pct)) / 100) * (duration || 0);
+                if (Number.isFinite(target)) seek(target);
+              }}
+            >
+              <Slider.Control>
+                <Slider.Track>
+                  <Slider.Range />
+                </Slider.Track>
+                <Slider.Thumbs rounded="full" />
+              </Slider.Control>
+            </Slider.Root>
+          </Box>
+          <Text fontSize="xs" minW="36px" color="fg.muted">
+            {fmt(duration || 0)}
+          </Text>
+        </HStack>
         <Flex
           align="center"
           gap={{ base: 3, md: 4 }}

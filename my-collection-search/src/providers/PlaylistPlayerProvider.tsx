@@ -24,6 +24,10 @@ type PlaylistPlayerContextValue = {
   currentTrack: Track | null;
   playlist: Track[];
   playlistLength: number;
+  // Playback position
+  currentTime: number;
+  duration: number;
+  seek: (time: number) => void;
 
   play: () => void;
   pause: () => void;
@@ -64,6 +68,8 @@ export function PlaylistPlayerProvider({
   const [isPlaying, setIsPlaying] = useState(false);
   const [plVersion, setPlVersion] = useState(0);
   const [volume, setVolumeState] = useState(1);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const play = useCallback(() => {
     const pl = playlistRef.current;
@@ -233,6 +239,7 @@ export function PlaylistPlayerProvider({
     if (!track) {
       audio.pause();
       // don't blank src here; keep it so pause retains position
+  setDuration(audio.duration || 0);
       return;
     }
 
@@ -240,6 +247,9 @@ export function PlaylistPlayerProvider({
     if (lastTrackIdRef.current !== track.track_id) {
       audio.src = `/api/audio?filename=${track.local_audio_url}`;
       lastTrackIdRef.current = track.track_id;
+  // reset timing until metadata loads
+  setCurrentTime(0);
+  setDuration(0);
     }
 
     if (isPlaying) {
@@ -254,6 +264,37 @@ export function PlaylistPlayerProvider({
       audioRef.current.volume = volume;
     }
   }, [volume, plVersion]);
+
+  // Time/duration listeners
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
+    const onLoadedMetadata = () => setDuration(audio.duration || 0);
+    const onDurationChange = () => setDuration(audio.duration || 0);
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("loadedmetadata", onLoadedMetadata);
+    audio.addEventListener("durationchange", onDurationChange);
+    return () => {
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
+      audio.removeEventListener("durationchange", onDurationChange);
+    };
+  }, [plVersion, currentTrackIndex]);
+
+  const seek = useCallback(
+    (time: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      const dur = Number.isFinite(duration) && duration > 0 ? duration : audio.duration || 0;
+      const clamped = Math.max(0, Math.min(dur || 0, time));
+      try {
+        audio.currentTime = clamped;
+        setCurrentTime(clamped);
+      } catch {}
+    },
+    [duration]
+  );
 
   // Auto-next
   useEffect(() => {
@@ -278,6 +319,8 @@ export function PlaylistPlayerProvider({
   );
 
   const value = useMemo<PlaylistPlayerContextValue>(() => {
+  // Reference plVersion so dependency is meaningful and value recomputes when playlist changes
+  void plVersion;
     const pl = playlistRef.current;
     return {
       isPlaying,
@@ -285,6 +328,9 @@ export function PlaylistPlayerProvider({
       currentTrack, // use state here
       playlist: pl,
       playlistLength: pl.length,
+  currentTime,
+  duration,
+  seek,
 
       play,
       pause,
@@ -308,6 +354,9 @@ export function PlaylistPlayerProvider({
     currentTrackIndex,
     currentTrack, // included in deps
     plVersion, // include plVersion so playlist updates trigger
+  currentTime,
+  duration,
+  seek,
     play,
     pause,
     stop,

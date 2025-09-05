@@ -216,7 +216,7 @@ export default function BackfillAudioPage() {
       <Container>
         {/* Pagination UI */}
 
-        <SimpleGrid columns={[1, null, 5]} gap={4} mb={4}>
+        <SimpleGrid columns={[1, null, 5]} gap={4} mt={3} mb={8}>
           <InputGroup startElement={<LuSearch size={16} />}>
             <Input
               type="text"

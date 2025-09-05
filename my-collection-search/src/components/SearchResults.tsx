@@ -98,7 +98,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         <Box mt={8}>
           {[...Array(8)].map((_, i) => (
             <Box key={i} mb={4}>
-              <Box height="60px" borderRadius="md" bg="gray.100" />
+              <Box height="255px" borderRadius="md" bg="bg.muted" />
             </Box>
           ))}
         </Box>

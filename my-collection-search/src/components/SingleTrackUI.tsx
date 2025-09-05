@@ -237,7 +237,7 @@ export default function SingleTrackUI({
             })()}
 
           {isOverride && (
-            <Box mt={2} mb={2} bg="gray.50" borderRadius="md">
+            <Box mt={2} mb={2} borderRadius="md">
               <HStack>
                 <Input
                   value={overrideQuery}

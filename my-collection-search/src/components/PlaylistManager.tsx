@@ -141,10 +141,15 @@ export default function PlaylistManager({
         ) : (
           playlists.map((pl) => (
             <Flex key={pl.id} direction="row" mb={2} alignItems="center">
-              <Text fontSize="sm" fontWeight="bold">
+              <Text fontSize="sm" fontWeight="bold" width="300px">
                 {pl.name}
               </Text>
-              <Flex mt={1} ml="auto" gap={1}>
+              <Flex
+                gap={2}
+                alignItems={"center"}
+                justifyContent={"flex-end"}
+                width="100%"
+              >
                 <Button
                   size="xs"
                   colorPalette={"primary"}
