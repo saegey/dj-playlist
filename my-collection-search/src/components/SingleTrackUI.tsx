@@ -339,14 +339,12 @@ export default function SingleTrackUI({
                 Apple Music Results
               </Text>
               {appleList.map((apple) => (
-                <>
-                  <AppleResultRow
-                    key={apple.id}
-                    result={apple}
-                    onSave={(url) => handleSaveFor(apple.id, url, "apple")}
-                    saving={!!savingById[apple.id]}
-                  />
-                </>
+                <AppleResultRow
+                  key={apple.id}
+                  result={apple}
+                  onSave={(url) => handleSaveFor(apple.id, url, "apple")}
+                  saving={!!savingById[apple.id]}
+                />
               ))}
             </Box>
           )}

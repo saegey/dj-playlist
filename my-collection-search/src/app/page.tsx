@@ -12,6 +12,8 @@ import TrackEditDialog from "@/components/TrackEditDialog";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
+import { useTracksQuery } from "@/hooks/useTracksQuery";
+import { toaster } from "@/components/ui/toaster";
 
 // TrackEditForm is used via TrackEditDialog
 const SearchPage = () => {
@@ -32,9 +34,9 @@ const SearchPage = () => {
     playlistCounts,
     hasMore,
     loadMore,
-    needsRefresh,
     loading,
   } = useSearchResults({ client: meiliClient, username: selectedUsername });
+  const { saveTrack } = useTracksQuery();
 
   const { addToPlaylist } = usePlaylists();
 
@@ -48,19 +50,14 @@ const SearchPage = () => {
   };
 
   const handleSaveTrack = async (data: TrackEditFormProps) => {
-    const res = await fetch("/api/tracks/update", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    if (res.ok) {
+    try {
+      await saveTrack(data);
       setEditTrack(null);
       setDialogOpen(false);
-      needsRefresh();
-      // Refresh search results after saving track
-    } else {
-      alert("Failed to update track");
+      toaster.create({ title: "Updated track", type: "success" });
+    } catch (error) {
+      console.error("Failed to update track", error);
+      toaster.create({ title: "Failed to update track", type: "error" });
     }
   };
 

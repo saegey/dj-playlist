@@ -1,5 +1,6 @@
 import { Playlist } from "@/types/track";
 import { Pool } from "pg";
+import { start } from "repl";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -29,51 +30,103 @@ export async function getPlaylistCountsForTracks(
   return result;
 }
 // Update a track by track_id, allowing partial updates (e.g. tags, metadata)
-export async function updateTrack(data: {
+type UpdateTrackInput = {
   track_id: string;
   username: string;
-  title?: string;
-  artist?: string;
-  album?: string;
-  local_tags?: string[];
-  apple_music_url?: string;
-  local_audio_url?: string;
-  duration_seconds?: number;
-}) {
+  title?: string | null;
+  artist?: string | null;
+  album?: string | null;
+  local_tags?: string | null;
+  apple_music_url?: string | null;
+  local_audio_url?: string | null;
+  youtube_url?: string | null;
+  soundcloud_url?: string | null;
+  spotify_url?: string | null;
+  duration_seconds?: number | null;
+  notes: string | null;
+  bpm: number | null;
+  key: string | null;
+  danceability: number | null;
+  star_rating: number | null;
+};
+
+const UPDATABLE_COLUMNS = {
+  title: "title",
+  artist: "artist",
+  album: "album",
+  local_tags: "local_tags",
+  apple_music_url: "apple_music_url",
+  youtube_url: "youtube_url",
+  soundcloud_url: "soundcloud_url",
+  spotify_url: "spotify_url",
+  local_audio_url: "local_audio_url",
+  duration_seconds: "duration_seconds",
+  notes: 'notes',
+  bpm: "bpm",
+  key: "key",
+  danceability: "danceability",
+  star_rating: "star_rating",
+} as const;
+
+export async function updateTrack(data: UpdateTrackInput) {
   const { track_id, username, ...fields } = data;
   if (!track_id || !username) return null;
-  // Remove undefined fields
-  const filteredFields: Record<string, unknown> = {};
-  Object.keys(fields).forEach((key) => {
-    const value = fields[key as keyof typeof fields];
-    if (value !== undefined && value !== null && value !== "") {
-      filteredFields[key] = value;
-    }
-  });
-  if (Object.keys(filteredFields).length === 0) {
-    // No fields to update, return current
+
+  // Keep everything except `undefined`. Allow null and "" to pass through.
+  const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
+
+  // Nothing to update? Return current row.
+  if (entries.length === 0) {
     const currentRes = await pool.query(
       "SELECT * FROM tracks WHERE track_id = $1 AND username = $2",
       [track_id, username]
     );
-    return currentRes.rows[0] || null;
+    return currentRes.rows[0] ?? null;
   }
-  // Build dynamic SET clause
+
+  // Build dynamic SET ... with safe whitelist + correct casts
   const setClauses: string[] = [];
-  const values = [];
+  const values: unknown[] = [];
   let idx = 1;
-  (Object.keys(filteredFields) as (keyof typeof fields)[]).forEach((key) => {
-    setClauses.push(`${key} = $${idx}`);
-    values.push(filteredFields[key]);
+
+  for (const [key, value] of entries) {
+    if (!(key in UPDATABLE_COLUMNS)) continue; // ignore unknown keys
+    const col = UPDATABLE_COLUMNS[key as keyof typeof UPDATABLE_COLUMNS];
+
+    // Cast arrays explicitly so null/empty work predictably
+    if (col === "duration_seconds" || col === "bpm") {
+      setClauses.push(`${col} = $${idx}::integer`);
+    } else {
+      setClauses.push(`${col} = $${idx}`);
+    }
+    values.push(value);
     idx++;
-  });
-  values.push(track_id);
-  values.push(username);
-  const query = `UPDATE tracks SET ${setClauses.join(
-    ", "
-  )} WHERE track_id = $${idx} AND username = $${idx + 1} RETURNING *`;
-  const { rows } = await pool.query(query, values);
-  return rows[0] || null;
+  }
+
+  // Optionally update a timestamp
+  // setClauses.push(`updated_at = NOW()`);
+
+  // WHERE params
+  values.push(track_id, username);
+
+  // If after whitelisting there’s still nothing to set, just return current.
+  if (setClauses.length === 0) {
+    const currentRes = await pool.query(
+      "SELECT * FROM tracks WHERE track_id = $1 AND username = $2",
+      [track_id, username]
+    );
+    return currentRes.rows[0] ?? null;
+  }
+
+  const sql = `
+    UPDATE tracks
+    SET ${setClauses.join(", ")}
+    WHERE track_id = $${idx} AND username = $${idx + 1}
+    RETURNING *;
+  `;
+
+  const { rows } = await pool.query(sql, values);
+  return rows[0] ?? null;
 }
 
 export async function getAllTracks() {

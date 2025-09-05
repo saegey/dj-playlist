@@ -20,7 +20,6 @@ import {
   Table,
   InputGroup,
 } from "@chakra-ui/react";
-
 import {
   LuLightbulb,
   LuMusic,
@@ -28,12 +27,13 @@ import {
   LuChevronRight,
   LuSearch,
 } from "react-icons/lu";
+
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { Track } from "../../types/track";
-import TopMenuBar from "@/components/MenuBar";
 import { useMeili } from "@/providers/MeiliProvider";
 import UsernameSelect from "@/components/UsernameSelect";
 import { useUsername } from "@/providers/UsernameProvider";
+import { useTracksQuery } from "@/hooks/useTracksQuery";
 
 interface BackfillTrack extends Track {
   status?: "pending" | "analyzing" | "success" | "error";
@@ -56,6 +56,7 @@ export default function BackfillAudioPage() {
   const pageSize = 20;
   const [total, setTotal] = useState(0);
   const { client: meiliClient, ready } = useMeili();
+  const { saveTrack } = useTracksQuery();
 
   // Reset page to 1 when filters or search change
   useEffect(() => {
@@ -132,7 +133,7 @@ export default function BackfillAudioPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             track_id: updated[idx].track_id,
-            username: updated[idx].username,
+            username: updated[idx].username ?? "",
             // add other fields if needed
           }),
         });
@@ -173,29 +174,26 @@ export default function BackfillAudioPage() {
         });
         if (!res.ok) throw new Error((await res.json()).error || "Failed");
         const data = await res.json();
-        await fetch("/api/tracks/update", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username: updated[idx].username,
-            track_id: updated[idx].track_id,
-            bpm:
-              data.rhythm && typeof data.rhythm.bpm === "number"
-                ? Math.round(data.rhythm.bpm)
-                : undefined,
-            key: data.tonal
-              ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
+        
+        saveTrack({
+          username: updated[idx].username ?? "",
+          track_id: updated[idx].track_id,
+          bpm:
+            data.rhythm && typeof data.rhythm.bpm === "number"
+              ? String(Math.round(data.rhythm.bpm))
               : undefined,
-            danceability:
-              data.rhythm && typeof data.rhythm.danceability === "number"
-                ? Number(data.rhythm.danceability.toFixed(3))
-                : undefined,
-            duration_seconds: Math.round(data.metadata.audio_properties.length),
-            // mood_happy: data.mood_happy,
-            // mood_sad: data.mood_sad,
-            // mood_relaxed: data.mood_relaxed,
-            // mood_aggressive: data.mood_aggressive,
-          }),
+          key: data.tonal
+            ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
+            : undefined,
+          danceability:
+            data.rhythm && typeof data.rhythm.danceability === "number"
+              ? data.rhythm.danceability.toFixed(3)
+              : undefined,
+          duration_seconds: Math.round(data.metadata.audio_properties.length),
+          // mood_happy: data.mood_happy,
+          // mood_sad: data.mood_sad,
+          // mood_relaxed: data.mood_relaxed,
+          // mood_aggressive: data.mood_aggressive,
         });
         updated[idx].status = "success";
       } catch (err) {
@@ -266,7 +264,7 @@ export default function BackfillAudioPage() {
           portalled={false}
         >
           <Portal>
-            <ActionBar.Positioner>
+            <ActionBar.Positioner mb={"200px"}>
               <ActionBar.Content>
                 <ActionBar.SelectionTrigger>
                   {selected.size} selected

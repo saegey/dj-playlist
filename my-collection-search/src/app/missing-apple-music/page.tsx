@@ -4,31 +4,29 @@ import React, { useRef, useState } from "react";
 import { Text, Spinner, HStack, Container, Box } from "@chakra-ui/react";
 import UsernameSelect from "@/components/UsernameSelect";
 import SingleTrackUI from "@/components/SingleTrackUI";
-import { Toaster } from "@/components/ui/toaster";
+import { toaster, Toaster } from "@/components/ui/toaster";
 import {
   MissingAppleProvider,
   useMissingApple,
 } from "@/providers/MissingAppleContext";
 import TrackEditDialog from "@/components/TrackEditDialog";
 import { TrackEditFormProps } from "@/components/TrackEditForm";
+import { useTracksQuery } from "@/hooks/useTracksQuery";
 
-function MissingAppleInner() {
+function MissingAudio() {
   const { usernames } = useMissingApple();
   const [dialogOpen, setDialogOpen] = useState(false);
   const initialFocusRef = useRef<HTMLButtonElement>(null);
   const { total, loading, tracks, currentIndex } = useMissingApple();
+  const { saveTrack } = useTracksQuery();
 
   const handleSaveTrack = async (data: TrackEditFormProps) => {
-    const res = await fetch("/api/tracks/update", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    if (res.ok) {
+    try {
+      await saveTrack(data);
       setDialogOpen(false);
-    } else {
-      alert("Failed to update track");
+    } catch (error) {
+      console.error("Failed to update track", error);
+      toaster.create({ title: "Failed to update track", type: "error" });
     }
   };
 
@@ -71,10 +69,10 @@ function MissingAppleInner() {
   );
 }
 
-export default function MissingAppleMusicPage() {
+export default function MissingAudioPage() {
   return (
     <MissingAppleProvider>
-      <MissingAppleInner />
+      <MissingAudio />
       <Toaster />
     </MissingAppleProvider>
   );

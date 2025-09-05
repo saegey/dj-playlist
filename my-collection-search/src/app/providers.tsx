@@ -9,6 +9,7 @@ import { UsernameProvider } from "@/providers/UsernameProvider";
 import PlaylistPlayer from "@/components/PlaylistPlayer";
 import { PlaylistPlayerProvider } from "@/providers/PlaylistPlayerProvider";
 import PlaylistDrawerProvider from "@/providers/PlaylistDrawer";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 export default function ClientProviders({
   children,
@@ -32,7 +33,7 @@ export default function ClientProviders({
             </PlaylistPlayerProvider>
           </MeiliProvider>
         </UsernameProvider>
-        {/* <ReactQueryDevtools initialIsOpen={false} /> */}
+        <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </ChakraProvider>
   );

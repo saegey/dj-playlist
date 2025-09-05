@@ -1,4 +1,6 @@
+import { TrackEditFormProps } from "@/components/TrackEditForm";
 import type { Track } from "@/types/track";
+import { http } from "./http";
 
 /**
  * Fetch full track objects by Meili/DB track IDs.
@@ -8,14 +10,17 @@ import type { Track } from "@/types/track";
  */
 export async function fetchTracksByIds(trackIds: string[]): Promise<Track[]> {
   if (!trackIds || trackIds.length === 0) return [];
-  const res = await fetch("/api/tracks/batch", {
+  return await http<Track[]>("/api/tracks/batch", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ track_ids: trackIds }),
   });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Failed to fetch tracks by IDs: ${res.status} ${text}`);
-  }
-  return (await res.json()) as Track[];
+}
+
+export async function saveTrack(data: TrackEditFormProps): Promise<void> {
+  await http<unknown>("/api/tracks/update", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
 }
