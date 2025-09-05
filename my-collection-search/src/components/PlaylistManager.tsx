@@ -23,6 +23,7 @@ import { usePlaylists } from "@/hooks/usePlaylists";
 import { importPlaylist } from "@/services/playlistService";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { FaPlay } from "react-icons/fa";
+import { fetchTracksByIds } from "@/services/trackService";
 
 type Props = {
   xmlImportModalOpen: boolean;
@@ -38,6 +39,8 @@ export default function PlaylistManager({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playlists, loadingPlaylists, fetchPlaylists, handleLoadPlaylist } =
     usePlaylists();
+
+  const { replacePlaylist } = usePlaylistPlayer();
 
   const notify = (opts: Parameters<typeof toaster.create>[0]) =>
     toaster.create(opts);
@@ -142,13 +145,14 @@ export default function PlaylistManager({
                 {pl.name}
               </Text>
               <Flex mt={1} ml="auto" gap={1}>
-                 <Button
+                <Button
                   size="xs"
                   colorPalette={"primary"}
                   variant={"surface"}
-                  onClick={() =>
-                    console.log('clicked')
-                  }
+                  onClick={async () => {
+                    const tracks = await fetchTracksByIds(pl.tracks);
+                    replacePlaylist(tracks, { autoplay: true, startIndex: 0 });
+                  }}
                 >
                   <FaPlay />
                 </Button>
