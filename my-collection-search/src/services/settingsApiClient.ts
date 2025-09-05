@@ -28,7 +28,7 @@ export async function apiGet<T = unknown>(url: string): Promise<T> {
   return res.json();
 }
 
-export async function apiPost<T = unknown>(url: string, body?: any): Promise<T> {
+export async function apiPost<T = unknown>(url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useMemo, useState } from "react";
-import { Drawer, Portal } from "@chakra-ui/react";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
 import type { MeiliSearch } from "meilisearch";
 import type { Track } from "@/types/track";
@@ -19,7 +18,6 @@ const PlaylistDrawerContext = createContext<PlaylistDrawerContextValue | null>(
 export function PlaylistDrawerProvider({
   children,
   meiliClient,
-  hasMounted,
   handleEditClick,
 }: {
   children?: React.ReactNode;
@@ -42,7 +40,6 @@ export function PlaylistDrawerProvider({
     <PlaylistDrawerContext.Provider value={value}>
       {children}
       <PlaylistViewerDrawer
-        hasMounted={hasMounted}
         handleEditClick={handleEditClick}
         meiliClient={meiliClient}
       />

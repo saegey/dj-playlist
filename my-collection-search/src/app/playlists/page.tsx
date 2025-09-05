@@ -70,7 +70,7 @@ const SearchPage = () => {
             </Text>
             <PlaylistManager
               xmlImportModalOpen={false}
-              setXmlImportModalOpen={function (open: boolean): void {
+              setXmlImportModalOpen={function (): void {
                 throw new Error("Function not implemented.");
               }}
               client={meiliClient}

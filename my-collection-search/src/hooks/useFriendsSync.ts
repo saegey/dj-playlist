@@ -34,8 +34,10 @@ export function useFriendsSync() {
 
       // refresh cached friend list after removal
       await qc.invalidateQueries({ queryKey: ["friends"] });
-    } catch (e: any) {
-      setRemoveFriendError(e?.message ?? String(e));
+    } catch (e) {
+      const errorMessage =
+        e instanceof Error ? e.message : String(e);
+      setRemoveFriendError(errorMessage);
       setRemoveFriendDone(true);
     }
   }

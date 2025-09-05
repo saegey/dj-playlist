@@ -32,14 +32,14 @@ export default function DiscogsSyncDialog() {
               ref={scrollRef}
               maxH="350px"
               overflowY="auto"
-              bg="gray.50"
+              bg="bg.muted"
               p={2}
               borderRadius="md"
               fontFamily="mono"
               fontSize="sm"
             >
               {discogs.lines.length === 0 && (
-                <Text color="gray.400">Waiting for sync output...</Text>
+                <Text color="text">Waiting for sync output...</Text>
               )}
               {discogs.lines.map((line: string, i: number) => (
                 <Text key={i} whiteSpace="pre-wrap">
