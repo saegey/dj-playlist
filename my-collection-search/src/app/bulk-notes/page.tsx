@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useFriends } from "@/hooks/useFriends";
+import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import {
   Box,
   Button,
@@ -26,10 +26,8 @@ import UsernameSelect from "@/components/UsernameSelect";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const { friends: usernames } = useFriends({
-    showCurrentUser: true,
-    showSpotifyUsernames: true,
-  });
+  const { friends: usernames, friendsLoading: usernamesLoading } =
+    useFriendsQuery({ showCurrentUser: true, showSpotifyUsernames: true });
   const { username: selectedUsername } = useUsername();
   const [bulkJson, setBulkJson] = useState("");
   const [filterLocalTagsEmpty, setFilterLocalTagsEmpty] = useState(true);
@@ -175,7 +173,7 @@ Example:
       <Toaster />
       <TopMenuBar current="/bulk-notes" />
       <Container>
-        <SimpleGrid gap={2} mb={4} columns={[1, 1, 4]}>
+        <SimpleGrid gap={2} columns={[1, 1, 4]} mt={3} mb={8}>
           <InputGroup startElement={<LuSearch size={16} />}>
             <Input
               placeholder="Search"
@@ -200,7 +198,11 @@ Example:
             </Checkbox.Root>
           </Box>
 
-          <UsernameSelect usernames={usernames} />
+          <UsernameSelect
+            usernames={usernames}
+            isLoading={usernamesLoading}
+            loadingText="Loading usernames..."
+          />
           {/* Master checkbox will replace select all/deselect all buttons */}
           <Group grow>
             <Button onClick={selectFirst10} size="sm">
@@ -228,6 +230,7 @@ Example:
             variant="outline"
             showColumnBorder
             fontSize={["xs", "sm", "sm"]}
+            maxH={"200px"}
           >
             <Table.Header>
               <Table.Row>
@@ -256,7 +259,7 @@ Example:
               </Table.Row>
             </Table.Header>
             <Table.Body>
-              {tracks.map((track) => (
+              {tracks.slice(0, 15).map((track) => (
                 <Table.Row
                   key={track.id}
                   data-selected={selected.has(track.id) || undefined}
@@ -286,7 +289,7 @@ Example:
 
         <Box
           position="fixed"
-          bottom={0}
+          bottom={"116px"}
           left={0}
           right={0}
           bg="bg.subtle"

@@ -2,7 +2,12 @@
 "use client";
 
 import * as React from "react";
-import { Select, Portal, createListCollection } from "@chakra-ui/react";
+import {
+  Select,
+  Portal,
+  createListCollection,
+  Spinner,
+} from "@chakra-ui/react";
 import { useUsername } from "@/providers/UsernameProvider";
 
 export type UsernameSelectProps = {
@@ -12,6 +17,12 @@ export type UsernameSelectProps = {
   size?: ("xs" | "sm" | "md" | "lg")[];
   variant?: "subtle" | "outline";
   width?: string;
+  /** Loading state for when usernames are being fetched */
+  isLoading?: boolean;
+  /** Text to show while loading */
+  loadingText?: string;
+  /** Disable the select while loading (default true) */
+  disableWhileLoading?: boolean;
   /**
    * Optional override: control the value externally.
    * If omitted, the component uses UsernameProvider's value.
@@ -26,6 +37,9 @@ export default function UsernameSelect({
   size = ["sm", "md", "md"],
   variant = "subtle",
   width = "100%",
+  isLoading = false,
+  loadingText = "Loading...",
+  disableWhileLoading = true,
   value,
   onChange,
 }: UsernameSelectProps) {
@@ -62,13 +76,18 @@ export default function UsernameSelect({
       width={width}
       size={size}
       variant={variant}
+      disabled={isLoading && disableWhileLoading}
+      aria-busy={isLoading}
     >
       <Select.HiddenSelect />
       <Select.Control>
         <Select.Trigger>
-          <Select.ValueText placeholder="Choose user library" />
+          <Select.ValueText
+            placeholder={isLoading ? loadingText : "Choose user library"}
+          />
         </Select.Trigger>
         <Select.IndicatorGroup>
+          {isLoading && <Spinner size="xs" mr={2} />}
           <Select.Indicator />
           <Select.ClearTrigger />
         </Select.IndicatorGroup>

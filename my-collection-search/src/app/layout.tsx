@@ -1,20 +1,12 @@
-import { Provider } from "@/components/ui/provider";
-import { MeiliProvider } from "@/providers/MeiliProvider";
-import { UsernameProvider } from "@/providers/UsernameProvider";
+// app/layout.tsx
+import type { ReactNode } from "react";
+import ClientProviders from "./providers"; // <- client wrapper
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body>
-        <Provider>
-          <UsernameProvider>
-            <MeiliProvider>{children}</MeiliProvider>
-          </UsernameProvider>
-        </Provider>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );

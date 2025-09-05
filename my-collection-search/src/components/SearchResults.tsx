@@ -1,5 +1,4 @@
 import React from "react";
-import { useFriends } from "@/hooks/useFriends";
 import {
   Box,
   Input,
@@ -14,6 +13,7 @@ import { Track } from "@/types/track";
 import { FiMoreVertical } from "react-icons/fi";
 import { LuSearch } from "react-icons/lu";
 import UsernameSelect from "./UsernameSelect";
+import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 
 interface SearchResultsProps {
   query: string;
@@ -40,10 +40,11 @@ const SearchResults: React.FC<SearchResultsProps> = ({
   loadMore,
   loading = false,
 }) => {
-  const { friends } = useFriends({
+  const { friends } = useFriendsQuery({
     showCurrentUser: true,
     showSpotifyUsernames: true,
   });
+
   const lastResultRef = React.useRef<HTMLDivElement | null>(null);
   const observer = React.useRef<IntersectionObserver | null>(null);
 
@@ -97,7 +98,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
         <Box mt={8}>
           {[...Array(8)].map((_, i) => (
             <Box key={i} mb={4}>
-              <Box height="60px" borderRadius="md" bg="gray.100" />
+              <Box height="255px" borderRadius="md" bg="bg.muted" />
             </Box>
           ))}
         </Box>
@@ -111,7 +112,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             const isLast = idx === results.length - 1;
             const trackResult = (
               <TrackResult
-                key={track.id}
+                key={`search-${track.id}`}
                 track={track}
                 allowMinimize={false}
                 playlistCount={playlistCounts[track.track_id]}
@@ -146,9 +147,9 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             );
             if (isLast) {
               return (
-                <div ref={lastResultRef} key={track.track_id}>
+                <Box ref={lastResultRef} key={track.track_id}>
                   {trackResult}
-                </div>
+                </Box>
               );
             }
             return trackResult;

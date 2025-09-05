@@ -27,10 +27,7 @@ function MissingAppleInner() {
     });
 
     if (res.ok) {
-      // setEditTrack(null);
       setDialogOpen(false);
-      // needsRefresh();
-      // Refresh search results after saving track
     } else {
       alert("Failed to update track");
     }
@@ -39,7 +36,7 @@ function MissingAppleInner() {
   return (
     <>
       <TopMenuBar current="/missing-apple-music" />
-      <Container maxW={["8xl", "2xl", "2xl"]}>
+      <Container maxW={["8xl", "2xl", "2xl"]} mt={3} mb={8}>
         <HStack mb={4}>
           <Box>
             <Text fontSize="xs" mb={2}>

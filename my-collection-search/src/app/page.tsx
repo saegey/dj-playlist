@@ -1,27 +1,15 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { Flex, Container, Box } from "@chakra-ui/react";
 
-import {
-  Box,
-  Flex,
-  Button,
-  Portal,
-  CloseButton,
-  Drawer,
-  Container,
-  Float,
-  Circle,
-} from "@chakra-ui/react";
 import SearchResults from "@/components/SearchResults";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import PlaylistsProvider, { usePlaylists } from "@/hooks/usePlaylists";
-import PlaylistManager from "@/components/PlaylistManager";
 import type { Track } from "@/types/track";
 import TopMenuBar from "@/components/MenuBar";
 import { TrackEditFormProps } from "../components/TrackEditForm";
 import TrackEditDialog from "@/components/TrackEditDialog";
-import { FiList } from "react-icons/fi";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
 import { Toaster } from "@/components/ui/toaster";
 import { useMeili } from "@/providers/MeiliProvider";
@@ -29,22 +17,15 @@ import { useUsername } from "@/providers/UsernameProvider";
 
 // TrackEditForm is used via TrackEditDialog
 const SearchPage = () => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [sidebarDrawerOpen, setSidebarDrawerOpen] = useState(false);
+  // sidebar open state is managed by PlaylistDrawer context
   const { client: meiliClient, ready } = useMeili();
 
   React.useEffect(() => {
     if (!ready || !meiliClient) return;
   }, [ready, meiliClient]);
 
-  const [xmlImportModalOpen, setXmlImportModalOpen] = useState(false);
-  // Prevent hydration mismatch for playlist count and playtime
-  const [hasMounted, setHasMounted] = React.useState(false);
-  React.useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
   const { username: selectedUsername } = useUsername();
+  const playlistPortalRef = useRef<HTMLDivElement | null>(null);
   const {
     query,
     onQueryChange,
@@ -57,14 +38,13 @@ const SearchPage = () => {
     loading,
   } = useSearchResults({ client: meiliClient, username: selectedUsername });
 
-  const { playlist, addToPlaylist } = usePlaylists();
+  const { addToPlaylist } = usePlaylists();
 
   const [editTrack, setEditTrack] = useState<Track | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const initialFocusRef = useRef<HTMLButtonElement>(null);
 
   const handleEditClick = (track: Track) => {
-    console.log("Editing track:", track);
     setEditTrack(track);
     setDialogOpen(true);
   };
@@ -91,105 +71,30 @@ const SearchPage = () => {
       <Toaster />
       <TopMenuBar current="/" />
       <Flex gap={4} direction="row">
-        {/* Playlist Sidebar Drawer Trigger */}
-        <Drawer.Root
-          open={sidebarDrawerOpen}
-          onOpenChange={(e) => setSidebarDrawerOpen(e.open)}
-          placement={"start"}
-          size={["full", "md", "md"]}
-        >
-          <Drawer.Trigger asChild>
-            <Button
-              position="fixed"
-              left={6}
-              bottom={6}
-              zIndex={100}
-              colorScheme="gray"
-              size="lg"
-              borderRadius="full"
-              boxShadow="md"
-            >
-              Playlists
-            </Button>
-          </Drawer.Trigger>
-          <Portal>
-            <Drawer.Backdrop />
-            <Drawer.Positioner>
-              <Drawer.Content>
-                <Drawer.Header>
-                  <Drawer.Title>Saved Playlists</Drawer.Title>
-                </Drawer.Header>
-                <Drawer.Body>
-                  <Box>
-                    {meiliClient && (
-                      <PlaylistManager
-                        xmlImportModalOpen={xmlImportModalOpen}
-                        setXmlImportModalOpen={setXmlImportModalOpen}
-                        client={meiliClient}
-                      />
-                    )}
-                  </Box>
-                </Drawer.Body>
-                <Drawer.Footer>
-                  <Drawer.CloseTrigger asChild>
-                    <CloseButton size="sm" />
-                  </Drawer.CloseTrigger>
-                </Drawer.Footer>
-              </Drawer.Content>
-            </Drawer.Positioner>
-          </Portal>
-        </Drawer.Root>
+        <Box pos="relative" flex="1" ref={playlistPortalRef}>
+          {/* Search Results */}
+          <Container maxW={["8xl", "2xl", "2xl"]} pt={3}>
+            <SearchResults
+              query={query}
+              onQueryChange={onQueryChange}
+              estimatedResults={estimatedResults}
+              results={results}
+              playlistCounts={playlistCounts}
+              addToPlaylist={addToPlaylist}
+              handleEditClick={handleEditClick}
+              hasMore={hasMore}
+              loadMore={loadMore}
+              loading={loading}
+            />
+          </Container>
 
-        {/* Search Results */}
-        <Container maxW={["8xl", "2xl", "2xl"]}>
-          <SearchResults
-            query={query}
-            onQueryChange={onQueryChange}
-            estimatedResults={estimatedResults}
-            results={results}
-            playlistCounts={playlistCounts}
-            addToPlaylist={addToPlaylist}
-            handleEditClick={handleEditClick}
-            hasMore={hasMore}
-            loadMore={loadMore}
-            loading={loading}
-          />
-        </Container>
-
-        {/* Playlist Drawer Trigger */}
-        <Drawer.Root
-          open={drawerOpen}
-          onOpenChange={(e) => setDrawerOpen(e.open)}
-          size={["sm", "md", "md"]}
-        >
-          <Drawer.Trigger asChild>
-            <Box position="fixed" right={6} bottom={6} zIndex={100}>
-              <Button
-                colorScheme="blue"
-                size="lg"
-                borderRadius="full"
-                boxShadow="md"
-                position="relative"
-                pr={hasMounted && playlist.length > 0 ? 8 : undefined}
-              >
-                <FiList size={25} />
-                {hasMounted && playlist.length > 0 && (
-                  <Float placement="top-end">
-                    <Circle size="6" bg="red.500" color="white" fontSize="sm">
-                      {playlist.length}
-                    </Circle>
-                  </Float>
-                )}
-              </Button>
-            </Box>
-          </Drawer.Trigger>
-
+          {/* Playlist Drawer renders within this container via Portal */}
           <PlaylistViewerDrawer
-            hasMounted={hasMounted}
             handleEditClick={handleEditClick}
             meiliClient={meiliClient}
+            containerRef={playlistPortalRef}
           />
-        </Drawer.Root>
+        </Box>
       </Flex>
       <TrackEditDialog
         editTrack={editTrack}

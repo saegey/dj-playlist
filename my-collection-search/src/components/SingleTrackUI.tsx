@@ -55,8 +55,6 @@ export default function SingleTrackUI({
   const [gotoValue, setGotoValue] = useState<string | undefined>(undefined);
   const [toggleDiscogs, setToggleDiscogs] = useState(false);
 
-  console.log(page);
-
   useEffect(() => {
     setOverrideResults(null);
   }, [overrideTrackId, currentIndex]);
@@ -76,8 +74,6 @@ export default function SingleTrackUI({
     } else if (type === "youtube") {
       await saveTrack({ ...track, youtube_url: url });
     }
-
-    // setSavingById((prev) => ({ ...prev, [id]: false }));
   };
 
   const goToIndex = () => {
@@ -241,7 +237,7 @@ export default function SingleTrackUI({
             })()}
 
           {isOverride && (
-            <Box mt={2} mb={2} bg="gray.50" borderRadius="md">
+            <Box mt={2} mb={2} borderRadius="md">
               <HStack>
                 <Input
                   value={overrideQuery}

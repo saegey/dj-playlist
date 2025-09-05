@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import type { Playlist, Track } from "@/types/track";
 import { importPlaylist } from "@/services/playlistService";
+import { fetchTracksByIds } from "@/services/trackService";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 
@@ -176,13 +177,8 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
       try {
         setLoadingPlaylists({ id });
         // Fetch full track objects from backend by IDs
-        const res = await fetch("/api/tracks/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ track_ids: trackIds }),
-        });
-        if (res.ok) {
-          const data = await res.json();
+        try {
+          const data = await fetchTracksByIds(trackIds);
           setPlaylist(data);
           setDisplayPlaylist(data);
           // Try to find the playlist name from loaded playlists
@@ -197,7 +193,8 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
           } else {
             setPlaylistInfo({ name: "" });
           }
-        } else {
+        } catch (err) {
+          console.error(err);
           alert("Failed to load playlist tracks");
         }
       } catch (e) {
@@ -335,7 +332,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
         if (selectedUsername) {
           filter += ` AND username = '${selectedUsername}'`;
         }
-        console.log("selectedUsername", selectedUsername);
+        // console.log("selectedUsername", selectedUsername);
         // if (playlistArtists.length > 0) {
         //   filter += ` AND NOT artist IN [${playlistArtists.join(",")}]`;
         // }

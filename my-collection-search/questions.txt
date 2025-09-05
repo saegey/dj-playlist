@@ -1,0 +1,24 @@
+	1.	Auth: public uploads or sign-in first (magic link OK)?
+	    - yes, I think magic link is sufficient and this will prevent bots from doing malicious stuff on the platform.
+	2.	Metrics scope v1: pick 6–10 you want guaranteed (e.g., elapsed time, moving time, distance, avg power, NP, TSS-ish, elevation gain, avg/Max HR, avg speed, cadence, lap splits).
+	    - right now the cli provides (elapsed time, moving time, distance, avg power, NP, elevation again, avg/max hr, avg speed, cadence, best 1 second to ?hr power with exponential'ish backoff 1sec, 2sec, 3sec, 5sec, 10sec, 30 sec, 60, 2min , 3min, 4min, 5min, 10min, 30min, 1hr, 2hr). Eventually i would like to add climb detection, shifting data, etc
+	3.	Climb detection: okay with a simple elevation-gain + sustained grade heuristic for v1?
+	    - yeah that would be sufficient
+	4.	File scale: single file per upload or support batch? Max file size?
+	    - 1 file per upload with 5mb max file
+	5.	Privacy defaults: “unlisted” by default (share via URL) or public indexable?
+	    - unlisted with obfuscated url aka (uuid), not crawable
+	6.	Public API keys: unauthenticated read for public activities, or require API key even for public?
+        - no api key needed so they can consume in blogs, etc
+	7.	Storage: keep raw .fit files or discard after parse?
+	    - keep raw fit files and have api available for zoom in, limit max datapoints so responses dont get bloated
+	8.	Hosting bias: Netlify + Neon + S3 (simple) vs “all-in” AWS? (I’d pick Netlify + Neon + R2/S3).
+	    - yeah netlify seems good, I am tired of cloudformation and how crazy the permissions are there.
+	9.	AI scope: just QA over a single activity, or also cross-activity queries (e.g., “best 20-min power this year”)?
+	    - just QA over a single activity for now but with design decisions that would allow for future expansion to see all activities for last 90 days, 1 year, etc
+	10.	Branding name/slug now (for routes and DB prefixes) or “activity-demo” placeholder?
+	    - fitnow
+	11.	Timezone handling: store UTC and compute local per user?
+	    - store all data in utc and metric, frontend can convert to local timezone and imperial if needed
+	12.	Units: metric/imperial toggle (default metric)?
+	    - all data saved in metric

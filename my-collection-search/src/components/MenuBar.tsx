@@ -1,17 +1,34 @@
+"use client";
+
+import React, { useState } from "react";
 import NextLink from "next/link";
-import { Box, Container, Flex, Group, Link, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Container,
+  Flex,
+  HStack,
+  Link,
+  Text,
+  IconButton,
+  VStack,
+  Drawer,
+  Icon,
+  Portal,
+} from "@chakra-ui/react";
 import { TbPlaylist } from "react-icons/tb";
 import { SiApplemusic } from "react-icons/si";
 import { LuAudioLines } from "react-icons/lu";
-import { IoBookSharp } from "react-icons/io5";
-import { IoMdSettings } from "react-icons/io";
+import { IoBookSharp, IoMusicalNotes, IoSettings } from "react-icons/io5";
+import { FiMenu } from "react-icons/fi";
+import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 
 interface TopMenuBarProps {
   current?: string;
 }
 
 const menuItems = [
-  { href: "/", label: "Playlists" },
+  { href: "/", label: "Library" },
+  { href: "/playlists", label: "Playlists" },
   { href: "/missing-apple-music", label: "Match" },
   { href: "/backfill-audio", label: "Audio" },
   { href: "/bulk-notes", label: "Metadata" },
@@ -19,86 +36,128 @@ const menuItems = [
 ];
 
 export default function TopMenuBar({ current }: TopMenuBarProps) {
-  return (
-    <Flex
-      as="nav"
-      bgColor={"gray.subtle"}
-      color="brand.menuText"
-      p="4"
-      mb="4"
-      justify="center"
-    >
-      <Container>
-        <Group gap={4} align="center" justify="center" grow>
-          {menuItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              _hover={{ textDecoration: "none", color: "brand.menuHover" }}
-              fontWeight={current === item.href ? "bold" : "normal"}
-              fontSize={["sm", "sm", "sm"]}
-              color={current === item.href ? "brand.menuActiveText" : undefined}
-              px={2}
-              as={NextLink}
-            >
-              <Flex width={"100%"} justifyContent={"center"} verticalAlign={"center"} gap={2}>
-                {item.href === "/" && (
-                  <Box>
-                    <TbPlaylist
-                      size={25}
-                      color={
-                        current === item.href ? "blue" : "brand.menuActiveText"
-                      }
-                    />
-                  </Box>
-                )}
-                {item.href === "/missing-apple-music" && (
-                  <Box>
-                    <SiApplemusic
-                      size={25}
-                      color={
-                        current === item.href ? "blue" : "brand.menuActiveText"
-                      }
-                    />
-                  </Box>
-                )}
-                {item.href === "/backfill-audio" && (
-                  <Box>
-                    <LuAudioLines
-                      size={25}
-                      color={
-                        current === item.href ? "blue" : "brand.menuActiveText"
-                      }
-                    />
-                  </Box>
-                )}
-                {item.href === "/bulk-notes" && (
-                  <Box>
-                    <IoBookSharp
-                      size={25}
-                      color={
-                        current === item.href ? "blue" : "brand.menuActiveText"
-                      }
-                    />
-                  </Box>
-                )}
+  const [open, setOpen] = useState(false);
+  const { isOpen: isPlaylistDrawerOpen, setOpen: setPlaylistDrawerOpen } =
+    usePlaylistDrawer();
 
-                {item.href === "/settings" && (
-                  <Box>
-                    <IoMdSettings
-                      size={25}
-                      color={
-                        current === item.href ? "blue" : "brand.menuActiveText"
-                      }
-                    />
-                  </Box>
-                )}
-                <Text hideBelow="md" as={"div"}>{item.label}</Text>
-              </Flex>
-            </Link>
-          ))}
-        </Group>
+  return (
+    <Box
+      position="sticky"
+      top={0}
+      zIndex={80}
+      bg="bg"
+      // backdropFilter="saturate(180%) blur(12px)"
+      borderBottomWidth="1px"
+      borderColor="brand.0"
+    >
+      <Container maxW={"full"}>
+        <Flex h={14} align="center" justify="space-between" gap={3}>
+          <HStack gap={2} align="center">
+            <IconButton
+              aria-label="Open menu"
+              variant="ghost"
+              onClick={() => setOpen(true)}
+            >
+              <FiMenu />
+            </IconButton>
+            <Text fontWeight="semibold">DJ Playlist</Text>
+          </HStack>
+
+          {/* Optional inline nav on larger screens */}
+          {/* <HStack hideBelow="lg" gap={3} color="brand.menuText">
+            {menuItems.map((item) => (
+              <Link
+                key={item.href}
+                as={NextLink}
+                href={item.href}
+                _hover={{ textDecoration: "none", color: "brand.menuHover" }}
+                fontWeight={current === item.href ? "bold" : "normal"}
+                color={
+                  current === item.href ? "brand.menuActiveText" : undefined
+                }
+              >
+                {item.label}
+              </Link>
+            ))}
+          </HStack> */}
+        </Flex>
       </Container>
-    </Flex>
+
+      {/* Side menu drawer (left) */}
+      <Portal>
+        <Drawer.Root
+          open={open}
+          onOpenChange={(e) => setOpen(e.open)}
+          size={["xs", "xs", "sm"]}
+          placement="start"
+        >
+          {/* <Drawer.Backdrop /> */}
+          <Drawer.Positioner paddingTop="57px" paddingBottom="88px">
+            <Drawer.Content
+              boxShadow="none"
+              borderRightStyle="solid"
+              borderRightWidth={"1px"}
+              borderRightColor={"brand.0"}
+              borderBottomStyle="solid"
+              borderBottomWidth={"1px"}
+              borderBottomColor={"brand.0"}
+            >
+              <Drawer.Body>
+                <VStack align="stretch" gap={1}>
+                  {menuItems.map((item) => {
+                    const active = current === item.href;
+                    const icon =
+                      item.href === "/"
+                        ? IoMusicalNotes
+                        : item.href === "/missing-apple-music"
+                        ? SiApplemusic
+                        : item.href === "/backfill-audio"
+                        ? LuAudioLines
+                        : item.href === "/bulk-notes"
+                        ? IoBookSharp
+                        : item.href === "/settings"
+                        ? IoSettings
+                        : item.href === "/playlists"
+                        ? TbPlaylist
+                        : IoBookSharp;
+
+                    const ItemIcon = icon;
+                    return (
+                      <Link
+                        key={item.href}
+                        as={NextLink}
+                        href={item.href}
+                        onClick={() => {
+                          setOpen(false);
+                          if (isPlaylistDrawerOpen) {
+                            setPlaylistDrawerOpen(false);
+                          }
+                        }}
+                        _hover={{ textDecoration: "none", bg: "bg.subtle" }}
+                        px={3}
+                        py={2}
+                        borderRadius="md"
+                        bg={active ? "bg.subtle" : undefined}
+                      >
+                        <HStack gap={3} align="center">
+                          <Icon
+                            as={ItemIcon}
+                            boxSize={5}
+                            color={active ? "blue.500" : "fg.muted"}
+                          />
+                          <Text fontWeight={active ? "bold" : "normal"}>
+                            {item.label}
+                          </Text>
+                        </HStack>
+                      </Link>
+                    );
+                  })}
+                </VStack>
+              </Drawer.Body>
+            </Drawer.Content>
+          </Drawer.Positioner>
+        </Drawer.Root>
+      </Portal>
+    </Box>
   );
 }

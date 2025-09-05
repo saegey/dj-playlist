@@ -10,7 +10,7 @@ import React, {
 } from "react";
 import { Track } from "@/types/track";
 import { AppleMusicResult } from "@/types/apple";
-import { useFriends } from "@/hooks/useFriends";
+import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
 
 type AppleResultsMap = Record<string, AppleMusicResult[] | null | undefined>;
@@ -93,7 +93,7 @@ export function MissingAppleProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { friends: usernames } = useFriends({ showCurrentUser: true });
+  const { friends: usernames } = useFriendsQuery({ showCurrentUser: true });
   const { username: selectedUsername } = useUsername();
 
   // core state
@@ -229,12 +229,6 @@ export function MissingAppleProvider({
         }),
       });
       if (res.ok) {
-        // setTracks((prev) =>
-        //   prev.map((t) =>
-        //     t.track_id === data.track_id ? { ...t, ...data } : t
-        //   )
-        // );
-        // advance
         if (typeof total === "number") goTo(currentGlobalIndex + 1);
       } else {
         alert("Failed to update track");
@@ -280,7 +274,7 @@ export function MissingAppleProvider({
       selectedUsername,
       appleResults,
       overrideTrackId,
-  overrideQuery,
+      overrideQuery,
       discogsByTrack,
       // actions
       setOverrideTrackId,

@@ -33,7 +33,7 @@ export default function AppleResultRow({ result, onSave, saving }: Props) {
             borderRadius="md"
           />
         ) : (
-          <Box boxSize="80px" borderRadius="md" bg="gray.100" />
+          <Box boxSize="80px" borderRadius="md" bg="bg.muted" />
         )}
         <Box>
           <Text fontWeight="bold" fontSize="sm">

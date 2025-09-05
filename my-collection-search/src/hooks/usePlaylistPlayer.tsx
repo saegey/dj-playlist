@@ -1,23 +1,41 @@
+"use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Track } from "@/types/track";
 
-export function usePlaylistPlayer(playlist: Track[] = []) {
-  const playlistRef = useRef<Track[]>(playlist);
-  useEffect(() => {
-    playlistRef.current = playlist;
-  }, [playlist]);
-
-  const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(
-    null
-  );
+export function usePlaylistPlayer(initial: Track[] = []) {
+  const playlistRef = useRef<Track[]>(initial);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(null);
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [plVersion, setPlVersion] = useState(0);
+
+
+  const replacePlaylist = useCallback(
+    (next: Track[], { autoplay = true, startIndex = 0 } = {}) => {
+      playlistRef.current = [...next];
+      setPlVersion((v) => v + 1);
+
+      const hasTracks = playlistRef.current.length > 0;
+
+      console.log("replacePlaylist", {
+        hasTracks,
+        autoplay,
+        startIndex,
+        playlistRef
+      });
+      setCurrentTrackIndex(hasTracks ? startIndex : null);
+      setIsPlaying(autoplay && hasTracks);
+    },
+    []
+  ); 
 
   // Reset when playlist content (not just reference) changes
   const prevPlaylistHashRef = useRef<string | null>(null);
   useEffect(() => {
     const playlistHash = JSON.stringify(
-      (playlist ?? []).map((t) => t.track_id)
+      (playlistRef.current ?? []).map((t) => t.track_id)
     );
     if (
       prevPlaylistHashRef.current &&
@@ -27,7 +45,16 @@ export function usePlaylistPlayer(playlist: Track[] = []) {
       setIsPlaying(false);
     }
     prevPlaylistHashRef.current = playlistHash;
-  }, [playlist]);
+  }, [playlistRef]);
+
+  // Keep currentTrack in sync with currentTrackIndex and playlist
+  useEffect(() => {
+    if (currentTrackIndex !== null && playlistRef.current[currentTrackIndex]) {
+      setCurrentTrack(playlistRef.current[currentTrackIndex]);
+    } else {
+      setCurrentTrack(null);
+    }
+  }, [currentTrackIndex, plVersion]);
 
   const play = useCallback(() => {
     const pl = playlistRef.current;
@@ -88,21 +115,27 @@ export function usePlaylistPlayer(playlist: Track[] = []) {
     if (
       isPlaying &&
       currentTrackIndex !== null &&
-      playlist[currentTrackIndex]
+      playlistRef.current[currentTrackIndex]
     ) {
       audio.play().catch(() => {});
     } else {
       audio.pause();
     }
-  }, [isPlaying, currentTrackIndex, playlist]);
+  }, [isPlaying, currentTrackIndex, playlistRef]);
+
+  const appendToQueue = useCallback((items: Track[] | Track) => {
+    const toAdd = Array.isArray(items) ? items : [items];
+    playlistRef.current = [...playlistRef.current, ...toAdd];
+    setPlVersion((v) => v + 1);
+  }, []);
 
   // Effect: change audio src when track or playlist changes
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (currentTrackIndex !== null && playlist[currentTrackIndex]) {
-      const track = playlist[currentTrackIndex];
+    if (currentTrackIndex !== null && playlistRef.current[currentTrackIndex]) {
+      const track = playlistRef.current[currentTrackIndex];
       const newSrc = `/api/audio?filename=${track.local_audio_url}`;
 
       if (audio.src !== newSrc) {
@@ -116,7 +149,7 @@ export function usePlaylistPlayer(playlist: Track[] = []) {
       audio.pause();
       audio.src = "";
     }
-  }, [currentTrackIndex, playlist, isPlaying]);
+  }, [currentTrackIndex, playlistRef, isPlaying]);
 
   // Effect: auto-play next when current track ends
   useEffect(() => {
@@ -133,21 +166,20 @@ export function usePlaylistPlayer(playlist: Track[] = []) {
     };
   }, [playNext]);
 
-  const audioElement = (
-    <audio ref={audioRef} preload="auto" controls/>
-  );
+  const audioElement = <audio ref={audioRef} preload="auto" controls />;
 
   return {
     isPlaying,
     currentTrackIndex,
-    currentTrack:
-      currentTrackIndex !== null ? playlist[currentTrackIndex] : null,
+    currentTrack,
     play,
     pause,
-    stop,
     playNext,
     playPrev,
     playTrack,
+    replacePlaylist, // new
+    appendToQueue,   // new
+    playlist: playlistRef.current,
     audioElement,
   };
 }
