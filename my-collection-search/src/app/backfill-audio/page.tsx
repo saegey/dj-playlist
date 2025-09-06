@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Spinner, Text, Container } from "@chakra-ui/react";
 
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
@@ -12,73 +12,67 @@ import BackfillActionBar from "@/components/backfill/BackfillActionBar";
 import BackfillTable from "@/components/backfill/BackfillTable";
 import BackfillPagination from "@/components/backfill/BackfillPagination";
 import type { BackfillTrack } from "@/components/backfill/types";
+import { useSearchResults } from "@/hooks/useSearchResults";
+import { useBackfillStatusMutation } from "@/hooks/useBackfillStatusMutation";
 
 // BackfillTrack moved to components/backfill/types
 
 export default function BackfillAudioPage() {
-  const [tracks, setTracks] = useState<BackfillTrack[]>([]);
   const [showMissingAudio, setShowMissingAudio] = useState(true);
   const [showMissingVectors, setShowMissingVectors] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { friends: usernames, friendsLoading: usernamesLoading } =
     useFriendsQuery({ showCurrentUser: true, showSpotifyUsernames: true });
   const { username: selectedUsername } = useUsername();
-  const [artistSearch, setArtistSearch] = useState("");
-  const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   // Pagination state
   const [page, setPage] = useState(1);
-  const pageSize = 20;
-  const [total, setTotal] = useState(0);
+  const pageSize = 15;
   const { client: meiliClient, ready } = useMeili();
   const { saveTrack } = useTracksQuery();
+  const { mutate: updateStatus } = useBackfillStatusMutation();
+
+  // Build Meili filter (AND conditions)
+  const filter = useMemo(() => {
+    const f: string[] = [];
+    if (selectedUsername) f.push(`username = "${selectedUsername}"`);
+    if (showMissingAudio) {
+      f.push(
+        "local_audio_url IS NULL AND (apple_music_url IS NOT NULL OR youtube_url IS NOT NULL OR soundcloud_url IS NOT NULL)"
+      );
+    } else {
+      f.push("local_audio_url IS NOT NULL");
+    }
+    if (showMissingVectors) {
+      f.push("hasVectors = false");
+    } else {
+      f.push("hasVectors = true");
+    }
+    return f;
+  }, [selectedUsername, showMissingAudio, showMissingVectors]);
+
+  // Use shared search hook in paginated mode with page size 1
+  const {
+    results: tracks,
+    estimatedResults,
+    loading,
+    query,
+    setQuery,
+  } = useSearchResults({
+    client: ready ? meiliClient : null,
+    mode: "page",
+    limit: pageSize,
+    page,
+    filter,
+  });
 
   // Reset page to 1 when filters or search change
   useEffect(() => {
     setPage(1);
-  }, [selectedUsername, artistSearch, showMissingAudio, showMissingVectors]);
+  }, [selectedUsername, query, showMissingAudio, showMissingVectors]);
 
-  useEffect(() => {
-    setLoading(true);
-    const fetchTracks = async () => {
-      if (!ready || !meiliClient) return;
-      const index = meiliClient.index("tracks");
-      const filter = [];
-      if (selectedUsername) filter.push(`username = '${selectedUsername}'`);
-      if (showMissingAudio) {
-        filter.push(
-          "local_audio_url IS NULL AND (apple_music_url IS NOT NULL OR youtube_url IS NOT NULL OR soundcloud_url IS NOT NULL)"
-        );
-      } else {
-        filter.push("local_audio_url IS NOT NULL");
-      }
-      if (showMissingVectors) {
-        filter.push("hasVectors = false");
-      } else {
-        filter.push("hasVectors = true");
-      }
-      const offset = (page - 1) * pageSize;
-      const results = await index.search("", {
-        q: artistSearch.trim(),
-        filter: filter.join(" AND "),
-        limit: pageSize,
-        offset,
-      });
-      setTracks((results.hits as BackfillTrack[]) || []);
-      setTotal(results.estimatedTotalHits || 0);
-      setSelected(new Set());
-      setLoading(false);
-    };
-    fetchTracks();
-  }, [
-    selectedUsername,
-    artistSearch,
-    showMissingAudio,
-    showMissingVectors,
-    page,
-    meiliClient,
-    ready,
-  ]);
+  // Derive page tracks with UI-only status fields (mutated optimistically)
+  const pageTracks = (tracks as BackfillTrack[]) || [];
 
   const toggleSelect = (trackId: string) => {
     setSelected((prev) => {
@@ -91,37 +85,35 @@ export default function BackfillAudioPage() {
       return next;
     });
   };
-  const selectAll = () => setSelected(new Set(tracks.map((t) => t.track_id)));
+  const selectAll = () => setSelected(new Set(pageTracks.map((t) => t.track_id)));
   const deselectAll = () => setSelected(new Set());
 
   const handleVectorizeSelected = async () => {
     setAnalyzing(true);
-    const updated = [...tracks];
     for (const trackId of selected) {
-      const idx = updated.findIndex((t) => t.track_id === trackId);
-      if (idx === -1) continue;
-      updated[idx].status = "analyzing";
-      setTracks([...updated]);
+      updateStatus({ track_id: trackId, status: "analyzing", errorMsg: null });
       try {
         const res = await fetch("/api/tracks/vectorize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            track_id: updated[idx].track_id,
-            username: updated[idx].username ?? "",
+            track_id: trackId,
+            username: pageTracks.find((t) => t.track_id === trackId)?.username ?? "",
             // add other fields if needed
           }),
         });
         if (!res.ok) throw new Error((await res.json()).error || "Failed");
-        updated[idx].status = "success";
+        updateStatus({ track_id: trackId, status: "success", errorMsg: null });
       } catch (err) {
-        updated[idx].status = "error";
-        updated[idx].errorMsg =
-          err && typeof err === "object" && "message" in err
-            ? String((err as { message?: unknown }).message)
-            : "Unknown error";
+        updateStatus({
+          track_id: trackId,
+          status: "error",
+          errorMsg:
+            err && typeof err === "object" && "message" in err
+              ? String((err as { message?: unknown }).message)
+              : "Unknown error",
+        });
       }
-      setTracks([...updated]);
     }
     setAnalyzing(false);
   };
@@ -129,30 +121,26 @@ export default function BackfillAudioPage() {
   const handleAnalyzeSelected = async () => {
     setAnalyzing(true);
 
-    const updated = [...tracks];
     for (const trackId of selected) {
-      const idx = updated.findIndex((t) => t.track_id === trackId);
-      if (idx === -1) continue;
-      updated[idx].status = "analyzing";
-      setTracks([...updated]);
+      updateStatus({ track_id: trackId, status: "analyzing", errorMsg: null });
       try {
         const res = await fetch("/api/tracks/analyze", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            track_id: updated[idx].track_id,
-            apple_music_url: updated[idx].apple_music_url,
-            youtube_url: updated[idx].youtube_url,
-            soundcloud_url: updated[idx].soundcloud_url,
-            spotify_url: updated[idx].spotify_url,
+            track_id: trackId,
+            apple_music_url: pageTracks.find((t) => t.track_id === trackId)?.apple_music_url,
+            youtube_url: pageTracks.find((t) => t.track_id === trackId)?.youtube_url,
+            soundcloud_url: pageTracks.find((t) => t.track_id === trackId)?.soundcloud_url,
+            spotify_url: pageTracks.find((t) => t.track_id === trackId)?.spotify_url,
           }),
         });
         if (!res.ok) throw new Error((await res.json()).error || "Failed");
         const data = await res.json();
 
         saveTrack({
-          username: updated[idx].username ?? "",
-          track_id: updated[idx].track_id,
+          username: pageTracks.find((t) => t.track_id === trackId)?.username ?? "",
+          track_id: trackId,
           bpm:
             data.rhythm && typeof data.rhythm.bpm === "number"
               ? Number(Math.round(data.rhythm.bpm))
@@ -170,15 +158,17 @@ export default function BackfillAudioPage() {
           // mood_relaxed: data.mood_relaxed,
           // mood_aggressive: data.mood_aggressive,
         });
-        updated[idx].status = "success";
+        updateStatus({ track_id: trackId, status: "success", errorMsg: null });
       } catch (err) {
-        updated[idx].status = "error";
-        updated[idx].errorMsg =
-          err && typeof err === "object" && "message" in err
-            ? String((err as { message?: unknown }).message)
-            : "Unknown error";
+        updateStatus({
+          track_id: trackId,
+          status: "error",
+          errorMsg:
+            err && typeof err === "object" && "message" in err
+              ? String((err as { message?: unknown }).message)
+              : "Unknown error",
+        });
       }
-      setTracks([...updated]);
     }
     setAnalyzing(false);
   };
@@ -191,8 +181,8 @@ export default function BackfillAudioPage() {
         <BackfillFilters
           usernames={usernames}
           usernamesLoading={usernamesLoading}
-          artistSearch={artistSearch}
-          setArtistSearch={setArtistSearch}
+          artistSearch={query}
+          setArtistSearch={setQuery}
           showMissingAudio={showMissingAudio}
           setShowMissingAudio={setShowMissingAudio}
           showMissingVectors={showMissingVectors}
@@ -211,16 +201,16 @@ export default function BackfillAudioPage() {
 
         {loading ? (
           <Spinner />
-        ) : tracks.length === 0 ? (
+        ) : pageTracks.length === 0 ? (
           <Text color="gray.500">No tracks to backfill.</Text>
         ) : (
           <BackfillTable
-            tracks={tracks}
+            tracks={pageTracks}
             selected={selected}
             analyzing={analyzing}
             onToggleOne={toggleSelect}
             onToggleAll={() => {
-              if (selected.size === tracks.length) {
+              if (selected.size === pageTracks.length) {
                 deselectAll();
               } else {
                 selectAll();
@@ -229,7 +219,7 @@ export default function BackfillAudioPage() {
           />
         )}
         <BackfillPagination
-          total={total}
+          total={estimatedResults}
           pageSize={pageSize}
           page={page}
           setPage={setPage}

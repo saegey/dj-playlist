@@ -11,6 +11,12 @@ interface UseSearchResultsOptions {
   client: MeiliSearch | null;
   username?: string;
   filter?: string | string[];
+  // New: choose between infinite scroll (default) or single-page pagination
+  mode?: "infinite" | "page";
+  // New: override page size
+  limit?: number;
+  // New: current page number (1-based) for page mode
+  page?: number;
 }
 
 type SearchPage = {
@@ -26,9 +32,12 @@ export function useSearchResults({
   client,
   username,
   filter,
+  mode = "infinite",
+  limit: limitOverride,
+  page,
 }: UseSearchResultsOptions) {
   const [query, setQuery] = useState("");
-  const limit = DEFAULT_LIMIT;
+  const limit = limitOverride ?? DEFAULT_LIMIT;
   const qc = useQueryClient();
 
   // Stable filter shape for caching
@@ -39,10 +48,12 @@ export function useSearchResults({
 
   const enabled = !!client;
 
-  // --- Infinite tracks query ---
-  const tracksQuery = useInfiniteQuery<SearchPage, Error>({
-    queryKey: ["tracks", { q: query, filter: searchFilter, limit }],
-    enabled,
+  // --- Tracks query (infinite or single page) ---
+  const isInfinite = mode === "infinite";
+
+  const infiniteQuery = useInfiniteQuery<SearchPage, Error>({
+    queryKey: ["tracks", { q: query, filter: searchFilter, limit, mode }],
+    enabled: enabled && isInfinite,
     queryFn: async (context): Promise<SearchPage> => {
       const pageParam =
         typeof context.pageParam === "number" ? context.pageParam : 0;
@@ -64,13 +75,41 @@ export function useSearchResults({
       return next < last.estimatedTotalHits ? next : undefined;
     },
     initialPageParam: 0,
-    // keepPreviousData helps avoid UI flicker between param changes
-    // keepPreviousData: true,
     staleTime: 10_000,
     gcTime: 5 * 60_000,
   });
 
-  const pages = tracksQuery.data?.pages ?? [];
+  const singlePageQuery = useQuery<SearchPage, Error>({
+    queryKey: [
+      "tracks",
+      { q: query, filter: searchFilter, limit, mode, page: page ?? 1 },
+    ],
+    enabled: enabled && !isInfinite && !!client,
+    queryFn: async (): Promise<SearchPage> => {
+      const index = client!.index<Track>("tracks");
+      const currentPage = Math.max(1, page ?? 1);
+      const offset = (currentPage - 1) * limit;
+      const res = await index.search(query || "", {
+        limit,
+        offset,
+        filter: searchFilter,
+      });
+      return {
+        hits: res.hits,
+        estimatedTotalHits: res.estimatedTotalHits || 0,
+        offset,
+        limit,
+      };
+    },
+    staleTime: 10_000,
+    gcTime: 5 * 60_000,
+  });
+
+  const pages = isInfinite
+    ? infiniteQuery.data?.pages ?? []
+    : singlePageQuery.data
+    ? [singlePageQuery.data]
+    : [];
   const results = pages.flatMap((p) => p.hits);
   const estimatedResults = pages[0]?.estimatedTotalHits ?? 0;
 
@@ -96,12 +135,16 @@ export function useSearchResults({
   });
 
   // --- API compatibility layer ---
-  const hasMore = !!tracksQuery.hasNextPage;
-  const loadMore = useCallback(
-    () => tracksQuery.fetchNextPage(),
-    [tracksQuery]
-  );
-  const refreshSearch = useCallback(() => tracksQuery.refetch(), [tracksQuery]);
+  const hasMore = isInfinite
+    ? !!infiniteQuery.hasNextPage
+    : (page ?? 1) * limit < estimatedResults;
+  const loadMore = useCallback(() => {
+    if (isInfinite) return infiniteQuery.fetchNextPage();
+    // no-op in page mode; parent controls page state
+  }, [infiniteQuery, isInfinite]);
+  const refreshSearch = useCallback(() => {
+    return isInfinite ? infiniteQuery.refetch() : singlePageQuery.refetch();
+  }, [infiniteQuery, singlePageQuery, isInfinite]);
 
   // Old hook had a refreshFlag with needsRefresh(). Here we invalidate cache.
   const needsRefresh = useCallback(() => {
@@ -150,13 +193,14 @@ export function useSearchResults({
   );
 
   // loading: combine initial + fetching-next
-  const loading = tracksQuery.isLoading || tracksQuery.isFetching;
+  const loading = isInfinite
+    ? infiniteQuery.isLoading || infiniteQuery.isFetching
+    : singlePageQuery.isLoading || singlePageQuery.isFetching;
 
   // setLoading existed in the old API; provide a no-op to avoid breakage.
   const setLoading = useCallback(() => {
     // no-op; handled by React Query now
   }, []);
-  
 
   return {
     // data
