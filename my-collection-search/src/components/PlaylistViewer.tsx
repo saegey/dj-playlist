@@ -1,15 +1,8 @@
 "use client";
 
 import React from "react";
-import { Box, Button, Menu, EmptyState, VStack } from "@chakra-ui/react";
-import {
-  FiArrowDown,
-  FiArrowUp,
-  FiEdit,
-  FiHeadphones,
-  FiMoreVertical,
-  FiTrash,
-} from "react-icons/fi";
+import { Box, EmptyState, VStack } from "@chakra-ui/react";
+import { FiHeadphones } from "react-icons/fi";
 import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
 import { usePlaylists } from "@/hooks/usePlaylists";
@@ -30,31 +23,40 @@ import {
   greedyPath,
   keyToCamelot,
 } from "@/lib/playlistOrder";
+import { useSearchResults } from "@/hooks/useSearchResults";
+import { useMeili } from "@/providers/MeiliProvider";
+import { useUsername } from "@/providers/UsernameProvider";
+import { useTrackEditor } from "@/providers/TrackEditProvider";
+import PlaylistItemMenu from "@/components/PlaylistItemMenu";
 
-type OptimalOrderType = "original" | "greedy" | "genetic";
-interface PlaylistViewerProps {
-  playlist: Track[];
-  playlistCounts: Record<string, number>;
-  moveTrack: (fromIdx: number, toIdx: number) => void;
-  setEditTrack: (track: Track) => void;
-  removeFromPlaylist: (trackId: string) => void;
-  optimalOrderType?: OptimalOrderType;
-}
-
-const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
-  playlist,
-  playlistCounts,
-  moveTrack,
-  setEditTrack,
-  removeFromPlaylist,
-  optimalOrderType = "original",
-}) => {
+const PlaylistViewer: React.FC = () => {
   const [geneticPlaylist, setGeneticPlaylist] = React.useState<Track[] | null>(
     null
   );
+  const { username: selectedUsername } = useUsername();
+
+  const { client: meiliClient, ready } = useMeili();
+
+  React.useEffect(() => {
+    if (!ready || !meiliClient) return;
+  }, [ready, meiliClient]);
+
+  const { playlistCounts } = useSearchResults({
+    client: meiliClient,
+    username: selectedUsername,
+  });
   const [loadingGenetic, setLoadingGenetic] = React.useState(false);
-  const { displayPlaylist, setDisplayPlaylist, setOptimalOrderType } =
-    usePlaylists();
+  const {
+    displayPlaylist,
+    setDisplayPlaylist,
+    setOptimalOrderType,
+    playlist,
+    moveTrack,
+    optimalOrderType,
+    removeFromPlaylist,
+  } = usePlaylists();
+
+  const { openTrackEditor } = useTrackEditor();
 
   // Compute greedy order
   const updatedPlaylist: TrackWithCamelot[] = React.useMemo(() => {
@@ -194,51 +196,16 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
                       minimized
                       playlistCount={playlistCounts[track.track_id]}
                       buttons={[
-                        <Menu.Root key="menu">
-                          <Menu.Trigger asChild>
-                            <Button variant="plain" size="xs">
-                              <FiMoreVertical size={16} />
-                            </Button>
-                          </Menu.Trigger>
-                          <Menu.Positioner>
-                            <Menu.Content>
-                              <Menu.Item
-                                onSelect={() => moveTrack(idx, idx - 1)}
-                                value="up"
-                                disabled={idx === 0}
-                              >
-                                <FiArrowUp />
-                                Move Up
-                              </Menu.Item>
-                              <Menu.Item
-                                onSelect={() => moveTrack(idx, idx + 1)}
-                                value="down"
-                                disabled={idx === ds.length - 1}
-                              >
-                                <FiArrowDown />
-                                Move Down
-                              </Menu.Item>
-                              <Menu.Item
-                                onSelect={() => setEditTrack(track)}
-                                value="edit"
-                              >
-                                <FiEdit />
-                                Edit
-                              </Menu.Item>
-                              <Menu.Item
-                                onSelect={() =>
-                                  removeFromPlaylist(track.track_id)
-                                }
-                                value="delete"
-                                color="fg.error"
-                                _hover={{ bg: "bg.error", color: "fg.error" }}
-                              >
-                                <FiTrash />
-                                Remove
-                              </Menu.Item>
-                            </Menu.Content>
-                          </Menu.Positioner>
-                        </Menu.Root>,
+                        <PlaylistItemMenu
+                          key="menu"
+                          idx={idx}
+                          total={ds.length}
+                          track={track}
+                          moveTrack={moveTrack}
+                          removeFromPlaylist={removeFromPlaylist}
+                          openTrackEditor={openTrackEditor}
+                          size="xs"
+                        />,
                       ]}
                     />
                   </Box>

@@ -22,5 +22,6 @@ export function usePlaylistsQuery(options?: Options) {
   return {
     ...query,
     playlists: query.data ?? [],
+    isPending: query.isPending,
   };
 }

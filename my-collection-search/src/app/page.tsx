@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useRef } from "react";
-import { Flex, Container, Box } from "@chakra-ui/react";
+import React from "react";
+import { Flex, Container } from "@chakra-ui/react";
 
 import SearchResults from "@/components/SearchResults";
 import PlaylistsProvider from "@/hooks/usePlaylists";
@@ -15,23 +15,16 @@ const SearchPage = () => {
     if (!ready || !meiliClient) return;
   }, [ready, meiliClient]);
 
-  const playlistPortalRef = useRef<HTMLDivElement | null>(null);
-
   return (
     <>
       <Flex gap={4} direction="row">
-        <Box pos="relative" flex="1" ref={playlistPortalRef}>
-          {/* Search Results */}
-          <Container maxW={["8xl", "2xl", "2xl"]} pt={3}>
-            <SearchResults />
-          </Container>
+        {/* Search Results */}
+        <Container maxW={["8xl", "2xl", "2xl"]} pt={3}>
+          <SearchResults />
+        </Container>
 
-          {/* Playlist Drawer renders within this container via Portal */}
-          <PlaylistViewerDrawer
-            meiliClient={meiliClient}
-            containerRef={playlistPortalRef}
-          />
-        </Box>
+        {/* Playlist Drawer renders within this container via Portal */}
+        <PlaylistViewerDrawer />
       </Flex>
     </>
   );

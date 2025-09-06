@@ -14,7 +14,6 @@ import {
 import PlaylistViewer from "@/components/PlaylistViewer";
 
 import TrackResult from "@/components/TrackResult";
-import { usePlaylistViewer } from "@/hooks/usePlaylistViewer";
 import type { Track } from "@/types/track";
 import { FiMoreVertical, FiSave } from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
@@ -25,44 +24,40 @@ import { usePlaylists } from "@/hooks/usePlaylists";
 import { useRecommendations } from "@/hooks/useRecommendations";
 
 import { formatSeconds, parseDurationToSeconds } from "@/lib/trackUtils";
-import { useSearchResults } from "@/hooks/useSearchResults";
-import { MeiliSearch } from "meilisearch";
 import { LuFileJson } from "react-icons/lu";
 import NamePlaylistDialog from "./NamePlaylistDialog";
 import { toaster } from "./ui/toaster";
-import { useUsername } from "@/providers/UsernameProvider";
 import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
+import { useMeili } from "@/providers/MeiliProvider";
 
-export const PlaylistViewerDrawer = ({
-  meiliClient,
-}: {
-  meiliClient: MeiliSearch | null;
-  containerRef?: React.MutableRefObject<HTMLDivElement | null>;
-}) => {
+export const PlaylistViewerDrawer = () => {
+  const { client: meiliClient, ready } = useMeili();
+
+  React.useEffect(() => {
+    if (!ready || !meiliClient) return;
+  }, [ready, meiliClient]);
+
   const {
     playlist,
+    playlistsLoading,
     displayPlaylist,
     exportPlaylist,
     addToPlaylist,
-    removeFromPlaylist,
-    moveTrack,
-    playlistAvgEmbedding,
     savePlaylist,
     playlistName,
     setPlaylistName,
-    optimalOrderType,
     setOptimalOrderType,
     clearPlaylist,
   } = usePlaylists();
   const { openTrackEditor } = useTrackEditor();
-  const { username: selectedUsername } = useUsername();
   const { isOpen, setOpen } = usePlaylistDrawer();
 
-  const { playlistCounts } = useSearchResults({
-    client: meiliClient,
-    username: selectedUsername,
-  });
+  console.log(
+    "PlaylistViewerDrawer render, playlist:",
+    playlist,
+    playlistsLoading
+  );
 
   const [recommendations, setRecommendations] = useState<Track[]>([]);
 
@@ -120,6 +115,10 @@ export const PlaylistViewerDrawer = ({
       });
     }
   };
+
+  if (playlistsLoading) {
+    return null; // or a loading spinner
+  }
 
   return (
     <Box
@@ -247,17 +246,7 @@ export const PlaylistViewerDrawer = ({
                   </Menu.Root>
                 </Flex>
               </Flex>
-              <PlaylistViewer
-                {...usePlaylistViewer({
-                  playlist: playlist,
-                  playlistCounts,
-                  moveTrack,
-                  setEditTrack: openTrackEditor,
-                  removeFromPlaylist,
-                  playlistAvgEmbedding: playlistAvgEmbedding ?? undefined,
-                })}
-                optimalOrderType={optimalOrderType}
-              />
+              <PlaylistViewer />
               {/* Recommendations below playlist tracks */}
               {recommendations.length > 0 && (
                 <Box mt={6}>

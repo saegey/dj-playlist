@@ -10,10 +10,18 @@ import React, {
 import type { Playlist, Track } from "@/types/track";
 import { importPlaylist } from "@/services/playlistService";
 import { fetchTracksByIds } from "@/services/trackService";
-import { useRecommendations, type TrackWithEmbedding as TrackWithEmbeddingFromHook } from "@/hooks/useRecommendations";
+import {
+  useRecommendations,
+  type TrackWithEmbedding as TrackWithEmbeddingFromHook,
+} from "@/hooks/useRecommendations";
 import { usePlaylistsQuery } from "@/hooks/usePlaylistsQuery";
 import { useCreatePlaylistMutation } from "@/hooks/usePlaylistMutations";
-import { reconcileDisplayPlaylist, idKey, moveTrackReorder } from "@/utils/playlist";
+import {
+  reconcileDisplayPlaylist,
+  idKey,
+  moveTrackReorder,
+} from "@/utils/playlist";
+import { toaster } from "@/components/ui/toaster";
 
 export interface PlaylistInfo {
   id?: number;
@@ -34,7 +42,7 @@ interface PlaylistsContextType {
     React.SetStateAction<"original" | "greedy" | "genetic">
   >;
   playlists: Playlist[];
-  setPlaylists: React.Dispatch<React.SetStateAction<Playlist[]>>;
+  playlistsLoading: boolean;
   playlistName: string;
   setPlaylistName: React.Dispatch<React.SetStateAction<string>>;
   loadingPlaylists: { id: number } | boolean;
@@ -67,11 +75,11 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   const [optimalOrderType, setOptimalOrderType] = useState<
     "original" | "greedy" | "genetic"
   >("original");
-  const { playlists, refetch } = usePlaylistsQuery({ enabled: true, staleTime: 30_000 });
-  const setPlaylists = useCallback<React.Dispatch<React.SetStateAction<Playlist[]>>>(
-    () => {},
-    []
-  );
+  const { playlists, refetch, isPending } = usePlaylistsQuery({
+    enabled: true,
+    staleTime: 30_000,
+  });
+
   const [playlistName, setPlaylistName] = useState("");
   const [loadingPlaylists, setLoadingPlaylists] = useState<
     { id: number } | false
@@ -116,6 +124,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
 
   // Create a new playlist
   const { mutateAsync: createPlaylist } = useCreatePlaylistMutation();
+
   const handleCreatePlaylist = useCallback(async () => {
     if (!playlistName.trim() || playlist.length === 0) return;
     try {
@@ -125,8 +134,8 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
       });
       setPlaylistName("");
       setPlaylistInfo({ name: playlistName });
-  } catch {
-      alert("Failed to create playlist");
+    } catch {
+      toaster.create({ title: "Failed to create playlist", type: "error" });
     }
   }, [playlistName, playlist, createPlaylist]);
 
@@ -288,17 +297,17 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     optimalOrderType,
     setOptimalOrderType,
     playlists,
-    setPlaylists,
+    playlistsLoading: isPending,
     playlistName,
     setPlaylistName,
-  loadingPlaylists,
+    loadingPlaylists,
     playlistInfo,
     setPlaylistInfo,
     playlist,
     setPlaylist,
     displayPlaylist,
     setDisplayPlaylist,
-  fetchPlaylists,
+    fetchPlaylists,
     handleCreatePlaylist,
     handleLoadPlaylist,
     savePlaylist,
