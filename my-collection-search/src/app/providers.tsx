@@ -11,6 +11,8 @@ import { PlaylistPlayerProvider } from "@/providers/PlaylistPlayerProvider";
 import PlaylistDrawerProvider from "@/providers/PlaylistDrawer";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import TrackEditProvider from "@/providers/TrackEditProvider";
+import PlaylistsProvider from "@/hooks/usePlaylists";
+import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
 
 export default function ClientProviders({
   children,
@@ -25,15 +27,19 @@ export default function ClientProviders({
         <UsernameProvider>
           {/* Make BOTH pages and the player share the same app providers */}
           <MeiliProvider>
-            <PlaylistPlayerProvider>
-              <PlaylistDrawerProvider>
-                <TrackEditProvider>
-                  {children}
-                  <PlaylistPlayer />
-                </TrackEditProvider>
-              </PlaylistDrawerProvider>
-              {/* Fixed bottom player renders once at root, available everywhere */}
-            </PlaylistPlayerProvider>
+            <TrackEditProvider>
+              <PlaylistsProvider>
+                <PlaylistPlayerProvider>
+                  <PlaylistDrawerProvider>
+                    
+                    <PlaylistViewerDrawer />
+                    {children}
+                    <PlaylistPlayer />
+                  </PlaylistDrawerProvider>
+                </PlaylistPlayerProvider>
+                {/* Fixed bottom player renders once at root, available everywhere */}
+              </PlaylistsProvider>
+            </TrackEditProvider>
           </MeiliProvider>
         </UsernameProvider>
         <ReactQueryDevtools initialIsOpen={false} />

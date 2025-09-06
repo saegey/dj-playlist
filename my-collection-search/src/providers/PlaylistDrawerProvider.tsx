@@ -17,8 +17,6 @@ const PlaylistDrawerContext = createContext<PlaylistDrawerContextValue | null>(
 
 export function PlaylistDrawerProvider({
   children,
-  meiliClient,
-  handleEditClick,
 }: {
   children?: React.ReactNode;
   meiliClient: MeiliSearch | null;
@@ -39,10 +37,7 @@ export function PlaylistDrawerProvider({
   return (
     <PlaylistDrawerContext.Provider value={value}>
       {children}
-      <PlaylistViewerDrawer
-        handleEditClick={handleEditClick}
-        meiliClient={meiliClient}
-      />
+      <PlaylistViewerDrawer />
     </PlaylistDrawerContext.Provider>
   );
 }

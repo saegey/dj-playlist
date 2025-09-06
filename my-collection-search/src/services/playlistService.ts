@@ -13,3 +13,10 @@ export async function fetchPlaylists() {
 
   return await res.json();
 }
+
+export async function fetchPlaylistTrackIds(id: number): Promise<string[]> {
+  const res = await fetch(`/api/playlists/${id}/tracks`);
+  if (!res.ok) throw new Error("Failed to fetch playlist tracks");
+  const data = await res.json();
+  return Array.isArray(data.track_ids) ? data.track_ids : [];
+}
