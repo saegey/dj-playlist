@@ -10,8 +10,10 @@ import React, {
 import type { Playlist, Track } from "@/types/track";
 import { importPlaylist } from "@/services/playlistService";
 import { fetchTracksByIds } from "@/services/trackService";
-import { useMeili } from "@/providers/MeiliProvider";
-import { useUsername } from "@/providers/UsernameProvider";
+import {
+  useRecommendations,
+  type TrackWithEmbedding as TrackWithEmbeddingFromHook,
+} from "@/hooks/useRecommendations";
 
 export interface PlaylistInfo {
   id?: number;
@@ -81,8 +83,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   const [displayPlaylist, setDisplayPlaylist] = useState<TrackWithEmbedding[]>(
     []
   );
-  const { client: meiliClient, ready } = useMeili();
-  const { username: selectedUsername } = useUsername();
+  const getRecommendationsRaw = useRecommendations();
 
   // Identity helper to avoid cross-user collisions
   const idKey = useCallback(
@@ -127,7 +128,9 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     if (playlist.length === 0 && displayPlaylist.length === 0) return;
     const displayKeys = new Set(displayPlaylist.map((t) => idKey(t)));
     const playlistKeys = new Set(playlist.map((t) => idKey(t)));
-    const hasExtraneous = displayPlaylist.some((t) => !playlistKeys.has(idKey(t)));
+    const hasExtraneous = displayPlaylist.some(
+      (t) => !playlistKeys.has(idKey(t))
+    );
     const hasMissing = playlist.some((t) => !displayKeys.has(idKey(t)));
     if (!hasExtraneous && !hasMissing) return;
 
@@ -295,60 +298,33 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Move track in playlist
-  const moveTrack = useCallback((fromIdx: number, toIdx: number) => {
-    setDisplayPlaylist((prev) => {
-      if (toIdx < 0 || toIdx >= prev.length) return prev;
-      const updated = [...prev];
-      const [removed] = updated.splice(fromIdx, 1);
-      updated.splice(toIdx, 0, removed);
-      // Also reorder the main playlist to reflect display order for consistency
-      const order = new Map(updated.map((t, i) => [idKey(t), i]));
-      setPlaylist((cur) => {
-        // keep only items present and sort by display order, then append any others by their current order
-        const inDisplay = cur.filter((t) => order.has(idKey(t)));
-        const notInDisplay = cur.filter((t) => !order.has(idKey(t)));
-        inDisplay.sort((a, b) => (order.get(idKey(a))! - order.get(idKey(b))!));
-        return [...inDisplay, ...notInDisplay];
-      });
-      return updated;
-    });
-  }, [idKey]);
-
-  // Get recommendations from MeiliSearch based on playlist average embedding
-  const getRecommendations = useCallback(
-    async (k: number = 25) => {
-      if (!playlistAvgEmbedding || !playlistAvgEmbedding.length) return [];
-      console.log("Fetching recommendations for playlist", {
-        playlistAvgEmbedding,
-        k,
-        playlist,
-      });
-      try {
-        if (!ready || !meiliClient) return [];
-        const index = meiliClient.index("tracks");
-        const playlistIds = playlist.map((t) => t.track_id);
-        // const playlistArtists = playlist.map((t) => `'${t.artist.replace(/'/g, "''")}'`);
-        let filter = `NOT track_id IN [${playlistIds.join(",")}]`;
-        if (selectedUsername) {
-          filter += ` AND username = '${selectedUsername}'`;
-        }
-        // console.log("selectedUsername", selectedUsername);
-        // if (playlistArtists.length > 0) {
-        //   filter += ` AND NOT artist IN [${playlistArtists.join(",")}]`;
-        // }
-        // console.log(playlistAvgEmbedding);
-        const results = await index.search(undefined, {
-          vector: playlistAvgEmbedding,
-          limit: k,
-          filter,
+  const moveTrack = useCallback(
+    (fromIdx: number, toIdx: number) => {
+      setDisplayPlaylist((prev) => {
+        if (toIdx < 0 || toIdx >= prev.length) return prev;
+        const updated = [...prev];
+        const [removed] = updated.splice(fromIdx, 1);
+        updated.splice(toIdx, 0, removed);
+        // Also reorder the main playlist to reflect display order for consistency
+        const order = new Map(updated.map((t, i) => [idKey(t), i]));
+        setPlaylist((cur) => {
+          // keep only items present and sort by display order, then append any others by their current order
+          const inDisplay = cur.filter((t) => order.has(idKey(t)));
+          const notInDisplay = cur.filter((t) => !order.has(idKey(t)));
+          inDisplay.sort((a, b) => order.get(idKey(a))! - order.get(idKey(b))!);
+          return [...inDisplay, ...notInDisplay];
         });
-        return (results.hits as Track[]) || [];
-      } catch (err) {
-        console.error("Error fetching recommendations:", err);
-        return [];
-      }
+        return updated;
+      });
     },
-    [playlistAvgEmbedding, playlist, meiliClient, ready, selectedUsername]
+    [idKey]
+  );
+
+  // Expose a wrapper that fixes playlist arg from context for consumers expecting previous shape
+  const getRecommendations = useCallback(
+    async (k: number = 25) =>
+      getRecommendationsRaw(k, playlist as TrackWithEmbeddingFromHook[]),
+    [getRecommendationsRaw, playlist]
   );
 
   // Persist playlist to localStorage

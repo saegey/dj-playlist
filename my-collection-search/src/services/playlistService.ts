@@ -7,3 +7,9 @@ export async function importPlaylist(name: string, tracks: string[]) {
   });
   return res;
 }
+
+export async function fetchPlaylists() {
+  const res = await fetch("/api/playlists");
+
+  return await res.json();
+}

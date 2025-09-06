@@ -11,9 +11,8 @@ import {
   Image,
   Text,
   VStack,
-  Popover,
-  Tooltip,
   Slider,
+  Icon,
 } from "@chakra-ui/react";
 import {
   FiPause,
@@ -278,60 +277,30 @@ const PlaylistPlayer: React.FC = () => {
           {/* Right: extras (volume / queue) */}
           <HStack gap={1} justify="flex-end" flex="1">
             <Box display={{ base: "none", md: "block" }}>
-              <Popover.Root>
-                <Popover.Trigger>
-                  <span>
-                    <Tooltip.Root>
-                      <Tooltip.Trigger>
-                        <span>
-                          <IconButton
-                            aria-label="Volume"
-                            size="sm"
-                            variant="ghost"
-                          >
-                            {React.createElement(VolumeIcon)}
-                          </IconButton>
-                        </span>
-                      </Tooltip.Trigger>
-                      <Tooltip.Content>{`${Math.round(
-                        volume * 100
-                      )}%`}</Tooltip.Content>
-                    </Tooltip.Root>
-                  </span>
-                </Popover.Trigger>
-                <Popover.Content w="240px" _focus={{ boxShadow: "lg" }}>
-                  <Popover.Body>
-                    <HStack align="center" gap={3}>
-                      <IconButton
-                        aria-label={volume === 0 ? "Unmute" : "Mute"}
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
-                      >
-                        {volume === 0 ? <FiVolumeX /> : <VolumeIcon />}
-                      </IconButton>
-                      <Slider.Root
-                        width="200px"
-                        defaultValue={[40]}
-                        onValueChange={(e) => {
-                          setVolume(e.value[0] / 100);
-                        }}
-                      >
-                        <HStack justify="space-between">
-                          <Slider.Label>Volume</Slider.Label>
-                          <Slider.ValueText />
-                        </HStack>
-                        <Slider.Control>
-                          <Slider.Track>
-                            <Slider.Range />
-                          </Slider.Track>
-                          <Slider.Thumbs rounded="l1" />
-                        </Slider.Control>
-                      </Slider.Root>
-                    </HStack>
-                  </Popover.Body>
-                </Popover.Content>
-              </Popover.Root>
+              <HStack align="center" gap={3}>
+                <Icon
+                  aria-label={volume === 0 ? "Unmute" : "Mute"}
+                  size="sm"
+                  // variant="ghost"
+                  onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
+                >
+                  {volume === 0 ? <FiVolumeX /> : <VolumeIcon />}
+                </Icon>
+                <Slider.Root
+                  width="200px"
+                  defaultValue={[40]}
+                  onValueChange={(e) => {
+                    setVolume(e.value[0] / 100);
+                  }}
+                >
+                  <Slider.Control>
+                    <Slider.Track>
+                      <Slider.Range />
+                    </Slider.Track>
+                    <Slider.Thumbs rounded="l1" />
+                  </Slider.Control>
+                </Slider.Root>
+              </HStack>
             </Box>
 
             <IconButton

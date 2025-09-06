@@ -41,7 +41,6 @@ export const PlaylistViewerDrawer = ({
 }) => {
   const {
     playlist,
-    setPlaylist,
     displayPlaylist,
     exportPlaylist,
     addToPlaylist,
@@ -54,6 +53,7 @@ export const PlaylistViewerDrawer = ({
     setPlaylistName,
     optimalOrderType,
     setOptimalOrderType,
+    clearPlaylist
   } = usePlaylists();
   const { openTrackEditor } = useTrackEditor();
   const { username: selectedUsername } = useUsername();
@@ -120,6 +120,7 @@ export const PlaylistViewerDrawer = ({
     }
   };
 
+
   return (
     <Box
       position="fixed"
@@ -159,7 +160,7 @@ export const PlaylistViewerDrawer = ({
             <Collapsible.Content>
               <Flex align="flex-start" w="100%" pt={3}>
                 <Box>
-                  <Text>Playlist ({playlist.length})</Text>
+                  <Text>Playlist</Text>
                   <Text fontSize="sm" color="gray.500" mb={2}>
                     Total Playtime: {totalPlaytimeFormatted}
                     {/* Playlist Recommendations */}
@@ -235,7 +236,7 @@ export const PlaylistViewerDrawer = ({
                         </Menu.Item>
                         <Menu.Item
                           value="clear"
-                          onSelect={() => setPlaylist([])}
+                          onSelect={clearPlaylist}
                           color="fg.error"
                           _hover={{ bg: "bg.error", color: "fg.error" }}
                         >
