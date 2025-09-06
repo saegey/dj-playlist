@@ -17,8 +17,8 @@ export async function fetchTracksByIds(trackIds: string[]): Promise<Track[]> {
   });
 }
 
-export async function saveTrack(data: TrackEditFormProps): Promise<void> {
-  await http<unknown>("/api/tracks/update", {
+export async function saveTrack(data: TrackEditFormProps): Promise<Track> {
+  return await http<Track>("/api/tracks/update", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
