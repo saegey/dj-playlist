@@ -1,7 +1,8 @@
 import React from "react";
 import { Box, Input, Text, InputGroup } from "@chakra-ui/react";
-import TrackResult from "@/components/TrackResult";
 import { LuSearch } from "react-icons/lu";
+
+import TrackResult from "@/components/TrackResult";
 import UsernameSelect from "./UsernameSelect";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useSearchResults } from "@/hooks/useSearchResults";
@@ -62,62 +63,59 @@ const SearchResults: React.FC = () => {
   }, [debouncedValue, onQueryChange, query]);
 
   return (
-    <>
-      <Box>
-        <Box display="flex" flexDirection={["column", "row"]} gap={3} mb={3}>
-          <InputGroup startElement={<LuSearch size={16} />}>
-            <Input
-              placeholder="Search"
-              value={debouncedValue}
-              onChange={(e) => setDebouncedValue(e.target.value)}
-              flex="1"
-              variant={"subtle"}
-              fontSize="16px"
-            />
-          </InputGroup>
-          <UsernameSelect usernames={friends} />
-        </Box>
-
-        {loading ? (
-          <Box mt={8}>
-            {[...Array(8)].map((_, i) => (
-              <Box key={i} mb={4}>
-                <Box height="255px" borderRadius="md" bg="bg.muted" />
-              </Box>
-            ))}
-          </Box>
-        ) : (
-          <>
-            <Text fontSize="sm" color="gray.500" mb={2}>
-              {estimatedResults.toLocaleString()} results found
-            </Text>
-
-            {results.map((track, idx) => {
-              const isLast = idx === results.length - 1;
-              const trackResult = (
-                <TrackResult
-                  key={`search-${track.id}`}
-                  track={track}
-                  allowMinimize={false}
-                  playlistCount={playlistCounts[track.track_id]}
-                  buttons={[<TrackActionsMenu key="menu" track={track} />]}
-                />
-              );
-              if (isLast) {
-                return (
-                  <Box ref={lastResultRef} key={track.track_id}>
-                    {trackResult}
-                  </Box>
-                );
-              }
-              return trackResult;
-            })}
-          </>
-        )}
-        {/* End of results/infinite scroll */}
+    <Box>
+      <Box display="flex" flexDirection={["column", "row"]} gap={3} mb={3}>
+        <InputGroup startElement={<LuSearch size={16} />}>
+          <Input
+            placeholder="Search"
+            value={debouncedValue}
+            onChange={(e) => setDebouncedValue(e.target.value)}
+            flex="1"
+            variant={"subtle"}
+            fontSize="16px"
+          />
+        </InputGroup>
+        <UsernameSelect usernames={friends} />
       </Box>
-      {/* Track editor dialog is now rendered globally by TrackEditProvider */}
-    </>
+
+      {loading ? (
+        <Box mt={8}>
+          {[...Array(8)].map((_, i) => (
+            <Box key={i} mb={4}>
+              <Box height="255px" borderRadius="md" bg="bg.muted" />
+            </Box>
+          ))}
+        </Box>
+      ) : (
+        <>
+          <Text fontSize="sm" color="gray.500" mb={2}>
+            {estimatedResults.toLocaleString()} results found
+          </Text>
+
+          {results.map((track, idx) => {
+            const isLast = idx === results.length - 1;
+            const trackResult = (
+              <TrackResult
+                key={`search-${track.id}`}
+                track={track}
+                allowMinimize={false}
+                playlistCount={playlistCounts[track.track_id]}
+                buttons={[<TrackActionsMenu key="menu" track={track} />]}
+              />
+            );
+            if (isLast) {
+              return (
+                <Box ref={lastResultRef} key={track.track_id}>
+                  {trackResult}
+                </Box>
+              );
+            }
+            return trackResult;
+          })}
+        </>
+      )}
+      {/* End of results/infinite scroll */}
+    </Box>
   );
 };
 

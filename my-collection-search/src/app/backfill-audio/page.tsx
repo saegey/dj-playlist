@@ -1,44 +1,19 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Switch,
-  ActionBar,
-  CloseButton,
-  Button,
-  Checkbox,
-  Spinner,
-  Text,
-  Portal,
-  Input,
-  Container,
-  SimpleGrid,
-  ButtonGroup,
-  IconButton,
-  Stack,
-  Pagination,
-  Table,
-  InputGroup,
-} from "@chakra-ui/react";
-import {
-  LuLightbulb,
-  LuMusic,
-  LuChevronLeft,
-  LuChevronRight,
-  LuSearch,
-} from "react-icons/lu";
+import { Spinner, Text, Container } from "@chakra-ui/react";
 
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
-import { Track } from "../../types/track";
 import { useMeili } from "@/providers/MeiliProvider";
-import UsernameSelect from "@/components/UsernameSelect";
+import BackfillFilters from "@/components/backfill/BackfillFilters";
 import { useUsername } from "@/providers/UsernameProvider";
 import { useTracksQuery } from "@/hooks/useTracksQuery";
+import BackfillActionBar from "@/components/backfill/BackfillActionBar";
+import BackfillTable from "@/components/backfill/BackfillTable";
+import BackfillPagination from "@/components/backfill/BackfillPagination";
+import type { BackfillTrack } from "@/components/backfill/types";
 
-interface BackfillTrack extends Track {
-  status?: "pending" | "analyzing" | "success" | "error";
-  errorMsg?: string;
-}
+// BackfillTrack moved to components/backfill/types
 
 export default function BackfillAudioPage() {
   const [tracks, setTracks] = useState<BackfillTrack[]>([]);
@@ -174,13 +149,13 @@ export default function BackfillAudioPage() {
         });
         if (!res.ok) throw new Error((await res.json()).error || "Failed");
         const data = await res.json();
-        
+
         saveTrack({
           username: updated[idx].username ?? "",
           track_id: updated[idx].track_id,
           bpm:
             data.rhythm && typeof data.rhythm.bpm === "number"
-              ? String(Math.round(data.rhythm.bpm))
+              ? Number(Math.round(data.rhythm.bpm))
               : undefined,
           key: data.tonal
             ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
@@ -213,247 +188,52 @@ export default function BackfillAudioPage() {
       <Container>
         {/* Pagination UI */}
 
-        <SimpleGrid columns={[1, null, 5]} gap={4} mt={3} mb={8}>
-          <InputGroup startElement={<LuSearch size={16} />}>
-            <Input
-              type="text"
-              placeholder="Search"
-              value={artistSearch}
-              onChange={(e) => setArtistSearch(e.target.value)}
-              disabled={analyzing}
-              size={["sm", "md", "md"]}
-              variant={"subtle"}
-            />
-          </InputGroup>
-          <Switch.Root
-            checked={showMissingAudio}
-            onCheckedChange={(e) => setShowMissingAudio(e.checked)}
-          >
-            <Switch.Label>Missing Audio</Switch.Label>
-            <Switch.HiddenInput />
-            <Switch.Control>
-              <Switch.Thumb />
-            </Switch.Control>
-            <Switch.Label />
-          </Switch.Root>
-          <Switch.Root
-            checked={showMissingVectors}
-            onCheckedChange={(e) => setShowMissingVectors(e.checked)}
-          >
-            <Switch.Label>Missing Vectors</Switch.Label>
-            <Switch.HiddenInput />
-            <Switch.Control>
-              <Switch.Thumb />
-            </Switch.Control>
-            <Switch.Label />
-          </Switch.Root>
-          <UsernameSelect
-            usernames={usernames}
-            isLoading={usernamesLoading}
-            loadingText="Loading usernames..."
-          />
-        </SimpleGrid>
+        <BackfillFilters
+          usernames={usernames}
+          usernamesLoading={usernamesLoading}
+          artistSearch={artistSearch}
+          setArtistSearch={setArtistSearch}
+          showMissingAudio={showMissingAudio}
+          setShowMissingAudio={setShowMissingAudio}
+          showMissingVectors={showMissingVectors}
+          setShowMissingVectors={setShowMissingVectors}
+          analyzing={analyzing}
+        />
 
         {/* ActionBar appears when items are selected */}
-        <ActionBar.Root
-          open={selected.size > 0}
-          onOpenChange={(e) => {
-            if (!e.open) deselectAll();
-          }}
-          closeOnInteractOutside={false}
-          portalled={false}
-        >
-          <Portal>
-            <ActionBar.Positioner mb={"200px"}>
-              <ActionBar.Content>
-                <ActionBar.SelectionTrigger>
-                  {selected.size} selected
-                </ActionBar.SelectionTrigger>
-                <ActionBar.Separator />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleVectorizeSelected}
-                  disabled={!selected.size || analyzing}
-                >
-                  <LuLightbulb style={{ marginRight: 4 }} />
-                  Vectorize
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAnalyzeSelected}
-                  disabled={!selected.size || analyzing}
-                >
-                  <LuMusic style={{ marginRight: 4 }} />
-                  Analyze Audio
-                </Button>
-                <ActionBar.CloseTrigger asChild>
-                  <CloseButton size="sm" />
-                </ActionBar.CloseTrigger>
-              </ActionBar.Content>
-            </ActionBar.Positioner>
-          </Portal>
-        </ActionBar.Root>
+        <BackfillActionBar
+          selectedCount={selected.size}
+          analyzing={analyzing}
+          onVectorize={handleVectorizeSelected}
+          onAnalyze={handleAnalyzeSelected}
+          onClose={deselectAll}
+        />
 
         {loading ? (
           <Spinner />
         ) : tracks.length === 0 ? (
           <Text color="gray.500">No tracks to backfill.</Text>
         ) : (
-          <Table.ScrollArea
-            borderWidth="1px"
-            maxHeight={["calc(100vh - 400px)", "calc(100vh - 300px)"]}
-          >
-            <Table.Root
-              size="sm"
-              variant="outline"
-              showColumnBorder
-              fontSize={["xs", "sm", "sm"]}
-            >
-              <Table.Header>
-                <Table.Row>
-                  <Table.ColumnHeader width={"5%"}>
-                    <Checkbox.Root
-                      checked={
-                        selected.size === tracks.length && tracks.length > 0
-                      }
-                      // _indeterminate={selected.size > 0 && selected.size < tracks.length}
-                      onChange={() => {
-                        if (selected.size === tracks.length) {
-                          deselectAll();
-                        } else {
-                          selectAll();
-                        }
-                      }}
-                      disabled={analyzing || tracks.length === 0}
-                    >
-                      <Checkbox.HiddenInput />
-                      <Checkbox.Control />
-                    </Checkbox.Root>
-                  </Table.ColumnHeader>
-                  <Table.ColumnHeader width={"45%"}>Title</Table.ColumnHeader>
-                  <Table.ColumnHeader width={"25%"}>Artist</Table.ColumnHeader>
-                  <Table.ColumnHeader width={"13%"}>Source</Table.ColumnHeader>
-                  <Table.ColumnHeader width={"12%"}>Status</Table.ColumnHeader>
-                </Table.Row>
-              </Table.Header>
-              <Table.Body>
-                {tracks.map((track) => (
-                  <Table.Row
-                    key={track.id}
-                    data-selected={
-                      selected.has(track.track_id) ? "" : undefined
-                    }
-                  >
-                    <Table.Cell>
-                      <Checkbox.Root
-                        checked={selected.has(track.track_id)}
-                        onChange={() => toggleSelect(track.track_id)}
-                        disabled={analyzing}
-                      >
-                        <Checkbox.HiddenInput />
-                        <Checkbox.Control />
-                      </Checkbox.Root>
-                    </Table.Cell>
-                    <Table.Cell maxW="220px">
-                      <Text truncate title={track.title}>
-                        {track.title}
-                      </Text>
-                    </Table.Cell>
-                    <Table.Cell maxW="140px">
-                      <Text truncate title={track.artist}>
-                        {track.artist}
-                      </Text>
-                    </Table.Cell>
-                    <Table.Cell>
-                      {track.apple_music_url ? (
-                        <a
-                          href={track.apple_music_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Apple
-                        </a>
-                      ) : track.youtube_url ? (
-                        <a
-                          href={track.youtube_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Youtube
-                        </a>
-                      ) : track.soundcloud_url ? (
-                        <a
-                          href={track.soundcloud_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          SoundCloud
-                        </a>
-                      ) : track.spotify_url ? (
-                        <a
-                          href={track.spotify_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Spotify
-                        </a>
-                      ) : (
-                        <Text color="gray.400">—</Text>
-                      )}
-                    </Table.Cell>
-                    <Table.Cell>
-                      {track.status === "analyzing" ? (
-                        <Spinner size="xs" />
-                      ) : track.status === "success" ? (
-                        <Text color="green.500">✓</Text>
-                      ) : track.status === "error" ? (
-                        <Text color="red.500">{track.errorMsg || "Error"}</Text>
-                      ) : (
-                        <Text color="gray.400">—</Text>
-                      )}
-                    </Table.Cell>
-                  </Table.Row>
-                ))}
-              </Table.Body>
-            </Table.Root>
-          </Table.ScrollArea>
+          <BackfillTable
+            tracks={tracks}
+            selected={selected}
+            analyzing={analyzing}
+            onToggleOne={toggleSelect}
+            onToggleAll={() => {
+              if (selected.size === tracks.length) {
+                deselectAll();
+              } else {
+                selectAll();
+              }
+            }}
+          />
         )}
-        <Stack align="center" my={4}>
-          <Pagination.Root count={total} pageSize={pageSize} page={page}>
-            <ButtonGroup variant="ghost" size="md">
-              <Pagination.PrevTrigger asChild>
-                <IconButton
-                  aria-label="Previous page"
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                >
-                  <LuChevronLeft />
-                </IconButton>
-              </Pagination.PrevTrigger>
-              <Pagination.Items
-                render={(pageObj: { type: "page"; value: number }) => (
-                  <IconButton
-                    key={pageObj.value}
-                    variant={pageObj.value === page ? "solid" : "outline"}
-                    aria-current={pageObj.value === page ? "page" : undefined}
-                    onClick={() => setPage(pageObj.value)}
-                  >
-                    {pageObj.value}
-                  </IconButton>
-                )}
-              />
-              <Pagination.NextTrigger asChild>
-                <IconButton
-                  aria-label="Next page"
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  <LuChevronRight />
-                </IconButton>
-              </Pagination.NextTrigger>
-            </ButtonGroup>
-          </Pagination.Root>
-        </Stack>
+        <BackfillPagination
+          total={total}
+          pageSize={pageSize}
+          page={page}
+          setPage={setPage}
+        />
       </Container>
     </>
   );
