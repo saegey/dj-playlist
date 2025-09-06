@@ -1,13 +1,9 @@
-// Utility to strip query/hash from a SoundCloud URL
-
 "use client";
 
 import React, { useState, useRef } from "react";
 import {
   Box,
   Button,
-  Input,
-  Textarea,
   Text,
   Stack,
   Image,
@@ -21,11 +17,18 @@ import {
   SimpleGrid,
   Skeleton,
 } from "@chakra-ui/react";
+import LabeledInput from "@/components/form/LabeledInput";
+import LabeledTextarea from "@/components/form/LabeledTextarea";
 
-import { AppleMusicResult, YoutubeVideo } from "@/types/track";
+import { YoutubeVideo } from "@/types/track";
 import { HiUpload } from "react-icons/hi";
 import { FiDownload } from "react-icons/fi";
 import { SiApplemusic, SiChatbot, SiSpotify, SiYoutube } from "react-icons/si";
+import { useAppleMusicPicker } from "@/hooks/useAppleMusicPicker";
+import AppleMusicPickerDialog from "@/components/AppleMusicPickerDialog";
+import { cleanSoundcloudUrl } from "@/lib/url";
+import { useSpotifyPicker } from "@/hooks/useSpotifyPicker";
+import SpotifyPickerDialog from "@/components/SpotifyPickerDialog";
 
 export interface TrackEditFormProps {
   track_id: string; // Optional for new tracks
@@ -34,69 +37,23 @@ export interface TrackEditFormProps {
   album?: string;
   local_tags?: string | undefined;
   notes?: string | undefined | null;
-  bpm?: string | undefined | null;
+  bpm?: number | null;
   key?: string | undefined | null;
-  danceability?: string | null;
+  danceability?: number | null;
   apple_music_url?: string;
   spotify_url?: string;
   youtube_url?: string;
   soundcloud_url?: string;
   star_rating?: number;
-  duration_seconds?: number; // Optional for new tracks
+  duration_seconds?: number | null; // Optional for new tracks
   username: string; // Required for all tracks
 }
 
-type SpotifySearchTrack = {
-  id: string;
-  title: string;
-  artist: string;
-  album: string;
-  url: string;
-  artwork: string;
-  duration: number; // duration in milliseconds
-};
+// SpotifySearchTrack type now lives in hooks/useSpotifyPicker
 
-function cleanSoundcloudUrl(url?: string) {
-  if (!url) return url;
-  try {
-    const urlObj = new URL(url);
-    urlObj.search = "";
-    urlObj.hash = "";
-    return urlObj.toString();
-  } catch {
-    return url;
-  }
-}
+// moved to lib/url.ts
 
-// Labeled input for text/number fields
-function LabeledInput({
-  label,
-  ...props
-}: { label: string } & React.ComponentProps<typeof Input>) {
-  return (
-    <Box flex="1">
-      <Text mb={1} fontSize="sm">
-        {label}
-      </Text>
-      <Input {...props} />
-    </Box>
-  );
-}
-
-// Labeled textarea for notes
-function LabeledTextarea({
-  label,
-  ...props
-}: { label: string } & React.ComponentProps<typeof Textarea>) {
-  return (
-    <Box>
-      <Text mb={1} fontSize="sm">
-        {label}
-      </Text>
-      <Textarea {...props} />
-    </Box>
-  );
-}
+// Moved LabeledInput and LabeledTextarea into components/form/
 
 export default function TrackEditForm({
   track,
@@ -162,15 +119,21 @@ export default function TrackEditForm({
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
 
-  const [spotifyResults, setSpotifyResults] = useState<SpotifySearchTrack[]>(
-    []
-  );
-  const [spotifyLoading, setSpotifyLoading] = useState(false);
-  const [showSpotifyModal, setShowSpotifyModal] = useState(false);
+  const spotifyPicker = useSpotifyPicker({
+    onSelect: (track) => {
+      setForm((prev) => ({ ...prev, spotify_url: track.url }));
+    },
+  });
 
-  const [appleResults, setAppleResults] = useState<AppleMusicResult[]>([]);
-  const [appleLoading, setAppleLoading] = useState(false);
-  const [showAppleModal, setShowAppleModal] = useState(false);
+  const applePicker = useAppleMusicPicker({
+    onSelect: (song) => {
+      setForm((prev) => ({
+        ...prev,
+        apple_music_url: song.url,
+        duration_seconds: song.duration ? Math.round(song.duration / 1000) : undefined,
+      }));
+    },
+  });
 
   const [analyzing, setAnalyzing] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -230,6 +193,10 @@ export default function TrackEditForm({
       const cleanForm = {
         ...form,
         soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
+        bpm: Number(form.bpm) || null,
+        key: form.key || null,
+        danceability: Number(form.danceability) || null,
+        duration_seconds: Number(form.duration_seconds) || null,
       };
       await Promise.resolve(onSave(cleanForm));
     } finally {
@@ -286,34 +253,7 @@ export default function TrackEditForm({
   };
 
   const searchSpotify = async () => {
-    setSpotifyLoading(true);
-    setShowSpotifyModal(true);
-    setSpotifyResults([]);
-    try {
-      const res = await fetch("/api/ai/spotify-track-search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title, artist: form.artist }),
-      });
-      console.log("[spotify-track-search] response status:", res.status);
-      if (res.status === 401) {
-        // Redirect to Spotify authorization
-        window.location.href =
-          "/api/spotify/login?state=" +
-          encodeURIComponent(window.location.pathname);
-        return;
-      }
-      if (res.ok) {
-        const data = await res.json();
-        setSpotifyResults(data.results || []);
-      } else {
-        alert("Spotify search failed");
-      }
-    } catch (err) {
-      console.error("Spotify search error:", err);
-      alert("Spotify search error");
-    }
-    setSpotifyLoading(false);
+    await spotifyPicker.search({ title: form.title, artist: form.artist });
   };
 
   const handleYoutubeSelect = (video: YoutubeVideo) => {
@@ -322,38 +262,10 @@ export default function TrackEditForm({
   };
 
   const searchAppleMusic = async () => {
-    setAppleLoading(true);
-    setShowAppleModal(true);
-    setAppleResults([]);
-    try {
-      const res = await fetch("/api/ai/apple-music-search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title, artist: form.artist }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAppleResults(data.results || []);
-      } else {
-        alert("Apple Music search failed");
-      }
-    } catch (err) {
-      console.error("Apple Music search error:", err);
-      alert("Apple Music search error");
-    }
-    setAppleLoading(false);
+    await applePicker.search({ title: form.title, artist: form.artist });
   };
 
-  const handleAppleSelect = (song: AppleMusicResult) => {
-    setForm((prev) => ({
-      ...prev,
-      apple_music_url: song.url,
-      duration_seconds: song.duration
-        ? Math.round(song.duration / 1000)
-        : undefined,
-    }));
-    setShowAppleModal(false);
-  };
+  // Apple selection handled via useAppleMusicPicker onSelect
 
   const handleAnalyzeAudio = async () => {
     setAnalyzing(true);
@@ -461,8 +373,8 @@ export default function TrackEditForm({
                           <Button
                             variant="outline"
                             size="sm"
-                            loading={appleLoading}
-                            disabled={appleLoading}
+                            loading={applePicker.loading}
+                            disabled={applePicker.loading}
                             onClick={searchAppleMusic}
                           >
                             <SiApplemusic /> Search Apple Music
@@ -479,8 +391,8 @@ export default function TrackEditForm({
                           <Button
                             variant="outline"
                             size="sm"
-                            loading={spotifyLoading}
-                            disabled={spotifyLoading}
+                            loading={spotifyPicker.loading}
+                            disabled={spotifyPicker.loading}
                             onClick={searchSpotify}
                           >
                             <SiSpotify /> Search Spotify
@@ -725,161 +637,22 @@ export default function TrackEditForm({
                   </Dialog.Root>
 
                   {/* --- Spotify Dialog --- */}
-                  <Dialog.Root
-                    open={showSpotifyModal}
-                    onOpenChange={(details) =>
-                      setShowSpotifyModal(details.open)
-                    }
-                    size={["full", "lg", "lg"]}
-                  >
-                    <Portal>
-                      <Dialog.Backdrop />
-                      <Dialog.Positioner>
-                        <Dialog.Content>
-                          <Dialog.Header>
-                            <Dialog.Title>Select Spotify Track</Dialog.Title>
-                            <Dialog.CloseTrigger asChild>
-                              <CloseButton size="sm" />
-                            </Dialog.CloseTrigger>
-                          </Dialog.Header>
-                          <Dialog.Body>
-                            {spotifyLoading ? (
-                              <Text>Loading...</Text>
-                            ) : spotifyResults.length === 0 ? (
-                              <Text>No results found.</Text>
-                            ) : (
-                              <Stack>
-                                {spotifyResults.map((track) => (
-                                  <Flex
-                                    key={track.id}
-                                    align="center"
-                                    gap={3}
-                                    borderWidth="1px"
-                                    borderRadius="md"
-                                    p={2}
-                                    // _hover={{ bg: "gray.50", cursor: "pointer" }}
-                                    onClick={() => {
-                                      setForm((prev) => ({
-                                        ...prev,
-                                        spotify_url: track.url,
-                                      }));
-                                      setShowSpotifyModal(false);
-                                    }}
-                                  >
-                                    {track.artwork && (
-                                      <Image
-                                        src={track.artwork}
-                                        alt={track.title}
-                                        boxSize="60px"
-                                        borderRadius="md"
-                                      />
-                                    )}
-                                    <Box flex="1">
-                                      <Text fontWeight="bold">
-                                        {track.title}
-                                      </Text>
-                                      <Text fontSize="sm">
-                                        {track.artist} — {track.album}
-                                      </Text>
-                                    </Box>
-                                    <Button
-                                      colorScheme="green"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setForm((prev) => ({
-                                          ...prev,
-                                          spotify_url: track.url,
-                                        }));
-                                        setShowSpotifyModal(false);
-                                      }}
-                                    >
-                                      Select
-                                    </Button>
-                                  </Flex>
-                                ))}
-                              </Stack>
-                            )}
-                          </Dialog.Body>
-                        </Dialog.Content>
-                      </Dialog.Positioner>
-                    </Portal>
-                  </Dialog.Root>
+                  <SpotifyPickerDialog
+                    open={spotifyPicker.isOpen}
+                    loading={spotifyPicker.loading}
+                    results={spotifyPicker.results}
+                    onOpenChange={(open) => (open ? spotifyPicker.open() : spotifyPicker.close())}
+                    onSelect={(t) => spotifyPicker.select(t)}
+                  />
 
                   {/* --- Apple Music Dialog --- */}
-                  <Dialog.Root
-                    open={showAppleModal}
-                    onOpenChange={(details) => setShowAppleModal(details.open)}
-                    size={["full", "lg", "lg"]}
-                  >
-                    <Portal>
-                      <Dialog.Backdrop />
-                      <Dialog.Positioner>
-                        <Dialog.Content>
-                          <Dialog.Header>
-                            <Dialog.Title>
-                              Select Apple Music Track
-                            </Dialog.Title>
-                            <Dialog.CloseTrigger asChild>
-                              <CloseButton size="sm" />
-                            </Dialog.CloseTrigger>
-                          </Dialog.Header>
-                          <Dialog.Body>
-                            {appleLoading ? (
-                              <Text>Loading...</Text>
-                            ) : appleResults.length === 0 ? (
-                              <Text>No results found.</Text>
-                            ) : (
-                              <Stack>
-                                {appleResults.map((song) => (
-                                  <Flex
-                                    key={song.id}
-                                    align="center"
-                                    gap={3}
-                                    borderWidth="1px"
-                                    borderRadius="md"
-                                    p={2}
-                                    // _hover={{ bg: "gray.50", cursor: "pointer" }}
-                                    onClick={() => handleAppleSelect(song)}
-                                  >
-                                    {song.artwork && (
-                                      <Image
-                                        src={song.artwork.replace(
-                                          "{w}x{h}bb",
-                                          "60x60bb"
-                                        )}
-                                        alt={song.title}
-                                        boxSize="60px"
-                                        borderRadius="md"
-                                      />
-                                    )}
-                                    <Box flex="1">
-                                      <Text fontWeight="bold">
-                                        {song.title}
-                                      </Text>
-                                      <Text fontSize="sm">
-                                        {song.artist} — {song.album}
-                                      </Text>
-                                    </Box>
-                                    <Button
-                                      colorScheme="blue"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleAppleSelect(song);
-                                      }}
-                                    >
-                                      Select
-                                    </Button>
-                                  </Flex>
-                                ))}
-                              </Stack>
-                            )}
-                          </Dialog.Body>
-                        </Dialog.Content>
-                      </Dialog.Positioner>
-                    </Portal>
-                  </Dialog.Root>
+                  <AppleMusicPickerDialog
+                    open={applePicker.isOpen}
+                    loading={applePicker.loading}
+                    results={applePicker.results}
+                    onOpenChange={(open) => (open ? applePicker.open() : applePicker.close())}
+                    onSelect={(song) => applePicker.select(song)}
+                  />
                 </Box>
               )}
             </Dialog.Body>

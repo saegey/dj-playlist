@@ -23,12 +23,9 @@ import {
 } from "@/providers/MissingAppleContext";
 import { FiChevronLeft, FiChevronRight, FiMoreVertical } from "react-icons/fi";
 import { toaster } from "@/components/ui/toaster";
+import { useTrackEditor } from "@/providers/TrackEditProvider";
 
-export default function SingleTrackUI({
-  setEditDialogOpen,
-}: {
-  setEditDialogOpen: (open: boolean) => void;
-}) {
+export default function SingleTrackUI() {
   const {
     tracks,
     currentIndex,
@@ -47,6 +44,8 @@ export default function SingleTrackUI({
     lookupDiscogs,
     discogsByTrack,
   } = useMissingApple();
+  const { openTrackEditor } = useTrackEditor();
+
   const track = tracks[currentIndex];
   const [overrideResults, setOverrideResults] = useState<
     AppleMusicResult[] | null
@@ -99,12 +98,14 @@ export default function SingleTrackUI({
               <Portal>
                 <Menu.Positioner>
                   <Menu.Content>
-                    <Menu.Item
-                      onSelect={() => setEditDialogOpen(true)}
-                      value="edit"
-                    >
-                      Edit Track
-                    </Menu.Item>
+                    {track && (
+                      <Menu.Item
+                        onSelect={() => openTrackEditor(track)}
+                        value="edit"
+                      >
+                        Edit Track
+                      </Menu.Item>
+                    )}
                   </Menu.Content>
                 </Menu.Positioner>
               </Portal>

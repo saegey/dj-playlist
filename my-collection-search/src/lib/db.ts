@@ -1,6 +1,5 @@
 import { Playlist } from "@/types/track";
 import { Pool } from "pg";
-import { start } from "repl";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

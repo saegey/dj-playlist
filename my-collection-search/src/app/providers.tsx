@@ -10,6 +10,7 @@ import PlaylistPlayer from "@/components/PlaylistPlayer";
 import { PlaylistPlayerProvider } from "@/providers/PlaylistPlayerProvider";
 import PlaylistDrawerProvider from "@/providers/PlaylistDrawer";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import TrackEditProvider from "@/providers/TrackEditProvider";
 
 export default function ClientProviders({
   children,
@@ -26,8 +27,10 @@ export default function ClientProviders({
           <MeiliProvider>
             <PlaylistPlayerProvider>
               <PlaylistDrawerProvider>
-                {children}
-                <PlaylistPlayer />
+                <TrackEditProvider>
+                  {children}
+                  <PlaylistPlayer />
+                </TrackEditProvider>
               </PlaylistDrawerProvider>
               {/* Fixed bottom player renders once at root, available everywhere */}
             </PlaylistPlayerProvider>

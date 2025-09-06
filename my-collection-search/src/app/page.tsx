@@ -5,13 +5,10 @@ import { Flex, Container, Box } from "@chakra-ui/react";
 
 import SearchResults from "@/components/SearchResults";
 import PlaylistsProvider from "@/hooks/usePlaylists";
-import type { Track } from "@/types/track";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
 import { useMeili } from "@/providers/MeiliProvider";
 
-// TrackEditForm is used via TrackEditDialog
 const SearchPage = () => {
-  // sidebar open state is managed by PlaylistDrawer context
   const { client: meiliClient, ready } = useMeili();
 
   React.useEffect(() => {
@@ -19,15 +16,6 @@ const SearchPage = () => {
   }, [ready, meiliClient]);
 
   const playlistPortalRef = useRef<HTMLDivElement | null>(null);
-
-  // const [ setEditTrack] = useState<Track | null>(null);
-  // const [setDialogOpen] = useState(false);
-
-  const handleEditClick = (track: Track) => {
-    // setEditTrack(track);
-    // setDialogOpen(true);
-    console.log("Edit track clicked", track);
-  };
 
   return (
     <>
@@ -40,7 +28,6 @@ const SearchPage = () => {
 
           {/* Playlist Drawer renders within this container via Portal */}
           <PlaylistViewerDrawer
-            handleEditClick={handleEditClick}
             meiliClient={meiliClient}
             containerRef={playlistPortalRef}
           />

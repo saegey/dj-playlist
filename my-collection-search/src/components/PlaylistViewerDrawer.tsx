@@ -31,12 +31,11 @@ import NamePlaylistDialog from "./NamePlaylistDialog";
 import { toaster } from "./ui/toaster";
 import { useUsername } from "@/providers/UsernameProvider";
 import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
+import { useTrackEditor } from "@/providers/TrackEditProvider";
 
 export const PlaylistViewerDrawer = ({
-  handleEditClick,
   meiliClient,
 }: {
-  handleEditClick: (track: Track) => void;
   meiliClient: MeiliSearch | null;
   containerRef?: React.MutableRefObject<HTMLDivElement | null>;
 }) => {
@@ -56,6 +55,7 @@ export const PlaylistViewerDrawer = ({
     optimalOrderType,
     setOptimalOrderType,
   } = usePlaylists();
+  const { openTrackEditor } = useTrackEditor();
   const { username: selectedUsername } = useUsername();
   const { isOpen, setOpen } = usePlaylistDrawer();
 
@@ -251,7 +251,7 @@ export const PlaylistViewerDrawer = ({
                   playlist: playlist,
                   playlistCounts,
                   moveTrack,
-                  setEditTrack: handleEditClick,
+                  setEditTrack: openTrackEditor,
                   removeFromPlaylist,
                   playlistAvgEmbedding: playlistAvgEmbedding ?? undefined,
                 })}
@@ -286,7 +286,7 @@ export const PlaylistViewerDrawer = ({
                                   Add to Playlist
                                 </Menu.Item>
                                 <Menu.Item
-                                  onSelect={() => handleEditClick(rec)}
+                                  onSelect={() => openTrackEditor(rec)}
                                   value="edit"
                                 >
                                   Edit Track
