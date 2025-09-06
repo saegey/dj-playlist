@@ -62,6 +62,14 @@ const SearchResults: React.FC = () => {
     return () => clearTimeout(handler);
   }, [debouncedValue, onQueryChange, query]);
 
+  console.log("Rendering SearchResults with", {
+    query,
+    debouncedValue,
+    results,
+    estimatedResults,
+    loading,
+  });
+
   return (
     <Box>
       <Box display="flex" flexDirection={["column", "row"]} gap={3} mb={3}>

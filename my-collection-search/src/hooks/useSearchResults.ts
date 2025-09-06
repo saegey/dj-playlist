@@ -75,8 +75,8 @@ export function useSearchResults({
       return next < last.estimatedTotalHits ? next : undefined;
     },
     initialPageParam: 0,
-    staleTime: 10_000,
-    gcTime: 5 * 60_000,
+    // staleTime: 10_000,
+    // gcTime: 5 * 60_000,
   });
 
   const singlePageQuery = useQuery<SearchPage, Error>({
@@ -101,8 +101,8 @@ export function useSearchResults({
         limit,
       };
     },
-    staleTime: 10_000,
-    gcTime: 5 * 60_000,
+    // staleTime: 10_000,
+    // gcTime: 5 * 60_000,
   });
 
   const pages = isInfinite
