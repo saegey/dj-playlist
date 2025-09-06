@@ -14,7 +14,6 @@ import {
   VStack,
   HStack,
   Input,
-  Tooltip,
   Badge,
   Spinner,
   Separator,
@@ -240,78 +239,57 @@ export default function PlaylistManager({
                   </HStack>
                 </Box>
                 <HStack gap={2}>
-                  <Tooltip.Root>
-                    <Tooltip.Trigger>
-                      <span>
-                        <Button
-                          aria-label="Play now"
-                          size="xs"
-                          colorPalette={"primary"}
-                          variant={"surface"}
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const tracks = await fetchTracksByIds(pl.tracks);
-                            replacePlaylist(tracks, {
-                              autoplay: true,
-                              startIndex: 0,
-                            });
-                          }}
-                        >
-                          <FaPlay />
-                        </Button>
-                      </span>
-                    </Tooltip.Trigger>
-                    <Tooltip.Content>Play now</Tooltip.Content>
-                  </Tooltip.Root>
+                  <Button
+                    aria-label="Play now"
+                    size="xs"
+                    colorPalette={"primary"}
+                    variant={"surface"}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const tracks = await fetchTracksByIds(pl.tracks);
+                      replacePlaylist(tracks, {
+                        autoplay: true,
+                        startIndex: 0,
+                      });
+                    }}
+                  >
+                    <FaPlay />
+                  </Button>
 
-                  <Tooltip.Root>
-                    <Tooltip.Trigger>
-                      <span>
-                        <Button
-                          aria-label="Load into editor"
-                          size="xs"
-                          variant="solid"
-                          colorPalette="primary"
-                          disabled={isRowLoading}
-                          loading={isRowLoading}
-                          mr={1}
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            await handleLoadPlaylist(pl.tracks, pl.id);
-                            notify({
-                              title: "Playlist loaded.",
-                              type: "success",
-                            });
-                          }}
-                        >
-                          <FiBookOpen />
-                        </Button>
-                      </span>
-                    </Tooltip.Trigger>
-                    <Tooltip.Content>Load</Tooltip.Content>
-                  </Tooltip.Root>
+                  <Button
+                    aria-label="Load into editor"
+                    size="xs"
+                    variant="solid"
+                    colorPalette="primary"
+                    disabled={isRowLoading}
+                    loading={isRowLoading}
+                    mr={1}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await handleLoadPlaylist(pl.tracks, pl.id);
+                      notify({
+                        title: "Playlist loaded.",
+                        type: "success",
+                      });
+                    }}
+                  >
+                    <FiBookOpen />
+                  </Button>
 
-                  <Tooltip.Root>
-                    <Tooltip.Trigger>
-                      <span>
-                        <Button
-                          aria-label="Delete playlist"
-                          size="xs"
-                          colorPalette={"red"}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteDialogState({
-                              open: true,
-                              playlistId: pl.id,
-                            });
-                          }}
-                        >
-                          <FiTrash />
-                        </Button>
-                      </span>
-                    </Tooltip.Trigger>
-                    <Tooltip.Content>Delete</Tooltip.Content>
-                  </Tooltip.Root>
+                  <Button
+                    aria-label="Delete playlist"
+                    size="xs"
+                    colorPalette={"red"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteDialogState({
+                        open: true,
+                        playlistId: pl.id,
+                      });
+                    }}
+                  >
+                    <FiTrash />
+                  </Button>
                 </HStack>
               </Flex>
             );

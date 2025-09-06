@@ -10,10 +10,10 @@ import React, {
 import type { Playlist, Track } from "@/types/track";
 import { importPlaylist } from "@/services/playlistService";
 import { fetchTracksByIds } from "@/services/trackService";
-import {
-  useRecommendations,
-  type TrackWithEmbedding as TrackWithEmbeddingFromHook,
-} from "@/hooks/useRecommendations";
+import { useRecommendations, type TrackWithEmbedding as TrackWithEmbeddingFromHook } from "@/hooks/useRecommendations";
+import { usePlaylistsQuery } from "@/hooks/usePlaylistsQuery";
+import { useCreatePlaylistMutation } from "@/hooks/usePlaylistMutations";
+import { reconcileDisplayPlaylist, idKey, moveTrackReorder } from "@/utils/playlist";
 
 export interface PlaylistInfo {
   id?: number;
@@ -67,7 +67,11 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   const [optimalOrderType, setOptimalOrderType] = useState<
     "original" | "greedy" | "genetic"
   >("original");
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const { playlists, refetch } = usePlaylistsQuery({ enabled: true, staleTime: 30_000 });
+  const setPlaylists = useCallback<React.Dispatch<React.SetStateAction<Playlist[]>>>(
+    () => {},
+    []
+  );
   const [playlistName, setPlaylistName] = useState("");
   const [loadingPlaylists, setLoadingPlaylists] = useState<
     { id: number } | false
@@ -85,12 +89,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   );
   const getRecommendationsRaw = useRecommendations();
 
-  // Identity helper to avoid cross-user collisions
-  const idKey = useCallback(
-    <T extends { track_id: string; username?: string }>(t: T) =>
-      `${t.username ?? ""}:${t.track_id}`,
-    []
-  );
+  // Identity helper now imported from utils
 
   // Memoized average embedding for playlist
   const playlistAvgEmbedding = useMemo(() => {
@@ -105,67 +104,31 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     );
   }, [playlist]);
 
-  // Fetch playlists from backend
   const fetchPlaylists = useCallback(async () => {
-    try {
-      const res = await fetch("/api/playlists");
-      if (res.ok) {
-        const data = await res.json();
-        setPlaylists(data);
-      }
-    } finally {
-      setLoadingPlaylists(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPlaylists();
-  }, [fetchPlaylists]);
+    await refetch();
+    setLoadingPlaylists(false);
+  }, [refetch]);
 
   // Reconcile displayPlaylist with playlist whenever they drift
   useEffect(() => {
-    // If both are empty or identical in content, nothing to do
-    if (playlist.length === 0 && displayPlaylist.length === 0) return;
-    const displayKeys = new Set(displayPlaylist.map((t) => idKey(t)));
-    const playlistKeys = new Set(playlist.map((t) => idKey(t)));
-    const hasExtraneous = displayPlaylist.some(
-      (t) => !playlistKeys.has(idKey(t))
-    );
-    const hasMissing = playlist.some((t) => !displayKeys.has(idKey(t)));
-    if (!hasExtraneous && !hasMissing) return;
-
-    // Rebuild display to include only items present in playlist, keeping current display order
-    const byKey = new Map(playlist.map((t) => [idKey(t), t]));
-    const reconciled: TrackWithEmbedding[] = [
-      // keep items that still exist
-      ...displayPlaylist
-        .filter((t) => byKey.has(idKey(t)))
-        .map((t) => byKey.get(idKey(t)) as TrackWithEmbedding),
-      // append any new items from playlist not shown yet, in playlist order
-      ...playlist.filter((t) => !displayKeys.has(idKey(t))),
-    ];
-    setDisplayPlaylist(reconciled);
-  }, [playlist, displayPlaylist, idKey]);
+    setDisplayPlaylist((cur) => reconcileDisplayPlaylist(playlist, cur));
+  }, [playlist]);
 
   // Create a new playlist
+  const { mutateAsync: createPlaylist } = useCreatePlaylistMutation();
   const handleCreatePlaylist = useCallback(async () => {
     if (!playlistName.trim() || playlist.length === 0) return;
-    const res = await fetch("/api/playlists", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      await createPlaylist({
         name: playlistName,
         tracks: playlist.map((t) => t.track_id),
-      }),
-    });
-    if (res.ok) {
+      });
       setPlaylistName("");
       setPlaylistInfo({ name: playlistName });
-      fetchPlaylists();
-    } else {
+  } catch {
       alert("Failed to create playlist");
     }
-  }, [playlistName, playlist, fetchPlaylists]);
+  }, [playlistName, playlist, createPlaylist]);
 
   // Load a playlist (replace current playlist)
   const handleLoadPlaylist = useCallback(
@@ -215,12 +178,8 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
       playlistName,
       displayPlaylist.map((t) => t.track_id)
     );
-    if (res.ok) {
-      fetchPlaylists();
-    } else {
-      throw new Error("Failed to save playlist");
-    }
-  }, [playlistName, fetchPlaylists, displayPlaylist]);
+    if (!res.ok) throw new Error("Failed to save playlist");
+  }, [playlistName, displayPlaylist]);
 
   // Export playlist as JSON file
   const exportPlaylist = useCallback(() => {
@@ -296,29 +255,20 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
       return prev;
     });
   }, []);
-
   // Move track in playlist
-  const moveTrack = useCallback(
-    (fromIdx: number, toIdx: number) => {
-      setDisplayPlaylist((prev) => {
-        if (toIdx < 0 || toIdx >= prev.length) return prev;
-        const updated = [...prev];
-        const [removed] = updated.splice(fromIdx, 1);
-        updated.splice(toIdx, 0, removed);
-        // Also reorder the main playlist to reflect display order for consistency
-        const order = new Map(updated.map((t, i) => [idKey(t), i]));
-        setPlaylist((cur) => {
-          // keep only items present and sort by display order, then append any others by their current order
-          const inDisplay = cur.filter((t) => order.has(idKey(t)));
-          const notInDisplay = cur.filter((t) => !order.has(idKey(t)));
-          inDisplay.sort((a, b) => order.get(idKey(a))! - order.get(idKey(b))!);
-          return [...inDisplay, ...notInDisplay];
-        });
-        return updated;
+  const moveTrack = useCallback((fromIdx: number, toIdx: number) => {
+    setDisplayPlaylist((prev) => {
+      const updated = moveTrackReorder(prev, fromIdx, toIdx);
+      const order = new Map(updated.map((t, i) => [idKey(t), i]));
+      setPlaylist((cur) => {
+        const inDisplay = cur.filter((t) => order.has(idKey(t)));
+        const notInDisplay = cur.filter((t) => !order.has(idKey(t)));
+        inDisplay.sort((a, b) => order.get(idKey(a))! - order.get(idKey(b))!);
+        return [...inDisplay, ...notInDisplay];
       });
-    },
-    [idKey]
-  );
+      return updated;
+    });
+  }, []);
 
   // Expose a wrapper that fixes playlist arg from context for consumers expecting previous shape
   const getRecommendations = useCallback(
@@ -341,14 +291,14 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     setPlaylists,
     playlistName,
     setPlaylistName,
-    loadingPlaylists,
+  loadingPlaylists,
     playlistInfo,
     setPlaylistInfo,
     playlist,
     setPlaylist,
     displayPlaylist,
     setDisplayPlaylist,
-    fetchPlaylists,
+  fetchPlaylists,
     handleCreatePlaylist,
     handleLoadPlaylist,
     savePlaylist,

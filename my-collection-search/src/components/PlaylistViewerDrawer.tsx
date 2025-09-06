@@ -22,6 +22,7 @@ import { PiDna, PiFilePdf } from "react-icons/pi";
 import { MdOutlineClearAll } from "react-icons/md";
 
 import { usePlaylists } from "@/hooks/usePlaylists";
+import { useRecommendations } from "@/hooks/useRecommendations";
 
 import { formatSeconds, parseDurationToSeconds } from "@/lib/trackUtils";
 import { useSearchResults } from "@/hooks/useSearchResults";
@@ -47,13 +48,12 @@ export const PlaylistViewerDrawer = ({
     removeFromPlaylist,
     moveTrack,
     playlistAvgEmbedding,
-    getRecommendations,
     savePlaylist,
     playlistName,
     setPlaylistName,
     optimalOrderType,
     setOptimalOrderType,
-    clearPlaylist
+    clearPlaylist,
   } = usePlaylists();
   const { openTrackEditor } = useTrackEditor();
   const { username: selectedUsername } = useUsername();
@@ -76,21 +76,22 @@ export const PlaylistViewerDrawer = ({
 
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
 
+  const getRecommendations = useRecommendations();
   React.useEffect(() => {
     let cancelled = false;
-    async function fetchRecommendations() {
+    async function fetchRecs() {
       if (playlist.length === 0) {
         setRecommendations([]);
         return;
       }
-      const recs = await getRecommendations(50);
+      const recs = await getRecommendations(50, playlist);
       if (!cancelled) setRecommendations(recs);
     }
-    fetchRecommendations();
+    fetchRecs();
     return () => {
       cancelled = true;
     };
-  }, [playlist, getRecommendations, playlistAvgEmbedding]);
+  }, [playlist, getRecommendations]);
 
   // PDF export handler
   const handleExportPlaylistToPDF = () => {
@@ -119,7 +120,6 @@ export const PlaylistViewerDrawer = ({
       });
     }
   };
-
 
   return (
     <Box
