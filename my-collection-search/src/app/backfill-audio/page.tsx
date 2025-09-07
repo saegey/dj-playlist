@@ -14,6 +14,8 @@ import BackfillPagination from "@/components/backfill/BackfillPagination";
 import type { BackfillTrack } from "@/components/backfill/types";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { useBackfillStatusMutation } from "@/hooks/useBackfillStatusMutation";
+import { useVectorizeTrackMutation } from "@/hooks/useVectorizeTrackMutation";
+import { useAnalyzeTrackMutation } from "@/hooks/useAnalyzeTrackMutation";
 
 // BackfillTrack moved to components/backfill/types
 
@@ -31,6 +33,8 @@ export default function BackfillAudioPage() {
   const { client: meiliClient, ready } = useMeili();
   const { saveTrack } = useTracksQuery();
   const { mutate: updateStatus } = useBackfillStatusMutation();
+  const { mutateAsync: vectorize } = useVectorizeTrackMutation();
+  const { mutateAsync: analyze } = useAnalyzeTrackMutation();
 
   // Build Meili filter (AND conditions)
   const filter = useMemo(() => {
@@ -85,24 +89,20 @@ export default function BackfillAudioPage() {
       return next;
     });
   };
-  const selectAll = () => setSelected(new Set(pageTracks.map((t) => t.track_id)));
+  const selectAll = () =>
+    setSelected(new Set(pageTracks.map((t) => t.track_id)));
   const deselectAll = () => setSelected(new Set());
 
   const handleVectorizeSelected = async () => {
     setAnalyzing(true);
-    for (const trackId of selected) {
+  for (const trackId of selected) {
       updateStatus({ track_id: trackId, status: "analyzing", errorMsg: null });
       try {
-        const res = await fetch("/api/tracks/vectorize", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            track_id: trackId,
-            username: pageTracks.find((t) => t.track_id === trackId)?.username ?? "",
-            // add other fields if needed
-          }),
+        await vectorize({
+          track_id: trackId,
+          username:
+            pageTracks.find((t) => t.track_id === trackId)?.username ?? "",
         });
-        if (!res.ok) throw new Error((await res.json()).error || "Failed");
         updateStatus({ track_id: trackId, status: "success", errorMsg: null });
       } catch (err) {
         updateStatus({
@@ -124,35 +124,38 @@ export default function BackfillAudioPage() {
     for (const trackId of selected) {
       updateStatus({ track_id: trackId, status: "analyzing", errorMsg: null });
       try {
-        const res = await fetch("/api/tracks/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            track_id: trackId,
-            apple_music_url: pageTracks.find((t) => t.track_id === trackId)?.apple_music_url,
-            youtube_url: pageTracks.find((t) => t.track_id === trackId)?.youtube_url,
-            soundcloud_url: pageTracks.find((t) => t.track_id === trackId)?.soundcloud_url,
-            spotify_url: pageTracks.find((t) => t.track_id === trackId)?.spotify_url,
-          }),
+        const data = await analyze({
+          track_id: trackId,
+          apple_music_url: pageTracks.find((t) => t.track_id === trackId)
+            ?.apple_music_url,
+          youtube_url: pageTracks.find((t) => t.track_id === trackId)
+            ?.youtube_url,
+          soundcloud_url: pageTracks.find((t) => t.track_id === trackId)
+            ?.soundcloud_url,
+          spotify_url: pageTracks.find((t) => t.track_id === trackId)
+            ?.spotify_url,
         });
-        if (!res.ok) throw new Error((await res.json()).error || "Failed");
-        const data = await res.json();
 
         saveTrack({
-          username: pageTracks.find((t) => t.track_id === trackId)?.username ?? "",
+          username:
+            pageTracks.find((t) => t.track_id === trackId)?.username ?? "",
           track_id: trackId,
           bpm:
-            data.rhythm && typeof data.rhythm.bpm === "number"
+            typeof data.rhythm?.bpm === "number"
               ? Number(Math.round(data.rhythm.bpm))
               : undefined,
-          key: data.tonal
-            ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
-            : undefined,
-          danceability:
-            data.rhythm && typeof data.rhythm.danceability === "number"
-              ? data.rhythm.danceability.toFixed(3)
+          key:
+            data.tonal?.key_edma?.key && data.tonal?.key_edma?.scale
+              ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
               : undefined,
-          duration_seconds: Math.round(data.metadata.audio_properties.length),
+          danceability:
+            typeof data.rhythm?.danceability === "number"
+              ? Math.round(data.rhythm.danceability * 1000) / 1000
+              : undefined,
+          duration_seconds:
+            typeof data.metadata?.audio_properties?.length === "number"
+              ? Math.round(data.metadata.audio_properties.length)
+              : undefined,
           // mood_happy: data.mood_happy,
           // mood_sad: data.mood_sad,
           // mood_relaxed: data.mood_relaxed,
