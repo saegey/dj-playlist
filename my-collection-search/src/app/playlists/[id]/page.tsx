@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
+import { Box } from "@chakra-ui/react";
+import { useEffect } from "react";
+
 import PlaylistViewer from "@/components/PlaylistViewer";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { usePlaylistTracksByIdQuery } from "@/hooks/usePlaylistTrackIdsQuery";
-import { Box } from "@chakra-ui/react";
-import { useEffect } from "react";
 
 interface PlaylistPageProps {
   params: Promise<{ id: string }> | { id: string };
@@ -23,7 +24,7 @@ const PlaylistPage = ({ params }: PlaylistPageProps) => {
     if (!isLoading && tracks) {
       setPlaylist(tracks);
     }
-  }, [isLoading, tracks, setPlaylist]);
+  }, [isLoading, tracks]);
 
   if (isLoading) {
     return <Box>Loading playlist...</Box>;

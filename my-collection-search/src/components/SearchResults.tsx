@@ -6,8 +6,6 @@ import TrackResult from "@/components/TrackResult";
 import UsernameSelect from "./UsernameSelect";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useSearchResults } from "@/hooks/useSearchResults";
-import { useUsername } from "@/providers/UsernameProvider";
-import { useMeili } from "@/providers/MeiliProvider";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 
 const SearchResults: React.FC = () => {
@@ -15,8 +13,6 @@ const SearchResults: React.FC = () => {
     showCurrentUser: true,
     showSpotifyUsernames: true,
   });
-  const { username: selectedUsername } = useUsername();
-  const { client: meiliClient } = useMeili();
   const {
     query,
     onQueryChange,
@@ -26,7 +22,10 @@ const SearchResults: React.FC = () => {
     hasMore,
     loadMore,
     loading,
-  } = useSearchResults({ client: meiliClient, username: selectedUsername });
+  } = useSearchResults({
+    mode: "infinite",
+    limit: 20,
+  });
 
   const lastResultRef = React.useRef<HTMLDivElement | null>(null);
   const observer = React.useRef<IntersectionObserver | null>(null);
@@ -61,14 +60,6 @@ const SearchResults: React.FC = () => {
     }, 300);
     return () => clearTimeout(handler);
   }, [debouncedValue, onQueryChange, query]);
-
-  console.log("Rendering SearchResults with", {
-    query,
-    debouncedValue,
-    results,
-    estimatedResults,
-    loading,
-  });
 
   return (
     <Box>

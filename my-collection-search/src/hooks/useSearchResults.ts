@@ -5,11 +5,14 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+
 import type { Track } from "@/types/track";
+import { useMeili } from "@/providers/MeiliProvider";
+import { useUsername } from "@/providers/UsernameProvider";
 
 interface UseSearchResultsOptions {
-  client: MeiliSearch | null;
-  username?: string;
+  client?: MeiliSearch | null; // optional override; defaults to provider
+  username?: string; // optional override; defaults to provider
   filter?: string | string[];
   // New: choose between infinite scroll (default) or single-page pagination
   mode?: "infinite" | "page";
@@ -39,14 +42,19 @@ export function useSearchResults({
   const [query, setQuery] = useState("");
   const limit = limitOverride ?? DEFAULT_LIMIT;
   const qc = useQueryClient();
+  // Resolve from providers by default
+  const { client: ctxClient, ready } = useMeili();
+  const { username: ctxUsername } = useUsername();
+  const effClient = client ?? ctxClient;
+  const effUsername = username ?? ctxUsername;
 
   // Stable filter shape for caching
   const searchFilter = useMemo(
-    () => filter ?? (username ? [`username = "${username}"`] : undefined),
-    [filter, username]
+    () => filter ?? (effUsername ? [`username = "${effUsername}"`] : undefined),
+    [filter, effUsername]
   );
 
-  const enabled = !!client;
+  const enabled = !!effClient && (ready ?? true);
 
   // --- Tracks query (infinite or single page) ---
   const isInfinite = mode === "infinite";
@@ -57,7 +65,7 @@ export function useSearchResults({
     queryFn: async (context): Promise<SearchPage> => {
       const pageParam =
         typeof context.pageParam === "number" ? context.pageParam : 0;
-      const index = client!.index<Track>("tracks");
+      const index = effClient!.index<Track>("tracks");
       const res = await index.search(query || "", {
         limit,
         offset: pageParam,
@@ -75,8 +83,8 @@ export function useSearchResults({
       return next < last.estimatedTotalHits ? next : undefined;
     },
     initialPageParam: 0,
-    // staleTime: 10_000,
-    // gcTime: 5 * 60_000,
+    staleTime: 10_000,
+    gcTime: 5 * 60_000,
   });
 
   const singlePageQuery = useQuery<SearchPage, Error>({
@@ -84,9 +92,9 @@ export function useSearchResults({
       "tracks",
       { q: query, filter: searchFilter, limit, mode, page: page ?? 1 },
     ],
-    enabled: enabled && !isInfinite && !!client,
+    enabled: enabled && !isInfinite && !!effClient,
     queryFn: async (): Promise<SearchPage> => {
-      const index = client!.index<Track>("tracks");
+      const index = effClient!.index<Track>("tracks");
       const currentPage = Math.max(1, page ?? 1);
       const offset = (currentPage - 1) * limit;
       const res = await index.search(query || "", {
@@ -101,8 +109,8 @@ export function useSearchResults({
         limit,
       };
     },
-    // staleTime: 10_000,
-    // gcTime: 5 * 60_000,
+    staleTime: 10_000,
+    gcTime: 5 * 60_000,
   });
 
   const pages = isInfinite
@@ -154,8 +162,8 @@ export function useSearchResults({
   // “Clear filter” previously loaded random docs; we emulate that by
   // setting a random window into the cache for the current key.
   const clearFilter = useCallback(async () => {
-    if (!client) return;
-    const index = client.index<Track>("tracks");
+    if (!effClient) return;
+    const index = effClient.index<Track>("tracks");
     const stats = await index.getStats();
     const total = stats.numberOfDocuments || 0;
     const sampleLimit = 10;
@@ -184,7 +192,7 @@ export function useSearchResults({
 
     // Also update local query string so UI input reflects cleared state
     setQuery("");
-  }, [client, qc, searchFilter, limit]);
+  }, [effClient, qc, searchFilter, limit]);
 
   // onChange helper kept for drop-in compatibility
   const onQueryChange = useCallback(
