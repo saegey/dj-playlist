@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import type { InfiniteData as RQInfiniteData } from "@tanstack/react-query";
 import type { Track } from "@/types/track";
 
@@ -29,7 +30,7 @@ export function useTracksCacheUpdater() {
     if (patches.length === 0) return;
 
     qc.setQueriesData<PageWithHits | RQInfiniteData<PageWithHits>>(
-      { queryKey: ["tracks"], exact: false },
+      { queryKey: queryKeys.tracksRoot(), exact: false },
       (old) => {
         if (!old) return old;
 

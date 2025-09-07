@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchPlaylistTrackIds } from "@/services/playlistService";
 import { usePlaylistTracksQuery } from "@/hooks/usePlaylistTracksQuery";
+import { queryKeys } from "@/lib/queryKeys";
 
 type Options = {
   enabled?: boolean;
@@ -16,7 +17,7 @@ export function usePlaylistTrackIdsQuery(
 ) {
   const idNum = typeof playlistId === "string" ? Number(playlistId) : playlistId ?? undefined;
   const query = useQuery<string[], Error>({
-    queryKey: ["playlist", idNum, "track-ids"],
+    queryKey: idNum ? queryKeys.playlistTrackIds(idNum) : ["playlist", idNum, "track-ids"],
     queryFn: () => fetchPlaylistTrackIds(idNum as number),
     enabled: Boolean(idNum) && (options?.enabled ?? true),
     staleTime: options?.staleTime ?? 30_000,

@@ -9,6 +9,7 @@ import {
 import type { Track } from "@/types/track";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
+import { queryKeys } from "@/lib/queryKeys";
 
 interface UseSearchResultsOptions {
   client?: MeiliSearch | null; // optional override; defaults to provider
@@ -55,12 +56,13 @@ export function useSearchResults({
   );
 
   const enabled = !!effClient && (ready ?? true);
+  const bootstrapping = !effClient || ready === false;
 
   // --- Tracks query (infinite or single page) ---
   const isInfinite = mode === "infinite";
 
   const infiniteQuery = useInfiniteQuery<SearchPage, Error>({
-    queryKey: ["tracks", { q: query, filter: searchFilter, limit, mode }],
+    queryKey: queryKeys.tracks({ q: query, filter: searchFilter, limit, mode }),
     enabled: enabled && isInfinite,
     queryFn: async (context): Promise<SearchPage> => {
       const pageParam =
@@ -88,10 +90,13 @@ export function useSearchResults({
   });
 
   const singlePageQuery = useQuery<SearchPage, Error>({
-    queryKey: [
-      "tracks",
-      { q: query, filter: searchFilter, limit, mode, page: page ?? 1 },
-    ],
+    queryKey: queryKeys.tracks({
+      q: query,
+      filter: searchFilter,
+      limit,
+      mode,
+      page: page ?? 1,
+    }),
     enabled: enabled && !isInfinite && !!effClient,
     queryFn: async (): Promise<SearchPage> => {
       const index = effClient!.index<Track>("tracks");
@@ -128,7 +133,7 @@ export function useSearchResults({
   );
 
   const countsQuery = useQuery({
-    queryKey: ["playlistCounts", ids],
+    queryKey: queryKeys.playlistCounts(ids),
     enabled: enabled && ids.length > 0,
     queryFn: async () => {
       const res = await fetch("/api/tracks/playlist_counts", {
@@ -156,7 +161,7 @@ export function useSearchResults({
 
   // Old hook had a refreshFlag with needsRefresh(). Here we invalidate cache.
   const needsRefresh = useCallback(() => {
-    qc.invalidateQueries({ queryKey: ["tracks"] });
+    qc.invalidateQueries({ queryKey: queryKeys.tracks({}) });
   }, [qc]);
 
   // “Clear filter” previously loaded random docs; we emulate that by
@@ -177,7 +182,7 @@ export function useSearchResults({
     });
 
     // Write a single-page result into this query's cache to match infiniteQuery shape
-    const key = ["tracks", { q: "", filter: searchFilter, limit }];
+    const key = queryKeys.tracks({ q: "", filter: searchFilter, limit });
     qc.setQueryData<{ pageParams: number[]; pages: SearchPage[] }>(key, {
       pageParams: [0],
       pages: [
@@ -202,8 +207,8 @@ export function useSearchResults({
 
   // loading: combine initial + fetching-next
   const loading = isInfinite
-    ? infiniteQuery.isLoading || infiniteQuery.isFetching
-    : singlePageQuery.isLoading || singlePageQuery.isFetching;
+    ? bootstrapping || infiniteQuery.isPending || infiniteQuery.isFetching
+    : bootstrapping || singlePageQuery.isPending || singlePageQuery.isFetching;
 
   // setLoading existed in the old API; provide a no-op to avoid breakage.
   const setLoading = useCallback(() => {

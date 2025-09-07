@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { importPlaylist } from "@/services/playlistService";
+import { queryKeys } from "@/lib/queryKeys";
 
 export function useCreatePlaylistMutation() {
   const qc = useQueryClient();
@@ -12,7 +13,10 @@ export function useCreatePlaylistMutation() {
       return true;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["playlists"], refetchType: "active" });
+      qc.invalidateQueries({
+        queryKey: queryKeys.playlists(),
+        refetchType: "active",
+      });
     },
   });
 }

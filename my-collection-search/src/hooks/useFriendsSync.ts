@@ -2,6 +2,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 
 import { useSyncStreams } from "@/providers/SyncStreamsProvider";
 import { useSettingsDialogs } from "@/providers/SettingsDialogProvider";
@@ -33,10 +34,9 @@ export function useFriendsSync() {
       setRemoveFriendDone(true);
 
       // refresh cached friend list after removal
-      await qc.invalidateQueries({ queryKey: ["friends"] });
+      await qc.invalidateQueries({ queryKey: queryKeys.friends() });
     } catch (e) {
-      const errorMessage =
-        e instanceof Error ? e.message : String(e);
+      const errorMessage = e instanceof Error ? e.message : String(e);
       setRemoveFriendError(errorMessage);
       setRemoveFriendDone(true);
     }

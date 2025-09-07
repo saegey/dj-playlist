@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 import type { InfiniteData as RQInfiniteData } from "@tanstack/react-query";
 import type { BackfillTrack } from "@/components/backfill/types";
 import type { Track } from "@/types/track";
@@ -24,7 +25,9 @@ function applyUpdatesToHits(
     return {
       ...h,
       ...(u.status !== undefined ? { status: u.status } : {}),
-      ...(u.errorMsg !== undefined ? { errorMsg: u.errorMsg ?? undefined } : {}),
+      ...(u.errorMsg !== undefined
+        ? { errorMsg: u.errorMsg ?? undefined }
+        : {}),
     } as BackfillTrack;
   });
 }
@@ -33,7 +36,7 @@ export function useBackfillStatusMutation() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationKey: ["tracks", "status"],
+    mutationKey: queryKeys.tracksStatus(),
     mutationFn: async (updates: TrackStatusUpdate | TrackStatusUpdate[]) => {
       // No server call; this is purely optimistic UI update
       return Array.isArray(updates) ? updates : [updates];
@@ -43,7 +46,7 @@ export function useBackfillStatusMutation() {
 
       // Update all cached "tracks" queries (both infinite and single-page)
       qc.setQueriesData<PageWithHits | RQInfiniteData<PageWithHits>>(
-        { queryKey: ["tracks"], exact: false },
+        { queryKey: queryKeys.tracksRoot(), exact: false },
         (old) => {
           if (!old) return old;
 

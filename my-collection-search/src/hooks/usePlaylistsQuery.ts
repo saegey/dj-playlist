@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchPlaylists } from "@/services/playlistService";
+import { queryKeys } from "@/lib/queryKeys";
 import type { Playlist } from "@/types/track";
 
 type Options = {
@@ -11,7 +12,7 @@ type Options = {
 
 export function usePlaylistsQuery(options?: Options) {
   const query = useQuery<Playlist[], Error>({
-    queryKey: ["playlists"],
+    queryKey: queryKeys.playlists(),
     queryFn: fetchPlaylists,
     enabled: options?.enabled ?? true,
     staleTime: options?.staleTime ?? 30_000,
