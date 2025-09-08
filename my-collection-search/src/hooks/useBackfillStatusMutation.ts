@@ -44,9 +44,17 @@ export function useBackfillStatusMutation() {
     onMutate: async (updates) => {
       const arr = Array.isArray(updates) ? updates : [updates];
 
-      // Update all cached "tracks" queries (both infinite and single-page)
+      // Update all cached ["tracks", { ...args }] queries (both infinite and single-page)
       qc.setQueriesData<PageWithHits | RQInfiniteData<PageWithHits>>(
-        { queryKey: queryKeys.tracksRoot(), exact: false },
+        {
+          predicate: (q) =>
+            Array.isArray(q.queryKey) &&
+            q.queryKey[0] === "tracks" &&
+            q.queryKey.length === 2 &&
+            typeof q.queryKey[1] === "object" &&
+            q.queryKey[1] !== null &&
+            !Array.isArray(q.queryKey[1]),
+        },
         (old) => {
           if (!old) return old;
 

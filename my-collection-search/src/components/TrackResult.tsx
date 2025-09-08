@@ -215,7 +215,7 @@ export default function TrackResult({
       </Flex>
       <Flex direction="column" flex={1}>
         <Flex alignItems="center" gap={2} mt={1}>
-          <RatingGroup.Root defaultValue={track.star_rating || 0} readOnly>
+          <RatingGroup.Root value={track.star_rating ?? 0} readOnly>
             {Array.from({ length: 5 }).map((_, index) => (
               <RatingGroup.Item key={index} index={index + 1}>
                 <RatingGroup.ItemIndicator fontSize="sm" />
