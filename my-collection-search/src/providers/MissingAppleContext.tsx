@@ -8,10 +8,15 @@ import React, {
   useMemo,
   useState,
 } from "react";
+
 import { Track } from "@/types/track";
 import { AppleMusicResult } from "@/types/apple";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
+import { useTracksQuery } from "@/hooks/useTracksQuery";
+import type { TrackEditFormProps } from "@/components/TrackEditForm";
+import { fetchAppleMusicAISearch } from "@/services/aiService";
+import { fetchMissingAppleTracks } from "@/services/trackService";
 
 type AppleResultsMap = Record<string, AppleMusicResult[] | null | undefined>;
 
@@ -127,27 +132,13 @@ export function MissingAppleProvider({
     const fetchTracks = async () => {
       setLoading(true);
       try {
-        let url = `/api/tracks/missing-apple-music?page=${page}&pageSize=${pageSize}`;
-        if (selectedUsername)
-          url += `&username=${encodeURIComponent(selectedUsername)}`;
-        const res = await fetch(url);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            setTracks(data);
-            setTotal(data.length);
-          } else if (data && Array.isArray(data.tracks)) {
-            setTracks(data.tracks);
-            setTotal(
-              typeof data.total === "number" ? data.total : data.tracks.length
-            );
-          } else {
-            setTracks([]);
-            setTotal(0);
-          }
-        } else {
-          setTracks([]);
-        }
+        const { tracks, total } = await fetchMissingAppleTracks({
+          page,
+          pageSize,
+          username: selectedUsername ?? undefined,
+        });
+        setTracks(tracks);
+        setTotal(total);
       } finally {
         setLoading(false);
       }
@@ -163,28 +154,19 @@ export function MissingAppleProvider({
   }, [selectedUsername]);
 
   const searchAppleFor = useCallback(async (track: Track) => {
-    const res = await fetch("/api/ai/apple-music-search", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    try {
+      const { results } = await fetchAppleMusicAISearch({
         title: track.title,
         artist: track.artist,
         album: track.album,
         isrc: track.isrc || undefined,
-      }),
-    });
-    if (res.ok) {
-      const data = await res.json();
-      const results: AppleMusicResult[] = Array.isArray(data.results)
-        ? data.results
-        : data.results
-        ? [data.results[0]]
-        : [];
+      });
+      const arr: AppleMusicResult[] = Array.isArray(results) ? results : [];
       setAppleResults((prev) => ({
         ...prev,
-        [track.track_id]: results.length > 0 ? results : null,
+        [track.track_id]: arr.length > 0 ? arr : null,
       }));
-    } else {
+    } catch {
       setAppleResults((prev) => ({ ...prev, [track.track_id]: null }));
     }
   }, []);
@@ -217,24 +199,54 @@ export function MissingAppleProvider({
     () => goTo(currentGlobalIndex + 1),
     [currentGlobalIndex, goTo]
   );
+  const { saveTrack: mutateSaveTrack } = useTracksQuery();
 
   const saveTrack = useCallback(
     async (data: Partial<Track> & { track_id: string; username?: string }) => {
-      const res = await fetch("/api/tracks/update", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...data,
+      try {
+        const payload: TrackEditFormProps = {
+          track_id: data.track_id,
           username: data.username ?? selectedUsername ?? "",
-        }),
-      });
-      if (res.ok) {
+          title: data.title,
+          artist: data.artist,
+          album: data.album,
+          local_tags:
+            typeof data.local_tags === "string" ? data.local_tags : undefined,
+          notes: typeof data.notes === "string" ? data.notes : undefined,
+          bpm:
+            typeof (data as { bpm?: unknown }).bpm === "number"
+              ? (data as { bpm?: number }).bpm
+              : undefined,
+          key:
+            typeof (data as { key?: unknown }).key === "string"
+              ? (data as { key?: string }).key
+              : undefined,
+          danceability:
+            typeof (data as { danceability?: unknown }).danceability ===
+            "number"
+              ? (data as { danceability?: number }).danceability
+              : undefined,
+          apple_music_url: data.apple_music_url,
+          spotify_url: data.spotify_url,
+          youtube_url: data.youtube_url,
+          soundcloud_url: data.soundcloud_url,
+          star_rating:
+            typeof (data as { star_rating?: unknown }).star_rating === "number"
+              ? (data as { star_rating?: number }).star_rating
+              : undefined,
+          duration_seconds:
+            typeof (data as { duration_seconds?: unknown }).duration_seconds ===
+            "number"
+              ? (data as { duration_seconds?: number }).duration_seconds
+              : undefined,
+        };
+        await mutateSaveTrack(payload);
         if (typeof total === "number") goTo(currentGlobalIndex + 1);
-      } else {
+      } catch {
         alert("Failed to update track");
       }
     },
-    [selectedUsername, total, currentGlobalIndex, goTo]
+    [mutateSaveTrack, selectedUsername, total, currentGlobalIndex, goTo]
   );
 
   const lookupDiscogs = useCallback(

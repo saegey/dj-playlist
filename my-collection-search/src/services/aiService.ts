@@ -28,6 +28,8 @@ export async function fetchYouTubeMusicSearch(
 export type AppleMusicAISearchArgs = {
   title?: string;
   artist?: string;
+  album?: string;
+  isrc?: string;
 };
 
 export type AppleMusicAISearchResponse = {

@@ -144,3 +144,30 @@ export async function fetchPlaylistCounts(
     body: JSON.stringify({ track_ids }),
   });
 }
+
+export type MissingAppleTracksArgs = {
+  page: number;
+  pageSize: number;
+  username?: string | null;
+};
+
+export type MissingAppleTracksResponse = {
+  tracks: Track[];
+  total: number;
+};
+
+export async function fetchMissingAppleTracks(
+  args: MissingAppleTracksArgs
+): Promise<MissingAppleTracksResponse> {
+  let url = `/api/tracks/missing-apple-music?page=${args.page}&pageSize=${args.pageSize}`;
+  if (args.username) url += `&username=${encodeURIComponent(args.username)}`;
+  const raw = await http<unknown>(url, { method: "GET", cache: "no-store" });
+  if (Array.isArray(raw)) {
+    const tracks = raw as Track[];
+    return { tracks, total: tracks.length };
+  }
+  const obj = raw as { tracks?: Track[]; total?: number };
+  const tracks = Array.isArray(obj.tracks) ? obj.tracks : [];
+  const total = typeof obj.total === "number" ? obj.total : tracks.length;
+  return { tracks, total };
+}
