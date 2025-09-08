@@ -239,7 +239,7 @@ export function PlaylistPlayerProvider({
     if (!track) {
       audio.pause();
       // don't blank src here; keep it so pause retains position
-  setDuration(audio.duration || 0);
+      setDuration(audio.duration || 0);
       return;
     }
 
@@ -247,9 +247,9 @@ export function PlaylistPlayerProvider({
     if (lastTrackIdRef.current !== track.track_id) {
       audio.src = `/api/audio?filename=${track.local_audio_url}`;
       lastTrackIdRef.current = track.track_id;
-  // reset timing until metadata loads
-  setCurrentTime(0);
-  setDuration(0);
+      // reset timing until metadata loads
+      setCurrentTime(0);
+      setDuration(0);
     }
 
     if (isPlaying) {
@@ -286,7 +286,10 @@ export function PlaylistPlayerProvider({
     (time: number) => {
       const audio = audioRef.current;
       if (!audio) return;
-      const dur = Number.isFinite(duration) && duration > 0 ? duration : audio.duration || 0;
+      const dur =
+        Number.isFinite(duration) && duration > 0
+          ? duration
+          : audio.duration || 0;
       const clamped = Math.max(0, Math.min(dur || 0, time));
       try {
         audio.currentTime = clamped;
@@ -319,8 +322,8 @@ export function PlaylistPlayerProvider({
   );
 
   const value = useMemo<PlaylistPlayerContextValue>(() => {
-  // Reference plVersion so dependency is meaningful and value recomputes when playlist changes
-  void plVersion;
+    // Reference plVersion so dependency is meaningful and value recomputes when playlist changes
+    void plVersion;
     const pl = playlistRef.current;
     return {
       isPlaying,
@@ -328,9 +331,9 @@ export function PlaylistPlayerProvider({
       currentTrack, // use state here
       playlist: pl,
       playlistLength: pl.length,
-  currentTime,
-  duration,
-  seek,
+      currentTime,
+      duration,
+      seek,
 
       play,
       pause,
@@ -354,9 +357,9 @@ export function PlaylistPlayerProvider({
     currentTrackIndex,
     currentTrack, // included in deps
     plVersion, // include plVersion so playlist updates trigger
-  currentTime,
-  duration,
-  seek,
+    currentTime,
+    duration,
+    seek,
     play,
     pause,
     stop,

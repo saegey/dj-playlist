@@ -52,7 +52,9 @@ export type AnalyzeResponse = {
   [k: string]: unknown;
 };
 
-export async function analyzeTrack(args: AnalyzeArgs): Promise<AnalyzeResponse> {
+export async function analyzeTrack(
+  args: AnalyzeArgs
+): Promise<AnalyzeResponse> {
   return await http<AnalyzeResponse>("/api/tracks/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -83,7 +85,10 @@ export async function uploadTrackAudio(
 }
 
 export type TrackMetadataArgs = { prompt: string };
-export type TrackMetadataResponse = { genre?: string; notes?: string } & Record<string, unknown>;
+export type TrackMetadataResponse = { genre?: string; notes?: string } & Record<
+  string,
+  unknown
+>;
 
 export async function fetchTrackMetadata(
   args: TrackMetadataArgs
@@ -99,9 +104,9 @@ export async function fetchTrackById(params: {
   track_id: string;
   username: string;
 }): Promise<Track> {
-  const url = `/api/tracks/${encodeURIComponent(params.track_id)}?username=${encodeURIComponent(
-    params.username
-  )}`;
+  const url = `/api/tracks/${encodeURIComponent(
+    params.track_id
+  )}?username=${encodeURIComponent(params.username)}`;
   return await http<Track>(url, { method: "GET", cache: "no-store" });
 }
 
@@ -125,5 +130,17 @@ export async function bulkUpdateTrackNotes(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ updates }),
+  });
+}
+
+// Fetch a map of track_id -> number of playlists the track appears in
+export async function fetchPlaylistCounts(
+  track_ids: string[]
+): Promise<Record<string, number>> {
+  if (!track_ids || track_ids.length === 0) return {};
+  return await http<Record<string, number>>("/api/tracks/playlist_counts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ track_ids }),
   });
 }

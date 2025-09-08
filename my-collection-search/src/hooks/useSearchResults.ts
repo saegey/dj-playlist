@@ -10,6 +10,7 @@ import type { Track } from "@/types/track";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 import { queryKeys } from "@/lib/queryKeys";
+import { fetchPlaylistCounts } from "@/services/trackService";
 
 interface UseSearchResultsOptions {
   client?: MeiliSearch | null; // optional override; defaults to provider
@@ -136,13 +137,7 @@ export function useSearchResults({
     queryKey: queryKeys.playlistCounts(ids),
     enabled: enabled && ids.length > 0,
     queryFn: async () => {
-      const res = await fetch("/api/tracks/playlist_counts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ track_ids: ids }),
-      });
-      if (!res.ok) throw new Error("Failed to fetch playlist counts");
-      return (await res.json()) as Record<string, number>;
+  return await fetchPlaylistCounts(ids);
     },
     staleTime: 60_000,
   });

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Text, Spinner, HStack, Container, Box } from "@chakra-ui/react";
+
 import UsernameSelect from "@/components/UsernameSelect";
 import SingleTrackUI from "@/components/SingleTrackUI";
 import {
@@ -10,10 +11,8 @@ import {
 } from "@/providers/MissingAppleContext";
 
 function MissingAudio() {
-  const { usernames } = useMissingApple();
-  const { total, loading, tracks } = useMissingApple();
+  const { usernames, total, loading, tracks } = useMissingApple();
    
-
   return (
     <>
       <Container maxW={["8xl", "2xl", "2xl"]} mt={3} mb={8}>
