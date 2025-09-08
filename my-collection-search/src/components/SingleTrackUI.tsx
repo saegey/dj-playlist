@@ -24,6 +24,7 @@ import {
 import { FiChevronLeft, FiChevronRight, FiMoreVertical } from "react-icons/fi";
 import { toaster } from "@/components/ui/toaster";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
+import { useAppleMusicAISearchQuery } from "@/hooks/useAppleMusicAISearchQuery";
 
 export default function SingleTrackUI() {
   const {
@@ -53,6 +54,10 @@ export default function SingleTrackUI() {
   const [savingById, setSavingById] = useState<Record<string, boolean>>({});
   const [gotoValue, setGotoValue] = useState<string | undefined>(undefined);
   const [toggleDiscogs, setToggleDiscogs] = useState(false);
+  // Enable AI Apple Music search only when manual override is active and query is present
+  const enabledAppleAi = !!overrideQuery && overrideTrackId != null;
+  const { isFetching: aiAppleLoading, refetch: refetchAiApple } =
+    useAppleMusicAISearchQuery({ title: overrideQuery }, enabledAppleAi);
 
   useEffect(() => {
     setOverrideResults(null);
@@ -250,25 +255,18 @@ export default function SingleTrackUI() {
                 <Button
                   size="sm"
                   colorScheme="blue"
+                  loading={aiAppleLoading}
+                  disabled={!overrideQuery}
                   onClick={async () => {
-                    const res = await fetch("/api/ai/apple-music-search", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ title: overrideQuery }),
-                    });
-                    if (res.ok) {
-                      const data = await res.json();
-                      const results: AppleMusicResult[] = Array.isArray(
-                        data.results
-                      )
-                        ? data.results
-                        : data.results
-                        ? [data.results[0]]
-                        : [];
-                      setOverrideResults(results);
-                    } else {
-                      setOverrideResults([]);
-                    }
+                    const { data } = await refetchAiApple();
+                    const results: AppleMusicResult[] = Array.isArray(
+                      data?.results
+                    )
+                      ? (data?.results as AppleMusicResult[])
+                      : data?.results
+                      ? [data.results[0] as AppleMusicResult]
+                      : [];
+                    setOverrideResults(results);
                   }}
                 >
                   Search

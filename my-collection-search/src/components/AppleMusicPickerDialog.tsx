@@ -1,20 +1,45 @@
 "use client";
 
 import React from "react";
-import { Box, Button, CloseButton, Dialog, Flex, Image, Portal, Stack, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  CloseButton,
+  Dialog,
+  Flex,
+  Image,
+  Portal,
+  Stack,
+  Text,
+} from "@chakra-ui/react";
 import type { AppleMusicResult } from "@/types/track";
+import { useAppleMusicAISearchQuery } from "@/hooks/useAppleMusicAISearchQuery";
+import { TrackEditFormProps } from "./TrackEditForm";
 
 type Props = {
   open: boolean;
-  loading: boolean;
-  results: AppleMusicResult[];
   onOpenChange: (open: boolean) => void;
   onSelect: (song: AppleMusicResult) => void;
+  track: TrackEditFormProps;
 };
 
-export default function AppleMusicPickerDialog({ open, loading, results, onOpenChange, onSelect }: Props) {
+export default function AppleMusicPickerDialog({
+  open,
+  onOpenChange,
+  onSelect,
+  track,
+}: Props) {
+  const { isPending: aiAppleLoading, data } = useAppleMusicAISearchQuery(
+    { title: track.title, artist: track.artist },
+    true
+  );
+
   return (
-    <Dialog.Root open={open} onOpenChange={(d) => onOpenChange(d.open)} size={["full", "lg", "lg"]}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(d) => onOpenChange(d.open)}
+      size={["full", "lg", "lg"]}
+    >
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
@@ -26,13 +51,13 @@ export default function AppleMusicPickerDialog({ open, loading, results, onOpenC
               </Dialog.CloseTrigger>
             </Dialog.Header>
             <Dialog.Body>
-              {loading ? (
+              {aiAppleLoading ? (
                 <Text>Loading...</Text>
-              ) : results.length === 0 ? (
+              ) : data?.results.length === 0 ? (
                 <Text>No results found.</Text>
               ) : (
                 <Stack>
-                  {results.map((song) => (
+                  {data?.results.map((song) => (
                     <Flex
                       key={song.id}
                       align="center"

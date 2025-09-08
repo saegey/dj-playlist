@@ -95,6 +95,16 @@ export async function fetchTrackMetadata(
   });
 }
 
+export async function fetchTrackById(params: {
+  track_id: string;
+  username: string;
+}): Promise<Track> {
+  const url = `/api/tracks/${encodeURIComponent(params.track_id)}?username=${encodeURIComponent(
+    params.username
+  )}`;
+  return await http<Track>(url, { method: "GET", cache: "no-store" });
+}
+
 export type BulkNotesUpdate = {
   track_id: string;
   local_tags?: string;

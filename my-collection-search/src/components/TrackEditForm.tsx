@@ -50,12 +50,6 @@ export interface TrackEditFormProps {
   username: string; // Required for all tracks
 }
 
-// SpotifySearchTrack type now lives in hooks/useSpotifyPicker
-
-// moved to lib/url.ts
-
-// Moved LabeledInput and LabeledTextarea into components/form/
-
 export default function TrackEditForm({
   track,
   onSave,
@@ -116,10 +110,8 @@ export default function TrackEditForm({
   }, [track]);
 
   const [youtubeResults, setYoutubeResults] = useState<YoutubeVideo[]>([]);
-  const {
-    mutateAsync: searchYouTubeMusic,
-    isPending: youtubeLoading,
-  } = useYouTubeMusicSearchMutation();
+  const { mutateAsync: searchYouTubeMusic, isPending: youtubeLoading } =
+    useYouTubeMusicSearchMutation();
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
 
   const spotifyPicker = useSpotifyPicker({
@@ -489,11 +481,10 @@ export default function TrackEditForm({
                   {/* --- Apple Music Dialog --- */}
                   <AppleMusicPickerDialog
                     open={applePicker.isOpen}
-                    loading={applePicker.loading}
-                    results={applePicker.results}
                     onOpenChange={(open) =>
                       open ? applePicker.open() : applePicker.close()
                     }
+                    track={track}
                     onSelect={(song) => applePicker.select(song)}
                   />
                 </Box>
