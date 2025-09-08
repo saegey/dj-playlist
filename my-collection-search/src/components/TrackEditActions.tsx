@@ -59,8 +59,8 @@ export default function TrackEditActions(props: TrackEditActionsProps) {
       <Button
         variant="outline"
         size="sm"
-        loading={appleLoading}
-        disabled={appleLoading}
+        // loading={appleLoading}
+        // disabled={appleLoading}
         onClick={onSearchApple}
       >
         <SiApplemusic /> Search Apple Music
@@ -79,8 +79,6 @@ export default function TrackEditActions(props: TrackEditActionsProps) {
       <Button
         variant="outline"
         size="sm"
-        loading={spotifyLoading}
-        disabled={spotifyLoading}
         onClick={onSearchSpotify}
       >
         <SiSpotify /> Search Spotify

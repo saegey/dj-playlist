@@ -30,4 +30,12 @@ export const queryKeys = {
       args.artist ?? "",
     ] as const;
   },
+  spotifySearchKey(args: { title?: string; artist?: string }) {
+    return [
+      "ai",
+      "spotify-track-search",
+      args.title ?? "",
+      args.artist ?? "",
+    ] as const;
+  },
 };
