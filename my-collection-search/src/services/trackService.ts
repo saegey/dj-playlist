@@ -94,3 +94,26 @@ export async function fetchTrackMetadata(
     body: JSON.stringify(args),
   });
 }
+
+export type BulkNotesUpdate = {
+  track_id: string;
+  local_tags?: string;
+  notes?: string;
+  // allow extra fields to be passed through without typing everything here
+  [k: string]: unknown;
+};
+
+export type BulkNotesResponse = {
+  updated?: number;
+  [k: string]: unknown;
+};
+
+export async function bulkUpdateTrackNotes(
+  updates: BulkNotesUpdate[]
+): Promise<BulkNotesResponse> {
+  return await http<BulkNotesResponse>("/api/tracks/bulk-notes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ updates }),
+  });
+}

@@ -19,9 +19,11 @@ import { toaster } from "@/components/ui/toaster";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { LuSearch } from "react-icons/lu";
 import { FiCheck, FiCopy, FiUpload } from "react-icons/fi";
-import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 import UsernameSelect from "@/components/UsernameSelect";
+import { useBulkUpdateTrackNotesMutation } from "@/hooks/useBulkUpdateTrackNotesMutation";
+import type { BulkNotesUpdate } from "@/services/trackService";
+import { buildBulkTrackMetadataPrompt } from "@/lib/prompts";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -32,11 +34,7 @@ export default function BulkNotesPage() {
   const [filterLocalTagsEmpty, setFilterLocalTagsEmpty] = useState(true);
   const [artistSearch, setArtistSearch] = useState("");
   const [isDataUploading, setIsDataUploading] = useState(false);
-  const { client: meiliClient, ready } = useMeili();
-
-  React.useEffect(() => {
-    if (!ready || !meiliClient) return;
-  }, [ready, meiliClient]);
+  const { mutateAsync: bulkUpdateNotes } = useBulkUpdateTrackNotesMutation();
 
   // Build filter string for MeiliSearch
   let filter = undefined;
@@ -55,16 +53,14 @@ export default function BulkNotesPage() {
     results: tracks,
     loading,
   } = useSearchResults({
-    client: meiliClient,
-    username: selectedUsername,
     filter,
   });
 
   React.useEffect(() => {
-    if (meiliClient && artistSearch !== "") {
+    if (artistSearch !== "") {
       setQuery(artistSearch);
     }
-  }, [artistSearch, meiliClient, setQuery]);
+  }, [artistSearch, setQuery]);
 
   // Friends are loaded via useFriends hook
 
@@ -98,20 +94,19 @@ export default function BulkNotesPage() {
   };
 
   const handleGeneratePrompt = () => {
-    const promptTracks = tracks
+    const selectedTracks = tracks
       .filter((t) => selected.has(t.id))
-      .map((t) => {
-        const url =
+      .map((t) => ({
+        track_id: t.track_id,
+        title: t.title,
+        artist: t.artist,
+        album: t.album,
+        url:
           t.discogs_url && t.discogs_url.trim() !== ""
             ? t.discogs_url
-            : t.spotify_url;
-        return `Track ID: ${t.track_id}\nTitle: ${t.title}\nArtist: ${t.artist}\nAlbum: ${t.album}\nDiscogs/Spotify URL: ${url}\n---`;
-      })
-      .join("\n");
-    const fullPrompt = `You are a DJ music metadata assistant. For each track below, return a JSON object with the following fields: track_id, local tags, notes. The notes don't use the name of the track and instead just This track.
-Example:
-{"track_id":"123","local_tags":"House","notes":"Great for warmup sets, uplifting vibe."}. In "notes", include a longer DJ-focused description with vibe, energy, suggested set placement, transition tips, and any emotional or cultural context. In local_tags, it is the genre or style of the actual track and not the album. 
- Tracks:\n${promptTracks}`;
+            : t.spotify_url,
+      }));
+    const fullPrompt = buildBulkTrackMetadataPrompt(selectedTracks);
     // Robust clipboard copy with fallback
     const copyToClipboard = async (text: string) => {
       try {
@@ -145,26 +140,24 @@ Example:
 
   const handleUpload = async () => {
     setIsDataUploading(true);
-    let parsed;
+    let parsed: unknown;
     try {
       parsed = JSON.parse(bulkJson);
       if (!Array.isArray(parsed)) throw new Error();
     } catch {
+      setIsDataUploading(false);
       toaster.create({ title: "Invalid JSON", type: "error" });
       return;
     }
-    // no-op: loading handled by hook
-    const res = await fetch("/api/tracks/bulk-notes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ updates: parsed }),
-    });
-    setIsDataUploading(false);
-    // no-op: loading handled by hook
-    toaster.create({
-      title: res.ok ? "Tracks updated" : "Update failed",
-      type: res.ok ? "success" : "error",
-    });
+    try {
+      await bulkUpdateNotes(parsed as BulkNotesUpdate[]);
+      toaster.create({ title: "Tracks updated", type: "success" });
+    } catch (err) {
+      console.error("Bulk update error", err);
+      toaster.create({ title: "Update failed", type: "error" });
+    } finally {
+      setIsDataUploading(false);
+    }
   };
 
   return (
@@ -278,11 +271,6 @@ Example:
             </Table.Body>
           </Table.Root>
         )}
-
-        {/* <Box mb={4}>
-          <Text fontWeight="bold">Bulk Prompt for ChatGPT</Text>
-          <Textarea value={bulkPrompt} rows={10} readOnly fontSize="sm" />
-        </Box> */}
 
         <Box
           position="fixed"

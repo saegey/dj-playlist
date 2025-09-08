@@ -1,5 +1,6 @@
 import React from "react";
 import { Dialog, Portal, CloseButton, Button } from "@chakra-ui/react";
+import { useDeletePlaylistMutation } from "@/hooks/useDeletePlaylistMutation";
 
 interface DeletePlaylistDialogProps {
   open: boolean;
@@ -11,13 +12,12 @@ interface DeletePlaylistDialogProps {
 
 export default function DeletePlaylistDialog({ open, playlistId, onClose, fetchPlaylists, notify }: DeletePlaylistDialogProps) {
   const cancelRef = React.useRef<HTMLButtonElement>(null);
+  const { mutateAsync: deletePlaylist, isPending } = useDeletePlaylistMutation();
 
   const confirmDeletePlaylist = async () => {
     if (playlistId == null) return;
     try {
-      await fetch(`/api/playlists?id=${playlistId}`, {
-        method: "DELETE",
-      });
+      await deletePlaylist(playlistId);
       notify({ title: "Playlist deleted.", type: "success" });
       fetchPlaylists();
     } catch {
@@ -58,6 +58,8 @@ export default function DeletePlaylistDialog({ open, playlistId, onClose, fetchP
                 colorPalette="red"
                 ml={3}
                 onClick={confirmDeletePlaylist}
+                loading={isPending}
+                disabled={isPending}
               >
                 Delete
               </Button>

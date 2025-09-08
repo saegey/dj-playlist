@@ -11,24 +11,20 @@ import {
   Dialog,
   CloseButton,
   RatingGroup,
-  FileUpload,
-  Spinner,
-  SimpleGrid,
-  Skeleton,
 } from "@chakra-ui/react";
 import LabeledInput from "@/components/form/LabeledInput";
 import LabeledTextarea from "@/components/form/LabeledTextarea";
 
 import { YoutubeVideo } from "@/types/track";
-import { HiUpload } from "react-icons/hi";
-import { FiDownload } from "react-icons/fi";
-import { SiApplemusic, SiChatbot, SiSpotify, SiYoutube } from "react-icons/si";
+// icons used within extracted components
 import { useAppleMusicPicker } from "@/hooks/useAppleMusicPicker";
 import AppleMusicPickerDialog from "@/components/AppleMusicPickerDialog";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { useSpotifyPicker } from "@/hooks/useSpotifyPicker";
 import SpotifyPickerDialog from "@/components/SpotifyPickerDialog";
 import YouTubePickerDialog from "@/components/YouTubePickerDialog";
+import TrackEditFormSkeleton from "@/components/TrackEditFormSkeleton";
+import { createTrackEditActionsWrapper } from "@/components/TrackEditActionsWrapper";
 import { useAnalyzeTrackMutation } from "@/hooks/useAnalyzeTrackMutation";
 import { useUploadTrackAudioMutation } from "@/hooks/useUploadTrackAudioMutation";
 import { buildTrackMetadataPrompt } from "@/lib/prompts";
@@ -154,7 +150,6 @@ export default function TrackEditForm({
     useTrackMetadataMutation();
 
   const handleFileUpload = async () => {
-    // alert("File upload started", JSON.stringify(file));
     if (!file) return;
     try {
       const { analysis: data } = await uploadAudio({
@@ -299,6 +294,24 @@ export default function TrackEditForm({
     }
   };
 
+  const TrackEditActionsWrapper = createTrackEditActionsWrapper({
+    aiLoading: aiLoading,
+    onFetchAI: fetchFromChatGPT,
+    appleLoading: applePicker.loading,
+    onSearchApple: searchAppleMusic,
+    youtubeLoading: youtubeLoading,
+    onSearchYouTube: searchYouTube,
+    spotifyLoading: spotifyPicker.loading,
+    onSearchSpotify: searchSpotify,
+    analyzeLoading: analyzeLoading,
+    onAnalyzeAudio: handleAnalyzeAudio,
+    uploadLoading: uploadLoading,
+    onFileSelected: (file) => {
+      setFile(file);
+      handleFileUpload();
+    },
+  });
+
   return (
     <Dialog.Root
       open={dialogOpen}
@@ -319,119 +332,21 @@ export default function TrackEditForm({
             </Dialog.Header>
             <Dialog.Body>
               {!track ? (
-                <Stack gap={4}>
-                  <SimpleGrid columns={[2, 3]} gap={2}>
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <Button key={i} variant="outline" size="sm" disabled>
-                        <Spinner size="xs" mr={2} /> Loading...
-                      </Button>
-                    ))}
-                  </SimpleGrid>
-                  <Stack borderWidth="1px" borderRadius="md" padding={4}>
-                    <Stack gap={2}>
-                      <Box>
-                        <Skeleton height="28px" width="60%" mb={2} />
-                        <Skeleton height="28px" width="70%" mb={2} />
-                        <Skeleton height="28px" width="65%" />
-                      </Box>
-                      <Flex gap={2}>
-                        <Skeleton height="38px" flex={1} />
-                        <Skeleton height="38px" flex={1} />
-                        <Skeleton height="38px" flex={1} />
-                        <Skeleton height="38px" flex={1} />
-                      </Flex>
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <Skeleton key={i} height="38px" />
-                      ))}
-                      <Skeleton height="24px" width="96px" />
-                    </Stack>
-                  </Stack>
-                </Stack>
+                <TrackEditFormSkeleton />
               ) : (
                 <Box as="form" onSubmit={handleSubmit}>
                   <Flex gap={4} direction="row">
                     <Stack flex={1}>
                       <Box as={"nav"}>
-                        <SimpleGrid columns={[2, 3]} gap={2}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            loading={aiLoading}
-                            disabled={aiLoading}
-                            onClick={fetchFromChatGPT}
-                          >
-                            <SiChatbot /> Fetch from AI
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            loading={applePicker.loading}
-                            disabled={applePicker.loading}
-                            onClick={searchAppleMusic}
-                          >
-                            <SiApplemusic /> Search Apple Music
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            loading={youtubeLoading}
-                            disabled={youtubeLoading}
-                            onClick={searchYouTube}
-                          >
-                            <SiYoutube /> Search YouTube
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            loading={spotifyPicker.loading}
-                            disabled={spotifyPicker.loading}
-                            onClick={searchSpotify}
-                          >
-                            <SiSpotify /> Search Spotify
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            loading={analyzeLoading}
-                            disabled={
-                              analyzeLoading ||
-                              (!form.apple_music_url &&
-                                !form.youtube_url &&
-                                !form.soundcloud_url &&
-                                !form.spotify_url)
-                            }
-                            onClick={handleAnalyzeAudio}
-                          >
-                            <FiDownload /> Fetch Audio
-                          </Button>
-                          <FileUpload.Root
-                            disabled={uploadLoading}
-                            onFileChange={(files) => {
-                              const file = files.acceptedFiles?.[0] || null;
-                              setFile(file);
-                              handleFileUpload();
-                            }}
-                          >
-                            <FileUpload.HiddenInput />
-                            <FileUpload.Trigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                width={"100%"}
-                              >
-                                {uploadLoading ? (
-                                  <>
-                                    <Spinner /> Uploading...
-                                  </>
-                                ) : (
-                                  <>
-                                    <HiUpload /> Upload Audio
-                                  </>
-                                )}
-                              </Button>
-                            </FileUpload.Trigger>
-                          </FileUpload.Root>
-                        </SimpleGrid>
+                        <TrackEditActionsWrapper
+                          analyzeDisabled={
+                            analyzeLoading ||
+                            (!form.apple_music_url &&
+                              !form.youtube_url &&
+                              !form.soundcloud_url &&
+                              !form.spotify_url)
+                          }
+                        />
                       </Box>
                     </Stack>
                   </Flex>

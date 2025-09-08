@@ -24,28 +24,12 @@ import {
   keyToCamelot,
 } from "@/lib/playlistOrder";
 import { useSearchResults } from "@/hooks/useSearchResults";
-import { useMeili } from "@/providers/MeiliProvider";
-import { useUsername } from "@/providers/UsernameProvider";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
 import PlaylistItemMenu from "@/components/PlaylistItemMenu";
+import { useGenerateGeneticPlaylistMutation } from "@/hooks/useGenerateGeneticPlaylistMutation";
 
 const PlaylistViewer: React.FC = () => {
-  const [geneticPlaylist, setGeneticPlaylist] = React.useState<Track[] | null>(
-    null
-  );
-  const { username: selectedUsername } = useUsername();
-
-  const { client: meiliClient, ready } = useMeili();
-
-  React.useEffect(() => {
-    if (!ready || !meiliClient) return;
-  }, [ready, meiliClient]);
-
-  const { playlistCounts } = useSearchResults({
-    client: meiliClient,
-    username: selectedUsername,
-  });
-  const [loadingGenetic, setLoadingGenetic] = React.useState(false);
+  const { playlistCounts } = useSearchResults({});
   const {
     displayPlaylist,
     setDisplayPlaylist,
@@ -55,6 +39,8 @@ const PlaylistViewer: React.FC = () => {
     optimalOrderType,
     removeFromPlaylist,
   } = usePlaylists();
+  const { mutateAsync: generateGenetic, isPending: generateGeneticLoading } =
+    useGenerateGeneticPlaylistMutation();
 
   const { openTrackEditor } = useTrackEditor();
 
@@ -100,25 +86,27 @@ const PlaylistViewer: React.FC = () => {
   // Fetch genetic order if needed
   React.useEffect(() => {
     if (optimalOrderType !== "genetic" || playlist.length === 0) return;
-    setLoadingGenetic(true);
-    fetch("/api/playlists/genetic", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playlist }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        // Ensure result is always an array
-        const result = Array.isArray(data.result)
-          ? data.result
-          : Object.values(data.result);
-        setGeneticPlaylist(result);
-      })
-      .finally(() => {
-        setLoadingGenetic(false);
-        setOptimalOrderType("original");
-      });
-  }, [optimalOrderType, playlist, setOptimalOrderType, displayPlaylist]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await generateGenetic(playlist as Track[]);
+        if (!cancelled) setDisplayPlaylist(result);
+      } finally {
+        if (!cancelled) {
+          setOptimalOrderType("original");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    optimalOrderType,
+    playlist,
+    setOptimalOrderType,
+    generateGenetic,
+    setDisplayPlaylist,
+  ]);
 
   React.useEffect(() => {
     if (optimalOrderType === "greedy" && playlist.length > 0) {
@@ -134,7 +122,6 @@ const PlaylistViewer: React.FC = () => {
     playlist,
     optimalPath,
     updatedPlaylist,
-    geneticPlaylist,
     setDisplayPlaylist,
     displayPlaylist,
   ]);
@@ -159,7 +146,7 @@ const PlaylistViewer: React.FC = () => {
     );
   }
 
-  if (optimalOrderType === "genetic" && loadingGenetic) {
+  if (optimalOrderType === "genetic" && generateGeneticLoading) {
     return <Box p={4}>Loading genetic order...</Box>;
   }
 
