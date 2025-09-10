@@ -2,11 +2,47 @@ import React from "react";
 import { Box, Input, Text, InputGroup } from "@chakra-ui/react";
 import { LuSearch } from "react-icons/lu";
 
-import TrackResult from "@/components/TrackResult";
+import TrackResultStore from "@/components/TrackResultStore";
 import UsernameSelect from "./UsernameSelect";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
+import { useTrack } from "@/hooks/useTrack";
+
+const TrackResultItem: React.FC<{
+  trackId: string;
+  username: string;
+  isLast: boolean;
+  playlistCount?: number;
+  lastResultRef?: React.RefObject<HTMLDivElement | null>;
+}> = ({ trackId, username, isLast, playlistCount, lastResultRef }) => {
+  const track = useTrack(trackId, username);
+  
+  if (!track) {
+    return null; // Track not yet loaded in store
+  }
+
+  const trackResult = (
+    <TrackResultStore
+      trackId={trackId}
+      username={username}
+      fallbackTrack={track}
+      allowMinimize={false}
+      playlistCount={playlistCount}
+      buttons={[<TrackActionsMenu key="menu" track={track} />]}
+    />
+  );
+
+  if (isLast && lastResultRef) {
+    return (
+      <Box ref={lastResultRef}>
+        {trackResult}
+      </Box>
+    );
+  }
+
+  return trackResult;
+};
 
 const SearchResults: React.FC = () => {
   const { friends } = useFriendsQuery({
@@ -17,7 +53,7 @@ const SearchResults: React.FC = () => {
     query,
     onQueryChange,
     estimatedResults,
-    results,
+    trackInfo,
     playlistCounts,
     hasMore,
     loadMore,
@@ -27,7 +63,7 @@ const SearchResults: React.FC = () => {
     limit: 20,
   });
 
-  const lastResultRef = React.useRef<HTMLDivElement | null>(null);
+  const lastResultRef = React.useRef<HTMLDivElement>(null);
   const observer = React.useRef<IntersectionObserver | null>(null);
 
   React.useEffect(() => {
@@ -41,7 +77,7 @@ const SearchResults: React.FC = () => {
     });
     observer.current.observe(lastResultRef.current);
     return () => observer.current?.disconnect();
-  }, [results, hasMore, loadMore]);
+  }, [trackInfo, hasMore, loadMore]);
 
   // Debounced input state
   const [debouncedValue, setDebouncedValue] = React.useState(query);
@@ -91,25 +127,18 @@ const SearchResults: React.FC = () => {
             {estimatedResults.toLocaleString()} results found
           </Text>
 
-          {results.map((track, idx) => {
-            const isLast = idx === results.length - 1;
-            const trackResult = (
-              <TrackResult
-                key={`search-${track.id}`}
-                track={track}
-                allowMinimize={false}
-                playlistCount={playlistCounts[track.track_id]}
-                buttons={[<TrackActionsMenu key="menu" track={track} />]}
+          {trackInfo.map((info, idx) => {
+            const isLast = idx === trackInfo.length - 1;
+            return (
+              <TrackResultItem
+                key={`search-${info.trackId}`}
+                trackId={info.trackId}
+                username={info.username}
+                isLast={isLast}
+                playlistCount={playlistCounts[info.trackId]}
+                lastResultRef={isLast ? lastResultRef : undefined}
               />
             );
-            if (isLast) {
-              return (
-                <Box ref={lastResultRef} key={track.track_id}>
-                  {trackResult}
-                </Box>
-              );
-            }
-            return trackResult;
           })}
         </>
       )}

@@ -1,92 +1,66 @@
 "use client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import type { QueryKey } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 
 import { saveTrack } from "@/services/trackService";
 import type { TrackEditFormProps } from "@/components/TrackEditForm";
-import { useTracksCacheUpdater } from "./useTracksCacheUpdater";
+import { useTrackStore } from "@/stores/trackStore";
 import type { Track } from "@/types/track";
 
 // Shape returned by saveTrack is void; customize if API starts returning a Track
 
 export function useTracksQuery() {
-  const queryClient = useQueryClient();
-  const { updateTracksInCache } = useTracksCacheUpdater();
+  const { updateTrack, getTrack, setTrack } = useTrackStore();
+  
   const saveTrackMutation = useMutation({
     mutationFn: async (data: TrackEditFormProps) => {
       return await saveTrack(data);
     },
-    // Optimistic update: patch all cached "tracks" queries immediately
-  onMutate: async (form: TrackEditFormProps) => {
-      // Cancel outgoing refetches so they don't overwrite our optimistic state
-      await queryClient.cancelQueries({
-        predicate: (q) =>
-          Array.isArray(q.queryKey) &&
-          (q.queryKey[0] === "tracks" || q.queryKey[0] === "playlist-tracks"),
-      });
-
-      // Snapshot previous data for rollback per matching query
-      const matching = queryClient.getQueryCache().findAll({
-        predicate: (q) =>
-          Array.isArray(q.queryKey) &&
-          (q.queryKey[0] === "tracks" || q.queryKey[0] === "playlist-tracks"),
-      });
-      const snapshots: { key: QueryKey; data: unknown }[] = matching.map((q) => ({
-        key: q.queryKey as QueryKey,
-        data: queryClient.getQueryData(q.queryKey as QueryKey),
-      }));
-
-      // Build a minimal patch. Try to infer track_id and treat the rest as Partial<Track>
+    // Optimistic update: update Zustand store immediately
+    onMutate: async (form: TrackEditFormProps) => {
       const track_id = form.track_id;
-      if (track_id) {
-        // Map form fields -> Track shape conservatively
-        const patch: Partial<Track> & { track_id: string } = {
-          track_id,
-          title: form.title ?? undefined,
-          artist: form.artist ?? undefined,
-          album: form.album ?? undefined,
-          local_tags: form.local_tags ?? undefined,
-          notes: form.notes ?? undefined,
-          bpm: form.bpm != null ? String(form.bpm) : undefined,
-          key: form.key ?? undefined,
-          danceability: form.danceability != null ? String(form.danceability) : undefined,
-          apple_music_url: form.apple_music_url ?? undefined,
-          spotify_url: form.spotify_url ?? undefined,
-          youtube_url: form.youtube_url ?? undefined,
-          soundcloud_url: form.soundcloud_url ?? undefined,
-          star_rating: typeof form.star_rating === "number" ? form.star_rating : undefined,
-          duration_seconds: form.duration_seconds ?? undefined,
-          username: form.username ?? undefined,
-        };
-        updateTracksInCache(patch);
-      }
+      const username = form.username || 'default';
+      
+      if (!track_id) return;
 
-      // Return context for rollback
-      return { snapshots } as {
-        snapshots: { key: readonly unknown[]; data: unknown }[];
+      // Get current track from store for rollback
+      const currentTrack = getTrack(track_id, username);
+      
+      // Build optimistic updates
+      const updates: Partial<Track> = {
+        title: form.title,
+        artist: form.artist,
+        album: form.album,
+        local_tags: form.local_tags,
+        notes: form.notes,
+        bpm: form.bpm != null ? String(form.bpm) : undefined,
+        key: form.key,
+        danceability: form.danceability != null ? String(form.danceability) : undefined,
+        apple_music_url: form.apple_music_url,
+        spotify_url: form.spotify_url,
+        youtube_url: form.youtube_url,
+        soundcloud_url: form.soundcloud_url,
+        star_rating: form.star_rating,
+        duration_seconds: form.duration_seconds,
       };
+
+      // Apply optimistic update
+      updateTrack(track_id, username, updates);
+      console.log("Optimistically updated track", track_id, "with", updates);
+
+      // Return previous state for potential rollback
+      return { currentTrack, track_id, username };
     },
-  onError: (_err, _form, context) => {
-      // Roll back cached data to previous snapshots
-      if (context?.snapshots) {
-        for (const s of context.snapshots) {
-      queryClient.setQueryData(s.key, s.data);
-        }
+    onError: (_err, _form, context) => {
+      // Rollback to previous state
+      if (context?.currentTrack) {
+        setTrack(context.currentTrack);
       }
     },
     onSuccess: (updatedTrack) => {
-      // Merge the authoritative server Track across caches
+      // Apply the server response to the store
       if (updatedTrack?.track_id) {
-        const { track_id, ...rest } = updatedTrack as Track;
-        updateTracksInCache({ track_id, ...rest });
+        setTrack(updatedTrack as Track);
       }
-      // Lightly invalidate inactive to reconcile any missed fields
-      queryClient.invalidateQueries({
-        predicate: (q) =>
-          Array.isArray(q.queryKey) &&
-          (q.queryKey[0] === "tracks" || q.queryKey[0] === "playlist-tracks"),
-        refetchType: "inactive",
-      });
     },
   });
 

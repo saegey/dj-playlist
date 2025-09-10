@@ -1,11 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { fetchTracksByIds } from "@/services/trackService";
 import type { Track } from "@/types/track";
 import { queryKeys } from "@/lib/queryKeys";
+import { useTrackStore } from "@/stores/trackStore";
 
 export function usePlaylistTracksQuery(trackIds: string[], enabled = true) {
+  const { setTracks } = useTrackStore();
+  
   const query = useQuery<Track[], Error>({
     queryKey: queryKeys.playlistTracks(trackIds),
     queryFn: () => fetchTracksByIds(trackIds),
@@ -14,5 +18,13 @@ export function usePlaylistTracksQuery(trackIds: string[], enabled = true) {
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
+
+  // Populate Zustand store when tracks are fetched
+  useEffect(() => {
+    if (query.data && query.data.length > 0) {
+      setTracks(query.data);
+    }
+  }, [query.data, setTracks]);
+
   return { ...query, tracks: query.data ?? [] };
 }

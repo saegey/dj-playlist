@@ -3,8 +3,7 @@
 import React from "react";
 import { Box, EmptyState, VStack } from "@chakra-ui/react";
 import { FiHeadphones } from "react-icons/fi";
-import TrackResult from "@/components/TrackResult";
-import type { Track } from "@/types/track";
+import TrackResultStore from "@/components/TrackResultStore";
 import { usePlaylists } from "@/providers/PlaylistsProvider";
 import {
   DragDropContext,
@@ -19,14 +18,14 @@ import {
 import {
   TrackCompat,
   TrackWithCamelot,
-  buildCompatibilityGraph,
-  greedyPath,
+  // buildCompatibilityGraph,
+  // greedyPath,
   keyToCamelot,
 } from "@/lib/playlistOrder";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
 import PlaylistItemMenu from "@/components/PlaylistItemMenu";
-import { useGenerateGeneticPlaylistMutation } from "@/hooks/useGenerateGeneticPlaylistMutation";
+// import { useGenerateGeneticPlaylistMutation } from "@/hooks/useGenerateGeneticPlaylistMutation";
 
 const PlaylistViewer: React.FC = () => {
   const { playlistCounts } = useSearchResults({});
@@ -35,34 +34,34 @@ const PlaylistViewer: React.FC = () => {
     moveTrack,
     removeFromPlaylist,
   } = usePlaylists();
-  const { mutateAsync: generateGenetic, isPending: generateGeneticLoading } =
-    useGenerateGeneticPlaylistMutation();
+  // const { mutateAsync: generateGenetic, isPending: generateGeneticLoading } =
+  //   useGenerateGeneticPlaylistMutation();
 
   const { openTrackEditor } = useTrackEditor();
 
   // Compute greedy order
-  const updatedPlaylist: TrackWithCamelot[] = React.useMemo(() => {
-    if (!playlist) return [];
-    return playlist.map((track, idx) => {
-      const t = track as TrackCompat;
-      return {
-        camelot_key: keyToCamelot(t.key),
-        _vectors: t._vectors,
-        energy: typeof t.energy === "number" ? t.energy : Number(t.energy) || 0,
-        bpm: typeof t.bpm === "number" ? t.bpm : Number(t.bpm) || 0,
-        idx,
-      };
-    });
-  }, [playlist]);
+  // const updatedPlaylist: TrackWithCamelot[] = React.useMemo(() => {
+  //   if (!playlist) return [];
+  //   return playlist.map((track, idx) => {
+  //     const t = track as TrackCompat;
+  //     return {
+  //       camelot_key: keyToCamelot(t.key),
+  //       _vectors: t._vectors,
+  //       energy: typeof t.energy === "number" ? t.energy : Number(t.energy) || 0,
+  //       bpm: typeof t.bpm === "number" ? t.bpm : Number(t.bpm) || 0,
+  //       idx,
+  //     };
+  //   });
+  // }, [playlist]);
 
-  const compatibilityEdges = React.useMemo(
-    () => buildCompatibilityGraph(updatedPlaylist),
-    [updatedPlaylist]
-  );
-  const optimalPath = React.useMemo(
-    () => greedyPath(updatedPlaylist, compatibilityEdges),
-    [updatedPlaylist, compatibilityEdges]
-  );
+  // const compatibilityEdges = React.useMemo(
+  //   () => buildCompatibilityGraph(updatedPlaylist),
+  //   [updatedPlaylist]
+  // );
+  // const optimalPath = React.useMemo(
+  //   () => greedyPath(updatedPlaylist, compatibilityEdges),
+  //   [updatedPlaylist, compatibilityEdges]
+  // );
 
   // DnD handler must be declared before any early return to satisfy hooks rules
   const onDragEnd = React.useCallback(
@@ -167,9 +166,11 @@ const PlaylistViewer: React.FC = () => {
                     {...dragProvided.dragHandleProps}
                     opacity={snapshot.isDragging ? 0.9 : 1}
                   >
-                    <TrackResult
+                    <TrackResultStore
                       key={`playlist-${track.track_id}`}
-                      track={track}
+                      trackId={track.track_id}
+                      username={track.username}
+                      fallbackTrack={track}
                       minimized
                       playlistCount={playlistCounts[track.track_id]}
                       buttons={[

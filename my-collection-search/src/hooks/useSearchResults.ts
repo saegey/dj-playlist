@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useState, useEffect } from "react";
 import type { MeiliSearch } from "meilisearch";
 import {
   useInfiniteQuery,
@@ -11,6 +11,7 @@ import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 import { queryKeys } from "@/lib/queryKeys";
 import { fetchPlaylistCounts } from "@/services/trackService";
+import { useTrackStore } from "@/stores/trackStore";
 
 interface UseSearchResultsOptions {
   client?: MeiliSearch | null; // optional override; defaults to provider
@@ -44,6 +45,7 @@ export function useSearchResults({
   const [query, setQuery] = useState("");
   const limit = limitOverride ?? DEFAULT_LIMIT;
   const qc = useQueryClient();
+  const { setTracks } = useTrackStore();
   // Resolve from providers by default
   const { client: ctxClient, ready } = useMeili();
   const { username: ctxUsername } = useUsername();
@@ -126,6 +128,19 @@ export function useSearchResults({
     : [];
   const results = pages.flatMap((p) => p.hits);
   const estimatedResults = pages[0]?.estimatedTotalHits ?? 0;
+
+  // Populate Zustand store when results change
+  useEffect(() => {
+    if (results.length > 0) {
+      setTracks(results);
+    }
+  }, [results, setTracks]);
+
+  // Return track info instead of full track objects to force components to read from store
+  const trackInfo = results.map((track) => ({
+    trackId: track.track_id,
+    username: track.username || 'default'
+  }));
 
   // --- Playlist counts (dependent query on unique IDs) ---
   const ids = useMemo(
@@ -213,7 +228,8 @@ export function useSearchResults({
   return {
     // data
     estimatedResults,
-    results,
+    results, // Keep this for backward compatibility
+    trackInfo, // New: track info for components to read from store
     playlistCounts: countsQuery.data ?? {},
 
     // status
