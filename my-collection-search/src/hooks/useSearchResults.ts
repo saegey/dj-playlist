@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState, useEffect } from "react";
+import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import type { MeiliSearch } from "meilisearch";
 import {
   useInfiniteQuery,
@@ -46,6 +46,7 @@ export function useSearchResults({
   const limit = limitOverride ?? DEFAULT_LIMIT;
   const qc = useQueryClient();
   const { setTracks } = useTrackStore();
+  const populatedTrackIds = useRef(new Set<string>()); // Track which IDs we've already populated
   // Resolve from providers by default
   const { client: ctxClient, ready } = useMeili();
   const { username: ctxUsername } = useUsername();
@@ -129,12 +130,27 @@ export function useSearchResults({
   const results = pages.flatMap((p) => p.hits);
   const estimatedResults = pages[0]?.estimatedTotalHits ?? 0;
 
-  // Populate Zustand store when results change
+  // Populate Zustand store when results change - but only with new tracks
   useEffect(() => {
-    if (results.length > 0) {
-      setTracks(results);
+    if (results.length === 0) return;
+    
+    // Filter to only new tracks that we haven't populated yet
+    const newTracks = results.filter(track => {
+      const key = `${track.track_id}:${track.username || 'default'}`;
+      return !populatedTrackIds.current.has(key);
+    });
+    
+    if (newTracks.length > 0) {
+      console.log('🔍 useSearchResults calling setTracks with', newTracks.length, 'new tracks');
+      setTracks(newTracks);
+      
+      // Mark these tracks as populated
+      newTracks.forEach(track => {
+        const key = `${track.track_id}:${track.username || 'default'}`;
+        populatedTrackIds.current.add(key);
+      });
     }
-  }, [results, setTracks]);
+  }, [results]); // Check on every results change, but only populate new ones
 
   // Return track info instead of full track objects to force components to read from store
   const trackInfo = results.map((track) => ({

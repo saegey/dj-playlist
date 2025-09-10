@@ -22,9 +22,10 @@ export function usePlaylistTracksQuery(trackIds: string[], enabled = true) {
   // Populate Zustand store when tracks are fetched
   useEffect(() => {
     if (query.data && query.data.length > 0) {
+      console.log('📋 usePlaylistTracksQuery calling setTracks');
       setTracks(query.data);
     }
-  }, [query.data, setTracks]);
+  }, [query.data]); // Remove setTracks from dependencies - it's stable from Zustand
 
   return { ...query, tracks: query.data ?? [] };
 }
