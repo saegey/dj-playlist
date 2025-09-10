@@ -13,7 +13,6 @@ import {
   Menu,
   Portal,
 } from "@chakra-ui/react";
-import TrackResult from "@/components/TrackResult";
 import AppleResultRow from "@/components/AppleResultRow";
 import { useMissingApple } from "@/providers/MissingAppleContext";
 import { AppleMusicResult } from "@/types/apple";
@@ -25,6 +24,7 @@ import { FiChevronLeft, FiChevronRight, FiMoreVertical } from "react-icons/fi";
 import { toaster } from "@/components/ui/toaster";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
 import { useAppleMusicAISearchQuery } from "@/hooks/useAppleMusicAISearchQuery";
+import TrackResultStore from "./TrackResultStore";
 
 export default function SingleTrackUI() {
   const {
@@ -90,8 +90,11 @@ export default function SingleTrackUI() {
   return (
     <Box>
       <Flex align="center" gap={4} direction="column">
-        <TrackResult
-          track={track}
+        <TrackResultStore
+          key={`${track.track_id}:${track.username || 'default'}`} // Force re-render on track change
+          trackId={track.track_id}
+          username={track.username || 'default'} // Ensure username is never undefined
+          fallbackTrack={track}
           allowMinimize={false}
           buttons={[
             <Menu.Root key="menu">
