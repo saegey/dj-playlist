@@ -11,7 +11,7 @@ import { PlaylistPlayerProvider } from "@/providers/PlaylistPlayerProvider";
 import PlaylistDrawerProvider from "@/providers/PlaylistDrawer";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import TrackEditProvider from "@/providers/TrackEditProvider";
-import PlaylistsProvider from "@/hooks/usePlaylists";
+import PlaylistsProvider from "@/providers/PlaylistsProvider";
 import { PlaylistViewerDrawer } from "@/components/PlaylistViewerDrawer";
 
 export default function ClientProviders({

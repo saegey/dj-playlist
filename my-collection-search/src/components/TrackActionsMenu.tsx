@@ -4,7 +4,7 @@ import React from "react";
 import { Button, Menu, Portal } from "@chakra-ui/react";
 import { FiMoreVertical } from "react-icons/fi";
 import type { Track } from "@/types/track";
-import { usePlaylists } from "@/hooks/usePlaylists";
+import { usePlaylists } from "@/providers/PlaylistsProvider";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
 
 type Props = {

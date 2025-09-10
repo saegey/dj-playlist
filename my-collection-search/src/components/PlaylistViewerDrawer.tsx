@@ -20,7 +20,7 @@ import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
 import { MdOutlineClearAll } from "react-icons/md";
 
-import { usePlaylists } from "@/hooks/usePlaylists";
+import { usePlaylists } from "@/providers/PlaylistsProvider";
 import { useRecommendations } from "@/hooks/useRecommendations";
 
 import { formatSeconds, parseDurationToSeconds } from "@/lib/trackUtils";
@@ -41,23 +41,16 @@ export const PlaylistViewerDrawer = () => {
   const {
     playlist,
     playlistsLoading,
-    displayPlaylist,
     exportPlaylist,
     addToPlaylist,
     savePlaylist,
     playlistName,
     setPlaylistName,
-    setOptimalOrderType,
     clearPlaylist,
   } = usePlaylists();
   const { openTrackEditor } = useTrackEditor();
   const { isOpen, setOpen } = usePlaylistDrawer();
 
-  console.log(
-    "PlaylistViewerDrawer render, playlist:",
-    playlist,
-    playlistsLoading
-  );
 
   const [recommendations, setRecommendations] = useState<Track[]>([]);
 

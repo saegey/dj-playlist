@@ -5,7 +5,7 @@ import { Box, EmptyState, VStack } from "@chakra-ui/react";
 import { FiHeadphones } from "react-icons/fi";
 import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
-import { usePlaylists } from "@/hooks/usePlaylists";
+import { usePlaylists } from "@/providers/PlaylistsProvider";
 import {
   DragDropContext,
   Droppable,
@@ -31,12 +31,8 @@ import { useGenerateGeneticPlaylistMutation } from "@/hooks/useGenerateGeneticPl
 const PlaylistViewer: React.FC = () => {
   const { playlistCounts } = useSearchResults({});
   const {
-    displayPlaylist,
-    setDisplayPlaylist,
-    setOptimalOrderType,
     playlist,
     moveTrack,
-    optimalOrderType,
     removeFromPlaylist,
   } = usePlaylists();
   const { mutateAsync: generateGenetic, isPending: generateGeneticLoading } =
@@ -84,47 +80,47 @@ const PlaylistViewer: React.FC = () => {
   );
 
   // Fetch genetic order if needed
-  React.useEffect(() => {
-    if (optimalOrderType !== "genetic" || playlist.length === 0) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const result = await generateGenetic(playlist as Track[]);
-        if (!cancelled) setDisplayPlaylist(result);
-      } finally {
-        if (!cancelled) {
-          setOptimalOrderType("original");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    optimalOrderType,
-    playlist,
-    setOptimalOrderType,
-    generateGenetic,
-    setDisplayPlaylist,
-  ]);
+  // React.useEffect(() => {
+  //   if (optimalOrderType !== "genetic" || playlist.length === 0) return;
+  //   let cancelled = false;
+  //   (async () => {
+  //     try {
+  //       const result = await generateGenetic(playlist as Track[]);
+  //       if (!cancelled) setDisplayPlaylist(result);
+  //     } finally {
+  //       if (!cancelled) {
+  //         setOptimalOrderType("original");
+  //       }
+  //     }
+  //   })();
+  //   return () => {
+  //     cancelled = true;
+  //   };
+  // }, [
+  //   optimalOrderType,
+  //   playlist,
+  //   setOptimalOrderType,
+  //   generateGenetic,
+  //   setDisplayPlaylist,
+  // ]);
 
-  React.useEffect(() => {
-    if (optimalOrderType === "greedy" && playlist.length > 0) {
-      const greedyPlaylist = optimalPath.map(
-        (orderIdx) => displayPlaylist[updatedPlaylist[orderIdx].idx]
-      );
-      setDisplayPlaylist(greedyPlaylist);
-      setOptimalOrderType("original");
-    }
-  }, [
-    optimalOrderType,
-    setOptimalOrderType,
-    playlist,
-    optimalPath,
-    updatedPlaylist,
-    setDisplayPlaylist,
-    displayPlaylist,
-  ]);
+  // React.useEffect(() => {
+  //   if (optimalOrderType === "greedy" && playlist.length > 0) {
+  //     const greedyPlaylist = optimalPath.map(
+  //       (orderIdx) => displayPlaylist[updatedPlaylist[orderIdx].idx]
+  //     );
+  //     setDisplayPlaylist(greedyPlaylist);
+  //     setOptimalOrderType("original");
+  //   }
+  // }, [
+  //   optimalOrderType,
+  //   setOptimalOrderType,
+  //   playlist,
+  //   optimalPath,
+  //   updatedPlaylist,
+  //   setDisplayPlaylist,
+  //   displayPlaylist,
+  // ]);
 
   if (playlist.length === 0) {
     return (
@@ -146,12 +142,6 @@ const PlaylistViewer: React.FC = () => {
     );
   }
 
-  if (optimalOrderType === "genetic" && generateGeneticLoading) {
-    return <Box p={4}>Loading genetic order...</Box>;
-  }
-
-  const ds = displayPlaylist.length > 0 ? displayPlaylist : playlist;
-
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId="playlist-droppable">
@@ -161,7 +151,7 @@ const PlaylistViewer: React.FC = () => {
             ref={provided.innerRef}
             {...provided.droppableProps}
           >
-            {ds.map((track, idx) => (
+            {playlist.map((track, idx) => (
               <Draggable
                 key={`${track.username ?? ""}:${track.track_id}`}
                 draggableId={`${track.username ?? ""}:${track.track_id}`}
@@ -186,7 +176,7 @@ const PlaylistViewer: React.FC = () => {
                         <PlaylistItemMenu
                           key="menu"
                           idx={idx}
-                          total={ds.length}
+                          total={playlist.length}
                           track={track}
                           moveTrack={moveTrack}
                           removeFromPlaylist={removeFromPlaylist}

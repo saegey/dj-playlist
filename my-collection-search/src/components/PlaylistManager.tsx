@@ -24,7 +24,7 @@ import { Toaster, toaster } from "@/components/ui/toaster"; // See below
 import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
 import { FiBookOpen, FiHeadphones, FiTrash } from "react-icons/fi";
 import { TbFileImport } from "react-icons/tb";
-import { usePlaylists } from "@/hooks/usePlaylists";
+import { usePlaylists } from "@/providers/PlaylistsProvider";
 import { importPlaylist } from "@/services/playlistService";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { FaPlay } from "react-icons/fa";

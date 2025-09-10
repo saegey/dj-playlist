@@ -2,11 +2,8 @@
 
 import React from "react";
 import { Box } from "@chakra-ui/react";
-import { useEffect } from "react";
 
 import PlaylistViewer from "@/components/PlaylistViewer";
-import { usePlaylists } from "@/hooks/usePlaylists";
-import { usePlaylistTracksByIdQuery } from "@/hooks/usePlaylistTrackIdsQuery";
 
 interface PlaylistPageProps {
   params: Promise<{ id: string }> | { id: string };
@@ -17,23 +14,6 @@ interface PlaylistPageProps {
 const PlaylistPage = ({ params }: PlaylistPageProps) => {
   const resolvedParams = React.use(params as Promise<{ id: string }>);
   const { id } = resolvedParams ?? (params as { id: string });
-  const { tracks, isLoading } = usePlaylistTracksByIdQuery(id);
-  const { setPlaylist } = usePlaylists();
-
-  useEffect(() => {
-    if (!isLoading && tracks) {
-      setPlaylist(tracks);
-    }
-  }, [isLoading, tracks]);
-
-  if (isLoading) {
-    return <Box>Loading playlist...</Box>;
-  }
-
-  if (!tracks) {
-    return <Box>Playlist not found or has no tracks.</Box>;
-  }
-
 
   // Placeholder: you can fetch playlist details here later
   // const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/playlists/${id}`, { cache: 'no-store' });

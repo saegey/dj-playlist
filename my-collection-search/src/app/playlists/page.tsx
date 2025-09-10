@@ -3,7 +3,7 @@
 import React from "react";
 import { Box } from "@chakra-ui/react";
 
-import PlaylistsProvider from "@/hooks/usePlaylists";
+import PlaylistsProvider from "@/providers/PlaylistsProvider";
 import { useMeili } from "@/providers/MeiliProvider";
 import PlaylistManager from "@/components/PlaylistManager";
 
