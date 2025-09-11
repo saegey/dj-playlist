@@ -20,6 +20,13 @@ import { usePlaylistsQuery } from "@/hooks/usePlaylistsQuery";
 import { useCreatePlaylistMutation } from "@/hooks/usePlaylistMutations";
 import { moveTrackReorder } from "@/utils/playlist";
 import { toaster } from "@/components/ui/toaster";
+import {
+  buildCompatibilityGraph,
+  greedyPath,
+  keyToCamelot,
+  TrackCompat,
+} from "@/lib/playlistOrder";
+import { compileFunction } from "vm";
 
 export interface PlaylistInfo {
   id?: number;
@@ -155,6 +162,8 @@ interface PlaylistsContextType {
 
   // recs
   getRecommendations: (k?: number) => Promise<Track[]>;
+
+  sortGreedy: () => void;
 }
 
 const PlaylistsContext = createContext<PlaylistsContextType | undefined>(
@@ -207,6 +216,25 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     await refetch();
     setLoadingPlaylists(false);
   }, [refetch]);
+
+  const sortGreedy = useCallback(() => {
+    const enrichedPlaylist = playlist.map((track, idx) => {
+      const t = track as TrackCompat;
+      return {
+        camelot_key: keyToCamelot(t.key),
+        _vectors: t._vectors,
+        energy: typeof t.energy === "number" ? t.energy : Number(t.energy) || 0,
+        bpm: typeof t.bpm === "number" ? t.bpm : Number(t.bpm) || 0,
+        idx,
+      };
+    });
+
+    const greedyPlaylist = greedyPath(
+      enrichedPlaylist,
+      buildCompatibilityGraph(enrichedPlaylist)
+    );
+    console.log("Greedy order:", greedyPlaylist);
+  }, [playlist]);
 
   const { mutateAsync: createPlaylist } = useCreatePlaylistMutation();
 
@@ -328,6 +356,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     savePlaylist,
     exportPlaylist,
     getRecommendations,
+    sortGreedy,
   };
 
   return (

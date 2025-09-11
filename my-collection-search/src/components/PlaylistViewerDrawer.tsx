@@ -47,6 +47,7 @@ export const PlaylistViewerDrawer = () => {
     playlistName,
     setPlaylistName,
     clearPlaylist,
+    sortGreedy
   } = usePlaylists();
   const { openTrackEditor } = useTrackEditor();
   const { isOpen, setOpen } = usePlaylistDrawer();
@@ -85,7 +86,6 @@ export const PlaylistViewerDrawer = () => {
   const handleExportPlaylistToPDF = () => {
     exportPlaylistToPDF({
       playlist,
-      displayPlaylist,
       totalPlaytimeFormatted,
       filename: "playlist.pdf",
     });
@@ -191,7 +191,7 @@ export const PlaylistViewerDrawer = () => {
                         />
                         <Menu.Item
                           value="sort-greedy"
-                          onSelect={() => setOptimalOrderType("greedy")}
+                          onSelect={() => sortGreedy()}
                         >
                           <GiTakeMyMoney /> Greedy Order
                         </Menu.Item>
@@ -247,10 +247,10 @@ export const PlaylistViewerDrawer = () => {
                     Recommended Tracks:
                   </Text>
                   <Box display="flex" flexDirection="column" gap={2}>
-                    {recommendations.map((rec: Track) => (
+                    {recommendations.map((rec: Track, i: number) => (
                       <TrackResult
                         allowMinimize={false}
-                        key={`recommendation-${rec.track_id}`}
+                        key={`recommendation-${rec.track_id}-${i}`}
                         track={rec}
                         buttons={[
                           <Menu.Root key="menu">

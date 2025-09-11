@@ -22,16 +22,6 @@ export default function TrackResultStore({
 }: TrackResultStoreProps) {
   const trackFromStore = useTrack(trackId, username);
   
-  // Debug logging
-  console.log('TrackResultStore:', {
-    trackId,
-    username,
-    hasStoreTrack: !!trackFromStore,
-    hasFallback: !!fallbackTrack,
-    storeStarRating: trackFromStore?.star_rating,
-    fallbackStarRating: fallbackTrack?.star_rating
-  });
-  
   // Use store data if available, otherwise fall back to the provided track
   const track = trackFromStore || fallbackTrack;
   
