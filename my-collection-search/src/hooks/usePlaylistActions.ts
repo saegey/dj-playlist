@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import type { Track } from '@/types/track';
+import { useTrackStore } from '@/stores/trackStore';
 import { exportPlaylistToPDF } from '@/lib/exportPlaylistPdf';
 
 /**
@@ -9,18 +10,22 @@ import { exportPlaylistToPDF } from '@/lib/exportPlaylistPdf';
  */
 export function usePlaylistActions(playlistId?: number) {
   const queryClient = useQueryClient();
+  const { getTrack } = useTrackStore();
   
-  // Get tracks from cache
+  // Get tracks from track store
   const getTracks = (): Track[] => {
     if (!playlistId) return [];
     
     const trackIds = queryClient.getQueryData(queryKeys.playlistTrackIds(playlistId)) as string[] || [];
-    return trackIds
-      .map(id => {
-        const trackData = queryClient.getQueryData(queryKeys.playlistTracks([id]));
-        return Array.isArray(trackData) ? trackData[0] : null;
-      })
+    if (trackIds.length === 0) return [];
+    
+    // Use track store instead of query cache
+    const tracks = trackIds
+      .map(id => getTrack(id, 'saegey'))
       .filter(Boolean) as Track[];
+      
+    console.log('usePlaylistActions getTracks:', tracks.length, 'out of', trackIds.length);
+    return tracks;
   };
 
   // Calculate total playtime
@@ -46,7 +51,9 @@ export function usePlaylistActions(playlistId?: number) {
 
   // Export playlist as JSON
   const exportPlaylist = () => {
+    console.log('Exporting playlist as JSON');
     const tracks = getTracks();
+    console.log(`Playlist has ${tracks.length} tracks`);
     if (tracks.length === 0) return;
 
     const playlistData = {

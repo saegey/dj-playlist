@@ -16,6 +16,7 @@ export interface PlaylistActionsMenuProps {
   onExportPdf: () => void;
   onOpenSaveDialog: () => void;
   onClear: () => void;
+  isGeneticSorting?: boolean;
 }
 
 /**
@@ -30,6 +31,7 @@ export default function PlaylistActionsMenu({
   onExportPdf,
   onOpenSaveDialog,
   onClear,
+  isGeneticSorting,
 }: PlaylistActionsMenuProps) {
   return (
     <Menu.Root>
@@ -49,15 +51,37 @@ export default function PlaylistActionsMenu({
           <Flex px={3} py={1} fontWeight="bold" fontSize="sm" color="gray.500">
             Playlist Sort
           </Flex>
-          <Box as="hr" my={1} borderColor="gray.200" borderWidth={0} borderTopWidth={1} />
+          <Box
+            as="hr"
+            my={1}
+            borderColor="gray.200"
+            borderWidth={0}
+            borderTopWidth={1}
+          />
           <Menu.Item value="sort-greedy" onSelect={onSortGreedy}>
             <GiTakeMyMoney /> Greedy Order
           </Menu.Item>
-          <Menu.Item value="sort-genetic" onSelect={onSortGenetic}>
-            <PiDna /> Genetic Order
+          <Menu.Item
+            value="sort-genetic"
+            onSelect={onSortGenetic}
+            disabled={isGeneticSorting}
+          >
+            <PiDna /> {isGeneticSorting ? "Sorting..." : "Genetic Order"}
           </Menu.Item>
-          <Box as="hr" my={1} borderColor="gray.200" borderWidth={0} borderTopWidth={1} />
-          <Menu.Item value="export-json" onSelect={onExportJson}>
+          <Box
+            as="hr"
+            my={1}
+            borderColor="gray.200"
+            borderWidth={0}
+            borderTopWidth={1}
+          />
+          <Menu.Item
+            value="export-json"
+            onSelect={() => {
+              console.log("Export json");
+              onExportJson();
+            }}
+          >
             <LuFileJson /> Export JSON
           </Menu.Item>
           <Menu.Item value="export-pdf" onSelect={onExportPdf}>

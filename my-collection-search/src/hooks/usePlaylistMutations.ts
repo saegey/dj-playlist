@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/queryKeys';
 import { generateGeneticPlaylist } from '@/services/playlistService';
 import type { Track } from '@/types/track';
+import { useTrackStore } from '@/stores/trackStore';
 import { 
   buildCompatibilityGraph, 
   greedyPath, 
@@ -15,6 +16,7 @@ import {
  */
 export function usePlaylistMutations(playlistId?: number) {
   const queryClient = useQueryClient();
+  const { getTrack } = useTrackStore();
   
   // Get current track IDs from cache
   const getTrackIds = (): string[] => {
@@ -57,17 +59,19 @@ export function usePlaylistMutations(playlistId?: number) {
   // Sort playlist using greedy algorithm
   const sortGreedy = () => {
     const trackIds = getTrackIds();
+    console.log('Greedy sort track IDs:', trackIds);
     if (trackIds.length === 0) return;
 
-    // Get tracks from cache or store
+    // Get tracks from track store
     const tracks = trackIds
-      .map(id => {
-        const trackData = queryClient.getQueryData(queryKeys.playlistTracks([id]));
-        return Array.isArray(trackData) ? trackData[0] : null;
-      })
+      .map(id => getTrack(id, 'saegey'))
       .filter(Boolean) as Track[];
 
-    if (tracks.length === 0) return;
+    console.log('Greedy sort tracks from store:', tracks.length, 'out of', trackIds.length);
+    if (tracks.length === 0) {
+      console.warn('No tracks found in store for IDs:', trackIds);
+      return;
+    }
 
     // Apply greedy sorting algorithm
     const enrichedPlaylist = tracks.map((track, idx) => {
@@ -88,6 +92,7 @@ export function usePlaylistMutations(playlistId?: number) {
     const sortedTrackIds = optimalPath.map(orderIdx => 
       tracks[enrichedPlaylist[orderIdx].idx].track_id
     );
+    console.log('Greedy sorted track IDs:', sortedTrackIds);
     
     updateTrackIds(sortedTrackIds);
   };
@@ -98,12 +103,9 @@ export function usePlaylistMutations(playlistId?: number) {
       const trackIds = getTrackIds();
       if (trackIds.length === 0) return [];
 
-      // Get full track objects for genetic algorithm
+      // Get full track objects from track store for genetic algorithm
       const tracks = trackIds
-        .map(id => {
-          const trackData = queryClient.getQueryData(queryKeys.playlistTracks([id]));
-          return Array.isArray(trackData) ? trackData[0] : null;
-        })
+        .map(id => getTrack(id, 'saegey'))
         .filter(Boolean) as Track[];
 
       if (tracks.length === 0) return [];

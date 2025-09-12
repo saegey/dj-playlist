@@ -20,20 +20,21 @@ import PlaylistItemMenu from "@/components/PlaylistItemMenu";
 import { usePlaylistTrackIdsQuery } from "@/hooks/usePlaylistTrackIdsQuery";
 import { usePlaylistTracksQuery } from "@/hooks/usePlaylistTracksQuery";
 import PlaylistActionsMenu from "./PlaylistActionsMenu";
-import { useSavePlaylistDialog } from "@/hooks/useSavePlaylistDialog";
+import { usePlaylistSaveDialog } from "@/hooks/usePlaylistSaveDialog";
 import { usePlaylistMutations } from "@/hooks/usePlaylistMutations";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
-  
+
   // New query-based hooks
-  const { trackIds, isPending: trackIdsLoading } = usePlaylistTrackIdsQuery(playlistId);
+  const { trackIds, isPending: trackIdsLoading } =
+    usePlaylistTrackIdsQuery(playlistId);
   const { tracks, isPending: tracksLoading } = usePlaylistTracksQuery(
     trackIds,
     trackIds.length > 0
   );
-  
+
   // New mutation and action hooks
   const {
     moveTrack,
@@ -43,12 +44,12 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     clearPlaylist,
     isGeneticSorting,
   } = usePlaylistMutations(playlistId);
-  
-  const { exportPlaylist, exportToPDF, getTotalPlaytime } = usePlaylistActions(playlistId);
-  
+
+  const { exportPlaylist, exportToPDF, getTotalPlaytime } =
+    usePlaylistActions(playlistId);
+
   const { openTrackEditor } = useTrackEditor();
-  const { Dialog: SaveDialog, close: closeSaveDialog } =
-    useSavePlaylistDialog();
+  const { Dialog: SaveDialog, open: openSaveDialog } = usePlaylistSaveDialog(playlistId);
 
   // Get total playtime for display
   const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
@@ -105,11 +106,14 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
         <Flex flexGrow={1} justify="flex-end" align="flex-start">
           <PlaylistActionsMenu
             disabled={trackIds.length === 0}
-            onSortGreedy={sortGreedy}
+            onSortGreedy={() => {
+              console.log("sort greed");
+              sortGreedy();
+            }}
             onSortGenetic={sortGenetic}
             onExportJson={exportPlaylist}
             onExportPdf={() => exportToPDF("playlist.pdf")}
-            onOpenSaveDialog={closeSaveDialog}
+            onOpenSaveDialog={openSaveDialog}
             onClear={clearPlaylist}
             isGeneticSorting={isGeneticSorting}
           />
@@ -125,10 +129,10 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
             >
               {trackIds.map((trackId, idx) => {
                 // Find the track in the tracks array for fallback
-                const track = tracks.find(t => t.track_id === trackId);
-                const username = track?.username || 'default';
+                const track = tracks.find((t) => t.track_id === trackId);
+                const username = track?.username || "default";
                 const draggableKey = `${username}:${trackId}`;
-                
+
                 return (
                   <Draggable
                     key={draggableKey}
@@ -157,7 +161,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
                               key="menu"
                               idx={idx}
                               total={trackIds.length}
-                              track={track || { track_id: trackId } as any} // Fallback for menu
+                              track={track || ({ track_id: trackId } as any)} // Fallback for menu
                               moveTrack={moveTrack}
                               removeFromPlaylist={removeFromPlaylist}
                               openTrackEditor={openTrackEditor}
