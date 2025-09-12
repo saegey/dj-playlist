@@ -5,31 +5,27 @@ import { exportPlaylistToPDF } from "@/lib/exportPlaylistPdf";
 import {
   Box,
   Text,
-  Button,
-  Menu,
   Flex,
   Collapsible,
   Container,
+  Button,
+  Menu,
 } from "@chakra-ui/react";
 import PlaylistViewer from "@/components/PlaylistViewer";
 
 import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
-import { FiMoreVertical, FiSave } from "react-icons/fi";
-import { GiTakeMyMoney } from "react-icons/gi";
-import { PiDna, PiFilePdf } from "react-icons/pi";
-import { MdOutlineClearAll } from "react-icons/md";
+import { FiMoreVertical } from "react-icons/fi";
 
 import { usePlaylists } from "@/providers/PlaylistsProvider";
 import { useRecommendations } from "@/hooks/useRecommendations";
 
 import { formatSeconds, parseDurationToSeconds } from "@/lib/trackUtils";
-import { LuFileJson } from "react-icons/lu";
-import NamePlaylistDialog from "./NamePlaylistDialog";
-import { toaster } from "./ui/toaster";
+import PlaylistActionsMenu from "@/components/PlaylistActionsMenu";
 import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
 import { useMeili } from "@/providers/MeiliProvider";
+import { useSavePlaylistDialog } from "@/hooks/useSavePlaylistDialog";
 
 export const PlaylistViewerDrawer = () => {
   const { client: meiliClient, ready } = useMeili();
@@ -43,15 +39,12 @@ export const PlaylistViewerDrawer = () => {
     playlistsLoading,
     exportPlaylist,
     addToPlaylist,
-    savePlaylist,
-    playlistName,
-    setPlaylistName,
     clearPlaylist,
-    sortGreedy
+    sortGreedy,
+    sortGenetic,
   } = usePlaylists();
   const { openTrackEditor } = useTrackEditor();
   const { isOpen, setOpen } = usePlaylistDrawer();
-
 
   const [recommendations, setRecommendations] = useState<Track[]>([]);
 
@@ -63,7 +56,7 @@ export const PlaylistViewerDrawer = () => {
   }, 0);
   const totalPlaytimeFormatted = formatSeconds(totalPlaytimeSeconds);
 
-  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const saveDialog = useSavePlaylistDialog();
 
   const getRecommendations = useRecommendations();
   React.useEffect(() => {
@@ -91,23 +84,7 @@ export const PlaylistViewerDrawer = () => {
     });
   };
 
-  const handleSavePlaylist = async () => {
-    try {
-      await savePlaylist();
-      toaster.create({
-        title: "Playlist saved successfully",
-        type: "success",
-      });
-      setIsSaveModalOpen(false);
-      // Optionally, you can refresh the playlist or show a success message
-    } catch (error) {
-      console.error("Failed to save playlist:", error);
-      toaster.create({
-        title: "Failed to save playlist",
-        type: "error",
-      });
-    }
-  };
+  // No-op retained (toaster imported elsewhere)
 
   if (playlistsLoading) {
     return null; // or a loading spinner
@@ -159,84 +136,15 @@ export const PlaylistViewerDrawer = () => {
                   </Text>
                 </Box>
                 <Flex flexGrow={1} justify="flex-end" align="flex-start">
-                  <Menu.Root>
-                    <Menu.Trigger asChild>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        aria-label="Playlist actions"
-                        px={2}
-                        disabled={playlist.length === 0}
-                      >
-                        <FiMoreVertical />
-                      </Button>
-                    </Menu.Trigger>
-                    <Menu.Positioner>
-                      <Menu.Content>
-                        <Flex
-                          px={3}
-                          py={1}
-                          fontWeight="bold"
-                          fontSize="sm"
-                          color="gray.500"
-                        >
-                          Playlist Sort
-                        </Flex>
-                        <Box
-                          as="hr"
-                          my={1}
-                          borderColor="gray.200"
-                          borderWidth={0}
-                          borderTopWidth={1}
-                        />
-                        <Menu.Item
-                          value="sort-greedy"
-                          onSelect={() => sortGreedy()}
-                        >
-                          <GiTakeMyMoney /> Greedy Order
-                        </Menu.Item>
-                        <Menu.Item
-                          value="sort-genetic"
-                          onSelect={() => setOptimalOrderType("genetic")}
-                        >
-                          <PiDna /> Genetic Order
-                        </Menu.Item>
-                        <Box
-                          as="hr"
-                          my={1}
-                          borderColor="gray.200"
-                          borderWidth={0}
-                          borderTopWidth={1}
-                        />
-                        <Menu.Item
-                          value="export-json"
-                          onSelect={exportPlaylist}
-                        >
-                          <LuFileJson /> Export JSON
-                        </Menu.Item>
-                        <Menu.Item
-                          value="export-pdf"
-                          onSelect={handleExportPlaylistToPDF}
-                        >
-                          <PiFilePdf /> Export PDF
-                        </Menu.Item>
-                        <Menu.Item
-                          value="save"
-                          onSelect={() => setIsSaveModalOpen(true)}
-                        >
-                          <FiSave /> Save Playlist
-                        </Menu.Item>
-                        <Menu.Item
-                          value="clear"
-                          onSelect={clearPlaylist}
-                          color="fg.error"
-                          _hover={{ bg: "bg.error", color: "fg.error" }}
-                        >
-                          <MdOutlineClearAll /> Clear Playlist
-                        </Menu.Item>
-                      </Menu.Content>
-                    </Menu.Positioner>
-                  </Menu.Root>
+                  <PlaylistActionsMenu
+                    disabled={playlist.length === 0}
+                    onSortGreedy={sortGreedy}
+                    onSortGenetic={sortGenetic}
+                    onExportJson={exportPlaylist}
+                    onExportPdf={handleExportPlaylistToPDF}
+                    onOpenSaveDialog={() => saveDialog.open()}
+                    onClear={clearPlaylist}
+                  />
                 </Flex>
               </Flex>
               <PlaylistViewer />
@@ -286,17 +194,7 @@ export const PlaylistViewerDrawer = () => {
             </Collapsible.Content>
           </Container>
         </Box>
-        <NamePlaylistDialog
-          open={isSaveModalOpen}
-          name={playlistName}
-          setName={setPlaylistName}
-          trackCount={playlist.length}
-          onConfirm={() => {
-            handleSavePlaylist();
-          }}
-          onCancel={() => setIsSaveModalOpen(false)}
-          confirmLabel="Save Playlist"
-        />
+        <saveDialog.Dialog />
       </Collapsible.Root>
     </Box>
   );

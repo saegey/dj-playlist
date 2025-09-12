@@ -31,7 +31,12 @@ export async function generateGeneticPlaylist(playlist: Track[]): Promise<Track[
     body: JSON.stringify({ playlist }),
   });
   if (!res.ok) throw new Error("Failed to generate genetic playlist");
+
   const data = await res.json();
+  console.log("Genetic playlist response data:", data);
+  if (data.detail) {
+    throw new Error(data.detail);
+  }
   const result = Array.isArray(data.result)
     ? (data.result as Track[])
     : (Object.values(data.result || {}) as Track[]);

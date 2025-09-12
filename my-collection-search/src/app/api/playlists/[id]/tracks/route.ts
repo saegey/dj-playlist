@@ -3,9 +3,12 @@ import { Pool } from "pg";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-export async function GET(_req: Request, context: { params: { id: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const idParam = context.params?.id;
+   const { id: idParam } = await params
     const id = Number(idParam);
     if (!idParam || Number.isNaN(id)) {
       return NextResponse.json(
@@ -16,7 +19,7 @@ export async function GET(_req: Request, context: { params: { id: string } }) {
 
     // Ensure playlist exists
     const playlistRes = await pool.query(
-      "SELECT *FROM playlists WHERE id = $1",
+      "SELECT * FROM playlists WHERE id = $1",
       [id]
     );
     if (playlistRes.rowCount === 0) {

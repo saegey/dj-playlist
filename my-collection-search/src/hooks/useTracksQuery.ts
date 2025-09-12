@@ -10,7 +10,7 @@ import type { Track } from "@/types/track";
 
 export function useTracksQuery() {
   const { updateTrack, getTrack, setTrack } = useTrackStore();
-  
+
   const saveTrackMutation = useMutation({
     mutationFn: async (data: TrackEditFormProps) => {
       return await saveTrack(data);
@@ -18,13 +18,13 @@ export function useTracksQuery() {
     // Optimistic update: update Zustand store immediately
     onMutate: async (form: TrackEditFormProps) => {
       const track_id = form.track_id;
-      const username = form.username || 'default';
-      
+      const username = form.username || "default";
+
       if (!track_id) return;
 
       // Get current track from store for rollback
       const currentTrack = getTrack(track_id, username);
-      
+
       // Build optimistic updates
       const updates: Partial<Track> = {
         title: form.title,
@@ -34,13 +34,15 @@ export function useTracksQuery() {
         notes: form.notes,
         bpm: form.bpm != null ? String(form.bpm) : undefined,
         key: form.key,
-        danceability: form.danceability != null ? String(form.danceability) : undefined,
+        danceability:
+          form.danceability != null ? String(form.danceability) : undefined,
         apple_music_url: form.apple_music_url,
         spotify_url: form.spotify_url,
         youtube_url: form.youtube_url,
         soundcloud_url: form.soundcloud_url,
         star_rating: form.star_rating,
-        duration_seconds: form.duration_seconds,
+        duration_seconds:
+          form.duration_seconds === null ? undefined : form.duration_seconds,
       };
 
       // Apply optimistic update

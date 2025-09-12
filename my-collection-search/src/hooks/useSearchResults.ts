@@ -150,7 +150,7 @@ export function useSearchResults({
         populatedTrackIds.current.add(key);
       });
     }
-  }, [results]); // Check on every results change, but only populate new ones
+  }, [results, setTracks]); // Check on every results change, but only populate new ones
 
   // Return track info instead of full track objects to force components to read from store
   const trackInfo = results.map((track) => ({

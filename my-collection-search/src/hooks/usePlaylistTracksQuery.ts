@@ -25,7 +25,7 @@ export function usePlaylistTracksQuery(trackIds: string[], enabled = true) {
       console.log('📋 usePlaylistTracksQuery calling setTracks');
       setTracks(query.data);
     }
-  }, [query.data]); // Remove setTracks from dependencies - it's stable from Zustand
+  }, [query.data, setTracks]); // Remove setTracks from dependencies - it's stable from Zustand
 
   return { ...query, tracks: query.data ?? [] };
 }

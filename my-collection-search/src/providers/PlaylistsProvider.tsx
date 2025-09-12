@@ -26,7 +26,7 @@ import {
   keyToCamelot,
   TrackCompat,
 } from "@/lib/playlistOrder";
-import { compileFunction } from "vm";
+import { useGenerateGeneticPlaylistMutation } from "@/hooks/useGenerateGeneticPlaylistMutation";
 
 export interface PlaylistInfo {
   id?: number;
@@ -110,7 +110,10 @@ function playlistReducer(state: TrackWithEmbedding[], action: Action) {
       return action.tracks;
     case "ADD": {
       const exists = state.some((t) =>
-        sameIdentity(t as any, action.track as any)
+        sameIdentity(
+          t as TrackWithEmbedding & WithUser,
+          action.track as TrackWithEmbedding & WithUser
+        )
       );
       return exists ? state : [...state, action.track];
     }
@@ -163,7 +166,9 @@ interface PlaylistsContextType {
   // recs
   getRecommendations: (k?: number) => Promise<Track[]>;
 
+  // sorting
   sortGreedy: () => void;
+  sortGenetic: () => void;
 }
 
 const PlaylistsContext = createContext<PlaylistsContextType | undefined>(
@@ -186,6 +191,8 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   const [loadingPlaylists, setLoadingPlaylists] = useState<
     { id: number } | false
   >(false);
+  const { mutateAsync: sortGeneticMutation } =
+    useGenerateGeneticPlaylistMutation();
 
   // keep localStorage in sync with reducer state
   useMemo(() => {
@@ -233,8 +240,31 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
       enrichedPlaylist,
       buildCompatibilityGraph(enrichedPlaylist)
     );
-    console.log("Greedy order:", greedyPlaylist);
+
+    dispatch({
+      type: "REPLACE",
+      tracks: greedyPlaylist.map((t) => playlist[t]),
+    });
   }, [playlist]);
+
+  const sortGenetic = useCallback(async () => {
+    // Placeholder for genetic sorting logic
+    // You can implement the genetic algorithm here and update the playlist accordingly
+    console.log("Genetic sorting is not yet implemented.");
+    try {
+      const result = await sortGeneticMutation(playlist);
+      console.log("Genetic sort result:", result);
+
+      dispatch({ type: "REPLACE", tracks: result });
+    } catch (e) {
+      console.error("Error during genetic sort:", e);
+      toaster.create({
+        title: "Genetic sort failed: " + (JSON.stringify(e) ?? ""),
+        type: "error",
+      });
+      return;
+    }
+  }, [playlist, sortGeneticMutation]);
 
   const { mutateAsync: createPlaylist } = useCreatePlaylistMutation();
 
@@ -357,6 +387,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     exportPlaylist,
     getRecommendations,
     sortGreedy,
+    sortGenetic,
   };
 
   return (

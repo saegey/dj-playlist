@@ -31,11 +31,9 @@ export default function TrackEditActions(props: TrackEditActionsProps) {
   const {
     aiLoading,
     onFetchAI,
-    appleLoading,
     onSearchApple,
     youtubeLoading,
     onSearchYouTube,
-    spotifyLoading,
     onSearchSpotify,
     analyzeLoading,
     analyzeDisabled,
