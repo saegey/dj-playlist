@@ -1,10 +1,23 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
+from fastapi.exception_handlers import RequestValidationError
+from fastapi.exceptions import RequestValidationError as FastAPIRequestValidationError
 from pydantic import BaseModel
 from typing import List
 from starlette.concurrency import run_in_threadpool
 from optimizer import run_genetic_algorithm
 
 app = FastAPI()
+
+# Custom handler to ensure validation errors return 422 and are logged
+@app.exception_handler(FastAPIRequestValidationError)
+async def validation_exception_handler(request: Request, exc: FastAPIRequestValidationError):
+    # Log the error for debugging
+    print(f"Validation error on {request.url}: {exc.errors()}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors(), "body": exc.body},
+    )
 
 
 class Track(BaseModel):
