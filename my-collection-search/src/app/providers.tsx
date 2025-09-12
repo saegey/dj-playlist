@@ -30,12 +30,12 @@ export default function ClientProviders({
             <TrackEditProvider>
               <PlaylistsProvider>
                 <PlaylistPlayerProvider>
-                  <PlaylistDrawerProvider>
+                  {/* <PlaylistDrawerProvider> */}
                     
-                    <PlaylistViewerDrawer />
+                    {/* <PlaylistViewerDrawer /> */}
                     {children}
                     <PlaylistPlayer />
-                  </PlaylistDrawerProvider>
+                  {/* </PlaylistDrawerProvider> */}
                 </PlaylistPlayerProvider>
                 {/* Fixed bottom player renders once at root, available everywhere */}
               </PlaylistsProvider>

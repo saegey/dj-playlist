@@ -24,6 +24,7 @@ import {
   FiVolumeX,
   FiArrowUp,
   FiArrowDown,
+  FiFilePlus,
 } from "react-icons/fi";
 import { Track } from "@/types/track";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
@@ -98,7 +99,7 @@ const PlaylistPlayer: React.FC = () => {
     volume,
     setVolume,
   } = usePlaylistPlayer();
-  const { setOpen, isOpen } = usePlaylistDrawer();
+  // const { setOpen, isOpen } = usePlaylistDrawer();
 
   const VolumeIcon = useMemo(() => {
     if (volume === 0) return FiVolumeX;
@@ -308,9 +309,10 @@ const PlaylistPlayer: React.FC = () => {
               size="sm"
               variant="ghost"
               title="Queue"
-              onClick={() => setOpen(!isOpen)}
+              // onClick={() => setOpen(!isOpen)}
             >
-              {isOpen ? <FiArrowDown /> : <FiArrowUp />}
+              {/* {isOpen ? <FiArrowDown /> : <FiArrowUp />} */}
+              <FiFilePlus />
             </IconButton>
           </HStack>
         </Flex>

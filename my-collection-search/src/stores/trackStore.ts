@@ -60,9 +60,6 @@ export const useTrackStore = create<TrackStore>((set, get) => ({
   },
 
   setTracks: (tracks: Track[]) => {
-    if (isStoreDebugEnabled()) {
-      console.trace('setTracks called from:'); // This will show the call stack
-    }
     set((state) => {
       let hasChanges = false;
       const newTracks = new Map(state.tracks);

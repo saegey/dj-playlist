@@ -20,7 +20,7 @@ import { SiApplemusic } from "react-icons/si";
 import { LuAudioLines } from "react-icons/lu";
 import { IoBookSharp, IoMusicalNotes, IoSettings } from "react-icons/io5";
 import { FiMenu } from "react-icons/fi";
-import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
+// import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 
 interface TopMenuBarProps {
   current?: string;
@@ -37,8 +37,8 @@ const menuItems = [
 
 export default function TopMenuBar({ current }: TopMenuBarProps) {
   const [open, setOpen] = useState(false);
-  const { isOpen: isPlaylistDrawerOpen, setOpen: setPlaylistDrawerOpen } =
-    usePlaylistDrawer();
+  // const { isOpen: isPlaylistDrawerOpen, setOpen: setPlaylistDrawerOpen } =
+  //   usePlaylistDrawer();
 
   return (
     <Box
@@ -129,9 +129,9 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
                         href={item.href}
                         onClick={() => {
                           setOpen(false);
-                          if (isPlaylistDrawerOpen) {
-                            setPlaylistDrawerOpen(false);
-                          }
+                          // if (isPlaylistDrawerOpen) {
+                          //   setPlaylistDrawerOpen(false);
+                          // }
                         }}
                         _hover={{ textDecoration: "none", bg: "bg.subtle" }}
                         px={3}

@@ -17,7 +17,7 @@ import {
   type TrackWithEmbedding as TrackWithEmbeddingFromHook,
 } from "@/hooks/useRecommendations";
 import { usePlaylistsQuery } from "@/hooks/usePlaylistsQuery";
-import { useCreatePlaylistMutation } from "@/hooks/usePlaylistMutations";
+// import { useCreatePlaylistMutation } from "@/hooks/usePlaylistMutations";
 import { moveTrackReorder } from "@/utils/playlist";
 import { toaster } from "@/components/ui/toaster";
 import {
@@ -158,7 +158,7 @@ interface PlaylistsContextType {
 
   // network / io
   fetchPlaylists: () => Promise<void>;
-  handleCreatePlaylist: () => Promise<void>;
+  // handleCreatePlaylist: () => Promise<void>;
   handleLoadPlaylist: (trackIds: string[], id: number) => Promise<void>;
   savePlaylist: () => Promise<void>;
   exportPlaylist: () => void;
@@ -266,21 +266,21 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     }
   }, [playlist, sortGeneticMutation]);
 
-  const { mutateAsync: createPlaylist } = useCreatePlaylistMutation();
+  // const { mutateAsync: createPlaylist } = useCreatePlaylistMutation();
 
-  const handleCreatePlaylist = useCallback(async () => {
-    if (!playlistName.trim() || state.length === 0) return;
-    try {
-      await createPlaylist({
-        name: playlistName,
-        tracks: state.map((t) => t.track_id),
-      });
-      setPlaylistName("");
-      setPlaylistInfo({ name: playlistName });
-    } catch {
-      toaster.create({ title: "Failed to create playlist", type: "error" });
-    }
-  }, [playlistName, state, createPlaylist]);
+  // const handleCreatePlaylist = useCallback(async () => {
+  //   if (!playlistName.trim() || state.length === 0) return;
+  //   try {
+  //     await createPlaylist({
+  //       name: playlistName,
+  //       tracks: state.map((t) => t.track_id),
+  //     });
+  //     setPlaylistName("");
+  //     setPlaylistInfo({ name: playlistName });
+  //   } catch {
+  //     toaster.create({ title: "Failed to create playlist", type: "error" });
+  //   }
+  // }, [playlistName, state, createPlaylist]);
 
   const handleLoadPlaylist = useCallback(
     async (trackIds: string[], id: number) => {
@@ -381,7 +381,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     moveTrack,
     clearPlaylist,
     fetchPlaylists,
-    handleCreatePlaylist,
+
     handleLoadPlaylist,
     savePlaylist,
     exportPlaylist,

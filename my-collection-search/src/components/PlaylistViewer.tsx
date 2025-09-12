@@ -4,7 +4,6 @@ import React from "react";
 import { Box, EmptyState, Flex, Text, VStack } from "@chakra-ui/react";
 import { FiHeadphones } from "react-icons/fi";
 import TrackResultStore from "@/components/TrackResultStore";
-import { usePlaylists } from "@/providers/PlaylistsProvider";
 import {
   DragDropContext,
   Droppable,
@@ -21,37 +20,38 @@ import PlaylistItemMenu from "@/components/PlaylistItemMenu";
 import { usePlaylistTrackIdsQuery } from "@/hooks/usePlaylistTrackIdsQuery";
 import { usePlaylistTracksQuery } from "@/hooks/usePlaylistTracksQuery";
 import PlaylistActionsMenu from "./PlaylistActionsMenu";
-import { exportPlaylistToPDF } from "@/lib/exportPlaylistPdf";
 import { useSavePlaylistDialog } from "@/hooks/useSavePlaylistDialog";
-// import { useGenerateGeneticPlaylistMutation } from "@/hooks/useGenerateGeneticPlaylistMutation";
+import { usePlaylistMutations } from "@/hooks/usePlaylistMutations";
+import { usePlaylistActions } from "@/hooks/usePlaylistActions";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
+  
+  // New query-based hooks
+  const { trackIds, isPending: trackIdsLoading } = usePlaylistTrackIdsQuery(playlistId);
+  const { tracks, isPending: tracksLoading } = usePlaylistTracksQuery(
+    trackIds,
+    trackIds.length > 0
+  );
+  
+  // New mutation and action hooks
   const {
     moveTrack,
     removeFromPlaylist,
     sortGreedy,
     sortGenetic,
-    exportPlaylist,
     clearPlaylist,
-  } = usePlaylists();
+    isGeneticSorting,
+  } = usePlaylistMutations(playlistId);
+  
+  const { exportPlaylist, exportToPDF, getTotalPlaytime } = usePlaylistActions(playlistId);
+  
   const { openTrackEditor } = useTrackEditor();
-  const { trackIds, isPending: trackIdsLoading } =
-    usePlaylistTrackIdsQuery(playlistId);
-  // Only fetch tracks once trackIds have been loaded and are non-empty
-  const { tracks, isPending: tracksLoading } = usePlaylistTracksQuery(
-    trackIds,
-    trackIds.length > 0
-  );
-  const trackMap = React.useMemo(() => {
-    const map: Record<string, (typeof tracks)[0]> = {};
-    tracks.forEach((track) => {
-      map[track.track_id] = { ...track, username: "saegey" };
-    });
-    return map;
-  }, [tracks]);
   const { Dialog: SaveDialog, close: closeSaveDialog } =
     useSavePlaylistDialog();
+
+  // Get total playtime for display
+  const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
 
   // DnD handler must be declared before any early return to satisfy hooks rules
   const onDragEnd = React.useCallback(
@@ -67,22 +67,12 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     },
     [moveTrack]
   );
-  console.log("Rendering PlaylistViewer with playlist:", tracks, trackMap);
-
-  console.log(
-    "isPending:",
-    trackIdsLoading,
-    "trackIds:",
-    trackIds,
-    "tracks:",
-    tracks
-  );
 
   if (trackIdsLoading || tracksLoading) {
     return <Box>Loading playlist...</Box>;
   }
 
-  if (tracks.length === 0) {
+  if (trackIds.length === 0) {
     return (
       <Box overflowY="auto">
         <EmptyState.Root size={"sm"}>
@@ -108,25 +98,20 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
         <Box>
           <Text>Playlist</Text>
           <Text fontSize="sm" color="gray.500" mb={2}>
-            Total Playtime: {"totalPlaytimeFormatted"}
+            Total Playtime: {totalPlaytimeFormatted}
             {/* Playlist Recommendations */}
           </Text>
         </Box>
         <Flex flexGrow={1} justify="flex-end" align="flex-start">
           <PlaylistActionsMenu
-            disabled={tracks.length === 0}
+            disabled={trackIds.length === 0}
             onSortGreedy={sortGreedy}
             onSortGenetic={sortGenetic}
             onExportJson={exportPlaylist}
-            onExportPdf={() =>
-              exportPlaylistToPDF({
-                playlist: tracks,
-                totalPlaytimeFormatted: "totalPlaytimeFormatted",
-                filename: "playlist.pdf",
-              })
-            }
+            onExportPdf={() => exportToPDF("playlist.pdf")}
             onOpenSaveDialog={closeSaveDialog}
             onClear={clearPlaylist}
+            isGeneticSorting={isGeneticSorting}
           />
         </Flex>
       </Flex>
@@ -139,20 +124,11 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
               {...provided.droppableProps}
             >
               {trackIds.map((trackId, idx) => {
-                const track = trackMap[trackId];
-                if (!track) {
-                  // Skeleton placeholder until track details load
-                  return (
-                    <Box
-                      key={`placeholder-${trackId}`}
-                      mb={2}
-                      borderWidth="1px"
-                      borderRadius="md"
-                      minH="56px"
-                    />
-                  );
-                }
-                const draggableKey = `${track.username ?? ""}:${trackId}`;
+                // Find the track in the tracks array for fallback
+                const track = tracks.find(t => t.track_id === trackId);
+                const username = track?.username || 'default';
+                const draggableKey = `${username}:${trackId}`;
+                
                 return (
                   <Draggable
                     key={draggableKey}
@@ -172,8 +148,8 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
                         <TrackResultStore
                           key={`playlist-${trackId}`}
                           trackId={trackId}
+                          username={username}
                           fallbackTrack={track}
-                          username={track.username}
                           minimized
                           playlistCount={playlistCounts[trackId]}
                           buttons={[
@@ -181,7 +157,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
                               key="menu"
                               idx={idx}
                               total={trackIds.length}
-                              track={track}
+                              track={track || { track_id: trackId } as any} // Fallback for menu
                               moveTrack={moveTrack}
                               removeFromPlaylist={removeFromPlaylist}
                               openTrackEditor={openTrackEditor}
