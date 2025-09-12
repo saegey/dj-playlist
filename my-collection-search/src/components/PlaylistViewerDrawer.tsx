@@ -1,30 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { exportPlaylistToPDF } from "@/lib/exportPlaylistPdf";
-import {
-  Box,
-  Text,
-  Flex,
-  Collapsible,
-  Container,
-  Button,
-  Menu,
-} from "@chakra-ui/react";
+import { Box, Text, Flex, Collapsible, Container } from "@chakra-ui/react";
 import PlaylistViewer from "@/components/PlaylistViewer";
-
-import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
-import { FiMoreVertical } from "react-icons/fi";
-
-import { usePlaylists } from "@/providers/PlaylistsProvider";
-import { useRecommendations } from "@/hooks/useRecommendations";
-
 import { formatSeconds, parseDurationToSeconds } from "@/lib/trackUtils";
 import PlaylistActionsMenu from "@/components/PlaylistActionsMenu";
-import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
+import PlaylistRecommendations from "@/components/PlaylistRecommendations";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
 import { useMeili } from "@/providers/MeiliProvider";
+import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
+import { usePlaylists } from "@/providers/PlaylistsProvider";
 import { useSavePlaylistDialog } from "@/hooks/useSavePlaylistDialog";
 
 export const PlaylistViewerDrawer = () => {
@@ -34,19 +21,9 @@ export const PlaylistViewerDrawer = () => {
     if (!ready || !meiliClient) return;
   }, [ready, meiliClient]);
 
-  const {
-    playlist,
-    playlistsLoading,
-    exportPlaylist,
-    addToPlaylist,
-    clearPlaylist,
-    sortGreedy,
-    sortGenetic,
-  } = usePlaylists();
+  const { playlist, playlistsLoading, exportPlaylist, addToPlaylist, clearPlaylist, sortGreedy, sortGenetic } = usePlaylists();
   const { openTrackEditor } = useTrackEditor();
   const { isOpen, setOpen } = usePlaylistDrawer();
-
-  const [recommendations, setRecommendations] = useState<Track[]>([]);
 
   const totalPlaytimeSeconds = playlist.reduce((sum, track) => {
     if (!track.duration && typeof track.duration_seconds === "number") {
@@ -55,34 +32,7 @@ export const PlaylistViewerDrawer = () => {
     return sum + parseDurationToSeconds(track.duration);
   }, 0);
   const totalPlaytimeFormatted = formatSeconds(totalPlaytimeSeconds);
-
   const saveDialog = useSavePlaylistDialog();
-
-  const getRecommendations = useRecommendations();
-  React.useEffect(() => {
-    let cancelled = false;
-    async function fetchRecs() {
-      if (playlist.length === 0) {
-        setRecommendations([]);
-        return;
-      }
-      const recs = await getRecommendations(50, playlist);
-      if (!cancelled) setRecommendations(recs);
-    }
-    fetchRecs();
-    return () => {
-      cancelled = true;
-    };
-  }, [playlist, getRecommendations]);
-
-  // PDF export handler
-  const handleExportPlaylistToPDF = () => {
-    exportPlaylistToPDF({
-      playlist,
-      totalPlaytimeFormatted,
-      filename: "playlist.pdf",
-    });
-  };
 
   // No-op retained (toaster imported elsewhere)
 
@@ -149,48 +99,12 @@ export const PlaylistViewerDrawer = () => {
               </Flex>
               <PlaylistViewer />
               {/* Recommendations below playlist tracks */}
-              {recommendations.length > 0 && (
-                <Box mt={6}>
-                  <Text fontWeight="bold" fontSize="sm" color="blue.500" mb={2}>
-                    Recommended Tracks:
-                  </Text>
-                  <Box display="flex" flexDirection="column" gap={2}>
-                    {recommendations.map((rec: Track, i: number) => (
-                      <TrackResult
-                        allowMinimize={false}
-                        key={`recommendation-${rec.track_id}-${i}`}
-                        track={rec}
-                        buttons={[
-                          <Menu.Root key="menu">
-                            <Menu.Trigger asChild>
-                              <Button variant="plain" size={["xs", "sm", "md"]}>
-                                <FiMoreVertical />
-                              </Button>
-                            </Menu.Trigger>
-
-                            <Menu.Positioner>
-                              <Menu.Content>
-                                <Menu.Item
-                                  onSelect={() => addToPlaylist(rec)}
-                                  value="add"
-                                >
-                                  Add to Playlist
-                                </Menu.Item>
-                                <Menu.Item
-                                  onSelect={() => openTrackEditor(rec)}
-                                  value="edit"
-                                >
-                                  Edit Track
-                                </Menu.Item>
-                              </Menu.Content>
-                            </Menu.Positioner>
-                          </Menu.Root>,
-                        ]}
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              )}
+              <PlaylistRecommendations
+                playlist={playlist as unknown as Track[]}
+                limit={50}
+                onAddToPlaylist={addToPlaylist}
+                onEditTrack={openTrackEditor}
+              />
             </Collapsible.Content>
           </Container>
         </Box>

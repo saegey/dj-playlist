@@ -22,13 +22,10 @@ import {
   FiVolume2,
   FiVolume1,
   FiVolumeX,
-  FiArrowUp,
-  FiArrowDown,
   FiFilePlus,
 } from "react-icons/fi";
 import { Track } from "@/types/track";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
-import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 
 const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
   children,

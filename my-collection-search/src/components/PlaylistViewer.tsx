@@ -23,6 +23,7 @@ import PlaylistActionsMenu from "./PlaylistActionsMenu";
 import { usePlaylistSaveDialog } from "@/hooks/usePlaylistSaveDialog";
 import { usePlaylistMutations } from "@/hooks/usePlaylistMutations";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
+import PlaylistRecommendations from "./PlaylistRecommendations";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
@@ -49,7 +50,8 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     usePlaylistActions(playlistId);
 
   const { openTrackEditor } = useTrackEditor();
-  const { Dialog: SaveDialog, open: openSaveDialog } = usePlaylistSaveDialog(playlistId);
+  const { Dialog: SaveDialog, open: openSaveDialog } =
+    usePlaylistSaveDialog(playlistId);
 
   // Get total playtime for display
   const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
@@ -157,16 +159,18 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
                           minimized
                           playlistCount={playlistCounts[trackId]}
                           buttons={[
-                            <PlaylistItemMenu
-                              key="menu"
-                              idx={idx}
-                              total={trackIds.length}
-                              track={track || ({ track_id: trackId } as any)} // Fallback for menu
-                              moveTrack={moveTrack}
-                              removeFromPlaylist={removeFromPlaylist}
-                              openTrackEditor={openTrackEditor}
-                              size="xs"
-                            />,
+                            track && (
+                              <PlaylistItemMenu
+                                key="menu"
+                                idx={idx}
+                                total={trackIds.length}
+                                track={track} // Fallback for menu
+                                moveTrack={moveTrack}
+                                removeFromPlaylist={removeFromPlaylist}
+                                openTrackEditor={openTrackEditor}
+                                size="xs"
+                              />
+                            ),
                           ]}
                         />
                       </Box>
@@ -175,6 +179,11 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
                 );
               })}
               {provided.placeholder}
+              <PlaylistRecommendations
+                playlist={tracks}
+                onAddToPlaylist={() => { throw new Error("Function not implemented."); }}
+                onEditTrack={() => { throw new Error("Function not implemented."); }}
+              />
               <SaveDialog />
             </Box>
           )}
