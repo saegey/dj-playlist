@@ -51,6 +51,14 @@ export function usePlaylistMutations(playlistId?: number) {
     updateTrackIds(newTrackIds);
   };
 
+  const addToPlaylist = (track: Track) => {
+    const trackIds = getTrackIds();
+    if (!trackIds.includes(track.track_id)) {
+      const newTrackIds = [...trackIds, track.track_id];
+      updateTrackIds(newTrackIds);
+    }
+  };
+
   // Clear entire playlist
   const clearPlaylist = () => {
     updateTrackIds([]);
@@ -127,6 +135,7 @@ export function usePlaylistMutations(playlistId?: number) {
   return {
     moveTrack,
     removeFromPlaylist,
+    addToPlaylist,
     clearPlaylist,
     sortGreedy,
     sortGenetic,

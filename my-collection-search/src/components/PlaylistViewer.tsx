@@ -40,6 +40,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const {
     moveTrack,
     removeFromPlaylist,
+    addToPlaylist,
     sortGreedy,
     sortGenetic,
     clearPlaylist,
@@ -99,7 +100,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     <>
       <Flex align="flex-start" w="100%" pt={3}>
         <Box>
-          <Text>Playlist</Text>
+          <Text>Playlist - {playlistId}</Text>
           <Text fontSize="sm" color="gray.500" mb={2}>
             Total Playtime: {totalPlaytimeFormatted}
             {/* Playlist Recommendations */}
@@ -181,8 +182,8 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
               {provided.placeholder}
               <PlaylistRecommendations
                 playlist={tracks}
-                onAddToPlaylist={() => { throw new Error("Function not implemented."); }}
-                onEditTrack={() => { throw new Error("Function not implemented."); }}
+                onAddToPlaylist={addToPlaylist}
+                onEditTrack={openTrackEditor}
               />
               <SaveDialog />
             </Box>

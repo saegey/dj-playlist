@@ -5,7 +5,7 @@ import { Button, Menu, Flex, Box } from "@chakra-ui/react";
 import { FiMoreVertical, FiSave } from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
-import { MdOutlineClearAll } from "react-icons/md";
+// import { MdOutlineClearAll } from "react-icons/md";
 import { LuFileJson } from "react-icons/lu";
 
 export interface PlaylistActionsMenuProps {
@@ -15,7 +15,7 @@ export interface PlaylistActionsMenuProps {
   onExportJson: () => void;
   onExportPdf: () => void;
   onOpenSaveDialog: () => void;
-  onClear: () => void;
+  // onClear: () => void;
   isGeneticSorting?: boolean;
 }
 
@@ -30,7 +30,7 @@ export default function PlaylistActionsMenu({
   onExportJson,
   onExportPdf,
   onOpenSaveDialog,
-  onClear,
+  // onClear,
   isGeneticSorting,
 }: PlaylistActionsMenuProps) {
   return (
@@ -90,14 +90,14 @@ export default function PlaylistActionsMenu({
           <Menu.Item value="save" onSelect={onOpenSaveDialog}>
             <FiSave /> Save Playlist
           </Menu.Item>
-          <Menu.Item
+          {/* <Menu.Item
             value="clear"
             onSelect={onClear}
             color="fg.error"
             _hover={{ bg: "bg.error", color: "fg.error" }}
           >
             <MdOutlineClearAll /> Clear Playlist
-          </Menu.Item>
+          </Menu.Item> */}
         </Menu.Content>
       </Menu.Positioner>
     </Menu.Root>
