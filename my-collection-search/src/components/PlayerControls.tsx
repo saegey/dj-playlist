@@ -21,7 +21,6 @@ import {
   FiVolume2,
   FiVolume1,
   FiVolumeX,
-  FiFilePlus,
   FiList,
 } from "react-icons/fi";
 import { Track } from "@/types/track";

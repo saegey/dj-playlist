@@ -1,9 +1,13 @@
 // src/services/playlistService.ts
-export async function importPlaylist(name: string, tracks: string[]) {
+export async function importPlaylist(name: string, tracks: string[] | Array<{track_id: string, friend_id: number}>, friendId?: number) {
   const res = await fetch("/api/playlists", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, tracks }),
+    body: JSON.stringify({ 
+      name, 
+      tracks,
+      default_friend_id: friendId 
+    }),
   });
   return res;
 }
@@ -43,7 +47,7 @@ export async function generateGeneticPlaylist(playlist: Track[]): Promise<Track[
   return result;
 }
 
-export async function updatePlaylist(id: number, data: { name?: string; tracks?: string[] }) {
+export async function updatePlaylist(id: number, data: { name?: string; tracks?: string[]; default_friend_id?: number }) {
   const res = await fetch("/api/playlists", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

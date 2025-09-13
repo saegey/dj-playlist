@@ -70,9 +70,17 @@ export function usePlaylistMutations(playlistId?: number) {
     console.log('Greedy sort track IDs:', trackIds);
     if (trackIds.length === 0) return;
 
-    // Get tracks from track store
+    // Get tracks from track store - try new friend_id approach first, fallback to username
     const tracks = trackIds
-      .map(id => getTrack(id, 'saegey'))
+      .map(id => {
+        // Try to get track using friend_id approach (tracks will have friend_id after migration)
+        let track = getTrack(id); // Try without specific friend_id first
+        if (!track) {
+          // Fallback to legacy username lookup during migration
+          track = useTrackStore.getState().getTrackByUsername(id, 'saegey');
+        }
+        return track;
+      })
       .filter(Boolean) as Track[];
 
     console.log('Greedy sort tracks from store:', tracks.length, 'out of', trackIds.length);
@@ -113,7 +121,15 @@ export function usePlaylistMutations(playlistId?: number) {
 
       // Get full track objects from track store for genetic algorithm
       const tracks = trackIds
-        .map(id => getTrack(id, 'saegey'))
+        .map(id => {
+          // Try to get track using friend_id approach first, fallback to username
+          let track = getTrack(id); // Try without specific friend_id first
+          if (!track) {
+            // Fallback to legacy username lookup during migration
+            track = useTrackStore.getState().getTrackByUsername(id, 'saegey');
+          }
+          return track;
+        })
         .filter(Boolean) as Track[];
 
       if (tracks.length === 0) return [];

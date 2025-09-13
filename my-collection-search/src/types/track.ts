@@ -30,6 +30,7 @@ export type Track = {
   star_rating?: number;
   username?: string; // Username of the user who added this track
   _semanticScore?: number; // Optional semantic score for AI recommendations
+  friend_id: number
 };
 
 // Spotify track type based on API response

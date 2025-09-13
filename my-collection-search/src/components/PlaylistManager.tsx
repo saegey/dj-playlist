@@ -6,7 +6,6 @@ import DeletePlaylistDialog from "@/components/DeletePlaylistDialog";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import {
   Box,
-  Flex,
   Text,
   Button,
   Stack,
@@ -17,12 +16,13 @@ import {
   Badge,
   Spinner,
   Separator,
+  Menu,
 } from "@chakra-ui/react";
 import { MeiliSearch } from "meilisearch";
 
 import { Toaster, toaster } from "@/components/ui/toaster"; // See below
 import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
-import { FiHeadphones, FiTrash } from "react-icons/fi";
+import { FiHeadphones, FiTrash, FiMoreVertical } from "react-icons/fi";
 import { TbFileImport } from "react-icons/tb";
 import { usePlaylists } from "@/providers/PlaylistsProvider";
 import { importPlaylist } from "@/services/playlistService";
@@ -134,11 +134,36 @@ export default function PlaylistManager({
       <VStack align="stretch" mb={2} gap={2}>
         <HStack justify="space-between">
           <Text fontWeight="bold">Playlists</Text>
-          {playlists.length > 0 && (
-            <Badge colorPalette="gray" variant="surface">
-              {playlists.length}
-            </Badge>
-          )}
+          <HStack gap={2}>
+            {playlists.length > 0 && (
+              <Badge colorPalette="gray" variant="surface">
+                {playlists.length}
+              </Badge>
+            )}
+            <Menu.Root>
+              <Menu.Trigger asChild>
+                <Button size="xs" variant="outline">
+                  <TbFileImport /> Import
+                </Button>
+              </Menu.Trigger>
+              <Menu.Positioner>
+                <Menu.Content>
+                  <Menu.Item
+                    value="import-apple-xml"
+                    onClick={() => setXmlImportModalOpen(true)}
+                  >
+                    <TbFileImport /> Import Apple XML
+                  </Menu.Item>
+                  <Menu.Item
+                    value="import-json"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <TbFileImport /> Import JSON
+                  </Menu.Item>
+                </Menu.Content>
+              </Menu.Positioner>
+            </Menu.Root>
+          </HStack>
         </HStack>
         <Input
           size="sm"
@@ -198,82 +223,91 @@ export default function PlaylistManager({
               loadingPlaylists !== null &&
               pl.id === loadingPlaylists.id;
             return (
-              <Flex
+              <Box
                 key={pl.id}
-                direction="row"
-                alignItems="center"
-                gap={2}
+                w="100%"
+                textAlign="left"
                 px={[0, 2]}
-                py={1}
+                py={2}
                 borderRadius="md"
                 _hover={{ bg: "bg.muted" }}
+                _active={{ bg: "bg.subtle" }}
               >
-                <Box
-                  flex="1"
-                  minW={0}
-                  cursor="pointer"
-                  onClick={async () => {
-                    router.push(`/playlists/${pl.id}`);
-                  }}
-                  onKeyDown={async (e) => {
-                    if (e.key === "Enter") {
-                      router.push(`/playlists/${pl.id}`);
-                    }
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  title={pl.name}
-                >
-                  <HStack gap={2} align="center">
-                    <Text fontSize="sm" fontWeight="bold" lineClamp={1}>
-                      {pl.name}
-                    </Text>
-                    <Box>
-                      <Text fontSize="xs" color="fg.muted">
-                        {formatDateWithRelative(pl.created_at)}
+                <HStack justify="space-between" align="center" gap={3}>
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    gap={3}
+                    minW={0}
+                    cursor="pointer"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(`/playlists/${pl.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') router.push(`/playlists/${pl.id}`);
+                    }}
+                  >
+                    <Box
+                      boxSize="7"
+                      rounded="sm"
+                      bg="blue.500"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      color="fg.muted"
+                      flexShrink={0}
+                    />
+                    <VStack align="start" gap={0} minW={0}>
+                      <Text fontWeight="semibold" fontSize="sm" lineClamp={1}>
+                        {pl.name}
                       </Text>
-                    </Box>
+                      <HStack gap={2} color="fg.muted" fontSize="xs">
+                        <Text>{formatDateWithRelative(pl.created_at)}</Text>
+                        <Text>• {pl.tracks.length} tracks</Text>
+                      </HStack>
+                    </VStack>
+                  </Box>
 
-                    <Badge colorPalette="gray" variant="solid">
-                      {pl.tracks.length}
-                    </Badge>
+                  <HStack gap={1} flexShrink={0}>
                     {isRowLoading && <Spinner size="xs" />}
+                    <Menu.Root>
+                      <Menu.Trigger asChild>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          px={2}
+                          aria-label="Playlist actions"
+                        >
+                          <FiMoreVertical />
+                        </Button>
+                      </Menu.Trigger>
+                      <Menu.Positioner>
+                        <Menu.Content>
+                          <Menu.Item
+                            value="play-now"
+                            onClick={async () => {
+                              const tracks = await fetchTracksByIds(pl.tracks);
+                              replacePlaylist(tracks, { autoplay: true, startIndex: 0 });
+                            }}
+                          >
+                            <FaPlay /> Play now
+                          </Menu.Item>
+                          <Menu.Item
+                            value="delete"
+                            onClick={() =>
+                              setDeleteDialogState({ open: true, playlistId: pl.id })
+                            }
+                            color="fg.error"
+                            _hover={{ bg: "bg.error", color: "fg.error" }}
+                          >
+                            <FiTrash /> Delete
+                          </Menu.Item>
+                        </Menu.Content>
+                      </Menu.Positioner>
+                    </Menu.Root>
                   </HStack>
-                </Box>
-                <HStack gap={2}>
-                  <Button
-                    aria-label="Play now"
-                    size="xs"
-                    colorPalette={"primary"}
-                    variant={"surface"}
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      const tracks = await fetchTracksByIds(pl.tracks);
-                      replacePlaylist(tracks, {
-                        autoplay: true,
-                        startIndex: 0,
-                      });
-                    }}
-                  >
-                    <FaPlay />
-                  </Button>
-
-                  <Button
-                    aria-label="Delete playlist"
-                    size="xs"
-                    colorPalette={"red"}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteDialogState({
-                        open: true,
-                        playlistId: pl.id,
-                      });
-                    }}
-                  >
-                    <FiTrash />
-                  </Button>
                 </HStack>
-              </Flex>
+              </Box>
             );
           })
         )}
@@ -285,29 +319,12 @@ export default function PlaylistManager({
         fetchPlaylists={fetchPlaylists}
         notify={notify}
       />
-      <HStack mt={4} gap={4}>
-        <Button
-          variant="surface"
-          size="sm"
-          onClick={() => setXmlImportModalOpen(true)}
-        >
-          <TbFileImport /> Apple Music XML
-        </Button>
-        <Button
-          variant="solid"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <TbFileImport /> Playlist JSON
-        </Button>
-
-        <AppleMusicXmlImport
-          isOpen={xmlImportModalOpen}
-          onClose={() => setXmlImportModalOpen(false)}
-          client={client}
-          fetchPlaylists={fetchPlaylists}
-        />
-      </HStack>
+      <AppleMusicXmlImport
+        isOpen={xmlImportModalOpen}
+        onClose={() => setXmlImportModalOpen(false)}
+        client={client}
+        fetchPlaylists={fetchPlaylists}
+      />
       <input
         type="file"
         accept="application/json"

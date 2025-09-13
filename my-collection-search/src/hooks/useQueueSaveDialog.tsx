@@ -16,9 +16,7 @@ export function useQueueSaveDialog() {
   const { playlist } = usePlaylistPlayer();
 
   const onConfirm = React.useCallback(async (finalName: string) => {
-    const trackIds = playlist.map(track => track.track_id);
-    
-    if (trackIds.length === 0) {
+    if (playlist.length === 0) {
       toaster.create({ title: "Cannot save empty queue", type: "error" });
       return;
     }
@@ -29,7 +27,14 @@ export function useQueueSaveDialog() {
     }
 
     try {
-      const res = await importPlaylist(finalName.trim(), trackIds);
+      // Create track objects with friend_id from queue tracks
+      const tracksWithFriendId = playlist.map(track => ({
+        track_id: track.track_id,
+        friend_id: track.friend_id
+      }));
+      console.log("Saving queue as playlist with tracks:", tracksWithFriendId);
+      
+      const res = await importPlaylist(finalName.trim(), tracksWithFriendId);
       if (!res.ok) throw new Error("Failed to save playlist");
       
       toaster.create({ title: "Queue saved as playlist successfully", type: "success" });

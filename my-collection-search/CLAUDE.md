@@ -195,7 +195,8 @@ Tables
   - Columns:
     - id integer (legacy sequence id)
     - track_id varchar(255)
-    - username text
+    - username text (kept for backwards compatibility)
+    - friend_id integer NOT NULL (references friends.id)
     - title varchar(255) NOT NULL
     - artist varchar(255) NOT NULL
     - album varchar(255)
@@ -224,6 +225,8 @@ Tables
     - tracks_compound_pk on (track_id, username)
     - Non-unique index on track_id (tracks_track_id_idx)
     - Index on spotify_url
+    - Index on friend_id (idx_tracks_friend_id)
+    - Foreign key: friend_id → friends.id
 
 - playlists
   - id integer primary key (sequence playlists_id_seq)
@@ -233,7 +236,11 @@ Tables
 - playlist_tracks (join table)
   - playlist_id integer NOT NULL
   - track_id varchar(255) NOT NULL
+  - friend_id integer NOT NULL (references friends.id)
   - position integer
+  - Indexes/constraints:
+    - Index on friend_id (idx_playlist_tracks_friend_id)
+    - Foreign key: friend_id → friends.id
   - Note: No explicit PK; combination typically treated as unique in code
 
 - friends
@@ -246,4 +253,10 @@ Extensions
 
 Notes
 - The compound PK allows the same track_id to exist for multiple users.
+- friend_id columns added to normalize references to friends table (replacing username strings).
+- username columns kept temporarily for backwards compatibility during transition.
 - Meilisearch stores denormalized Track docs for fast search; Postgres is the source of truth.
+
+Migration Scripts
+- migrations/1737641200000_add_friend_id_columns.js — adds friend_id to tracks and playlist_tracks
+- scripts/validate-friend-id-migration.js — validates data integrity after migration

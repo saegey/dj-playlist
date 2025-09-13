@@ -8,6 +8,15 @@ type Track = Omit<BaseTrack, "id">;
 const EXPORT_DIR = path.resolve(process.cwd(), "spotify_exports");
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+// Helper function to get friend_id by username
+async function getFriendIdByUsername(username: string): Promise<number> {
+  const result = await pool.query('SELECT id FROM friends WHERE username = $1', [username]);
+  if (result.rows.length === 0) {
+    throw new Error(`Friend not found for username: ${username}`);
+  }
+  return result.rows[0].id;
+}
+
 // --- Converter function ---
 /**
  * Convert one SpotifyTrack into your internal Track shape.
@@ -15,7 +24,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
  * @param spotifyTrack  the raw object from Spotify’s API
  * @param username      the local username to stamp on this record
  */
-function spotifyToTrack(spotifyTrack: SpotifyTrack, username: string): Track {
+function spotifyToTrack(spotifyTrack: SpotifyTrack, username: string, friendId?: number): Track {
   const t = spotifyTrack.track;
 
   // 1) Year → parse from release_date (first 4 chars)
@@ -57,6 +66,7 @@ function spotifyToTrack(spotifyTrack: SpotifyTrack, username: string): Track {
     apple_music_url: "", // you'd need a separate lookup
     local_audio_url: t.preview_url !== null ? t.preview_url : undefined,
     username,
+    friend_id: friendId ?? (() => { throw new Error('friend_id is required for track creation') })(),
     spotify_url: t.external_urls.spotify || "", // Spotify URL
   };
 }
@@ -84,7 +94,8 @@ export async function POST() {
             if (!fs.existsSync(trackFile)) continue;
             const raw = fs.readFileSync(trackFile, "utf-8");
             const spotifyTrack = JSON.parse(raw);
-            const track = spotifyToTrack(spotifyTrack, manifestUsername);
+            const friendId = await getFriendIdByUsername(manifestUsername);
+            const track = spotifyToTrack(spotifyTrack, manifestUsername, friendId);
             allTracks.push(track);
           } catch (e) {
             errors.push({ file: `track_${trackId}.json`, error: (e as Error).message });

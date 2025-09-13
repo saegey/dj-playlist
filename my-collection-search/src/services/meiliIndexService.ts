@@ -40,7 +40,6 @@ export async function configureMeiliIndex(index: Index, meiliClient: MeiliSearch
   ]);
   await index.updateFilterableAttributes([
     "track_id",
-    "username",
     "bpm",
     "genres",
     "key",
@@ -53,6 +52,7 @@ export async function configureMeiliIndex(index: Index, meiliClient: MeiliSearch
     "youtube_url",
     "spotify_url",
     "soundcloud_url",
+    "friend_id",
   ]);
   await index.updateRankingRules([
     "words",

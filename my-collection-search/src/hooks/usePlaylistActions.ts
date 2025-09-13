@@ -19,9 +19,17 @@ export function usePlaylistActions(playlistId?: number) {
     const trackIds = queryClient.getQueryData(queryKeys.playlistTrackIds(playlistId)) as string[] || [];
     if (trackIds.length === 0) return [];
     
-    // Use track store instead of query cache
+    // Use track store instead of query cache - try new friend_id approach first, fallback to username
     const tracks = trackIds
-      .map(id => getTrack(id, 'saegey'))
+      .map(id => {
+        // Try to get track using friend_id approach first, fallback to username
+        let track = getTrack(id); // Try without specific friend_id first
+        if (!track) {
+          // Fallback to legacy username lookup during migration
+          track = useTrackStore.getState().getTrackByUsername(id, 'saegey');
+        }
+        return track;
+      })
       .filter(Boolean) as Track[];
       
     console.log('usePlaylistActions getTracks:', tracks.length, 'out of', trackIds.length);

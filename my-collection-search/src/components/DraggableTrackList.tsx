@@ -6,7 +6,6 @@ import {
   DragDropContext,
   Droppable,
   Draggable,
-  DropResult,
   DroppableProvided,
   DraggableProvided,
   DraggableStateSnapshot,

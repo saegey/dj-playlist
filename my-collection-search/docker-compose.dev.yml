@@ -52,6 +52,8 @@ services:
     entrypoint: ["sh", "-c", "npx wait-port db:5432 && npx node-pg-migrate up"]
     depends_on:
       - db
+    volumes:
+      - .:/app:ro
 
   db:
     image: pgvector/pgvector:pg15
