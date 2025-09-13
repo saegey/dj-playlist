@@ -27,9 +27,11 @@ import { buildBulkTrackMetadataPrompt } from "@/lib/prompts";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const { friends: usernames, friendsLoading: usernamesLoading } =
-    useFriendsQuery({ showCurrentUser: true, showSpotifyUsernames: true });
-  const { username: selectedUsername } = useUsername();
+  const { friends, friendsLoading } = useFriendsQuery({
+    showCurrentUser: true,
+    showSpotifyUsernames: true,
+  });
+  const { friend } = useUsername();
   const [bulkJson, setBulkJson] = useState("");
   const [filterLocalTagsEmpty, setFilterLocalTagsEmpty] = useState(true);
   const [artistSearch, setArtistSearch] = useState("");
@@ -40,12 +42,12 @@ export default function BulkNotesPage() {
   let filter = undefined;
   const localTagsFilter =
     "local_tags IS NULL OR local_tags IS EMPTY OR local_tags = '{}'";
-  if (filterLocalTagsEmpty && selectedUsername) {
-    filter = `(${localTagsFilter}) AND username = '${selectedUsername}'`;
+  if (filterLocalTagsEmpty && friend) {
+    filter = `(${localTagsFilter}) AND friend_id = '${friend.id}'`;
   } else if (filterLocalTagsEmpty) {
     filter = localTagsFilter;
-  } else if (selectedUsername) {
-    filter = `username = '${selectedUsername}'`;
+  } else if (friend) {
+    filter = `friend_id = '${friend.id}'`;
   }
 
   const {
@@ -189,8 +191,8 @@ export default function BulkNotesPage() {
           </Box>
 
           <UsernameSelect
-            usernames={usernames}
-            isLoading={usernamesLoading}
+            usernames={friends}
+            isLoading={friendsLoading}
             loadingText="Loading usernames..."
           />
           {/* Master checkbox will replace select all/deselect all buttons */}

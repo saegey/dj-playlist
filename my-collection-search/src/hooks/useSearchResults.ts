@@ -6,7 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
-import type { Track } from "@/types/track";
+import type { Friend, Track } from "@/types/track";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 import { queryKeys } from "@/lib/queryKeys";
@@ -15,7 +15,7 @@ import { useTrackStore } from "@/stores/trackStore";
 
 interface UseSearchResultsOptions {
   client?: MeiliSearch | null; // optional override; defaults to provider
-  username?: string; // optional override; defaults to provider
+  friend?: Friend | null; // optional override; defaults to provider
   filter?: string | string[];
   // New: choose between infinite scroll (default) or single-page pagination
   mode?: "infinite" | "page";
@@ -36,7 +36,7 @@ const DEFAULT_LIMIT = 20;
 
 export function useSearchResults({
   client,
-  username,
+  friend,
   filter,
   mode = "infinite",
   limit: limitOverride,
@@ -49,14 +49,14 @@ export function useSearchResults({
   const populatedTrackIds = useRef(new Set<string>()); // Track which IDs we've already populated
   // Resolve from providers by default
   const { client: ctxClient, ready } = useMeili();
-  const { username: ctxUsername } = useUsername();
+  const { friend: ctxFriend } = useUsername();
   const effClient = client ?? ctxClient;
-  const effUsername = username ?? ctxUsername;
+  const friendId = friend?.id ?? ctxFriend?.id;
 
   // Stable filter shape for caching
   const searchFilter = useMemo(
-    () => filter ?? (effUsername ? [`username = "${effUsername}"`] : undefined),
-    [filter, effUsername]
+    () => filter ?? (friendId ? [`friend_id = "${friendId}"`] : undefined),
+    [filter, friendId]
   );
 
   const enabled = !!effClient && (ready ?? true);
@@ -136,7 +136,7 @@ export function useSearchResults({
     
     // Filter to only new tracks that we haven't populated yet
     const newTracks = results.filter(track => {
-      const key = `${track.track_id}:${track.username || 'default'}`;
+      const key = `${track.track_id}:${track.friend_id || 'default'}`;
       return !populatedTrackIds.current.has(key);
     });
     
@@ -146,7 +146,7 @@ export function useSearchResults({
       
       // Mark these tracks as populated
       newTracks.forEach(track => {
-        const key = `${track.track_id}:${track.username || 'default'}`;
+        const key = `${track.track_id}:${track.friend_id || 'default'}`;
         populatedTrackIds.current.add(key);
       });
     }
@@ -155,7 +155,7 @@ export function useSearchResults({
   // Return track info instead of full track objects to force components to read from store
   const trackInfo = results.map((track) => ({
     trackId: track.track_id,
-    username: track.username || 'default'
+    friendId: track.friend_id || 'default'
   }));
 
   // --- Playlist counts (dependent query on unique IDs) ---

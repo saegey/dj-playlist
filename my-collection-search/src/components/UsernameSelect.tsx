@@ -9,9 +9,10 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import { useUsername } from "@/providers/UsernameProvider";
+import { Friend } from "@/types/track";
 
 export type UsernameSelectProps = {
-  usernames: string[];
+  usernames: Friend[];
   includeAllOption?: boolean;
   /** Chakra responsive size array is fine here */
   size?: ("xs" | "sm" | "md" | "lg")[];
@@ -27,8 +28,8 @@ export type UsernameSelectProps = {
    * Optional override: control the value externally.
    * If omitted, the component uses UsernameProvider's value.
    */
-  value?: string;
-  onChange?: (username: string) => void;
+  value?: Friend | null;
+  onChange?: (friend_id: number) => void;
 };
 
 export default function UsernameSelect({
@@ -43,20 +44,22 @@ export default function UsernameSelect({
   value,
   onChange,
 }: UsernameSelectProps) {
-  const { username: ctxValue, setUsername: setCtxValue } = useUsername();
+  // Context value is assumed to be friend id (number or "")
+  const { friend: ctxValue, setFriend: setCtxValue } = useUsername();
+  console.log(usernames, ctxValue);
 
-  // Allow controlled usage via props, else fall back to context
-  const selectedUsername = value ?? ctxValue;
-  const setSelectedUsername = onChange ?? setCtxValue;
+  // Controlled value: id (number or "")
+  const selectedFriend = value ? value : ctxValue;
+  const setSelectedId = onChange ?? setCtxValue;
 
   const items = React.useMemo(
     () =>
       includeAllOption
         ? [
             { label: "All Libraries", value: "" },
-            ...usernames.map((u) => ({ label: u, value: u })),
+            ...usernames.map((u) => ({ label: u.username, value: u.id })),
           ]
-        : usernames.map((u) => ({ label: u, value: u })),
+        : usernames.map((u) => ({ label: u.username, value: u.id })),
     [usernames, includeAllOption]
   );
 
@@ -71,8 +74,20 @@ export default function UsernameSelect({
   return (
     <Select.Root
       collection={collection}
-      value={selectedUsername ? [selectedUsername] : []}
-      onValueChange={(vals) => setSelectedUsername(vals.value[0] || "")}
+      value={
+        selectedFriend && selectedFriend.id !== undefined
+          ? [String(selectedFriend.id)]
+          : undefined
+      }
+      onValueChange={(vals) => {
+        console.log("vals", vals);
+        setSelectedId(Number(vals.value[0]));
+        setCtxValue(
+          vals.items[0]
+            ? usernames.find((u) => u.id === vals.items[0].value) || null
+            : null
+        );
+      }}
       width={width}
       size={size}
       variant={variant}
@@ -96,7 +111,7 @@ export default function UsernameSelect({
         <Select.Positioner>
           <Select.Content>
             {items.map((item) => (
-              <Select.Item key={item.value ?? item.label} item={item}>
+              <Select.Item key={item.label ?? item.label} item={item}>
                 {item.label}
                 <Select.ItemIndicator />
               </Select.Item>

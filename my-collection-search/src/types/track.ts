@@ -166,6 +166,7 @@ export interface DiscogsTrack {
   apple_music_url: string | null;
   local_audio_url: string | null;
   username: string;
+  friend_id?: number; // resolved via friends table during upsert/index
 }
 
 interface DiscogsArtist {
@@ -179,4 +180,9 @@ export interface ProcessedTrack {
   duration_seconds?: number | null;
   apple_music_url?: string | null;
   local_audio_url?: string | null;
+}
+
+export interface Friend {
+  id: number;
+  username: string;
 }

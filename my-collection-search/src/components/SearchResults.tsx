@@ -11,12 +11,12 @@ import { useTrack } from "@/hooks/useTrack";
 
 const TrackResultItem: React.FC<{
   trackId: string;
-  username: string;
+  friendId: number;
   isLast: boolean;
   playlistCount?: number;
   lastResultRef?: React.RefObject<HTMLDivElement | null>;
-}> = ({ trackId, username, isLast, playlistCount, lastResultRef }) => {
-  const track = useTrack(trackId, username);
+}> = ({ trackId, friendId, isLast, playlistCount, lastResultRef }) => {
+  const track = useTrack(trackId, friendId);
   
   if (!track) {
     return null; // Track not yet loaded in store
@@ -25,7 +25,7 @@ const TrackResultItem: React.FC<{
   const trackResult = (
     <TrackResultStore
       trackId={trackId}
-      username={username}
+      friendId={friendId}
       fallbackTrack={track}
       allowMinimize={false}
       playlistCount={playlistCount}
@@ -62,6 +62,8 @@ const SearchResults: React.FC = () => {
     mode: "infinite",
     limit: 20,
   });
+
+  console.log('Friends', friends)
 
   const lastResultRef = React.useRef<HTMLDivElement>(null);
   const observer = React.useRef<IntersectionObserver | null>(null);
@@ -133,7 +135,7 @@ const SearchResults: React.FC = () => {
               <TrackResultItem
                 key={`search-${info.trackId}`}
                 trackId={info.trackId}
-                username={info.username}
+                friendId={info.friendId}
                 isLast={isLast}
                 playlistCount={playlistCounts[info.trackId]}
                 lastResultRef={isLast ? lastResultRef : undefined}

@@ -4,9 +4,10 @@ import React from "react";
 import { Input, SimpleGrid, Switch, InputGroup } from "@chakra-ui/react";
 import UsernameSelect from "@/components/UsernameSelect";
 import { LuSearch } from "react-icons/lu";
+import { Friend } from "@/types/track";
 
 type Props = {
-  usernames: string[];
+  friends: Friend[];
   usernamesLoading?: boolean;
   artistSearch: string;
   setArtistSearch: (v: string) => void;
@@ -18,7 +19,7 @@ type Props = {
 };
 
 export default function BackfillFilters({
-  usernames,
+  friends,
   usernamesLoading,
   artistSearch,
   setArtistSearch,
@@ -64,7 +65,7 @@ export default function BackfillFilters({
         <Switch.Label />
       </Switch.Root>
       <UsernameSelect
-        usernames={usernames}
+        usernames={friends}
         isLoading={usernamesLoading}
         loadingText="Loading usernames..."
       />

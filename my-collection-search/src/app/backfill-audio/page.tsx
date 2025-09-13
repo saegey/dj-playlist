@@ -25,7 +25,7 @@ export default function BackfillAudioPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { friends: usernames, friendsLoading: usernamesLoading } =
     useFriendsQuery({ showCurrentUser: true, showSpotifyUsernames: true });
-  const { username: selectedUsername } = useUsername();
+  const { friend: selectedFriend } = useUsername();
   const [analyzing, setAnalyzing] = useState(false);
   // Pagination state
   const [page, setPage] = useState(1);
@@ -39,7 +39,7 @@ export default function BackfillAudioPage() {
   // Build Meili filter (AND conditions)
   const filter = useMemo(() => {
     const f: string[] = [];
-    if (selectedUsername) f.push(`username = "${selectedUsername}"`);
+    if (selectedFriend) f.push(`friend_id = ${selectedFriend.id}`);
     if (showMissingAudio) {
       f.push(
         "local_audio_url IS NULL AND (apple_music_url IS NOT NULL OR youtube_url IS NOT NULL OR soundcloud_url IS NOT NULL)"
@@ -53,7 +53,7 @@ export default function BackfillAudioPage() {
       f.push("hasVectors = true");
     }
     return f;
-  }, [selectedUsername, showMissingAudio, showMissingVectors]);
+  }, [selectedFriend, showMissingAudio, showMissingVectors]);
 
   // Use shared search hook in paginated mode with page size 1
   const {
@@ -73,7 +73,7 @@ export default function BackfillAudioPage() {
   // Reset page to 1 when filters or search change
   useEffect(() => {
     setPage(1);
-  }, [selectedUsername, query, showMissingAudio, showMissingVectors]);
+  }, [selectedFriend, query, showMissingAudio, showMissingVectors]);
 
   // Derive page tracks with UI-only status fields (mutated optimistically)
   const pageTracks = (tracks as BackfillTrack[]) || [];
@@ -182,7 +182,7 @@ export default function BackfillAudioPage() {
         {/* Pagination UI */}
 
         <BackfillFilters
-          usernames={usernames}
+          friends={usernames}
           usernamesLoading={usernamesLoading}
           artistSearch={query}
           setArtistSearch={setQuery}

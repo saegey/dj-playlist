@@ -1,31 +1,32 @@
 // app/providers/UsernameProvider.tsx
 "use client";
 
+import { Friend } from "@/types/track";
 import React, { createContext, useContext, useMemo, useState } from "react";
 
 type UsernameContextValue = {
-  username: string;
-  setUsername: (u: string) => void;
-  clearUsername: () => void;
+  friend: Friend | null;
+  setFriend: (u: Friend | null) => void;
+  clearFriend: () => void;
 };
 
 const UsernameContext = createContext<UsernameContextValue | null>(null);
 
 export function UsernameProvider({
   children,
-  initialUsername = "",
+  initialFriend = null,
 }: {
   children: React.ReactNode;
-  initialUsername?: string;
+  initialFriend?: Friend | null;
 }) {
-  const [username, setUsername] = useState(initialUsername);
+  const [friend, setFriend] = useState<Friend | null>(initialFriend);
   const value = useMemo(
     () => ({
-      username,
-      setUsername,
-      clearUsername: () => setUsername(""),
+      friend,
+      setFriend,
+      clearFriend: () => setFriend(null),
     }),
-    [username]
+    [friend]
   );
 
   return (

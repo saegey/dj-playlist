@@ -10,7 +10,10 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Helper function to get friend_id by username
 async function getFriendIdByUsername(username: string): Promise<number> {
-  const result = await pool.query('SELECT id FROM friends WHERE username = $1', [username]);
+  const result = await pool.query(
+    "SELECT id FROM friends WHERE username = $1",
+    [username]
+  );
   if (result.rows.length === 0) {
     throw new Error(`Friend not found for username: ${username}`);
   }
@@ -24,7 +27,11 @@ async function getFriendIdByUsername(username: string): Promise<number> {
  * @param spotifyTrack  the raw object from Spotify’s API
  * @param username      the local username to stamp on this record
  */
-function spotifyToTrack(spotifyTrack: SpotifyTrack, username: string, friendId?: number): Track {
+function spotifyToTrack(
+  spotifyTrack: SpotifyTrack,
+  username: string,
+  friendId?: number
+): Track {
   const t = spotifyTrack.track;
 
   // 1) Year → parse from release_date (first 4 chars)
@@ -56,7 +63,8 @@ function spotifyToTrack(spotifyTrack: SpotifyTrack, username: string, friendId?:
     genres: [], // neither does it expose “genres” at track level
     duration: duration !== null ? duration : "",
     discogs_url: "", // no Discogs link from Spotify
-    album_thumbnail: t.album.images.length > 0 ? t.album.images[0].url : undefined,
+    album_thumbnail:
+      t.album.images.length > 0 ? t.album.images[0].url : undefined,
     position: t.track_number,
     duration_seconds: durationSeconds !== null ? durationSeconds : undefined,
     bpm: null, // Spotify’s audio-features endpoint has BPM, but not here
@@ -66,7 +74,11 @@ function spotifyToTrack(spotifyTrack: SpotifyTrack, username: string, friendId?:
     apple_music_url: "", // you'd need a separate lookup
     local_audio_url: t.preview_url !== null ? t.preview_url : undefined,
     username,
-    friend_id: friendId ?? (() => { throw new Error('friend_id is required for track creation') })(),
+    friend_id:
+      friendId ??
+      (() => {
+        throw new Error("friend_id is required for track creation");
+      })(),
     spotify_url: t.external_urls.spotify || "", // Spotify URL
   };
 }
@@ -76,15 +88,26 @@ export async function POST() {
     const { getMeiliClient } = await import("@/lib/meili");
     const meiliClient = getMeiliClient();
     // Process all manifest files for all usernames
-    const manifestFiles = fs.readdirSync(EXPORT_DIR).filter(f => f.startsWith("manifest_") && f.endsWith(".json"));
+    const manifestFiles = fs
+      .readdirSync(EXPORT_DIR)
+      .filter((f) => f.startsWith("manifest_") && f.endsWith(".json"));
     const allTracks: Track[] = [];
     const errors: { file: string; error: string }[] = [];
     for (const manifestFile of manifestFiles) {
-      let manifestUsername = manifestFile.replace(/^manifest_(.+)\.json$/, "$1");
+      let manifestUsername = manifestFile.replace(
+        /^manifest_(.+)\.json$/,
+        "$1"
+      );
       try {
-        const manifestRaw = fs.readFileSync(path.join(EXPORT_DIR, manifestFile), "utf-8");
+        const manifestRaw = fs.readFileSync(
+          path.join(EXPORT_DIR, manifestFile),
+          "utf-8"
+        );
         const manifest = JSON.parse(manifestRaw);
-        if (manifest.spotifyUsername && typeof manifest.spotifyUsername === "string") {
+        if (
+          manifest.spotifyUsername &&
+          typeof manifest.spotifyUsername === "string"
+        ) {
           manifestUsername = manifest.spotifyUsername;
         }
         // For each trackId in manifest, load the track file
@@ -95,10 +118,17 @@ export async function POST() {
             const raw = fs.readFileSync(trackFile, "utf-8");
             const spotifyTrack = JSON.parse(raw);
             const friendId = await getFriendIdByUsername(manifestUsername);
-            const track = spotifyToTrack(spotifyTrack, manifestUsername, friendId);
+            const track = spotifyToTrack(
+              spotifyTrack,
+              manifestUsername,
+              friendId
+            );
             allTracks.push(track);
           } catch (e) {
-            errors.push({ file: `track_${trackId}.json`, error: (e as Error).message });
+            errors.push({
+              file: `track_${trackId}.json`,
+              error: (e as Error).message,
+            });
           }
         }
       } catch (e) {
@@ -121,13 +151,14 @@ export async function POST() {
       await pool.query(
         `
       INSERT INTO tracks (
-        track_id, title, artist, album, year, styles, genres, duration, position, discogs_url, album_thumbnail, bpm, key, notes, local_tags, apple_music_url, duration_seconds, username, local_audio_url, spotify_url
+        track_id, title, artist, album, year, styles, genres, duration, position, discogs_url, album_thumbnail, bpm, key, notes, local_tags, apple_music_url, duration_seconds, username, local_audio_url, spotify_url, friend_id
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21
       )
       ON CONFLICT (track_id, username) DO UPDATE SET
         username = EXCLUDED.username,
-        spotify_url = EXCLUDED.spotify_url
+        spotify_url = EXCLUDED.spotify_url,
+        friend_id = EXCLUDED.friend_id
       RETURNING *
       `,
         [
@@ -151,6 +182,7 @@ export async function POST() {
           track.username,
           track.local_audio_url,
           track.spotify_url,
+          track.friend_id,
         ]
       );
       const { rows } = await pool.query(

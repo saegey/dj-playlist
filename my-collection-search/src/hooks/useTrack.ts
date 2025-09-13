@@ -4,18 +4,12 @@ import type { Track } from '@/types/track';
 /**
  * Hook to get a single track from the store
  */
-export function useTrack(trackId: string, username?: string): Track | undefined {
+export function useTrack(trackId: string, friendId: number): Track | undefined {
   return useTrackStore((state) => {
-    const normUser = username || 'default';
-    const keyExact = `${trackId}:${normUser}`;
+    const keyExact = `${trackId}:${friendId}`;
     const tExact = state.tracks.get(keyExact);
     if (tExact) return tExact;
-    // Fallback: if exact username not found, try 'default'
-    if (normUser !== 'default') {
-      const keyDefault = `${trackId}:default`;
-      const tDefault = state.tracks.get(keyDefault);
-      if (tDefault) return tDefault;
-    }
+
     return undefined;
   });
 }
@@ -23,11 +17,11 @@ export function useTrack(trackId: string, username?: string): Track | undefined 
 /**
  * Hook to get multiple tracks from the store
  */
-export function useTracks(trackIds: string[], username?: string): Track[] {
+export function useTracks(trackIds: string[], friendId: number): Track[] {
   return useTrackStore((state) => 
     trackIds
       .map(id => {
-        const key = `${id}:${username || 'default'}`;
+        const key = `${id}:${friendId}`;
         return state.tracks.get(key);
       })
       .filter((track): track is Track => track !== undefined)
@@ -37,9 +31,9 @@ export function useTracks(trackIds: string[], username?: string): Track[] {
 /**
  * Hook to check if a track exists in the store
  */
-export function useHasTrack(trackId: string, username?: string): boolean {
+export function useHasTrack(trackId: string, friendId: number): boolean {
   return useTrackStore((state) => {
-    const key = `${trackId}:${username || 'default'}`;
+    const key = `${trackId}:${friendId}`;
     return state.tracks.has(key);
   });
 }

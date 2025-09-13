@@ -5,7 +5,7 @@ import type { Track } from '@/types/track';
 
 interface TrackResultStoreProps extends Omit<TrackResultProps, 'track'> {
   trackId: string;
-  username?: string;
+  friendId: number;
   fallbackTrack?: Track; // Use this if track not in store yet
 }
 
@@ -16,11 +16,11 @@ interface TrackResultStoreProps extends Omit<TrackResultProps, 'track'> {
  */
 export default function TrackResultStore({
   trackId,
-  username,
+  friendId,
   fallbackTrack,
   ...props
 }: TrackResultStoreProps) {
-  const trackFromStore = useTrack(trackId, username);
+  const trackFromStore = useTrack(trackId, friendId);
   
   // Use store data if available, otherwise fall back to the provided track
   const track = trackFromStore || fallbackTrack;
