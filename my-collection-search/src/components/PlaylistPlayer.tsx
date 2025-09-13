@@ -26,6 +26,8 @@ import {
 } from "react-icons/fi";
 import { Track } from "@/types/track";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import QueueDrawer from "@/components/QueueDrawer";
+import { useQueueDrawer } from "@/hooks/useQueueDrawer";
 
 const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -96,7 +98,7 @@ const PlaylistPlayer: React.FC = () => {
     volume,
     setVolume,
   } = usePlaylistPlayer();
-  // const { setOpen, isOpen } = usePlaylistDrawer();
+  const { isOpen, toggle } = useQueueDrawer();
 
   const VolumeIcon = useMemo(() => {
     if (volume === 0) return FiVolumeX;
@@ -306,9 +308,9 @@ const PlaylistPlayer: React.FC = () => {
               size="sm"
               variant="ghost"
               title="Queue"
-              // onClick={() => setOpen(!isOpen)}
+              onClick={toggle}
+              colorPalette={isOpen ? "blue" : undefined}
             >
-              {/* {isOpen ? <FiArrowDown /> : <FiArrowUp />} */}
               <FiFilePlus />
             </IconButton>
           </HStack>
@@ -316,6 +318,9 @@ const PlaylistPlayer: React.FC = () => {
 
         {/* audio element is mounted by PlaylistPlayerProvider; don't duplicate here */}
       </PlayerContainer>
+
+      {/* Queue Drawer */}
+      <QueueDrawer isOpen={isOpen} onClose={() => toggle()} />
     </>
   );
 };

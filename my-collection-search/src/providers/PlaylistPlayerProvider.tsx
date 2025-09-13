@@ -40,6 +40,8 @@ type PlaylistPlayerContextValue = {
   appendToQueue: (items: Track[] | Track) => void;
   enqueueNext: (items: Track[] | Track) => void;
   clearQueue: () => void;
+  moveTrackInQueue: (fromIndex: number, toIndex: number) => void;
+  removeFromQueue: (index: number) => void;
 
   volume: number;
   setVolume: (v: number) => void;
@@ -197,6 +199,80 @@ export function PlaylistPlayerProvider({
     setIsPlaying(false);
   }, []);
 
+  const moveTrackInQueue = useCallback((fromIndex: number, toIndex: number) => {
+    const playlist = playlistRef.current;
+    if (fromIndex < 0 || fromIndex >= playlist.length || 
+        toIndex < 0 || toIndex >= playlist.length || 
+        fromIndex === toIndex) {
+      return;
+    }
+
+    const newPlaylist = [...playlist];
+    const [movedTrack] = newPlaylist.splice(fromIndex, 1);
+    newPlaylist.splice(toIndex, 0, movedTrack);
+    
+    playlistRef.current = newPlaylist;
+    setPlVersion((v) => v + 1);
+
+    // Adjust current track index if needed
+    setCurrentTrackIndex((currentIdx) => {
+      if (currentIdx === null) return null;
+      
+      if (currentIdx === fromIndex) {
+        // The currently playing track was moved
+        return toIndex;
+      } else if (fromIndex < currentIdx && toIndex >= currentIdx) {
+        // Track moved from before current to after current
+        return currentIdx - 1;
+      } else if (fromIndex > currentIdx && toIndex <= currentIdx) {
+        // Track moved from after current to before current
+        return currentIdx + 1;
+      }
+      // Current track index doesn't need adjustment
+      return currentIdx;
+    });
+  }, []);
+
+  const removeFromQueue = useCallback((index: number) => {
+    const playlist = playlistRef.current;
+    if (index < 0 || index >= playlist.length) {
+      return;
+    }
+
+    const newPlaylist = [...playlist];
+    newPlaylist.splice(index, 1);
+    
+    playlistRef.current = newPlaylist;
+    setPlVersion((v) => v + 1);
+
+    // Adjust current track index if needed
+    setCurrentTrackIndex((currentIdx) => {
+      if (currentIdx === null) return null;
+      
+      if (currentIdx === index) {
+        // The currently playing track was removed
+        // If there are tracks after this one, play the next one (same index)
+        // If this was the last track, play the previous one (index - 1)
+        // If this was the only track, stop playing
+        if (newPlaylist.length === 0) {
+          setIsPlaying(false);
+          return null;
+        } else if (index < newPlaylist.length) {
+          // Play the track that took this position
+          return index;
+        } else {
+          // This was the last track, play the new last track
+          return newPlaylist.length - 1;
+        }
+      } else if (currentIdx > index) {
+        // Currently playing track index needs to shift down
+        return currentIdx - 1;
+      }
+      // Current track index doesn't need adjustment
+      return currentIdx;
+    });
+  }, []);
+
   const setVolume = useCallback((v: number) => {
     const clamped = Math.max(0, Math.min(1, v));
     setVolumeState(clamped);
@@ -346,6 +422,8 @@ export function PlaylistPlayerProvider({
       appendToQueue,
       enqueueNext,
       clearQueue,
+      moveTrackInQueue,
+      removeFromQueue,
 
       volume,
       setVolume,
@@ -370,6 +448,8 @@ export function PlaylistPlayerProvider({
     appendToQueue,
     enqueueNext,
     clearQueue,
+    moveTrackInQueue,
+    removeFromQueue,
     volume,
     setVolume,
     audioElement,

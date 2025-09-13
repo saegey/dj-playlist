@@ -43,6 +43,15 @@ export async function generateGeneticPlaylist(playlist: Track[]): Promise<Track[
   return result;
 }
 
+export async function updatePlaylist(id: number, data: { name?: string; tracks?: string[] }) {
+  const res = await fetch("/api/playlists", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id, ...data }),
+  });
+  return res;
+}
+
 export async function deletePlaylist(playlistId: number): Promise<void> {
   const res = await fetch(`/api/playlists?id=${playlistId}`, {
     method: "DELETE",

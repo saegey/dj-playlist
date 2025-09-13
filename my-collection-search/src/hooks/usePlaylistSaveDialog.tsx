@@ -4,7 +4,7 @@ import React from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { toaster } from "@/components/ui/toaster";
-import { importPlaylist } from "@/services/playlistService";
+import { importPlaylist, updatePlaylist } from "@/services/playlistService";
 import { queryKeys } from '@/lib/queryKeys';
 
 /**
@@ -21,18 +21,34 @@ export function usePlaylistSaveDialog(playlistId?: number) {
     return queryClient.getQueryData(queryKeys.playlistTrackIds(playlistId)) || [];
   };
 
-  const onConfirm = React.useCallback(async (finalName: string) => {
+  // Main save handler - works for both new and existing playlists
+  const handleSave = React.useCallback(async (finalName?: string) => {
     const trackIds = getTrackIds();
-    if (!finalName.trim() || trackIds.length === 0) {
-      toaster.create({ title: "Please enter a playlist name and ensure you have tracks", type: "error" });
+    
+    if (trackIds.length === 0) {
+      toaster.create({ title: "Cannot save empty playlist", type: "error" });
       return;
     }
 
     try {
-      const res = await importPlaylist(finalName.trim(), trackIds);
+      let res;
+      
+      if (playlistId) {
+        // Existing playlist - update tracks only (no name change for now)
+        res = await updatePlaylist(playlistId, { tracks: trackIds });
+        toaster.create({ title: "Playlist updated successfully", type: "success" });
+      } else {
+        // New playlist - need name
+        if (!finalName?.trim()) {
+          toaster.create({ title: "Please enter a playlist name", type: "error" });
+          return;
+        }
+        res = await importPlaylist(finalName.trim(), trackIds);
+        toaster.create({ title: "Playlist created successfully", type: "success" });
+      }
+      
       if (!res.ok) throw new Error("Failed to save playlist");
       
-      toaster.create({ title: "Playlist saved successfully", type: "success" });
       setOpen(false);
       setPlaylistName("");
     } catch (error) {
@@ -40,6 +56,16 @@ export function usePlaylistSaveDialog(playlistId?: number) {
       toaster.create({ title: "Failed to save playlist", type: "error" });
     }
   }, [playlistId, queryClient]);
+
+  // For existing playlists, save directly without dialog
+  const saveExisting = React.useCallback(async () => {
+    await handleSave();
+  }, [handleSave]);
+
+  // For new playlists, use dialog with name input
+  const onConfirm = React.useCallback(async (finalName: string) => {
+    await handleSave(finalName);
+  }, [handleSave]);
 
   const trackCount = React.useMemo(() => {
     return getTrackIds().length;
@@ -63,6 +89,7 @@ export function usePlaylistSaveDialog(playlistId?: number) {
     isOpen: open,
     open: () => setOpen(true),
     close: () => setOpen(false),
+    saveExisting, // Direct save for existing playlists
     Dialog,
   } as const;
 }

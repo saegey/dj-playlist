@@ -113,3 +113,70 @@ export async function POST(req: Request) {
     );
   }
 }
+
+// Update a playlist's name and/or tracks
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const idRaw = body?.id;
+    const name: string | undefined = body?.name;
+    const tracks: string[] | undefined = body?.tracks;
+
+    const id = Number(idRaw);
+    if (!idRaw || Number.isNaN(id)) {
+      return NextResponse.json({ error: "Invalid or missing playlist id" }, { status: 400 });
+    }
+
+    if (name !== undefined && typeof name !== 'string') {
+      return NextResponse.json({ error: "'name' must be a string" }, { status: 400 });
+    }
+    if (tracks !== undefined && !Array.isArray(tracks)) {
+      return NextResponse.json({ error: "'tracks' must be an array of track ids" }, { status: 400 });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Ensure playlist exists
+      const existsRes = await client.query('SELECT id, name FROM playlists WHERE id = $1', [id]);
+      if (existsRes.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
+      }
+
+      // Update name if provided
+      if (name !== undefined) {
+        await client.query('UPDATE playlists SET name = $1 WHERE id = $2', [name, id]);
+      }
+
+      // Update tracks if provided (replace positions)
+      if (tracks !== undefined) {
+        await client.query('DELETE FROM playlist_tracks WHERE playlist_id = $1', [id]);
+        if (tracks.length > 0) {
+          const values = tracks.map((_, i) => `($1, $${i + 2}, ${i})`).join(',');
+          const insertSql = `INSERT INTO playlist_tracks (playlist_id, track_id, position) VALUES ${values}`;
+          await client.query(insertSql, [id, ...tracks]);
+        }
+      }
+
+      await client.query('COMMIT');
+
+      // Fetch updated playlist and tracks
+      const playlistRes = await pool.query('SELECT * FROM playlists WHERE id = $1', [id]);
+      const playlistRow = playlistRes.rows[0];
+      const tracksRes = await pool.query(
+        'SELECT track_id FROM playlist_tracks WHERE playlist_id = $1 ORDER BY position ASC',
+        [id]
+      );
+      const trackIds = tracksRes.rows.map((r: { track_id: string }) => r.track_id);
+
+      return NextResponse.json({ ...playlistRow, tracks: trackIds });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error updating playlist:', error);
+    return NextResponse.json({ error: 'Failed to update playlist' }, { status: 500 });
+  }
+}

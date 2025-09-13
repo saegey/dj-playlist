@@ -4,15 +4,7 @@ import React from "react";
 import { Box, EmptyState, Flex, Text, VStack } from "@chakra-ui/react";
 import { FiHeadphones } from "react-icons/fi";
 import TrackResultStore from "@/components/TrackResultStore";
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-  DroppableProvided,
-  DraggableProvided,
-  DraggableStateSnapshot,
-} from "@hello-pangea/dnd";
+import DraggableTrackList from "@/components/DraggableTrackList";
 
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
@@ -43,7 +35,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     addToPlaylist,
     sortGreedy,
     sortGenetic,
-    clearPlaylist,
+    // clearPlaylist,
     isGeneticSorting,
   } = usePlaylistMutations(playlistId);
 
@@ -51,26 +43,27 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     usePlaylistActions(playlistId);
 
   const { openTrackEditor } = useTrackEditor();
-  const { Dialog: SaveDialog, open: openSaveDialog } =
+  const { Dialog: SaveDialog, open: openSaveDialog, saveExisting } =
     usePlaylistSaveDialog(playlistId);
 
   // Get total playtime for display
   const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
 
-  // DnD handler must be declared before any early return to satisfy hooks rules
-  const onDragEnd = React.useCallback(
-    (result: DropResult) => {
-      const { destination, source } = result;
-      if (!destination) return;
-      if (
-        destination.droppableId === source.droppableId &&
-        destination.index === source.index
-      )
-        return;
-      moveTrack(source.index, destination.index);
-    },
-    [moveTrack]
-  );
+  // Render function for playlist item menu buttons
+  const renderPlaylistButtons = React.useCallback((track: Track | undefined, idx: number) => {
+    return track ? (
+      <PlaylistItemMenu
+        key="menu"
+        idx={idx}
+        total={trackIds.length}
+        track={track}
+        moveTrack={moveTrack}
+        removeFromPlaylist={removeFromPlaylist}
+        openTrackEditor={openTrackEditor}
+        size="xs"
+      />
+    ) : null;
+  }, [trackIds.length, moveTrack, removeFromPlaylist, openTrackEditor]);
 
   if (trackIdsLoading || tracksLoading) {
     return <Box>Loading playlist...</Box>;
@@ -116,80 +109,30 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
             onSortGenetic={sortGenetic}
             onExportJson={exportPlaylist}
             onExportPdf={() => exportToPDF("playlist.pdf")}
-            onOpenSaveDialog={openSaveDialog}
-            onClear={clearPlaylist}
+            onOpenSaveDialog={playlistId ? saveExisting : openSaveDialog}
             isGeneticSorting={isGeneticSorting}
           />
         </Flex>
       </Flex>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="playlist-droppable">
-          {(provided: DroppableProvided) => (
-            <Box
-              overflowY="auto"
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-            >
-              {trackIds.map((trackId, idx) => {
-                // Find the track in the tracks array for fallback
-                const track = tracks.find((t) => t.track_id === trackId);
-                const username = track?.username || "default";
-                const draggableKey = `${username}:${trackId}`;
-
-                return (
-                  <Draggable
-                    key={draggableKey}
-                    draggableId={draggableKey}
-                    index={idx}
-                  >
-                    {(
-                      dragProvided: DraggableProvided,
-                      snapshot: DraggableStateSnapshot
-                    ) => (
-                      <Box
-                        ref={dragProvided.innerRef}
-                        {...dragProvided.draggableProps}
-                        {...dragProvided.dragHandleProps}
-                        opacity={snapshot.isDragging ? 0.9 : 1}
-                      >
-                        <TrackResultStore
-                          key={`playlist-${trackId}`}
-                          trackId={trackId}
-                          username={username}
-                          fallbackTrack={track}
-                          minimized
-                          playlistCount={playlistCounts[trackId]}
-                          buttons={[
-                            track && (
-                              <PlaylistItemMenu
-                                key="menu"
-                                idx={idx}
-                                total={trackIds.length}
-                                track={track} // Fallback for menu
-                                moveTrack={moveTrack}
-                                removeFromPlaylist={removeFromPlaylist}
-                                openTrackEditor={openTrackEditor}
-                                size="xs"
-                              />
-                            ),
-                          ]}
-                        />
-                      </Box>
-                    )}
-                  </Draggable>
-                );
-              })}
-              {provided.placeholder}
-              <PlaylistRecommendations
-                playlist={tracks}
-                onAddToPlaylist={addToPlaylist}
-                onEditTrack={openTrackEditor}
-              />
-              <SaveDialog />
-            </Box>
-          )}
-        </Droppable>
-      </DragDropContext>
+      <Box overflowY="auto">
+        <DraggableTrackList
+          trackIds={trackIds}
+          tracks={tracks}
+          moveTrack={moveTrack}
+          droppableId="playlist-droppable"
+          renderTrackButtons={renderPlaylistButtons}
+          trackResultProps={{
+            minimized: true,
+            playlistCount: playlistCounts,
+          }}
+        />
+        <PlaylistRecommendations
+          playlist={tracks}
+          onAddToPlaylist={addToPlaylist}
+          onEditTrack={openTrackEditor}
+        />
+        <SaveDialog />
+      </Box>
     </>
   );
 };
