@@ -10,19 +10,28 @@ import {
   EmptyState,
   VStack,
 } from "@chakra-ui/react";
-import { FiX, FiSave, FiTrash2 } from "react-icons/fi";
+import { FiX, FiSave, FiTrash2, FiPlay } from "react-icons/fi";
 import { LuMusic } from "react-icons/lu";
 import DraggableTrackList from "@/components/DraggableTrackList";
+import PlayerControls from "@/components/PlayerControls";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useQueueSaveDialog } from "@/hooks/useQueueSaveDialog";
 import type { Track } from "@/types/track";
+import { PlayerContainer } from "./PlaylistPlayer";
 
 interface QueueDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  onQueueToggle: () => void;
+  isQueueOpen: boolean;
 }
 
-export default function QueueDrawer({ isOpen, onClose }: QueueDrawerProps) {
+export default function QueueDrawer({
+  isOpen,
+  onClose,
+  onQueueToggle,
+  isQueueOpen,
+}: QueueDrawerProps) {
   const {
     playlist,
     currentTrackIndex,
@@ -37,38 +46,41 @@ export default function QueueDrawer({ isOpen, onClose }: QueueDrawerProps) {
 
   // Create track IDs array from playlist
   const trackIds = React.useMemo(() => {
-    return playlist.map(track => track.track_id);
+    return playlist.map((track) => track.track_id);
   }, [playlist]);
 
   // Render function for queue item buttons
-  const renderQueueButtons = React.useCallback((track: Track | undefined, idx: number) => {
-    if (!track) return null;
+  const renderQueueButtons = React.useCallback(
+    (track: Track | undefined, idx: number) => {
+      if (!track) return null;
 
-    const isCurrentTrack = idx === currentTrackIndex;
-    
-    return (
-      <Flex gap={1} align="center">
-        {!isCurrentTrack && (
+      const isCurrentTrack = idx === currentTrackIndex;
+
+      return (
+        <Flex gap={1} align="center">
+          {!isCurrentTrack && (
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() => playTrack(idx)}
+              colorPalette="blue"
+            >
+              <FiPlay />
+            </Button>
+          )}
           <Button
             size="xs"
             variant="ghost"
-            onClick={() => playTrack(idx)}
-            colorPalette="blue"
+            onClick={() => removeFromQueue(idx)}
+            colorPalette="red"
           >
-            Play
+            <FiTrash2 />
           </Button>
-        )}
-        <Button
-          size="xs"
-          variant="ghost"
-          onClick={() => removeFromQueue(idx)}
-          colorPalette="red"
-        >
-          <FiTrash2 />
-        </Button>
-      </Flex>
-    );
-  }, [currentTrackIndex, playTrack, removeFromQueue]);
+        </Flex>
+      );
+    },
+    [currentTrackIndex, playTrack, removeFromQueue]
+  );
 
   // Calculate total duration
   const totalDuration = React.useMemo(() => {
@@ -81,25 +93,27 @@ export default function QueueDrawer({ isOpen, onClose }: QueueDrawerProps) {
     const seconds = totalSeconds % 60;
 
     if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
+        .toString()
+        .padStart(2, "0")}`;
     } else {
-      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
     }
   }, [playlist]);
 
   return (
     <>
-      <Drawer.Root 
-        open={isOpen} 
+      <Drawer.Root
+        open={isOpen}
         onOpenChange={({ open }) => !open && onClose()}
         placement="bottom"
         size="full"
       >
         <Drawer.Backdrop />
         <Drawer.Positioner>
-          <Drawer.Content>
-            {/* Header */}
-            <Drawer.Header borderBottomWidth="1px">
+          <Drawer.Content display="flex" flexDirection="column" height="100%">
+            {/* Queue Actions Header */}
+            <Drawer.Header borderBottomWidth="1px" py={3} mt={9}>
               <Flex justify="space-between" align="center" w="100%">
                 <Box>
                   <Drawer.Title>Queue</Drawer.Title>
@@ -113,8 +127,8 @@ export default function QueueDrawer({ isOpen, onClose }: QueueDrawerProps) {
                     variant="outline"
                     onClick={openSaveDialog}
                     disabled={playlist.length === 0}
-                    leftIcon={<FiSave />}
                   >
+                    <FiSave />
                     Save as Playlist
                   </Button>
                   <Button
@@ -123,8 +137,8 @@ export default function QueueDrawer({ isOpen, onClose }: QueueDrawerProps) {
                     onClick={clearQueue}
                     disabled={playlist.length === 0}
                     colorPalette="red"
-                    leftIcon={<FiTrash2 />}
                   >
+                    <FiTrash2 />
                     Clear Queue
                   </Button>
                   <Drawer.CloseTrigger asChild>
@@ -136,14 +150,15 @@ export default function QueueDrawer({ isOpen, onClose }: QueueDrawerProps) {
               </Flex>
             </Drawer.Header>
 
-            {/* Body */}
-            <Drawer.Body 
-              px={0} 
+            {/* Body fills space between header and bottom player */}
+            <Drawer.Body
+              px={0}
               py={0}
-              // Add bottom padding to prevent covering the player
-              pb={{ base: "80px", md: "120px" }}
-              maxH="70vh"
-              overflowY="auto"
+              flex="1"
+              display="flex"
+              flexDirection="column"
+              overflow="hidden"
+              minH={0}
             >
               {playlist.length === 0 ? (
                 <Box p={8}>
@@ -162,7 +177,7 @@ export default function QueueDrawer({ isOpen, onClose }: QueueDrawerProps) {
                   </EmptyState.Root>
                 </Box>
               ) : (
-                <Box px={4}>
+                <Box px={4} pt={4} pb={4} flex="1" minH={0} overflowY="auto">
                   <DraggableTrackList
                     trackIds={trackIds}
                     tracks={playlist}
@@ -174,9 +189,28 @@ export default function QueueDrawer({ isOpen, onClose }: QueueDrawerProps) {
                       minimized: true,
                     }}
                   />
+                  <Box h={{ base: "72px", md: "84px" }} />
                 </Box>
               )}
             </Drawer.Body>
+
+            {/* Bottom pinned player */}
+            <Box
+              borderTopWidth="1px"
+              borderColor="border.muted"
+              bg="bg.surface"
+              p={4}
+            >
+              <PlayerContainer>
+                <PlayerControls
+                  showQueueButton={true}
+                  onQueueToggle={onQueueToggle}
+                  isQueueOpen={isQueueOpen}
+                  compact={false}
+                  showVolumeControls={true}
+                />
+              </PlayerContainer>
+            </Box>
           </Drawer.Content>
         </Drawer.Positioner>
       </Drawer.Root>

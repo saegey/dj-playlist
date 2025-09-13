@@ -112,6 +112,7 @@ export interface Playlist {
   id: number;
   name: string;
   tracks: string[];
+  created_at: string;
 }
 
 export type SpotifyApiTrack = {

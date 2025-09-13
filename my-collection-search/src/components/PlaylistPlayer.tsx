@@ -1,35 +1,13 @@
 // components/PlaylistPlayer.tsx
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  Box,
-  Button,
-  Flex,
-  HStack,
-  IconButton,
-  Image,
-  Text,
-  VStack,
-  Slider,
-  Icon,
-} from "@chakra-ui/react";
-import {
-  FiPause,
-  FiPlay,
-  FiSkipBack,
-  FiSkipForward,
-  FiVolume2,
-  FiVolume1,
-  FiVolumeX,
-  FiFilePlus,
-} from "react-icons/fi";
-import { Track } from "@/types/track";
-import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import React from "react";
+import { Box } from "@chakra-ui/react";
+import PlayerControls from "@/components/PlayerControls";
 import QueueDrawer from "@/components/QueueDrawer";
 import { useQueueDrawer } from "@/hooks/useQueueDrawer";
 
-const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
+export const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   return (
@@ -56,271 +34,35 @@ const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-const Artwork: React.FC<{ src?: string; alt?: string }> = ({ src, alt }) => {
-  if (!src) {
-    return (
-      <Box
-        width={{ base: "40px", md: "48px" }}
-        height={{ base: "40px", md: "48px" }}
-        bg="bg.muted"
-        borderRadius="md"
-      />
-    );
-  }
-
-  return (
-    <Image
-      src={src || "/images/placeholder-artwork.png"}
-      alt={alt || "Artwork"}
-      boxSize={{ base: "40px", md: "48px" }}
-      objectFit="cover"
-      borderRadius="md"
-      borderWidth="1px"
-    />
-  );
-};
 
 const PlaylistPlayer: React.FC = () => {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const {
-    isPlaying,
-    currentTrackIndex,
-    currentTrack,
-    currentTime,
-    duration,
-    seek,
-    play,
-    pause,
-    playNext,
-    playPrev,
-    playlist,
-    volume,
-    setVolume,
-  } = usePlaylistPlayer();
   const { isOpen, toggle } = useQueueDrawer();
-
-  const VolumeIcon = useMemo(() => {
-    if (volume === 0) return FiVolumeX;
-    if (volume < 0.5) return FiVolume1;
-    return FiVolume2;
-  }, [volume]);
-
-  const safeLen = mounted ? playlist.length : 0;
-  const safeIndex = mounted ? currentTrackIndex : null;
-  const canPrev = safeIndex !== null && safeIndex > 0;
-  const canNext = safeIndex !== null && safeIndex < safeLen - 1;
-
-  const progress = useMemo(() => {
-    if (!mounted || !duration || duration <= 0) return 0;
-    return Math.max(0, Math.min(100, (currentTime / duration) * 100));
-  }, [mounted, currentTime, duration]);
-
-  const fmt = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
 
   return (
     <>
       {/* Spacer so your page content isn't hidden behind the fixed bar */}
       <Box h={{ base: "72px", md: "84px" }} />
 
-      {/* Remount internals when playlist changes to ensure fresh state */}
-      <PlayerContainer>
-        {/* Playhead slider */}
-        <HStack gap={3} align="center" mb={2}>
-          <Text fontSize="xs" minW="36px" textAlign="right" color="fg.muted">
-            {fmt(currentTime || 0)}
-          </Text>
-          <Box flex="1">
-            <Slider.Root
-              width="100%"
-              value={[progress]}
-              onValueChange={(e) => {
-                const pct = e.value[0] ?? 0;
-                const target =
-                  (Math.max(0, Math.min(100, pct)) / 100) * (duration || 0);
-                if (Number.isFinite(target)) seek(target);
-              }}
-            >
-              <Slider.Control>
-                <Slider.Track>
-                  <Slider.Range />
-                </Slider.Track>
-                <Slider.Thumbs rounded="full" />
-              </Slider.Control>
-            </Slider.Root>
-          </Box>
-          <Text fontSize="xs" minW="36px" color="fg.muted">
-            {fmt(duration || 0)}
-          </Text>
-        </HStack>
-        <Flex>
-          <VStack
-            align="start"
-            gap={1}
-            flex="1"
-            minW={0}
-            display={{ base: "flex", md: "none" }}
-          >
-            <Text
-              fontWeight="semibold"
-              fontSize={{ base: "sm" }}
-              // noOfLines={1}
-              maxW={{ base: "100vw" }}
-            >
-              {mounted && currentTrack
-                ? currentTrack.title
-                : "No track playing"}
-            </Text>
-            <Text
-              color="fg.muted"
-              fontSize="xs"
-              // noOfLines={1}
-              maxW={{ base: "45vw", md: "40vw" }}
-            >
-              {mounted && currentTrack ? currentTrack.artist : "—"}
-            </Text>
-          </VStack>
-        </Flex>
-        <Flex
-          align="center"
-          gap={{ base: 3, md: 4 }}
-          justify="space-between"
-          minH={{ base: "56px", md: "64px" }}
-          zIndex={100}
-        >
-          {/* Left: Artwork + track info */}
-          <HStack minW={0} gap={3} flex="1">
-            <Artwork
-              src={(currentTrack as Track)?.album_thumbnail}
-              alt={
-                mounted && currentTrack
-                  ? `${currentTrack.artist} - ${currentTrack.title}`
-                  : "Artwork"
-              }
-            />
-            <VStack
-              align="start"
-              minW={0}
-              display={{ base: "none", md: "flex" }}
-            >
-              <Text
-                fontWeight="semibold"
-                fontSize={{ base: "sm", md: "md" }}
-                // noOfLines={1}
-                maxW={{ base: "45vw", md: "40vw" }}
-              >
-                {mounted && currentTrack
-                  ? currentTrack.title
-                  : "No track playing"}
-              </Text>
-              <Text
-                color="fg.muted"
-                fontSize="xs"
-                // noOfLines={1}
-                maxW={{ base: "45vw", md: "40vw" }}
-              >
-                {mounted && currentTrack ? currentTrack.artist : "—"}
-              </Text>
-            </VStack>
-          </HStack>
+      {/* Original Player - hide when queue drawer is open */}
+      {!isOpen && (
+        <PlayerContainer>
+          <PlayerControls
+            showQueueButton={true}
+            onQueueToggle={toggle}
+            isQueueOpen={isOpen}
+            compact={false}
+            showVolumeControls={true}
+          />
+        </PlayerContainer>
+      )}
 
-          {/* Center: transport controls (YouTube Music vibe) */}
-          <HStack gap={{ base: 1, md: 2 }}>
-            <IconButton
-              aria-label="Previous"
-              size="sm"
-              variant="ghost"
-              onClick={playPrev}
-              disabled={!canPrev}
-            >
-              <FiSkipBack />
-            </IconButton>
-
-            {isPlaying ? (
-              <Button
-                aria-label="Pause"
-                size="sm"
-                variant="solid"
-                colorScheme="red"
-                onClick={pause}
-              >
-                <FiPause />
-              </Button>
-            ) : (
-              <Button
-                aria-label="Play"
-                size="sm"
-                variant="solid"
-                colorScheme="green"
-                onClick={play}
-                disabled={!mounted || safeLen === 0}
-              >
-                <FiPlay />
-              </Button>
-            )}
-
-            <IconButton
-              aria-label="Next"
-              size="sm"
-              variant="ghost"
-              onClick={playNext}
-              disabled={!canNext}
-            >
-              <FiSkipForward />
-            </IconButton>
-          </HStack>
-
-          {/* Right: extras (volume / queue) */}
-          <HStack gap={1} justify="flex-end" flex="1">
-            <Box display={{ base: "none", md: "block" }}>
-              <HStack align="center" gap={3}>
-                <Icon
-                  aria-label={volume === 0 ? "Unmute" : "Mute"}
-                  size="sm"
-                  // variant="ghost"
-                  onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
-                >
-                  {volume === 0 ? <FiVolumeX /> : <VolumeIcon />}
-                </Icon>
-                <Slider.Root
-                  width="200px"
-                  defaultValue={[40]}
-                  onValueChange={(e) => {
-                    setVolume(e.value[0] / 100);
-                  }}
-                >
-                  <Slider.Control>
-                    <Slider.Track>
-                      <Slider.Range />
-                    </Slider.Track>
-                    <Slider.Thumbs rounded="l1" />
-                  </Slider.Control>
-                </Slider.Root>
-              </HStack>
-            </Box>
-
-            <IconButton
-              aria-label="Queue"
-              size="sm"
-              variant="ghost"
-              title="Queue"
-              onClick={toggle}
-              colorPalette={isOpen ? "blue" : undefined}
-            >
-              <FiFilePlus />
-            </IconButton>
-          </HStack>
-        </Flex>
-
-        {/* audio element is mounted by PlaylistPlayerProvider; don't duplicate here */}
-      </PlayerContainer>
-
-      {/* Queue Drawer */}
-      <QueueDrawer isOpen={isOpen} onClose={() => toggle()} />
+      {/* Queue Drawer with embedded player */}
+      <QueueDrawer 
+        isOpen={isOpen} 
+        onClose={() => toggle()} 
+        onQueueToggle={toggle}
+        isQueueOpen={isOpen}
+      />
     </>
   );
 };

@@ -22,13 +22,14 @@ import { MeiliSearch } from "meilisearch";
 
 import { Toaster, toaster } from "@/components/ui/toaster"; // See below
 import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
-import { FiBookOpen, FiHeadphones, FiTrash } from "react-icons/fi";
+import { FiHeadphones, FiTrash } from "react-icons/fi";
 import { TbFileImport } from "react-icons/tb";
 import { usePlaylists } from "@/providers/PlaylistsProvider";
 import { importPlaylist } from "@/services/playlistService";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { FaPlay } from "react-icons/fa";
 import { fetchTracksByIds } from "@/services/trackService";
+import { formatDateWithRelative } from "@/lib/date";
 
 type Props = {
   xmlImportModalOpen: boolean;
@@ -43,8 +44,7 @@ export default function PlaylistManager({
 }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { playlists, loadingPlaylists, fetchPlaylists, handleLoadPlaylist } =
-    usePlaylists();
+  const { playlists, loadingPlaylists, fetchPlaylists } = usePlaylists();
 
   const { replacePlaylist } = usePlaylistPlayer();
 
@@ -213,14 +213,10 @@ export default function PlaylistManager({
                   minW={0}
                   cursor="pointer"
                   onClick={async () => {
-                    // await handleLoadPlaylist(pl.tracks, pl.id);
-                    notify({ title: "Playlist loaded.", type: "success" });
                     router.push(`/playlists/${pl.id}`);
                   }}
                   onKeyDown={async (e) => {
                     if (e.key === "Enter") {
-                      // await handleLoadPlaylist(pl.tracks, pl.id);
-                      notify({ title: "Playlist loaded.", type: "success" });
                       router.push(`/playlists/${pl.id}`);
                     }
                   }}
@@ -232,6 +228,12 @@ export default function PlaylistManager({
                     <Text fontSize="sm" fontWeight="bold" lineClamp={1}>
                       {pl.name}
                     </Text>
+                    <Box>
+                      <Text fontSize="xs" color="fg.muted">
+                        {formatDateWithRelative(pl.created_at)}
+                      </Text>
+                    </Box>
+
                     <Badge colorPalette="gray" variant="solid">
                       {pl.tracks.length}
                     </Badge>
@@ -254,26 +256,6 @@ export default function PlaylistManager({
                     }}
                   >
                     <FaPlay />
-                  </Button>
-
-                  <Button
-                    aria-label="Load into editor"
-                    size="xs"
-                    variant="solid"
-                    colorPalette="primary"
-                    disabled={isRowLoading}
-                    loading={isRowLoading}
-                    mr={1}
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      await handleLoadPlaylist(pl.tracks, pl.id);
-                      notify({
-                        title: "Playlist loaded.",
-                        type: "success",
-                      });
-                    }}
-                  >
-                    <FiBookOpen />
                   </Button>
 
                   <Button

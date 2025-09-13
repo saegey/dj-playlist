@@ -1,11 +1,17 @@
 "use client";
 
 import React from "react";
-import { Box, EmptyState, Flex, Text, VStack } from "@chakra-ui/react";
+import {
+  Box,
+  EmptyState,
+  Flex,
+  Text,
+  VStack,
+  Skeleton,
+} from "@chakra-ui/react";
 import { FiHeadphones } from "react-icons/fi";
-import TrackResultStore from "@/components/TrackResultStore";
-import DraggableTrackList from "@/components/DraggableTrackList";
 
+import DraggableTrackList from "@/components/DraggableTrackList";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
 import PlaylistItemMenu from "@/components/PlaylistItemMenu";
@@ -16,6 +22,7 @@ import { usePlaylistSaveDialog } from "@/hooks/usePlaylistSaveDialog";
 import { usePlaylistMutations } from "@/hooks/usePlaylistMutations";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
 import PlaylistRecommendations from "./PlaylistRecommendations";
+import { Track } from "@/types/track";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
@@ -35,7 +42,6 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     addToPlaylist,
     sortGreedy,
     sortGenetic,
-    // clearPlaylist,
     isGeneticSorting,
   } = usePlaylistMutations(playlistId);
 
@@ -43,30 +49,67 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     usePlaylistActions(playlistId);
 
   const { openTrackEditor } = useTrackEditor();
-  const { Dialog: SaveDialog, open: openSaveDialog, saveExisting } =
-    usePlaylistSaveDialog(playlistId);
+  const {
+    Dialog: SaveDialog,
+    open: openSaveDialog,
+    saveExisting,
+  } = usePlaylistSaveDialog(playlistId);
 
   // Get total playtime for display
   const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
 
   // Render function for playlist item menu buttons
-  const renderPlaylistButtons = React.useCallback((track: Track | undefined, idx: number) => {
-    return track ? (
-      <PlaylistItemMenu
-        key="menu"
-        idx={idx}
-        total={trackIds.length}
-        track={track}
-        moveTrack={moveTrack}
-        removeFromPlaylist={removeFromPlaylist}
-        openTrackEditor={openTrackEditor}
-        size="xs"
-      />
-    ) : null;
-  }, [trackIds.length, moveTrack, removeFromPlaylist, openTrackEditor]);
+  const renderPlaylistButtons = React.useCallback(
+    (track: Track | undefined, idx: number) => {
+      return track ? (
+        <PlaylistItemMenu
+          key="menu"
+          idx={idx}
+          total={trackIds.length}
+          track={track}
+          moveTrack={moveTrack}
+          removeFromPlaylist={removeFromPlaylist}
+          openTrackEditor={openTrackEditor}
+          size="xs"
+        />
+      ) : null;
+    },
+    [trackIds.length, moveTrack, removeFromPlaylist, openTrackEditor]
+  );
 
   if (trackIdsLoading || tracksLoading) {
-    return <Box>Loading playlist...</Box>;
+    return (
+      <Box>
+        {/* Header skeleton */}
+        <Flex align="flex-start" w="100%" pt={3} mb={2} gap={3}>
+          <Box flex="1">
+            <Skeleton height="20px" width="220px" mb={2} />
+            <Skeleton height="14px" width="180px" />
+          </Box>
+          <Box>
+            <Skeleton height="32px" width="40px" borderRadius="md" />
+          </Box>
+        </Flex>
+
+        {/* List skeleton */}
+        <Box>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Flex key={i} align="center" gap={3} py={2}>
+              <Skeleton height="36px" width="36px" borderRadius="md" />
+              <Box flex="1">
+                <Skeleton
+                  height="16px"
+                  width={i % 3 === 0 ? "60%" : "75%"}
+                  mb={1}
+                />
+                <Skeleton height="12px" width={i % 2 === 0 ? "35%" : "45%"} />
+              </Box>
+              <Skeleton height="28px" width="28px" borderRadius="full" />
+            </Flex>
+          ))}
+        </Box>
+      </Box>
+    );
   }
 
   if (trackIds.length === 0) {
