@@ -1,51 +1,69 @@
 import React from "react";
-import {
-  Box,
-  Input,
-  Text,
-  Button,
-  Portal,
-  Menu,
-  InputGroup,
-} from "@chakra-ui/react";
-import TrackResult from "@/components/TrackResult";
-import { Track } from "@/types/track";
-import { FiMoreVertical } from "react-icons/fi";
+import { Box, Input, Text, InputGroup } from "@chakra-ui/react";
 import { LuSearch } from "react-icons/lu";
+
+import TrackResultStore from "@/components/TrackResultStore";
 import UsernameSelect from "./UsernameSelect";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
+import { useSearchResults } from "@/hooks/useSearchResults";
+import TrackActionsMenu from "@/components/TrackActionsMenu";
+import { useTrack } from "@/hooks/useTrack";
 
-interface SearchResultsProps {
-  query: string;
-  onQueryChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  estimatedResults: number;
-  results: Track[];
-  playlistCounts: Record<string, number>;
-  addToPlaylist: (track: Track) => void;
-  handleEditClick: (track: Track) => void;
-  hasMore: boolean;
-  loadMore: () => void;
-  loading?: boolean;
-}
+const TrackResultItem: React.FC<{
+  trackId: string;
+  friendId: number;
+  isLast: boolean;
+  playlistCount?: number;
+  lastResultRef?: React.RefObject<HTMLDivElement | null>;
+}> = ({ trackId, friendId, isLast, playlistCount, lastResultRef }) => {
+  const track = useTrack(trackId, friendId);
+  
+  if (!track) {
+    return null; // Track not yet loaded in store
+  }
 
-const SearchResults: React.FC<SearchResultsProps> = ({
-  query,
-  onQueryChange: onQueryChangeProp,
-  estimatedResults,
-  results,
-  playlistCounts,
-  addToPlaylist,
-  handleEditClick,
-  hasMore,
-  loadMore,
-  loading = false,
-}) => {
+  const trackResult = (
+    <TrackResultStore
+      trackId={trackId}
+      friendId={friendId}
+      fallbackTrack={track}
+      allowMinimize={false}
+      playlistCount={playlistCount}
+      buttons={[<TrackActionsMenu key="menu" track={track} />]}
+    />
+  );
+
+  if (isLast && lastResultRef) {
+    return (
+      <Box ref={lastResultRef}>
+        {trackResult}
+      </Box>
+    );
+  }
+
+  return trackResult;
+};
+
+const SearchResults: React.FC = () => {
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
     showSpotifyUsernames: true,
   });
+  const {
+    query,
+    onQueryChange,
+    estimatedResults,
+    trackInfo,
+    playlistCounts,
+    hasMore,
+    loadMore,
+    loading,
+  } = useSearchResults({
+    mode: "infinite",
+    limit: 20,
+  });
 
-  const lastResultRef = React.useRef<HTMLDivElement | null>(null);
+  const lastResultRef = React.useRef<HTMLDivElement>(null);
   const observer = React.useRef<IntersectionObserver | null>(null);
 
   React.useEffect(() => {
@@ -59,7 +77,7 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     });
     observer.current.observe(lastResultRef.current);
     return () => observer.current?.disconnect();
-  }, [results, hasMore, loadMore]);
+  }, [trackInfo, hasMore, loadMore]);
 
   // Debounced input state
   const [debouncedValue, setDebouncedValue] = React.useState(query);
@@ -71,24 +89,25 @@ const SearchResults: React.FC<SearchResultsProps> = ({
     const handler = setTimeout(() => {
       if (debouncedValue !== query) {
         // Only call if changed
-        onQueryChangeProp({
+        onQueryChange({
           target: { value: debouncedValue },
         } as React.ChangeEvent<HTMLInputElement>);
       }
     }, 300);
     return () => clearTimeout(handler);
-  }, [debouncedValue, onQueryChangeProp, query]);
+  }, [debouncedValue, onQueryChange, query]);
 
   return (
     <Box>
-      <Box display="flex" gap={3} mb={3}>
+      <Box display="flex" flexDirection={["column", "row"]} gap={3} mb={3}>
         <InputGroup startElement={<LuSearch size={16} />}>
           <Input
-            placeholder="Search (name, genres, instruments, etc.)"
+            placeholder="Search"
             value={debouncedValue}
             onChange={(e) => setDebouncedValue(e.target.value)}
             flex="1"
             variant={"subtle"}
+            fontSize="16px"
           />
         </InputGroup>
         <UsernameSelect usernames={friends} />
@@ -108,51 +127,18 @@ const SearchResults: React.FC<SearchResultsProps> = ({
             {estimatedResults.toLocaleString()} results found
           </Text>
 
-          {results.map((track, idx) => {
-            const isLast = idx === results.length - 1;
-            const trackResult = (
-              <TrackResult
-                key={`search-${track.id}`}
-                track={track}
-                allowMinimize={false}
-                playlistCount={playlistCounts[track.track_id]}
-                buttons={[
-                  <Menu.Root key="menu">
-                    <Menu.Trigger asChild>
-                      <Button variant="plain" size={["xs", "sm", "md"]}>
-                        <FiMoreVertical />
-                      </Button>
-                    </Menu.Trigger>
-                    <Portal>
-                      <Menu.Positioner>
-                        <Menu.Content>
-                          <Menu.Item
-                            onSelect={() => addToPlaylist(track)}
-                            value="add"
-                          >
-                            Add to Playlist
-                          </Menu.Item>
-                          <Menu.Item
-                            onSelect={() => handleEditClick(track)}
-                            value="edit"
-                          >
-                            Edit Track
-                          </Menu.Item>
-                        </Menu.Content>
-                      </Menu.Positioner>
-                    </Portal>
-                  </Menu.Root>,
-                ]}
+          {trackInfo.map((info, idx) => {
+            const isLast = idx === trackInfo.length - 1;
+            return (
+              <TrackResultItem
+                key={`search-${info.trackId}`}
+                trackId={info.trackId}
+                friendId={info.friendId}
+                isLast={isLast}
+                playlistCount={playlistCounts[info.trackId]}
+                lastResultRef={isLast ? lastResultRef : undefined}
               />
             );
-            if (isLast) {
-              return (
-                <Box ref={lastResultRef} key={track.track_id}>
-                  {trackResult}
-                </Box>
-              );
-            }
-            return trackResult;
           })}
         </>
       )}

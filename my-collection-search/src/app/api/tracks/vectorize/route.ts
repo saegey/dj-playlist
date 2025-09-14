@@ -8,11 +8,11 @@ const pool = new Pool({
 
 async function getTrack(
   track_id: string,
-  username: string
+  friend_id: number
 ): Promise<Track | null> {
   const res = await pool.query(
-    "SELECT * FROM tracks WHERE track_id = $1 AND username = $2",
-    [track_id, username]
+    "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2",
+    [track_id, friend_id]
   );
   return res.rows[0] || null;
 }
@@ -20,13 +20,18 @@ async function getTrack(
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { track_id, username } = body;
+    const { track_id, friend_id } = body;
     if (!track_id) {
       return new Response(JSON.stringify({ error: "Missing track_id" }), {
         status: 400,
       });
     }
-    const track = await getTrack(track_id, username);
+    if (!friend_id) {
+      return new Response(JSON.stringify({ error: "Missing friend_id" }), {
+        status: 400,
+      });
+    }
+    const track = await getTrack(track_id, friend_id);
     if (!track) {
       return new Response(JSON.stringify({ error: "Track not found" }), {
         status: 404,
@@ -37,8 +42,8 @@ export async function POST(request: Request) {
     // Convert JS array to Postgres vector format: [0.1,0.2,...]
     const pgVector = `[${embedding.join(",")}]`;
     await pool.query(
-      "UPDATE tracks SET embedding = $1 WHERE track_id = $2 AND username = $3",
-      [pgVector, track_id, username]
+      "UPDATE tracks SET embedding = $1 WHERE track_id = $2 AND friend_id = $3",
+      [pgVector, track_id, friend_id]
     );
 
     // Update MeiliSearch index with new embedding

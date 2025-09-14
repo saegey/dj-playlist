@@ -1,3 +1,4 @@
+import { Friend } from "@/types/track";
 import { streamLines } from "../sse";
 
 export async function removeFriendStream(
@@ -32,10 +33,10 @@ export async function removeFriendApi(username: string) {
 export async function fetchFriends(
   showCurrentUser?: boolean,
   showSpotifyUsernames?: boolean
-) {
+): Promise<Friend[]> {
   const res = await fetch(
     `/api/friends?showCurrentUser=${!!showCurrentUser}&showSpotifyUsernames=${!!showSpotifyUsernames}`
   );
   const data = await res.json();
-  return data.friends;
+  return data.results || [];
 }

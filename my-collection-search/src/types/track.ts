@@ -30,6 +30,7 @@ export type Track = {
   star_rating?: number;
   username?: string; // Username of the user who added this track
   _semanticScore?: number; // Optional semantic score for AI recommendations
+  friend_id: number;
 };
 
 // Spotify track type based on API response
@@ -111,7 +112,8 @@ export type AppleMusicResult = {
 export interface Playlist {
   id: number;
   name: string;
-  tracks: string[];
+  tracks: { track_id: string; friend_id: number; position: number }[];
+  created_at: string;
 }
 
 export type SpotifyApiTrack = {
@@ -164,6 +166,7 @@ export interface DiscogsTrack {
   apple_music_url: string | null;
   local_audio_url: string | null;
   username: string;
+  friend_id?: number; // resolved via friends table during upsert/index
 }
 
 interface DiscogsArtist {
@@ -177,4 +180,9 @@ export interface ProcessedTrack {
   duration_seconds?: number | null;
   apple_music_url?: string | null;
   local_audio_url?: string | null;
+}
+
+export interface Friend {
+  id: number;
+  username: string;
 }

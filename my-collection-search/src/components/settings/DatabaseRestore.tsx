@@ -10,28 +10,23 @@ import {
   Alert,
 } from "@chakra-ui/react";
 import { HiUpload } from "react-icons/hi";
+import { useRestoreDatabaseMutation } from "@/hooks/useRestoreDatabaseMutation";
 
 const DatabaseRestore: React.FC = () => {
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
   const [restoring, setRestoring] = useState(false);
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+  const { mutateAsync: restoreMutation, isPending: isRestoring } =
+    useRestoreDatabaseMutation();
 
   const handleRestore = async () => {
     if (!restoreFile) return;
-    setRestoring(true);
     setRestoreResult(null);
     setRestoreError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", restoreFile);
-      const res = await fetch("/api/restore", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Unknown error");
-      setRestoreResult(data.message || "Restore complete");
+      const data = await restoreMutation(restoreFile);
+      setRestoreResult((data?.message as string) || "Restore complete");
     } catch (e) {
       setRestoreError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -99,8 +94,8 @@ const DatabaseRestore: React.FC = () => {
         <Button
           colorScheme="red"
           onClick={handleRestore}
-          disabled={!restoreFile || restoring}
-          loading={restoring}
+          disabled={!restoreFile || isRestoring}
+          loading={isRestoring}
         >
           Restore Database
         </Button>

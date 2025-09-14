@@ -1,143 +1,122 @@
 "use client";
 
 import React from "react";
-import { Box, Button, Menu, EmptyState, VStack } from "@chakra-ui/react";
 import {
-  FiArrowDown,
-  FiArrowUp,
-  FiEdit,
-  FiHeadphones,
-  FiMoreVertical,
-  FiTrash,
-} from "react-icons/fi";
-import TrackResult from "@/components/TrackResult";
-import type { Track } from "@/types/track";
-import { usePlaylists } from "@/hooks/usePlaylists";
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-  DroppableProvided,
-  DraggableProvided,
-  DraggableStateSnapshot,
-} from "@hello-pangea/dnd";
+  Box,
+  EmptyState,
+  Flex,
+  Text,
+  VStack,
+  Skeleton,
+} from "@chakra-ui/react";
+import { FiHeadphones } from "react-icons/fi";
 
-import {
-  TrackCompat,
-  TrackWithCamelot,
-  buildCompatibilityGraph,
-  greedyPath,
-  keyToCamelot,
-} from "@/lib/playlistOrder";
+import DraggableTrackList from "@/components/DraggableTrackList";
+import { useSearchResults } from "@/hooks/useSearchResults";
+import { useTrackEditor } from "@/providers/TrackEditProvider";
+import PlaylistItemMenu from "@/components/PlaylistItemMenu";
+import { usePlaylistTrackIdsQuery } from "@/hooks/usePlaylistTrackIdsQuery";
+import { usePlaylistTracksQuery } from "@/hooks/usePlaylistTracksQuery";
+import PlaylistActionsMenu from "./PlaylistActionsMenu";
+import { usePlaylistSaveDialog } from "@/hooks/usePlaylistSaveDialog";
+import { usePlaylistMutations } from "@/hooks/usePlaylistMutations";
+import { usePlaylistActions } from "@/hooks/usePlaylistActions";
+import PlaylistRecommendations from "./PlaylistRecommendations";
+import { Track } from "@/types/track";
+import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
-type OptimalOrderType = "original" | "greedy" | "genetic";
-interface PlaylistViewerProps {
-  playlist: Track[];
-  playlistCounts: Record<string, number>;
-  moveTrack: (fromIdx: number, toIdx: number) => void;
-  setEditTrack: (track: Track) => void;
-  removeFromPlaylist: (trackId: string) => void;
-  optimalOrderType?: OptimalOrderType;
-}
+const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
+  const { playlistCounts } = useSearchResults({});
 
-const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
-  playlist,
-  playlistCounts,
-  moveTrack,
-  setEditTrack,
-  removeFromPlaylist,
-  optimalOrderType = "original",
-}) => {
-  const [geneticPlaylist, setGeneticPlaylist] = React.useState<Track[] | null>(
-    null
-  );
-  const [loadingGenetic, setLoadingGenetic] = React.useState(false);
-  const { displayPlaylist, setDisplayPlaylist, setOptimalOrderType } =
-    usePlaylists();
+  // New query-based hooks
+  const { tracks: tracksPlaylist, isPending: trackIdsLoading } =
+    usePlaylistTrackIdsQuery(playlistId);
 
-  // Compute greedy order
-  const updatedPlaylist: TrackWithCamelot[] = React.useMemo(() => {
-    if (!playlist) return [];
-    return playlist.map((track, idx) => {
-      const t = track as TrackCompat;
-      return {
-        camelot_key: keyToCamelot(t.key),
-        _vectors: t._vectors,
-        energy: typeof t.energy === "number" ? t.energy : Number(t.energy) || 0,
-        bpm: typeof t.bpm === "number" ? t.bpm : Number(t.bpm) || 0,
-        idx,
-      };
-    });
-  }, [playlist]);
-
-  const compatibilityEdges = React.useMemo(
-    () => buildCompatibilityGraph(updatedPlaylist),
-    [updatedPlaylist]
-  );
-  const optimalPath = React.useMemo(
-    () => greedyPath(updatedPlaylist, compatibilityEdges),
-    [updatedPlaylist, compatibilityEdges]
+  const { tracks, isPending: tracksLoading } = usePlaylistTracksQuery(
+    tracksPlaylist,
+    tracksPlaylist.length > 0
   );
 
-  // DnD handler must be declared before any early return to satisfy hooks rules
-  const onDragEnd = React.useCallback(
-    (result: DropResult) => {
-      const { destination, source } = result;
-      if (!destination) return;
-      if (
-        destination.droppableId === source.droppableId &&
-        destination.index === source.index
-      )
-        return;
-      moveTrack(source.index, destination.index);
+  // New mutation and action hooks
+  const {
+    moveTrack,
+    removeFromPlaylist,
+    addToPlaylist,
+    sortGreedy,
+    sortGenetic,
+    isGeneticSorting,
+  } = usePlaylistMutations(playlistId);
+
+  const { replacePlaylist } = usePlaylistPlayer();
+
+  const { exportPlaylist, exportToPDF, getTotalPlaytime } =
+    usePlaylistActions(playlistId);
+
+  const { openTrackEditor } = useTrackEditor();
+  const {
+    Dialog: SaveDialog,
+    open: openSaveDialog,
+    saveExisting,
+  } = usePlaylistSaveDialog(playlistId);
+
+  // Get total playtime for display
+  const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
+
+  // Render function for playlist item menu buttons
+  const renderPlaylistButtons = React.useCallback(
+    (track: Track | undefined, idx: number) => {
+      return track ? (
+        <PlaylistItemMenu
+          key="menu"
+          idx={idx}
+          total={tracksPlaylist.length}
+          track={track}
+          moveTrack={moveTrack}
+          removeFromPlaylist={removeFromPlaylist}
+          openTrackEditor={openTrackEditor}
+          size="xs"
+        />
+      ) : null;
     },
-    [moveTrack]
+    [tracksPlaylist.length, moveTrack, removeFromPlaylist, openTrackEditor]
   );
 
-  // Fetch genetic order if needed
-  React.useEffect(() => {
-    if (optimalOrderType !== "genetic" || playlist.length === 0) return;
-    setLoadingGenetic(true);
-    fetch("/api/playlists/genetic", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playlist }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        // Ensure result is always an array
-        const result = Array.isArray(data.result)
-          ? data.result
-          : Object.values(data.result);
-        setGeneticPlaylist(result);
-      })
-      .finally(() => {
-        setLoadingGenetic(false);
-        setOptimalOrderType("original");
-      });
-  }, [optimalOrderType, playlist, setOptimalOrderType, displayPlaylist]);
+  if (trackIdsLoading || tracksLoading) {
+    return (
+      <Box>
+        {/* Header skeleton */}
+        <Flex align="flex-start" w="100%" pt={3} mb={2} gap={3}>
+          <Box flex="1">
+            <Skeleton height="20px" width="220px" mb={2} />
+            <Skeleton height="14px" width="180px" />
+          </Box>
+          <Box>
+            <Skeleton height="32px" width="40px" borderRadius="md" />
+          </Box>
+        </Flex>
 
-  React.useEffect(() => {
-    if (optimalOrderType === "greedy" && playlist.length > 0) {
-      const greedyPlaylist = optimalPath.map(
-        (orderIdx) => displayPlaylist[updatedPlaylist[orderIdx].idx]
-      );
-      setDisplayPlaylist(greedyPlaylist);
-      setOptimalOrderType("original");
-    }
-  }, [
-    optimalOrderType,
-    setOptimalOrderType,
-    playlist,
-    optimalPath,
-    updatedPlaylist,
-    geneticPlaylist,
-    setDisplayPlaylist,
-    displayPlaylist,
-  ]);
+        {/* List skeleton */}
+        <Box>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Flex key={i} align="center" gap={3} py={2}>
+              <Skeleton height="36px" width="36px" borderRadius="md" />
+              <Box flex="1">
+                <Skeleton
+                  height="16px"
+                  width={i % 3 === 0 ? "60%" : "75%"}
+                  mb={1}
+                />
+                <Skeleton height="12px" width={i % 2 === 0 ? "35%" : "45%"} />
+              </Box>
+              <Skeleton height="28px" width="28px" borderRadius="full" />
+            </Flex>
+          ))}
+        </Box>
+      </Box>
+    );
+  }
 
-  if (playlist.length === 0) {
+  if (tracksPlaylist.length === 0) {
     return (
       <Box overflowY="auto">
         <EmptyState.Root size={"sm"}>
@@ -157,99 +136,57 @@ const PlaylistViewer: React.FC<PlaylistViewerProps> = ({
     );
   }
 
-  if (optimalOrderType === "genetic" && loadingGenetic) {
-    return <Box p={4}>Loading genetic order...</Box>;
-  }
-
-  const ds = displayPlaylist.length > 0 ? displayPlaylist : playlist;
-
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <Droppable droppableId="playlist-droppable">
-        {(provided: DroppableProvided) => (
-          <Box
-            overflowY="auto"
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-          >
-            {ds.map((track, idx) => (
-              <Draggable
-                key={`${track.username ?? ""}:${track.track_id}`}
-                draggableId={`${track.username ?? ""}:${track.track_id}`}
-                index={idx}
-              >
-                {(
-                  dragProvided: DraggableProvided,
-                  snapshot: DraggableStateSnapshot
-                ) => (
-                  <Box
-                    ref={dragProvided.innerRef}
-                    {...dragProvided.draggableProps}
-                    {...dragProvided.dragHandleProps}
-                    opacity={snapshot.isDragging ? 0.9 : 1}
-                  >
-                    <TrackResult
-                      key={`playlist-${track.track_id}`}
-                      track={track}
-                      minimized
-                      playlistCount={playlistCounts[track.track_id]}
-                      buttons={[
-                        <Menu.Root key="menu">
-                          <Menu.Trigger asChild>
-                            <Button variant="plain" size="xs">
-                              <FiMoreVertical size={16} />
-                            </Button>
-                          </Menu.Trigger>
-                          <Menu.Positioner>
-                            <Menu.Content>
-                              <Menu.Item
-                                onSelect={() => moveTrack(idx, idx - 1)}
-                                value="up"
-                                disabled={idx === 0}
-                              >
-                                <FiArrowUp />
-                                Move Up
-                              </Menu.Item>
-                              <Menu.Item
-                                onSelect={() => moveTrack(idx, idx + 1)}
-                                value="down"
-                                disabled={idx === ds.length - 1}
-                              >
-                                <FiArrowDown />
-                                Move Down
-                              </Menu.Item>
-                              <Menu.Item
-                                onSelect={() => setEditTrack(track)}
-                                value="edit"
-                              >
-                                <FiEdit />
-                                Edit
-                              </Menu.Item>
-                              <Menu.Item
-                                onSelect={() =>
-                                  removeFromPlaylist(track.track_id)
-                                }
-                                value="delete"
-                                color="fg.error"
-                                _hover={{ bg: "bg.error", color: "fg.error" }}
-                              >
-                                <FiTrash />
-                                Remove
-                              </Menu.Item>
-                            </Menu.Content>
-                          </Menu.Positioner>
-                        </Menu.Root>,
-                      ]}
-                    />
-                  </Box>
-                )}
-              </Draggable>
-            ))}
-            {provided.placeholder}
-          </Box>
-        )}
-      </Droppable>
-    </DragDropContext>
+    <>
+      <Flex align="flex-start" w="100%" pt={3}>
+        <Box>
+          <Text>Playlist - {playlistId}</Text>
+          <Text fontSize="sm" color="gray.500" mb={2}>
+            Total Playtime: {totalPlaytimeFormatted}
+            {/* Playlist Recommendations */}
+          </Text>
+        </Box>
+        <Flex flexGrow={1} justify="flex-end" align="flex-start">
+          <PlaylistActionsMenu
+            disabled={tracksPlaylist.length === 0}
+            onSortGreedy={() => {
+              console.log("sort greed");
+              sortGreedy();
+            }}
+            onSortGenetic={sortGenetic}
+            onExportJson={exportPlaylist}
+            onExportPdf={() => exportToPDF("playlist.pdf")}
+            onOpenSaveDialog={playlistId ? saveExisting : openSaveDialog}
+            isGeneticSorting={isGeneticSorting}
+            enqueuePlaylist={() =>
+              replacePlaylist(tracks, {
+                autoplay: true,
+                startIndex: 0,
+              })
+            }
+          />
+        </Flex>
+      </Flex>
+      <Box overflowY="auto">
+        <DraggableTrackList
+          tracksPlaylist={tracksPlaylist}
+          tracks={tracks}
+          moveTrack={moveTrack}
+          droppableId="playlist-droppable"
+          renderTrackButtons={renderPlaylistButtons}
+          trackResultProps={{
+            minimized: true,
+            playlistCount: playlistCounts,
+          }}
+        />
+        <PlaylistRecommendations
+          playlist={tracks}
+          onAddToPlaylist={addToPlaylist}
+          onEditTrack={openTrackEditor}
+        />
+        <SaveDialog />
+      </Box>
+    </>
   );
 };
 

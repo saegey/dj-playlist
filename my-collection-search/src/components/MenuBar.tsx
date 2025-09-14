@@ -20,7 +20,7 @@ import { SiApplemusic } from "react-icons/si";
 import { LuAudioLines } from "react-icons/lu";
 import { IoBookSharp, IoMusicalNotes, IoSettings } from "react-icons/io5";
 import { FiMenu } from "react-icons/fi";
-import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
+// import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 
 interface TopMenuBarProps {
   current?: string;
@@ -37,8 +37,8 @@ const menuItems = [
 
 export default function TopMenuBar({ current }: TopMenuBarProps) {
   const [open, setOpen] = useState(false);
-  const { isOpen: isPlaylistDrawerOpen, setOpen: setPlaylistDrawerOpen } =
-    usePlaylistDrawer();
+  // const { isOpen: isPlaylistDrawerOpen, setOpen: setPlaylistDrawerOpen } =
+  //   usePlaylistDrawer();
 
   return (
     <Box
@@ -55,12 +55,12 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
           <HStack gap={2} align="center">
             <IconButton
               aria-label="Open menu"
-              variant="ghost"
+              variant="outline"
               onClick={() => setOpen(true)}
             >
-              <FiMenu />
+              <FiMenu size={'16px'} />
             </IconButton>
-            <Text fontWeight="semibold">DJ Playlist</Text>
+            <Text fontWeight="semibold">GrooveNet</Text>
           </HStack>
 
           {/* Optional inline nav on larger screens */}
@@ -92,15 +92,15 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
           placement="start"
         >
           {/* <Drawer.Backdrop /> */}
-          <Drawer.Positioner paddingTop="57px" paddingBottom="88px">
+          <Drawer.Positioner paddingTop="57px" paddingBottom={[0, "117px"]}>
             <Drawer.Content
               boxShadow="none"
               borderRightStyle="solid"
               borderRightWidth={"1px"}
               borderRightColor={"brand.0"}
-              borderBottomStyle="solid"
-              borderBottomWidth={"1px"}
-              borderBottomColor={"brand.0"}
+              // borderBottomStyle="solid"
+              // borderBottomWidth={[0, "1px"]}
+              // borderBottomColor={"brand.0"}
             >
               <Drawer.Body>
                 <VStack align="stretch" gap={1}>
@@ -129,9 +129,9 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
                         href={item.href}
                         onClick={() => {
                           setOpen(false);
-                          if (isPlaylistDrawerOpen) {
-                            setPlaylistDrawerOpen(false);
-                          }
+                          // if (isPlaylistDrawerOpen) {
+                          //   setPlaylistDrawerOpen(false);
+                          // }
                         }}
                         _hover={{ textDecoration: "none", bg: "bg.subtle" }}
                         px={3}

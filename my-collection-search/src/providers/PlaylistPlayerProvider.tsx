@@ -40,6 +40,8 @@ type PlaylistPlayerContextValue = {
   appendToQueue: (items: Track[] | Track) => void;
   enqueueNext: (items: Track[] | Track) => void;
   clearQueue: () => void;
+  moveTrackInQueue: (fromIndex: number, toIndex: number) => void;
+  removeFromQueue: (index: number) => void;
 
   volume: number;
   setVolume: (v: number) => void;
@@ -166,6 +168,7 @@ export function PlaylistPlayerProvider({
   );
 
   const appendToQueue = useCallback((items: Track[] | Track) => {
+    console.log("appendToQueue", items);
     const toAdd = Array.isArray(items) ? items : [items];
     if (!toAdd.length) return;
     playlistRef.current = [...playlistRef.current, ...toAdd];
@@ -195,6 +198,80 @@ export function PlaylistPlayerProvider({
     setPlVersion((v) => v + 1);
     setCurrentTrackIndex(null);
     setIsPlaying(false);
+  }, []);
+
+  const moveTrackInQueue = useCallback((fromIndex: number, toIndex: number) => {
+    const playlist = playlistRef.current;
+    if (fromIndex < 0 || fromIndex >= playlist.length || 
+        toIndex < 0 || toIndex >= playlist.length || 
+        fromIndex === toIndex) {
+      return;
+    }
+
+    const newPlaylist = [...playlist];
+    const [movedTrack] = newPlaylist.splice(fromIndex, 1);
+    newPlaylist.splice(toIndex, 0, movedTrack);
+    
+    playlistRef.current = newPlaylist;
+    setPlVersion((v) => v + 1);
+
+    // Adjust current track index if needed
+    setCurrentTrackIndex((currentIdx) => {
+      if (currentIdx === null) return null;
+      
+      if (currentIdx === fromIndex) {
+        // The currently playing track was moved
+        return toIndex;
+      } else if (fromIndex < currentIdx && toIndex >= currentIdx) {
+        // Track moved from before current to after current
+        return currentIdx - 1;
+      } else if (fromIndex > currentIdx && toIndex <= currentIdx) {
+        // Track moved from after current to before current
+        return currentIdx + 1;
+      }
+      // Current track index doesn't need adjustment
+      return currentIdx;
+    });
+  }, []);
+
+  const removeFromQueue = useCallback((index: number) => {
+    const playlist = playlistRef.current;
+    if (index < 0 || index >= playlist.length) {
+      return;
+    }
+
+    const newPlaylist = [...playlist];
+    newPlaylist.splice(index, 1);
+    
+    playlistRef.current = newPlaylist;
+    setPlVersion((v) => v + 1);
+
+    // Adjust current track index if needed
+    setCurrentTrackIndex((currentIdx) => {
+      if (currentIdx === null) return null;
+      
+      if (currentIdx === index) {
+        // The currently playing track was removed
+        // If there are tracks after this one, play the next one (same index)
+        // If this was the last track, play the previous one (index - 1)
+        // If this was the only track, stop playing
+        if (newPlaylist.length === 0) {
+          setIsPlaying(false);
+          return null;
+        } else if (index < newPlaylist.length) {
+          // Play the track that took this position
+          return index;
+        } else {
+          // This was the last track, play the new last track
+          return newPlaylist.length - 1;
+        }
+      } else if (currentIdx > index) {
+        // Currently playing track index needs to shift down
+        return currentIdx - 1;
+      }
+      // Current track index doesn't need adjustment
+      return currentIdx;
+    });
   }, []);
 
   const setVolume = useCallback((v: number) => {
@@ -239,7 +316,7 @@ export function PlaylistPlayerProvider({
     if (!track) {
       audio.pause();
       // don't blank src here; keep it so pause retains position
-  setDuration(audio.duration || 0);
+      setDuration(audio.duration || 0);
       return;
     }
 
@@ -247,9 +324,9 @@ export function PlaylistPlayerProvider({
     if (lastTrackIdRef.current !== track.track_id) {
       audio.src = `/api/audio?filename=${track.local_audio_url}`;
       lastTrackIdRef.current = track.track_id;
-  // reset timing until metadata loads
-  setCurrentTime(0);
-  setDuration(0);
+      // reset timing until metadata loads
+      setCurrentTime(0);
+      setDuration(0);
     }
 
     if (isPlaying) {
@@ -286,7 +363,10 @@ export function PlaylistPlayerProvider({
     (time: number) => {
       const audio = audioRef.current;
       if (!audio) return;
-      const dur = Number.isFinite(duration) && duration > 0 ? duration : audio.duration || 0;
+      const dur =
+        Number.isFinite(duration) && duration > 0
+          ? duration
+          : audio.duration || 0;
       const clamped = Math.max(0, Math.min(dur || 0, time));
       try {
         audio.currentTime = clamped;
@@ -319,8 +399,8 @@ export function PlaylistPlayerProvider({
   );
 
   const value = useMemo<PlaylistPlayerContextValue>(() => {
-  // Reference plVersion so dependency is meaningful and value recomputes when playlist changes
-  void plVersion;
+    // Reference plVersion so dependency is meaningful and value recomputes when playlist changes
+    void plVersion;
     const pl = playlistRef.current;
     return {
       isPlaying,
@@ -328,9 +408,9 @@ export function PlaylistPlayerProvider({
       currentTrack, // use state here
       playlist: pl,
       playlistLength: pl.length,
-  currentTime,
-  duration,
-  seek,
+      currentTime,
+      duration,
+      seek,
 
       play,
       pause,
@@ -343,6 +423,8 @@ export function PlaylistPlayerProvider({
       appendToQueue,
       enqueueNext,
       clearQueue,
+      moveTrackInQueue,
+      removeFromQueue,
 
       volume,
       setVolume,
@@ -354,9 +436,9 @@ export function PlaylistPlayerProvider({
     currentTrackIndex,
     currentTrack, // included in deps
     plVersion, // include plVersion so playlist updates trigger
-  currentTime,
-  duration,
-  seek,
+    currentTime,
+    duration,
+    seek,
     play,
     pause,
     stop,
@@ -367,6 +449,8 @@ export function PlaylistPlayerProvider({
     appendToQueue,
     enqueueNext,
     clearQueue,
+    moveTrackInQueue,
+    removeFromQueue,
     volume,
     setVolume,
     audioElement,

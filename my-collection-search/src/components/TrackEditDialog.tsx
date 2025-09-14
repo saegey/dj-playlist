@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Track } from "@/types/track";
 import type { TrackEditFormProps } from "./TrackEditForm";
+import { useTrackByIdQuery } from "@/hooks/useTrackByIdQuery";
 
 const TrackEditForm = dynamic(() => import("./TrackEditForm"), { ssr: false });
 
@@ -25,54 +26,52 @@ export default function TrackEditDialog({
   const [loaded, setLoaded] = useState<TrackEditFormProps | null>(null);
 
   const prevOpenRef = useRef<boolean>(dialogOpen);
+  const { data: fetchedTrack } = useTrackByIdQuery(
+    editTrack?.track_id,
+    editTrack?.friend_id,
+    dialogOpen
+  );
 
   useEffect(() => {
     const justOpened = dialogOpen && !prevOpenRef.current;
     prevOpenRef.current = dialogOpen;
     if (!justOpened) return;
 
-    let aborted = false;
     setLoaded(null);
-    // Only fetch when we have identifiers
-    if (!editTrack?.track_id || !editTrack?.username) return;
-    const load = async () => {
-      try {
-        const url = `/api/tracks/${encodeURIComponent(
-          editTrack.track_id
-        )}?username=${encodeURIComponent(editTrack.username!)}`;
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) return; // fallback to provided editTrack
-        const data = await res.json();
-        if (aborted) return;
-        // Map API row to TrackEditFormProps (ensure username present)
-        const mapped: TrackEditFormProps = {
-          track_id: data.track_id,
-          title: data.title,
-          artist: data.artist,
-          album: data.album,
-          local_tags: data.local_tags,
-          notes: data.notes,
-          bpm: data.bpm,
-          key: data.key,
-          danceability: data.danceability,
-          apple_music_url: data.apple_music_url,
-          spotify_url: data.spotify_url,
-          youtube_url: data.youtube_url,
-          soundcloud_url: data.soundcloud_url,
-          star_rating: data.star_rating,
-          duration_seconds: data.duration_seconds,
-          username: data.username || editTrack.username!,
-        };
-        setLoaded(mapped);
-      } catch {
-        // Ignore and rely on fallback
+  }, [dialogOpen]);
+
+  // Map fetched data to form props when available
+  useEffect(() => {
+    if (!fetchedTrack) return;
+    const data = fetchedTrack;
+    const toNumberOrNull = (v: unknown): number | null => {
+      if (typeof v === "number") return v;
+      if (typeof v === "string") {
+        const n = Number(v);
+        return Number.isNaN(n) ? null : n;
       }
+      return null;
     };
-    load();
-    return () => {
-      aborted = true;
+    const mapped: TrackEditFormProps = {
+      track_id: data.track_id,
+      title: data.title,
+      artist: data.artist,
+      album: data.album,
+      local_tags: data.local_tags,
+      notes: data.notes,
+      bpm: toNumberOrNull(data.bpm),
+      key: data.key,
+      danceability: toNumberOrNull(data.danceability),
+      apple_music_url: data.apple_music_url,
+      spotify_url: data.spotify_url,
+      youtube_url: data.youtube_url,
+      soundcloud_url: data.soundcloud_url,
+      star_rating: data.star_rating,
+      duration_seconds: data.duration_seconds,
+      friend_id: data.friend_id,
     };
-  }, [dialogOpen, editTrack?.track_id, editTrack?.username]);
+    setLoaded(mapped);
+  }, [fetchedTrack, editTrack?.username]);
 
   if (!editTrack || !editTrack.username) return null;
 

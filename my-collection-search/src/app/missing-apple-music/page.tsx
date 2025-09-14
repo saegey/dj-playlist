@@ -1,41 +1,20 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React from "react";
 import { Text, Spinner, HStack, Container, Box } from "@chakra-ui/react";
-import TopMenuBar from "@/components/MenuBar";
+
 import UsernameSelect from "@/components/UsernameSelect";
 import SingleTrackUI from "@/components/SingleTrackUI";
-import { Toaster } from "@/components/ui/toaster";
 import {
   MissingAppleProvider,
   useMissingApple,
 } from "@/providers/MissingAppleContext";
-import TrackEditDialog from "@/components/TrackEditDialog";
-import { TrackEditFormProps } from "@/components/TrackEditForm";
 
-function MissingAppleInner() {
-  const { usernames } = useMissingApple();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const initialFocusRef = useRef<HTMLButtonElement>(null);
-  const { total, loading, tracks, currentIndex } = useMissingApple();
-
-  const handleSaveTrack = async (data: TrackEditFormProps) => {
-    const res = await fetch("/api/tracks/update", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    if (res.ok) {
-      setDialogOpen(false);
-    } else {
-      alert("Failed to update track");
-    }
-  };
-
+function MissingAudio() {
+  const { usernames: friends, total, loading, tracks } = useMissingApple();
+   
   return (
     <>
-      <TopMenuBar current="/missing-apple-music" />
       <Container maxW={["8xl", "2xl", "2xl"]} mt={3} mb={8}>
         <HStack mb={4}>
           <Box>
@@ -43,7 +22,7 @@ function MissingAppleInner() {
               Selected Library:
             </Text>
             <UsernameSelect
-              usernames={usernames}
+              usernames={friends}
               width="200px"
               variant="outline"
             />
@@ -59,25 +38,17 @@ function MissingAppleInner() {
         ) : tracks.length === 0 ? (
           <Text color="gray.500">All tracks have Apple Music URLs!</Text>
         ) : (
-          <SingleTrackUI setEditDialogOpen={setDialogOpen} />
+          <SingleTrackUI />
         )}
       </Container>
-      <TrackEditDialog
-        editTrack={tracks[currentIndex]}
-        dialogOpen={dialogOpen}
-        setDialogOpen={setDialogOpen}
-        initialFocusRef={initialFocusRef}
-        onSave={handleSaveTrack}
-      />
     </>
   );
 }
 
-export default function MissingAppleMusicPage() {
+export default function MissingAudioPage() {
   return (
     <MissingAppleProvider>
-      <MissingAppleInner />
-      <Toaster />
+      <MissingAudio />
     </MissingAppleProvider>
   );
 }

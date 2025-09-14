@@ -9,9 +9,10 @@ import {
   Spinner,
 } from "@chakra-ui/react";
 import { useUsername } from "@/providers/UsernameProvider";
+import { Friend } from "@/types/track";
 
 export type UsernameSelectProps = {
-  usernames: string[];
+  usernames: Friend[];
   includeAllOption?: boolean;
   /** Chakra responsive size array is fine here */
   size?: ("xs" | "sm" | "md" | "lg")[];
@@ -27,8 +28,8 @@ export type UsernameSelectProps = {
    * Optional override: control the value externally.
    * If omitted, the component uses UsernameProvider's value.
    */
-  value?: string;
-  onChange?: (username: string) => void;
+  value?: Friend | null;
+  onChange?: (friend_id: number) => void;
 };
 
 export default function UsernameSelect({
@@ -43,20 +44,18 @@ export default function UsernameSelect({
   value,
   onChange,
 }: UsernameSelectProps) {
-  const { username: ctxValue, setUsername: setCtxValue } = useUsername();
-
-  // Allow controlled usage via props, else fall back to context
-  const selectedUsername = value ?? ctxValue;
-  const setSelectedUsername = onChange ?? setCtxValue;
+  // Context holds Friend | null; external value can override
+  const { friend: ctxValue, setFriend: setCtxValue } = useUsername();
+  const selectedFriend: Friend | null = value ?? (ctxValue as Friend | null);
 
   const items = React.useMemo(
     () =>
       includeAllOption
         ? [
             { label: "All Libraries", value: "" },
-            ...usernames.map((u) => ({ label: u, value: u })),
+            ...usernames.map((u) => ({ label: u.username, value: String(u.id) })),
           ]
-        : usernames.map((u) => ({ label: u, value: u })),
+        : usernames.map((u) => ({ label: u.username, value: String(u.id) })),
     [usernames, includeAllOption]
   );
 
@@ -71,8 +70,18 @@ export default function UsernameSelect({
   return (
     <Select.Root
       collection={collection}
-      value={selectedUsername ? [selectedUsername] : []}
-      onValueChange={(vals) => setSelectedUsername(vals.value[0] || "")}
+      value={selectedFriend?.id != null ? [String(selectedFriend.id)] : includeAllOption ? [""] : undefined}
+      onValueChange={(vals) => {
+        const idStr = vals.value[0] ?? "";
+        const idNum = idStr === "" ? null : Number(idStr);
+        // Fire external change with friend_id when available
+        if (onChange && idNum !== null && !Number.isNaN(idNum)) {
+          onChange(idNum);
+        }
+        // Update context with full Friend object (or null for All)
+        const friendObj = idNum === null ? null : usernames.find((u) => u.id === idNum) || null;
+        setCtxValue(friendObj);
+      }}
       width={width}
       size={size}
       variant={variant}
@@ -96,7 +105,7 @@ export default function UsernameSelect({
         <Select.Positioner>
           <Select.Content>
             {items.map((item) => (
-              <Select.Item key={item.value ?? item.label} item={item}>
+              <Select.Item key={String(item.value)} item={item}>
                 {item.label}
                 <Select.ItemIndicator />
               </Select.Item>

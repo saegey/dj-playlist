@@ -200,14 +200,6 @@ export default function AppleMusicXmlImport({
               {/* idle */}
               {step === "idle" && (
                 <Stack>
-                  {/* <Input
-                    ref={initialRef}
-                    type="file"
-                    accept=".xml"
-                    mb={2}
-                    size="sm"
-                    onChange={e => { setFile(e.target.files?.[0] || null); }}
-                  /> */}
 
                   <FileUpload.Root
                     accept={[".xml", "text/xml"]}

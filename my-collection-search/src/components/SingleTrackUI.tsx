@@ -13,7 +13,6 @@ import {
   Menu,
   Portal,
 } from "@chakra-ui/react";
-import TrackResult from "@/components/TrackResult";
 import AppleResultRow from "@/components/AppleResultRow";
 import { useMissingApple } from "@/providers/MissingAppleContext";
 import { AppleMusicResult } from "@/types/apple";
@@ -23,12 +22,11 @@ import {
 } from "@/providers/MissingAppleContext";
 import { FiChevronLeft, FiChevronRight, FiMoreVertical } from "react-icons/fi";
 import { toaster } from "@/components/ui/toaster";
+import { useTrackEditor } from "@/providers/TrackEditProvider";
+import { useAppleMusicAISearchQuery } from "@/hooks/useAppleMusicAISearchQuery";
+import TrackResultStore from "./TrackResultStore";
 
-export default function SingleTrackUI({
-  setEditDialogOpen,
-}: {
-  setEditDialogOpen: (open: boolean) => void;
-}) {
+export default function SingleTrackUI() {
   const {
     tracks,
     currentIndex,
@@ -47,6 +45,8 @@ export default function SingleTrackUI({
     lookupDiscogs,
     discogsByTrack,
   } = useMissingApple();
+  const { openTrackEditor } = useTrackEditor();
+
   const track = tracks[currentIndex];
   const [overrideResults, setOverrideResults] = useState<
     AppleMusicResult[] | null
@@ -54,6 +54,10 @@ export default function SingleTrackUI({
   const [savingById, setSavingById] = useState<Record<string, boolean>>({});
   const [gotoValue, setGotoValue] = useState<string | undefined>(undefined);
   const [toggleDiscogs, setToggleDiscogs] = useState(false);
+  // Enable AI Apple Music search only when manual override is active and query is present
+  const enabledAppleAi = !!overrideQuery && overrideTrackId != null;
+  const { isFetching: aiAppleLoading, refetch: refetchAiApple } =
+    useAppleMusicAISearchQuery({ title: overrideQuery }, enabledAppleAi);
 
   useEffect(() => {
     setOverrideResults(null);
@@ -86,8 +90,11 @@ export default function SingleTrackUI({
   return (
     <Box>
       <Flex align="center" gap={4} direction="column">
-        <TrackResult
-          track={track}
+        <TrackResultStore
+          key={`${track.track_id}:${track.friend_id}`} // Force re-render on track change
+          trackId={track.track_id}
+          friendId={track.friend_id}
+          fallbackTrack={track}
           allowMinimize={false}
           buttons={[
             <Menu.Root key="menu">
@@ -99,12 +106,14 @@ export default function SingleTrackUI({
               <Portal>
                 <Menu.Positioner>
                   <Menu.Content>
-                    <Menu.Item
-                      onSelect={() => setEditDialogOpen(true)}
-                      value="edit"
-                    >
-                      Edit Track
-                    </Menu.Item>
+                    {track && (
+                      <Menu.Item
+                        onSelect={() => openTrackEditor(track)}
+                        value="edit"
+                      >
+                        Edit Track
+                      </Menu.Item>
+                    )}
                   </Menu.Content>
                 </Menu.Positioner>
               </Portal>
@@ -249,25 +258,18 @@ export default function SingleTrackUI({
                 <Button
                   size="sm"
                   colorScheme="blue"
+                  loading={aiAppleLoading}
+                  disabled={!overrideQuery}
                   onClick={async () => {
-                    const res = await fetch("/api/ai/apple-music-search", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ title: overrideQuery }),
-                    });
-                    if (res.ok) {
-                      const data = await res.json();
-                      const results: AppleMusicResult[] = Array.isArray(
-                        data.results
-                      )
-                        ? data.results
-                        : data.results
-                        ? [data.results[0]]
-                        : [];
-                      setOverrideResults(results);
-                    } else {
-                      setOverrideResults([]);
-                    }
+                    const { data } = await refetchAiApple();
+                    const results: AppleMusicResult[] = Array.isArray(
+                      data?.results
+                    )
+                      ? (data?.results as AppleMusicResult[])
+                      : data?.results
+                      ? [data.results[0] as AppleMusicResult]
+                      : [];
+                    setOverrideResults(results);
                   }}
                 >
                   Search
@@ -339,14 +341,12 @@ export default function SingleTrackUI({
                 Apple Music Results
               </Text>
               {appleList.map((apple) => (
-                <>
-                  <AppleResultRow
-                    key={apple.id}
-                    result={apple}
-                    onSave={(url) => handleSaveFor(apple.id, url, "apple")}
-                    saving={!!savingById[apple.id]}
-                  />
-                </>
+                <AppleResultRow
+                  key={apple.id}
+                  result={apple}
+                  onSave={(url) => handleSaveFor(apple.id, url, "apple")}
+                  saving={!!savingById[apple.id]}
+                />
               ))}
             </Box>
           )}

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
 
 import {
   addFriendApi,
@@ -16,18 +17,18 @@ export function useFriendsQuery({
   const qc = useQueryClient();
 
   const { data: friends = [], isLoading } = useQuery({
-    queryKey: ["friends"],
+    queryKey: queryKeys.friends(),
     queryFn: () => fetchFriends(!!showCurrentUser, !!showSpotifyUsernames),
   });
 
   const addFriend = useMutation({
     mutationFn: (username: string) => addFriendApi(username),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["friends"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.friends() }),
   });
 
   const removeFriend = useMutation({
     mutationFn: (username: string) => removeFriendApi(username),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["friends"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.friends() }),
   });
 
   return {

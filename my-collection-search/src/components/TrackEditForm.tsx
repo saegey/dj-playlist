@@ -1,31 +1,35 @@
-// Utility to strip query/hash from a SoundCloud URL
-
 "use client";
 
 import React, { useState, useRef } from "react";
 import {
   Box,
   Button,
-  Input,
-  Textarea,
   Text,
   Stack,
-  Image,
   Flex,
   Portal,
   Dialog,
   CloseButton,
   RatingGroup,
-  FileUpload,
-  Spinner,
-  SimpleGrid,
-  Skeleton,
 } from "@chakra-ui/react";
+import LabeledInput from "@/components/form/LabeledInput";
+import LabeledTextarea from "@/components/form/LabeledTextarea";
 
-import { AppleMusicResult, YoutubeVideo } from "@/types/track";
-import { HiUpload } from "react-icons/hi";
-import { FiDownload } from "react-icons/fi";
-import { SiApplemusic, SiChatbot, SiSpotify, SiYoutube } from "react-icons/si";
+import { YoutubeVideo } from "@/types/track";
+// icons used within extracted components
+import { useAppleMusicPicker } from "@/hooks/useAppleMusicPicker";
+import AppleMusicPickerDialog from "@/components/AppleMusicPickerDialog";
+import { cleanSoundcloudUrl } from "@/lib/url";
+import { useSpotifyPicker } from "@/hooks/useSpotifyPicker";
+import SpotifyPickerDialog from "@/components/SpotifyPickerDialog";
+import YouTubePickerDialog from "@/components/YouTubePickerDialog";
+import TrackEditFormSkeleton from "@/components/TrackEditFormSkeleton";
+import { createTrackEditActionsWrapper } from "@/components/TrackEditActionsWrapper";
+import { useAnalyzeTrackMutation } from "@/hooks/useAnalyzeTrackMutation";
+import { useUploadTrackAudioMutation } from "@/hooks/useUploadTrackAudioMutation";
+import { buildTrackMetadataPrompt } from "@/lib/prompts";
+import { useTrackMetadataMutation } from "@/hooks/useTrackMetadataMutation";
+import { useYouTubeMusicSearchMutation } from "@/hooks/useYouTubeMusicSearchMutation";
 
 export interface TrackEditFormProps {
   track_id: string; // Optional for new tracks
@@ -34,68 +38,16 @@ export interface TrackEditFormProps {
   album?: string;
   local_tags?: string | undefined;
   notes?: string | undefined | null;
-  bpm?: string | undefined | null;
+  bpm?: number | null;
   key?: string | undefined | null;
-  danceability?: string | null;
+  danceability?: number | null;
   apple_music_url?: string;
   spotify_url?: string;
   youtube_url?: string;
   soundcloud_url?: string;
   star_rating?: number;
-  duration_seconds?: number; // Optional for new tracks
-  username: string; // Required for all tracks
-}
-
-type SpotifySearchTrack = {
-  id: string;
-  title: string;
-  artist: string;
-  album: string;
-  url: string;
-  artwork: string;
-  duration: number; // duration in milliseconds
-};
-
-function cleanSoundcloudUrl(url?: string) {
-  if (!url) return url;
-  try {
-    const urlObj = new URL(url);
-    urlObj.search = "";
-    urlObj.hash = "";
-    return urlObj.toString();
-  } catch {
-    return url;
-  }
-}
-
-// Labeled input for text/number fields
-function LabeledInput({
-  label,
-  ...props
-}: { label: string } & React.ComponentProps<typeof Input>) {
-  return (
-    <Box flex="1">
-      <Text mb={1} fontSize="sm">
-        {label}
-      </Text>
-      <Input {...props} />
-    </Box>
-  );
-}
-
-// Labeled textarea for notes
-function LabeledTextarea({
-  label,
-  ...props
-}: { label: string } & React.ComponentProps<typeof Textarea>) {
-  return (
-    <Box>
-      <Text mb={1} fontSize="sm">
-        {label}
-      </Text>
-      <Textarea {...props} />
-    </Box>
-  );
+  duration_seconds?: number | null; // Optional for new tracks
+  friend_id: number;
 }
 
 export default function TrackEditForm({
@@ -113,7 +65,6 @@ export default function TrackEditForm({
 }) {
   // File upload logic
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({
     track_id: track?.track_id || "",
@@ -132,7 +83,7 @@ export default function TrackEditForm({
     star_rating:
       typeof track?.star_rating === "number" ? track!.star_rating : 0,
     duration_seconds: track?.duration_seconds || undefined, // Optional for new tracks
-    username: track?.username || "",
+    friend_id: track?.friend_id,
   });
 
   React.useEffect(() => {
@@ -154,60 +105,71 @@ export default function TrackEditForm({
       star_rating:
         typeof track.star_rating === "number" ? track.star_rating : 0,
       duration_seconds: track.duration_seconds || undefined,
-      username: track.username,
+      friend_id: track.friend_id,
     });
   }, [track]);
 
   const [youtubeResults, setYoutubeResults] = useState<YoutubeVideo[]>([]);
-  const [youtubeLoading, setYoutubeLoading] = useState(false);
+  const { mutateAsync: searchYouTubeMusic, isPending: youtubeLoading } =
+    useYouTubeMusicSearchMutation();
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
 
-  const [spotifyResults, setSpotifyResults] = useState<SpotifySearchTrack[]>(
-    []
-  );
-  const [spotifyLoading, setSpotifyLoading] = useState(false);
-  const [showSpotifyModal, setShowSpotifyModal] = useState(false);
+  const spotifyPicker = useSpotifyPicker({
+    onSelect: (track) => {
+      setForm((prev) => ({ ...prev, spotify_url: track.url }));
+    },
+  });
 
-  const [appleResults, setAppleResults] = useState<AppleMusicResult[]>([]);
-  const [appleLoading, setAppleLoading] = useState(false);
-  const [showAppleModal, setShowAppleModal] = useState(false);
-
-  const [analyzing, setAnalyzing] = useState(false);
-  const [fetching, setFetching] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-
-  const handleFileUpload = async () => {
-    // alert("File upload started", JSON.stringify(file));
-    if (!file) return;
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("track_id", form.track_id);
-      const res = await fetch("/api/tracks/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      const response = await res.json();
-      const { analysis: data } = response;
+  const applePicker = useAppleMusicPicker({
+    onSelect: (song) => {
       setForm((prev) => ({
         ...prev,
-        bpm: data.rhythm.bpm ? String(Math.round(data.rhythm.bpm)) : prev.bpm,
-        key: data.tonal.key_edma
-          ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
-          : prev.key,
+        apple_music_url: song.url,
+        duration_seconds: song.duration
+          ? Math.round(song.duration / 1000)
+          : undefined,
+      }));
+    },
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const { mutateAsync: analyze, isPending: analyzeLoading } =
+    useAnalyzeTrackMutation();
+  const { mutateAsync: uploadAudio, isPending: uploadLoading } =
+    useUploadTrackAudioMutation();
+  const { mutateAsync: fetchMetadata, isPending: aiLoading } =
+    useTrackMetadataMutation();
+
+  const handleFileUpload = async () => {
+    if (!file) return;
+    try {
+      const { analysis: data } = await uploadAudio({
+        file,
+        track_id: form.track_id,
+      });
+      setForm((prev) => ({
+        ...prev,
+        bpm:
+          typeof data.rhythm?.bpm === "number"
+            ? String(Math.round(data.rhythm.bpm))
+            : prev.bpm,
+        key:
+          data.tonal?.key_edma?.key && data.tonal?.key_edma?.scale
+            ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
+            : prev.key,
         danceability:
-          typeof data.rhythm.danceability === "number"
+          typeof data.rhythm?.danceability === "number"
             ? data.rhythm.danceability.toFixed(3)
             : prev.danceability,
-        duration_seconds: Math.round(data.metadata.audio_properties.length),
+        duration_seconds:
+          typeof data.metadata?.audio_properties?.length === "number"
+            ? Math.round(data.metadata.audio_properties.length)
+            : prev.duration_seconds,
       }));
     } catch (err) {
       alert("Upload failed: " + (err instanceof Error ? err.message : err));
     }
-    setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setFile(null);
   };
@@ -226,10 +188,18 @@ export default function TrackEditForm({
     e.preventDefault();
     setLoading(true);
     try {
+      if (!form.friend_id) {
+        throw new Error("Track is missing friend_id");
+      }
       // Strip query params from soundcloud_url if present
       const cleanForm = {
         ...form,
         soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
+        bpm: Number(form.bpm) || null,
+        key: form.key || null,
+        danceability: Number(form.danceability) || null,
+        duration_seconds: Number(form.duration_seconds) || null,
+        friend_id: form.friend_id,
       };
       await Promise.resolve(onSave(cleanForm));
     } finally {
@@ -238,82 +208,40 @@ export default function TrackEditForm({
   };
 
   const fetchFromChatGPT = async () => {
-    setFetching(true);
     try {
-      const prompt = `Given the following track details, suggest genre, style, and detailed DJ-focused notes.\nTitle: ${form.title}\nArtist: ${form.artist}\nAlbum: ${form.album}`;
-      const res = await fetch("/api/ai/track-metadata", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+      const prompt = buildTrackMetadataPrompt({
+        title: form.title,
+        artist: form.artist,
+        album: form.album,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setForm((prev) => ({
-          ...prev,
-          local_tags: data.genre || prev.local_tags,
-          notes: data.notes || prev.notes,
-        }));
-      } else {
-        alert("Failed to fetch from AI");
-      }
+      const data = await fetchMetadata({ prompt });
+      setForm((prev) => ({
+        ...prev,
+        local_tags: (data.genre as string) || prev.local_tags,
+        notes: (data.notes as string) || prev.notes,
+      }));
     } catch {
       alert("Error fetching from AI");
     }
-    setFetching(false);
   };
 
   const searchYouTube = async () => {
-    setYoutubeLoading(true);
     setShowYoutubeModal(true);
     setYoutubeResults([]);
     try {
-      const res = await fetch("/api/ai/youtube-music-search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title, artist: form.artist }),
+      const data = await searchYouTubeMusic({
+        title: form.title,
+        artist: form.artist,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setYoutubeResults(data.results || []);
-      } else {
-        alert("YouTube search failed");
-      }
+      setYoutubeResults(data.results || []);
     } catch (err) {
       console.error("YouTube search error:", err);
       alert("YouTube search error");
     }
-    setYoutubeLoading(false);
   };
 
   const searchSpotify = async () => {
-    setSpotifyLoading(true);
-    setShowSpotifyModal(true);
-    setSpotifyResults([]);
-    try {
-      const res = await fetch("/api/ai/spotify-track-search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title, artist: form.artist }),
-      });
-      console.log("[spotify-track-search] response status:", res.status);
-      if (res.status === 401) {
-        // Redirect to Spotify authorization
-        window.location.href =
-          "/api/spotify/login?state=" +
-          encodeURIComponent(window.location.pathname);
-        return;
-      }
-      if (res.ok) {
-        const data = await res.json();
-        setSpotifyResults(data.results || []);
-      } else {
-        alert("Spotify search failed");
-      }
-    } catch (err) {
-      console.error("Spotify search error:", err);
-      alert("Spotify search error");
-    }
-    setSpotifyLoading(false);
+    await spotifyPicker.search({ title: form.title, artist: form.artist });
   };
 
   const handleYoutubeSelect = (video: YoutubeVideo) => {
@@ -322,78 +250,67 @@ export default function TrackEditForm({
   };
 
   const searchAppleMusic = async () => {
-    setAppleLoading(true);
-    setShowAppleModal(true);
-    setAppleResults([]);
-    try {
-      const res = await fetch("/api/ai/apple-music-search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title, artist: form.artist }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setAppleResults(data.results || []);
-      } else {
-        alert("Apple Music search failed");
-      }
-    } catch (err) {
-      console.error("Apple Music search error:", err);
-      alert("Apple Music search error");
-    }
-    setAppleLoading(false);
+    await applePicker.search({ title: form.title, artist: form.artist });
   };
 
-  const handleAppleSelect = (song: AppleMusicResult) => {
-    setForm((prev) => ({
-      ...prev,
-      apple_music_url: song.url,
-      duration_seconds: song.duration
-        ? Math.round(song.duration / 1000)
-        : undefined,
-    }));
-    setShowAppleModal(false);
-  };
+  // Apple selection handled via useAppleMusicPicker onSelect
 
   const handleAnalyzeAudio = async () => {
-    setAnalyzing(true);
     try {
-      const res = await fetch("/api/tracks/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          apple_music_url: form.apple_music_url,
-          youtube_url: form.youtube_url,
-          soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
-          track_id: form.track_id,
-          spotify_url: form.spotify_url,
-        }),
+      if (!form.friend_id) {
+        throw new Error("Track is missing friend_id");
+      }
+      const data = await analyze({
+        apple_music_url: form.apple_music_url,
+        youtube_url: form.youtube_url,
+        soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
+        track_id: form.track_id,
+        friend_id: form.friend_id,
+        spotify_url: form.spotify_url,
       });
-      if (res.ok) {
-        const data = await res.json();
-        console.log("Analysis result:", data);
-        setForm((prev) => ({
-          ...prev,
-          bpm: data.rhythm.bpm ? String(Math.round(data.rhythm.bpm)) : prev.bpm,
-          key: data.tonal.key_edma
+      console.log("Analysis result:", data);
+      setForm((prev) => ({
+        ...prev,
+        bpm:
+          typeof data.rhythm?.bpm === "number"
+            ? String(Math.round(data.rhythm.bpm))
+            : prev.bpm,
+        key:
+          data.tonal?.key_edma?.key && data.tonal?.key_edma?.scale
             ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
             : prev.key,
-          danceability:
-            typeof data.rhythm.danceability === "number"
-              ? data.rhythm.danceability.toFixed(3)
-              : prev.danceability,
-          duration_seconds: Math.round(data.metadata.audio_properties.length),
-        }));
-      } else {
-        const err = await res.json();
-        alert("Analysis failed: " + (err.error || "Unknown error"));
-      }
+        danceability:
+          typeof data.rhythm?.danceability === "number"
+            ? data.rhythm.danceability.toFixed(3)
+            : prev.danceability,
+        duration_seconds:
+          typeof data.metadata?.audio_properties?.length === "number"
+            ? Math.round(data.metadata.audio_properties.length)
+            : prev.duration_seconds,
+      }));
     } catch (err) {
       console.error("Audio analysis error:", err);
       alert("Error analyzing audio");
     }
-    setAnalyzing(false);
   };
+
+  const TrackEditActionsWrapper = createTrackEditActionsWrapper({
+    aiLoading: aiLoading,
+    onFetchAI: fetchFromChatGPT,
+    appleLoading: applePicker.loading,
+    onSearchApple: searchAppleMusic,
+    youtubeLoading: youtubeLoading,
+    onSearchYouTube: searchYouTube,
+    spotifyLoading: spotifyPicker.loading,
+    onSearchSpotify: searchSpotify,
+    analyzeLoading: analyzeLoading,
+    onAnalyzeAudio: handleAnalyzeAudio,
+    uploadLoading: uploadLoading,
+    onFileSelected: (file) => {
+      setFile(file);
+      handleFileUpload();
+    },
+  });
 
   return (
     <Dialog.Root
@@ -415,121 +332,21 @@ export default function TrackEditForm({
             </Dialog.Header>
             <Dialog.Body>
               {!track ? (
-                <Stack gap={4}>
-                  <SimpleGrid columns={[2, 3]} gap={2}>
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <Button key={i} variant="outline" size="sm" disabled>
-                        <Spinner size="xs" mr={2} /> Loading...
-                      </Button>
-                    ))}
-                  </SimpleGrid>
-                  <Stack borderWidth="1px" borderRadius="md" padding={4}>
-                    <Stack gap={2}>
-                      <Box>
-                        <Skeleton height="28px" width="60%" mb={2} />
-                        <Skeleton height="28px" width="70%" mb={2} />
-                        <Skeleton height="28px" width="65%" />
-                      </Box>
-                      <Flex gap={2}>
-                        <Skeleton height="38px" flex={1} />
-                        <Skeleton height="38px" flex={1} />
-                        <Skeleton height="38px" flex={1} />
-                        <Skeleton height="38px" flex={1} />
-                      </Flex>
-                      {Array.from({ length: 6 }).map((_, i) => (
-                        <Skeleton key={i} height="38px" />
-                      ))}
-                      <Skeleton height="24px" width="96px" />
-                    </Stack>
-                  </Stack>
-                </Stack>
+                <TrackEditFormSkeleton />
               ) : (
                 <Box as="form" onSubmit={handleSubmit}>
                   <Flex gap={4} direction="row">
                     <Stack flex={1}>
                       <Box as={"nav"}>
-                        <SimpleGrid columns={[2, 3]} gap={2}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            loading={fetching}
-                            disabled={fetching}
-                            onClick={fetchFromChatGPT}
-                          >
-                            <SiChatbot /> Fetch from AI
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            loading={appleLoading}
-                            disabled={appleLoading}
-                            onClick={searchAppleMusic}
-                          >
-                            <SiApplemusic /> Search Apple Music
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            loading={youtubeLoading}
-                            disabled={youtubeLoading}
-                            onClick={searchYouTube}
-                          >
-                            <SiYoutube /> Search YouTube
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            loading={spotifyLoading}
-                            disabled={spotifyLoading}
-                            onClick={searchSpotify}
-                          >
-                            <SiSpotify /> Search Spotify
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            loading={analyzing}
-                            disabled={
-                              analyzing ||
-                              (!form.apple_music_url &&
-                                !form.youtube_url &&
-                                !form.soundcloud_url &&
-                                !form.spotify_url)
-                            }
-                            onClick={handleAnalyzeAudio}
-                          >
-                            <FiDownload /> Fetch Audio
-                          </Button>
-                          <FileUpload.Root
-                            disabled={uploading}
-                            onFileChange={(files) => {
-                              // alert("File upload started");
-                              // Chakra UI v3 FileUpload: files.acceptedFiles is the correct property
-                              const file = files.acceptedFiles?.[0] || null;
-                              setFile(file);
-                              handleFileUpload();
-                            }}
-                          >
-                            <FileUpload.HiddenInput />
-                            <FileUpload.Trigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                width={"100%"}
-                              >
-                                {uploading ? (
-                                  <>
-                                    <Spinner /> Uploading...
-                                  </>
-                                ) : (
-                                  <>
-                                    <HiUpload /> Upload Audio
-                                  </>
-                                )}
-                              </Button>
-                            </FileUpload.Trigger>
-                          </FileUpload.Root>
-                        </SimpleGrid>
+                        <TrackEditActionsWrapper
+                          analyzeDisabled={
+                            analyzeLoading ||
+                            (!form.apple_music_url &&
+                              !form.youtube_url &&
+                              !form.soundcloud_url &&
+                              !form.spotify_url)
+                          }
+                        />
                       </Box>
                     </Stack>
                   </Flex>
@@ -650,236 +467,34 @@ export default function TrackEditForm({
                     Save
                   </Button>
 
-                  {/* --- YouTube Dialog --- */}
-                  <Dialog.Root
+                  <YouTubePickerDialog
                     open={showYoutubeModal}
-                    onOpenChange={(details) =>
-                      setShowYoutubeModal(details.open)
-                    }
-                    size={["full", "lg", "lg"]}
-                  >
-                    <Portal>
-                      <Dialog.Backdrop />
-                      <Dialog.Positioner>
-                        <Dialog.Content>
-                          <Dialog.Header>
-                            <Dialog.Title>Select YouTube Video</Dialog.Title>
-                            <Dialog.CloseTrigger asChild>
-                              <CloseButton size="sm" />
-                            </Dialog.CloseTrigger>
-                          </Dialog.Header>
-                          <Dialog.Body>
-                            {youtubeLoading ? (
-                              <Text>Loading...</Text>
-                            ) : youtubeResults.length === 0 ? (
-                              <Text>No results found.</Text>
-                            ) : (
-                              <Stack>
-                                {youtubeResults.map((video) => (
-                                  <Flex
-                                    key={video.id}
-                                    align="center"
-                                    gap={3}
-                                    borderWidth="1px"
-                                    borderRadius="md"
-                                    p={2}
-                                    // _hover={{ bg: "gray.50", cursor: "pointer" }}
-                                    onClick={() => {
-                                      handleYoutubeSelect(video);
-                                      console.log(video);
-                                    }}
-                                  >
-                                    {video.thumbnail && (
-                                      <Image
-                                        src={video.thumbnail}
-                                        alt={video.title}
-                                        boxSize="60px"
-                                        borderRadius="md"
-                                      />
-                                    )}
-                                    <Box flex="1">
-                                      <Text fontWeight="bold">
-                                        {video.title}
-                                      </Text>
-                                      <Text fontSize="sm">{video.channel}</Text>
-                                    </Box>
-                                    <Button
-                                      colorScheme="blue"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        console.log(video);
-                                        handleYoutubeSelect(video);
-                                      }}
-                                    >
-                                      Select
-                                    </Button>
-                                  </Flex>
-                                ))}
-                              </Stack>
-                            )}
-                          </Dialog.Body>
-                        </Dialog.Content>
-                      </Dialog.Positioner>
-                    </Portal>
-                  </Dialog.Root>
+                    loading={youtubeLoading}
+                    results={youtubeResults}
+                    onOpenChange={(open) => setShowYoutubeModal(open)}
+                    onSelect={(video) => handleYoutubeSelect(video)}
+                  />
 
                   {/* --- Spotify Dialog --- */}
-                  <Dialog.Root
-                    open={showSpotifyModal}
-                    onOpenChange={(details) =>
-                      setShowSpotifyModal(details.open)
+                  <SpotifyPickerDialog
+                    open={spotifyPicker.isOpen}
+                    loading={spotifyPicker.loading}
+                    results={spotifyPicker.results}
+                    onOpenChange={(open) =>
+                      open ? spotifyPicker.open() : spotifyPicker.close()
                     }
-                    size={["full", "lg", "lg"]}
-                  >
-                    <Portal>
-                      <Dialog.Backdrop />
-                      <Dialog.Positioner>
-                        <Dialog.Content>
-                          <Dialog.Header>
-                            <Dialog.Title>Select Spotify Track</Dialog.Title>
-                            <Dialog.CloseTrigger asChild>
-                              <CloseButton size="sm" />
-                            </Dialog.CloseTrigger>
-                          </Dialog.Header>
-                          <Dialog.Body>
-                            {spotifyLoading ? (
-                              <Text>Loading...</Text>
-                            ) : spotifyResults.length === 0 ? (
-                              <Text>No results found.</Text>
-                            ) : (
-                              <Stack>
-                                {spotifyResults.map((track) => (
-                                  <Flex
-                                    key={track.id}
-                                    align="center"
-                                    gap={3}
-                                    borderWidth="1px"
-                                    borderRadius="md"
-                                    p={2}
-                                    // _hover={{ bg: "gray.50", cursor: "pointer" }}
-                                    onClick={() => {
-                                      setForm((prev) => ({
-                                        ...prev,
-                                        spotify_url: track.url,
-                                      }));
-                                      setShowSpotifyModal(false);
-                                    }}
-                                  >
-                                    {track.artwork && (
-                                      <Image
-                                        src={track.artwork}
-                                        alt={track.title}
-                                        boxSize="60px"
-                                        borderRadius="md"
-                                      />
-                                    )}
-                                    <Box flex="1">
-                                      <Text fontWeight="bold">
-                                        {track.title}
-                                      </Text>
-                                      <Text fontSize="sm">
-                                        {track.artist} — {track.album}
-                                      </Text>
-                                    </Box>
-                                    <Button
-                                      colorScheme="green"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setForm((prev) => ({
-                                          ...prev,
-                                          spotify_url: track.url,
-                                        }));
-                                        setShowSpotifyModal(false);
-                                      }}
-                                    >
-                                      Select
-                                    </Button>
-                                  </Flex>
-                                ))}
-                              </Stack>
-                            )}
-                          </Dialog.Body>
-                        </Dialog.Content>
-                      </Dialog.Positioner>
-                    </Portal>
-                  </Dialog.Root>
+                    onSelect={(t) => spotifyPicker.select(t)}
+                  />
 
                   {/* --- Apple Music Dialog --- */}
-                  <Dialog.Root
-                    open={showAppleModal}
-                    onOpenChange={(details) => setShowAppleModal(details.open)}
-                    size={["full", "lg", "lg"]}
-                  >
-                    <Portal>
-                      <Dialog.Backdrop />
-                      <Dialog.Positioner>
-                        <Dialog.Content>
-                          <Dialog.Header>
-                            <Dialog.Title>
-                              Select Apple Music Track
-                            </Dialog.Title>
-                            <Dialog.CloseTrigger asChild>
-                              <CloseButton size="sm" />
-                            </Dialog.CloseTrigger>
-                          </Dialog.Header>
-                          <Dialog.Body>
-                            {appleLoading ? (
-                              <Text>Loading...</Text>
-                            ) : appleResults.length === 0 ? (
-                              <Text>No results found.</Text>
-                            ) : (
-                              <Stack>
-                                {appleResults.map((song) => (
-                                  <Flex
-                                    key={song.id}
-                                    align="center"
-                                    gap={3}
-                                    borderWidth="1px"
-                                    borderRadius="md"
-                                    p={2}
-                                    // _hover={{ bg: "gray.50", cursor: "pointer" }}
-                                    onClick={() => handleAppleSelect(song)}
-                                  >
-                                    {song.artwork && (
-                                      <Image
-                                        src={song.artwork.replace(
-                                          "{w}x{h}bb",
-                                          "60x60bb"
-                                        )}
-                                        alt={song.title}
-                                        boxSize="60px"
-                                        borderRadius="md"
-                                      />
-                                    )}
-                                    <Box flex="1">
-                                      <Text fontWeight="bold">
-                                        {song.title}
-                                      </Text>
-                                      <Text fontSize="sm">
-                                        {song.artist} — {song.album}
-                                      </Text>
-                                    </Box>
-                                    <Button
-                                      colorScheme="blue"
-                                      size="sm"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleAppleSelect(song);
-                                      }}
-                                    >
-                                      Select
-                                    </Button>
-                                  </Flex>
-                                ))}
-                              </Stack>
-                            )}
-                          </Dialog.Body>
-                        </Dialog.Content>
-                      </Dialog.Positioner>
-                    </Portal>
-                  </Dialog.Root>
+                  <AppleMusicPickerDialog
+                    open={applePicker.isOpen}
+                    onOpenChange={(open) =>
+                      open ? applePicker.open() : applePicker.close()
+                    }
+                    track={track}
+                    onSelect={(song) => applePicker.select(song)}
+                  />
                 </Box>
               )}
             </Dialog.Body>

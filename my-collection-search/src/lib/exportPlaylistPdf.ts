@@ -11,17 +11,15 @@ import { formatSeconds } from "@/lib/trackUtils";
  */
 export function exportPlaylistToPDF({
   playlist,
-  displayPlaylist,
   totalPlaytimeFormatted,
   filename = "playlist.pdf",
 }: {
   playlist: Track[];
-  displayPlaylist: Track[];
   totalPlaytimeFormatted: string;
   filename?: string;
 }) {
   if (!playlist.length) return;
-  const currentPlaylist = displayPlaylist.length > 0 ? displayPlaylist : playlist;
+  const currentPlaylist = playlist;
   const doc = new jsPDF();
   doc.setFont("courier", "normal");
   doc.setFontSize(8);

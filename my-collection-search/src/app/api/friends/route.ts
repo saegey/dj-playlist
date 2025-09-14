@@ -8,26 +8,25 @@ export async function GET(request: NextRequest) {
   try {
     // Next.js API Route Request may have nextUrl property for URL parsing
     const searchParams = request.nextUrl.searchParams;
-    const showCurrentUser = searchParams.get("showCurrentUser") === "true"; // example usage
+    // const showCurrentUser = searchParams.get("showCurrentUser") === "true"; // example usage
     const showSpotifyUsernames =
       searchParams.get("showSpotifyUsernames") === "true";
 
-    let rows;
-    if (showCurrentUser) {
-      console.debug("Fetching all friends including current user");
-      ({ rows } = await pool.query(
-        "SELECT username FROM friends ORDER BY added_at DESC"
-      ));
-      rows.push({
-        username: process.env.DISCOGS_USERNAME,
-      });
-    } else {
-      console.debug("Fetching all friends excluding current user");
-      ({ rows } = await pool.query(
-        "SELECT username FROM friends WHERE username <> $1 ORDER BY added_at DESC",
-        [process.env.DISCOGS_USERNAME]
-      ));
-    }
+    // let rows;
+    // if (showCurrentUser) {
+    //   console.debug("Fetching all friends including current user");
+    //   ({ rows } = await pool.query(
+    //     "SELECT id, username FROM friends ORDER BY added_at DESC"
+    //   ));
+    //   rows.push({
+    //     username: process.env.DISCOGS_USERNAME,
+    //   });
+    // } else {
+    console.debug("Fetching all friends excluding current user");
+    const { rows } = await pool.query(
+      "SELECT id, username FROM friends ORDER BY added_at DESC"
+    );
+    // }
 
     // Add Spotify usernames from manifest files
     if (showSpotifyUsernames) {
@@ -51,7 +50,7 @@ export async function GET(request: NextRequest) {
               typeof manifest.spotifyUsername === "string"
             ) {
               if (!rows.some((r) => r.username === manifest.spotifyUsername)) {
-                rows.push({ username: manifest.spotifyUsername });
+                rows.push({ username: manifest.spotifyUsername, id: 999 });
               }
             }
           } catch {}
@@ -59,8 +58,9 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    const friends = rows.map((r) => r.username);
-    return NextResponse.json({ friends });
+    // Ensure results is always an array
+    const results = Array.isArray(rows) ? rows : Object.values(rows);
+    return NextResponse.json({ results });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : String(e) },

@@ -2,8 +2,66 @@ import { Pool } from "pg";
 import { DiscogsTrack } from "@/types/track";
 
 export async function upsertTracks(pool: Pool, tracks: DiscogsTrack[]): Promise<DiscogsTrack[]> {
+  // 1) Ensure all friends exist and build username -> friend_id map
+  const usernames = Array.from(
+    new Set(tracks.map((t) => t.username).filter((u): u is string => !!u))
+  );
+
+  if (usernames.length) {
+    // Insert any missing friends
+    await pool.query(
+      `INSERT INTO friends (username)
+       SELECT UNNEST($1::text[])
+       ON CONFLICT (username) DO NOTHING`,
+      [usernames]
+    );
+  }
+
+  const friendMap = new Map<string, number>();
+  if (usernames.length) {
+    const { rows } = await pool.query(
+      `SELECT id, username FROM friends WHERE username = ANY($1::text[])`,
+      [usernames]
+    );
+    for (const r of rows) friendMap.set(r.username, r.id);
+  }
+
+  // 2) Upsert tracks with resolved friend_id
   const upserted: DiscogsTrack[] = [];
   for (const track of tracks) {
+    let friendId: number | undefined = friendMap.get(track.username);
+    if (!friendId) {
+      // Fallback: create/select friend for this username on the fly
+      const { rows: inserted } = await pool.query(
+        `INSERT INTO friends (username) VALUES ($1)
+         ON CONFLICT (username) DO NOTHING
+         RETURNING id`,
+        [track.username]
+      );
+      if (inserted.length) {
+        const id: number = inserted[0].id;
+        friendId = id;
+        friendMap.set(track.username, id);
+      } else {
+        const { rows: got } = await pool.query(
+          `SELECT id FROM friends WHERE username = $1`,
+          [track.username]
+        );
+        if (got.length) {
+          const id: number = got[0].id;
+          friendId = id;
+          friendMap.set(track.username, id);
+        }
+      }
+    }
+
+    if (!friendId) {
+      console.warn(
+        `[Discogs Index] Could not resolve friend_id for username='${track.username}'. Skipping ${track.track_id}`
+      );
+      continue;
+    }
+
     const { rows: insertedRows } = await pool.query(
       `
       INSERT INTO tracks (
@@ -11,15 +69,16 @@ export async function upsertTracks(pool: Pool, tracks: DiscogsTrack[]): Promise<
         styles, genres, duration, position,
         discogs_url, album_thumbnail,
         bpm, key, notes, local_tags,
-        apple_music_url, duration_seconds, username
+        apple_music_url, duration_seconds, username, friend_id
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,
-        $10,$11,$12,$13,$14,$15,$16,$17,$18
+        $10,$11,$12,$13,$14,$15,$16,$17,$18,$19
       )
       ON CONFLICT (track_id, username)
       DO UPDATE SET
         discogs_url     = EXCLUDED.discogs_url,
-        album_thumbnail = EXCLUDED.album_thumbnail
+        album_thumbnail = EXCLUDED.album_thumbnail,
+        friend_id       = EXCLUDED.friend_id
       RETURNING *;
       `,
       [
@@ -41,6 +100,7 @@ export async function upsertTracks(pool: Pool, tracks: DiscogsTrack[]): Promise<
         track.apple_music_url,
         track.duration_seconds,
         track.username,
+        friendId,
       ]
     );
     if (insertedRows.length !== 1) {

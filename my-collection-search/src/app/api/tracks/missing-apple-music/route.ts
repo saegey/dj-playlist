@@ -10,20 +10,20 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") || "50", 10);
     const offset = (page - 1) * pageSize;
-    const username = searchParams.get("username");
+    const friendId = searchParams.get("friendId");
 
     // Build WHERE clause: missing apple_music_url AND missing youtube_url AND missing soundcloud_url
     let where =
       "(apple_music_url IS NULL OR apple_music_url = '') AND (youtube_url IS NULL OR youtube_url = '') AND (soundcloud_url IS NULL OR soundcloud_url = '')";
     let params: (string | number)[] = [pageSize, offset];
-    if (username) {
-      where += " AND username = $3";
-      params = [pageSize, offset, username];
+    if (friendId) {
+      where += " AND friend_id = $3";
+      params = [pageSize, offset, friendId];
     }
 
     // Get total count for pagination
     const countQuery = `SELECT COUNT(*) FROM tracks WHERE ${where}`;
-    const countParams = username ? [username] : [];
+    const countParams = friendId ? [friendId] : [];
     const countResult = await pool.query(
       countQuery.replace(/\$3/g, "$1"), // $1 for count param if username
       countParams

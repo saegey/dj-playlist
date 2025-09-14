@@ -1,14 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-// import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
 import { Provider as ChakraProvider } from "@/components/ui/provider";
 import { MeiliProvider } from "@/providers/MeiliProvider";
 import { UsernameProvider } from "@/providers/UsernameProvider";
 import PlaylistPlayer from "@/components/PlaylistPlayer";
 import { PlaylistPlayerProvider } from "@/providers/PlaylistPlayerProvider";
-import PlaylistDrawerProvider from "@/providers/PlaylistDrawer";
+import TrackEditProvider from "@/providers/TrackEditProvider";
+import PlaylistsProvider from "@/providers/PlaylistsProvider";
+
+const ReactQueryDevtools: React.ComponentType<{ initialIsOpen?: boolean }> =
+  process.env.NODE_ENV === "development"
+    ? dynamic(
+        () =>
+          import("@tanstack/react-query-devtools").then((m) => ({
+            default: m.ReactQueryDevtools,
+          })),
+        { ssr: false }
+      )
+    : () => null;
 
 export default function ClientProviders({
   children,
@@ -21,18 +34,20 @@ export default function ClientProviders({
     <ChakraProvider>
       <QueryClientProvider client={client}>
         <UsernameProvider>
-          {/* Make BOTH pages and the player share the same app providers */}
           <MeiliProvider>
-            <PlaylistPlayerProvider>
-              <PlaylistDrawerProvider>
-                {children}
-                <PlaylistPlayer />
-              </PlaylistDrawerProvider>
-              {/* Fixed bottom player renders once at root, available everywhere */}
-            </PlaylistPlayerProvider>
+            <TrackEditProvider>
+              <PlaylistsProvider>
+                <PlaylistPlayerProvider>
+                  {children}
+                  <PlaylistPlayer />
+                </PlaylistPlayerProvider>
+              </PlaylistsProvider>
+            </TrackEditProvider>
           </MeiliProvider>
         </UsernameProvider>
-        {/* <ReactQueryDevtools initialIsOpen={false} /> */}
+        {process.env.NODE_ENV === "development" && (
+          <ReactQueryDevtools initialIsOpen={false} />
+        )}
       </QueryClientProvider>
     </ChakraProvider>
   );

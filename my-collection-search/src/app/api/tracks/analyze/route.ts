@@ -23,6 +23,7 @@ export async function POST(request: Request) {
       youtube_url,
       soundcloud_url,
       track_id,
+      friend_id,
       spotify_url,
     } = body;
 
@@ -219,15 +220,18 @@ export async function POST(request: Request) {
             local_audio_url,
             track_id,
           });
+          if (!friend_id) {
+            throw new Error("Missing friend_id for track update");
+          }
           await pool.query(
-            "UPDATE tracks SET local_audio_url = $1 WHERE track_id = $2",
-            [local_audio_url, track_id]
+            "UPDATE tracks SET local_audio_url = $1 WHERE track_id = $2 AND friend_id = $3",
+            [local_audio_url, track_id, friend_id]
           );
 
           // Fetch the updated track for MeiliSearch
           const { rows } = await pool.query(
-            "SELECT * FROM tracks WHERE track_id = $1",
-            [track_id]
+            "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2",
+            [track_id, friend_id]
           );
           if (rows && rows[0]) {
             // console.debug("Track updated successfully:", rows[0]);

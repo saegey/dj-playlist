@@ -43,6 +43,8 @@ services:
     entrypoint: ["sh", "-c", "npx wait-port db:5432 && npx node-pg-migrate up"]
     depends_on:
       - db
+    volumes:
+      - .:/app:ro
 
   db:
     image: pgvector/pgvector:pg15
@@ -64,16 +66,16 @@ services:
     volumes:
       - meili_data:/meili_data
 
-  watchtower:
-    image: containrrr/watchtower
-    restart: always
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=3600 # Check hourly
-    depends_on:
-      - app
+  # watchtower:
+  #   image: containrrr/watchtower
+  #   restart: always
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   environment:
+  #     - WATCHTOWER_CLEANUP=true
+  #     - WATCHTOWER_POLL_INTERVAL=3600 # Check hourly
+  #   depends_on:
+  #     - app
   
   essentia:
     build:

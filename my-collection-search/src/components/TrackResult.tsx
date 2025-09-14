@@ -9,7 +9,6 @@ import {
   Button,
   Icon,
   RatingGroup,
-  Float,
   Badge,
   SimpleGrid,
 } from "@chakra-ui/react";
@@ -64,7 +63,7 @@ export default function TrackResult({
   // Minimized view (only render after mount to avoid hydration mismatch)
   if (minimized && !expanded && hasMounted) {
     return (
-      <Box borderWidth="1px" borderRadius="md" p={2} mb={2} position="relative">
+      <Box borderWidth="1px" borderRadius="md" p={3} mb={2} position="relative">
         <Flex alignItems="center" gap={2}>
           {/* Track summary (clickable to expand) */}
           <Box
@@ -105,9 +104,10 @@ export default function TrackResult({
   // Expanded view
   return (
     <Flex
-      borderWidth="1px"
-      borderRadius="md"
-      p={3}
+      borderWidth={[0, "1px"]}
+      borderBottomWidth={["1px", "1px"]}
+      borderRadius={[0, "md"]}
+      p={[0, 3]}
       mb={2}
       flexDirection="column"
       flexGrow={1}
@@ -200,20 +200,31 @@ export default function TrackResult({
             whiteSpace="nowrap"
             maxLines={1}
             overflow="hidden"
+            maxWidth={["250px", "350px", "450px"]}
             textOverflow="ellipsis"
           >
             {track.album} ({track.year})
           </Text>
         </Flex>
 
-        {/* Action menu */}
-        <Float mr={3} mt={3}>
+        {/* Action menu - top-right, expands left, stays within card */}
+        <Box
+          position="absolute"
+          top={0}
+          left={2}
+          right={0}
+          display="flex"
+          justifyContent="flex-end"
+          alignItems="center"
+          gap={2}
+          pointerEvents="auto"
+        >
           {buttons}
-        </Float>
+        </Box>
       </Flex>
       <Flex direction="column" flex={1}>
         <Flex alignItems="center" gap={2} mt={1}>
-          <RatingGroup.Root defaultValue={track.star_rating || 0} readOnly>
+          <RatingGroup.Root value={track.star_rating ?? 0} readOnly>
             {Array.from({ length: 5 }).map((_, index) => (
               <RatingGroup.Item key={index} index={index + 1}>
                 <RatingGroup.ItemIndicator fontSize="sm" />
@@ -269,8 +280,8 @@ export default function TrackResult({
         </Flex>
 
         {/* Details line */}
-        <Box bg={"gray.subtle"} pl={4} pb={2} borderRadius="md">
-          <SimpleGrid columns={[3, null, 3]} gap={1} mt={2}>
+        <Box bg={["bg", "bg.muted"]} pl={[0, 4]} pb={2} borderRadius="md">
+          <SimpleGrid columns={[2, null, 3]} gap={1} mt={2}>
             {[
               { label: "Pos", value: track.position },
               {
