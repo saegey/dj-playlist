@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 
-import { Track } from "@/types/track";
+import { Friend, Track } from "@/types/track";
 import { AppleMusicResult } from "@/types/apple";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
@@ -31,8 +31,8 @@ type MissingAppleState = {
   currentIndex: number; // 0-based within page (0 when pageSize=1)
   currentGlobalIndex: number; // derived
   // filters
-  usernames: string[];
-  selectedUsername?: string | null;
+  usernames: Friend[];
+  selectedUsername?: Friend | null;
   // apple search results
   appleResults: AppleResultsMap;
   // override search
@@ -49,7 +49,7 @@ type MissingAppleActions = {
   prev: () => void;
   next: () => void;
   saveTrack: (
-    data: Partial<Track> & { track_id: string; username?: string }
+    data: Partial<Track> & { track_id: string; friend_id: number }
   ) => Promise<void>;
   searchAppleFor: (track: Track) => Promise<void>;
   lookupDiscogs: (trackId?: string) => Promise<DiscogsLookupResult | null>;
@@ -99,7 +99,7 @@ export function MissingAppleProvider({
   children: React.ReactNode;
 }) {
   const { friends: usernames } = useFriendsQuery({ showCurrentUser: true });
-  const { username: selectedUsername } = useUsername();
+  const { friend: selectedUsername } = useUsername();
 
   // core state
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -130,12 +130,15 @@ export function MissingAppleProvider({
   // fetch tracks when username or page changes
   useEffect(() => {
     const fetchTracks = async () => {
+      if (!selectedUsername) {
+        throw new Error("No username selected");
+      }
       setLoading(true);
       try {
         const { tracks, total } = await fetchMissingAppleTracks({
           page,
           pageSize,
-          username: selectedUsername ?? undefined,
+          friendId: selectedUsername.id,
         });
         setTracks(tracks);
         setTotal(total);
@@ -206,7 +209,7 @@ export function MissingAppleProvider({
       try {
         const payload: TrackEditFormProps = {
           track_id: data.track_id,
-          username: data.username ?? selectedUsername ?? "",
+          friend_id: data.friend_id ?? selectedUsername?.id,
           title: data.title,
           artist: data.artist,
           album: data.album,
@@ -259,7 +262,7 @@ export function MissingAppleProvider({
       }
 
       const params = new URLSearchParams({ track_id: id });
-      if (selectedUsername) params.set("username", selectedUsername);
+      if (selectedUsername) params.set("friend_id", selectedUsername.id.toString());
       const res = await fetch(`/api/ai/discogs?${params.toString()}`);
       if (!res.ok) {
         setDiscogsByTrack((prev) => ({ ...prev, [id]: null }));

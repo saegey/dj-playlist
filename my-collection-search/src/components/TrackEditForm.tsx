@@ -47,7 +47,8 @@ export interface TrackEditFormProps {
   soundcloud_url?: string;
   star_rating?: number;
   duration_seconds?: number | null; // Optional for new tracks
-  username: string; // Required for all tracks
+  username?: string; // Required for all tracks
+  friend_id?: number; // Optional friend ID for shared libraries
 }
 
 export default function TrackEditForm({

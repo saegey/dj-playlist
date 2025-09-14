@@ -11,7 +11,7 @@ import {
 } from "@/providers/MissingAppleContext";
 
 function MissingAudio() {
-  const { usernames, total, loading, tracks } = useMissingApple();
+  const { usernames: friends, total, loading, tracks } = useMissingApple();
    
   return (
     <>
@@ -22,7 +22,7 @@ function MissingAudio() {
               Selected Library:
             </Text>
             <UsernameSelect
-              usernames={usernames}
+              usernames={friends}
               width="200px"
               variant="outline"
             />

@@ -44,22 +44,18 @@ export default function UsernameSelect({
   value,
   onChange,
 }: UsernameSelectProps) {
-  // Context value is assumed to be friend id (number or "")
+  // Context holds Friend | null; external value can override
   const { friend: ctxValue, setFriend: setCtxValue } = useUsername();
-  console.log(usernames, ctxValue);
-
-  // Controlled value: id (number or "")
-  const selectedFriend = value ? value : ctxValue;
-  const setSelectedId = onChange ?? setCtxValue;
+  const selectedFriend: Friend | null = value ?? (ctxValue as Friend | null);
 
   const items = React.useMemo(
     () =>
       includeAllOption
         ? [
             { label: "All Libraries", value: "" },
-            ...usernames.map((u) => ({ label: u.username, value: u.id })),
+            ...usernames.map((u) => ({ label: u.username, value: String(u.id) })),
           ]
-        : usernames.map((u) => ({ label: u.username, value: u.id })),
+        : usernames.map((u) => ({ label: u.username, value: String(u.id) })),
     [usernames, includeAllOption]
   );
 
@@ -74,19 +70,17 @@ export default function UsernameSelect({
   return (
     <Select.Root
       collection={collection}
-      value={
-        selectedFriend && selectedFriend.id !== undefined
-          ? [String(selectedFriend.id)]
-          : undefined
-      }
+      value={selectedFriend?.id != null ? [String(selectedFriend.id)] : includeAllOption ? [""] : undefined}
       onValueChange={(vals) => {
-        console.log("vals", vals);
-        setSelectedId(Number(vals.value[0]));
-        setCtxValue(
-          vals.items[0]
-            ? usernames.find((u) => u.id === vals.items[0].value) || null
-            : null
-        );
+        const idStr = vals.value[0] ?? "";
+        const idNum = idStr === "" ? null : Number(idStr);
+        // Fire external change with friend_id when available
+        if (onChange && idNum !== null && !Number.isNaN(idNum)) {
+          onChange(idNum);
+        }
+        // Update context with full Friend object (or null for All)
+        const friendObj = idNum === null ? null : usernames.find((u) => u.id === idNum) || null;
+        setCtxValue(friendObj);
       }}
       width={width}
       size={size}
@@ -111,7 +105,7 @@ export default function UsernameSelect({
         <Select.Positioner>
           <Select.Content>
             {items.map((item) => (
-              <Select.Item key={item.label ?? item.label} item={item}>
+              <Select.Item key={String(item.value)} item={item}>
                 {item.label}
                 <Select.ItemIndicator />
               </Select.Item>

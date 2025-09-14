@@ -148,7 +148,7 @@ export async function fetchPlaylistCounts(
 export type MissingAppleTracksArgs = {
   page: number;
   pageSize: number;
-  username?: string | null;
+  friendId?: number | null;
 };
 
 export type MissingAppleTracksResponse = {
@@ -160,7 +160,7 @@ export async function fetchMissingAppleTracks(
   args: MissingAppleTracksArgs
 ): Promise<MissingAppleTracksResponse> {
   let url = `/api/tracks/missing-apple-music?page=${args.page}&pageSize=${args.pageSize}`;
-  if (args.username) url += `&username=${encodeURIComponent(args.username)}`;
+  if (args.friendId) url += `&friendId=${encodeURIComponent(args.friendId)}`;
   const raw = await http<unknown>(url, { method: "GET", cache: "no-store" });
   if (Array.isArray(raw)) {
     const tracks = raw as Track[];
