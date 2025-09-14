@@ -16,9 +16,15 @@ export function usePlaylistTrackIdsQuery(
   options?: Options
 ) {
   const idNum = typeof playlistId === "string" ? Number(playlistId) : playlistId ?? undefined;
-  const query = useQuery<string[], Error>({
+  const query = useQuery<
+    { track_id: string; friend_id: number; position: number }[],
+    Error
+  >({
     queryKey: idNum ? queryKeys.playlistTrackIds(idNum) : ["playlist", idNum, "track-ids"],
-    queryFn: () => fetchPlaylistTrackIds(idNum as number),
+    queryFn: async () => {
+      const result = await fetchPlaylistTrackIds(idNum as number);
+      return result;
+    },
     enabled: Boolean(idNum) && (options?.enabled ?? true),
     staleTime: options?.staleTime ?? 30_000,
     gcTime: options?.gcTime ?? 5 * 60_000,
@@ -27,7 +33,7 @@ export function usePlaylistTrackIdsQuery(
 
   return {
     ...query,
-    trackIds: query.data ?? [],
+    tracks: query.data ?? [],
   };
 }
 
@@ -37,13 +43,13 @@ export function usePlaylistTracksByIdQuery(
 ) {
   const idsQuery = usePlaylistTrackIdsQuery(playlistId, options);
   const tracksQuery = usePlaylistTracksQuery(
-    idsQuery.trackIds,
-    (options?.enabled ?? true) && idsQuery.trackIds.length > 0
+    idsQuery.tracks.map(({ track_id, friend_id }) => ({ track_id, friend_id })),
+    (options?.enabled ?? true) && idsQuery.tracks.length > 0
   );
 
   return {
     ...tracksQuery,
-    trackIds: idsQuery.trackIds,
+    trackRefs: idsQuery.tracks,
     isFetchingIds: idsQuery.isFetching,
   };
 }

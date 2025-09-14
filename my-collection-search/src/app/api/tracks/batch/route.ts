@@ -1,30 +1,44 @@
-import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { NextResponse } from "next/server";
+import { Pool } from "pg";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function POST(req: Request) {
   try {
-    const { track_ids } = await req.json();
-    if (!Array.isArray(track_ids) || track_ids.length === 0) {
+    const body = (await req.json()) as {
+      tracks: Array<{ track_id: string; friend_id: number; position?: number }>;
+    };
+    const tracks = Array.isArray(body?.tracks) ? body.tracks : [];
+    if (tracks.length === 0) {
       return NextResponse.json([], { status: 200 });
     }
-    // Build parameterized query for track_ids
-    const params = track_ids.map((_, i) => `$${i + 1}`).join(',');
-    const query = `SELECT * FROM tracks WHERE track_id IN (${params})`;
-    const { rows } = await pool.query(query, track_ids);
-    // Preserve order of input track_ids and alias embedding as _vectors.default
-    const trackMap = Object.fromEntries(rows.map((t) => [t.track_id, t]));
-    const ordered = track_ids.map((id) => {
-      const t = trackMap[id];
-      if (!t) return undefined;
-      let embeddingArr = null;
+
+    // Build a VALUES table of (track_id, friend_id, ord) to preserve order
+    const values: string[] = [];
+  const params: (string | number)[] = [];
+    let p = 1;
+    for (let i = 0; i < tracks.length; i++) {
+      const t = tracks[i];
+      values.push(`($${p++}::text,$${p++}::int,$${p++}::int)`);
+      params.push(t.track_id, t.friend_id, i);
+    }
+    const query = `
+      SELECT t.*, v.ord
+      FROM (VALUES ${values.join(",")}) AS v(track_id, friend_id, ord)
+      JOIN tracks t
+        ON t.track_id = v.track_id AND t.friend_id = v.friend_id
+      ORDER BY v.ord
+    `;
+    const { rows } = await pool.query(query, params);
+
+    // Normalize embedding into _vectors.default
+    const ordered = rows.map((t) => {
+      let embeddingArr: number[] | null = null;
       if (t.embedding) {
-        if (Array.isArray(t.embedding)) {
-          embeddingArr = t.embedding;
-        } else if (typeof t.embedding === "string") {
+        if (Array.isArray(t.embedding)) embeddingArr = t.embedding as number[];
+        else if (typeof t.embedding === "string") {
           try {
-            embeddingArr = JSON.parse(t.embedding);
+            embeddingArr = JSON.parse(t.embedding) as number[];
           } catch {
             embeddingArr = null;
           }
@@ -34,10 +48,13 @@ export async function POST(req: Request) {
         ...t,
         _vectors: embeddingArr ? { default: embeddingArr } : undefined,
       };
-    }).filter(Boolean);
+    });
     return NextResponse.json(ordered);
   } catch (error) {
-    console.error('Error fetching tracks by ids:', error);
-    return NextResponse.json({ error: 'Failed to fetch tracks' }, { status: 500 });
+    console.error("Error fetching tracks by ids:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch tracks" },
+      { status: 500 }
+    );
   }
 }

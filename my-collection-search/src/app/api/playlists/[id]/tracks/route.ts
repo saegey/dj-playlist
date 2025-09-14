@@ -4,11 +4,11 @@ import { Pool } from "pg";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-   const { id: idParam } = await params
+    const { id: idParam } = await params;
     const id = Number(idParam);
     if (!idParam || Number.isNaN(id)) {
       return NextResponse.json(
@@ -31,15 +31,21 @@ export async function GET(
 
     // Fetch ordered track ids for the playlist
     const tracksRes = await pool.query(
-      "SELECT track_id FROM playlist_tracks WHERE playlist_id = $1 ORDER BY position ASC",
+      "SELECT track_id, friend_id, position FROM playlist_tracks WHERE playlist_id = $1 ORDER BY position ASC",
       [id]
     );
     const trackIds = tracksRes.rows.map(
-      (r: { track_id: string }) => r.track_id
+      (r: { track_id: string; friend_id: string; position: number }) => {
+        return {
+          track_id: r.track_id,
+          friend_id: r.friend_id,
+          position: r.position,
+        };
+      }
     );
     return NextResponse.json({
       playlist_id: id,
-      track_ids: trackIds,
+      tracks: trackIds,
       playlist_name: playlistRes.rows[0].name,
     });
   } catch (error) {

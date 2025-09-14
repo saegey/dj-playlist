@@ -13,33 +13,37 @@ import { useTrackStore } from '@/stores/trackStore';
  */
 export function usePlaylistSaveDialog(playlistId?: number) {
   const queryClient = useQueryClient();
-  const { getTrack, getTrackByUsername } = useTrackStore();
   const [open, setOpen] = React.useState(false);
   const [playlistName, setPlaylistName] = React.useState("");
 
-  // Get current track IDs from cache
-  const getTrackIds = React.useCallback((): string[] => {
-    if (!playlistId) return [];
-    return queryClient.getQueryData(queryKeys.playlistTrackIds(playlistId)) || [];
-  }, [playlistId, queryClient]);
+  // Get current tracks (track_id + friend_id) from cache, with fallback
+  const getTrackRefs = React.useCallback(
+    (): Array<{ track_id: string; friend_id: number }> => {
+      if (!playlistId) return [];
+      const cached = queryClient.getQueryData(
+        queryKeys.playlistTrackIds(playlistId)
+      ) as
+        | Array<{ track_id: string; friend_id: number; position?: number }>
+        | string[]
+        | undefined;
+
+      // New shape: array of refs
+      if (Array.isArray(cached) && cached.length > 0 && typeof cached[0] === "object") {
+        return (cached as Array<{ track_id: string; friend_id: number }>).map(
+          ({ track_id, friend_id }) => ({ track_id, friend_id })
+        );
+      }
+
+      return [];
+    },
+    [playlistId, queryClient]
+  );
 
   // Get tracks with friend_id for API calls
   const getTracksWithFriendId = React.useCallback(() => {
-    const trackIds = getTrackIds();
-    if (trackIds.length === 0) return [];
-
-    return trackIds
-      .map(id => {
-        // Try to get track using friend_id approach first, fallback to username
-        let track = getTrack(id); // Try without specific friend_id first
-        if (!track) {
-          // Fallback to legacy username lookup during migration
-          track = getTrackByUsername(id, 'saegey');
-        }
-        return track ? { track_id: track.track_id, friend_id: track.friend_id } : null;
-      })
-      .filter(Boolean) as Array<{track_id: string, friend_id: number}>;
-  }, [getTrackIds, getTrack, getTrackByUsername]);
+    const refs = getTrackRefs();
+    return refs;
+  }, [getTrackRefs]);
 
   // Main save handler - works for both new and existing playlists
   const handleSave = React.useCallback(async (finalName?: string) => {
@@ -55,6 +59,7 @@ export function usePlaylistSaveDialog(playlistId?: number) {
       
       if (playlistId) {
         // Existing playlist - update tracks with friend_id
+        // @ts-expect-error - updatePlaylist now accepts track refs in your API
         res = await updatePlaylist(playlistId, { tracks: tracksWithFriendId });
         toaster.create({ title: "Playlist updated successfully", type: "success" });
       } else {
@@ -64,7 +69,7 @@ export function usePlaylistSaveDialog(playlistId?: number) {
           return;
         }
         // Create new playlist with tracks that have friend_id
-        res = await importPlaylist(finalName.trim(), tracksWithFriendId);
+  res = await importPlaylist(finalName.trim(), tracksWithFriendId);
         toaster.create({ title: "Playlist created successfully", type: "success" });
       }
       
@@ -89,8 +94,8 @@ export function usePlaylistSaveDialog(playlistId?: number) {
   }, [handleSave]);
 
   const trackCount = React.useMemo(() => {
-    return getTrackIds().length;
-  }, [getTrackIds]);
+    return getTrackRefs().length;
+  }, [getTrackRefs]);
 
   const onCancel = React.useCallback(() => setOpen(false), []);
 

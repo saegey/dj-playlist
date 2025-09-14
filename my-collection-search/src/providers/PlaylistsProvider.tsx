@@ -266,22 +266,6 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     }
   }, [playlist, sortGeneticMutation]);
 
-  // const { mutateAsync: createPlaylist } = useCreatePlaylistMutation();
-
-  // const handleCreatePlaylist = useCallback(async () => {
-  //   if (!playlistName.trim() || state.length === 0) return;
-  //   try {
-  //     await createPlaylist({
-  //       name: playlistName,
-  //       tracks: state.map((t) => t.track_id),
-  //     });
-  //     setPlaylistName("");
-  //     setPlaylistInfo({ name: playlistName });
-  //   } catch {
-  //     toaster.create({ title: "Failed to create playlist", type: "error" });
-  //   }
-  // }, [playlistName, state, createPlaylist]);
-
   const handleLoadPlaylist = useCallback(
     async (trackIds: string[], id: number) => {
       setOrderMode("original");

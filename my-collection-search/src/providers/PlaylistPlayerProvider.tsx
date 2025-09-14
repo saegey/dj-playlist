@@ -168,6 +168,7 @@ export function PlaylistPlayerProvider({
   );
 
   const appendToQueue = useCallback((items: Track[] | Track) => {
+    console.log("appendToQueue", items);
     const toAdd = Array.isArray(items) ? items : [items];
     if (!toAdd.length) return;
     playlistRef.current = [...playlistRef.current, ...toAdd];

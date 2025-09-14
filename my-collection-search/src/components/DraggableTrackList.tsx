@@ -16,7 +16,7 @@ import type { Track } from "@/types/track";
 
 interface DraggableTrackListProps {
   /** Array of track IDs in order */
-  trackIds: string[];
+  tracksPlaylist: { track_id: string; friend_id: number }[];
   /** Array of track objects for fallback */
   tracks: Track[];
   /** Function to move tracks within the list */
@@ -24,7 +24,10 @@ interface DraggableTrackListProps {
   /** Unique ID for the droppable area */
   droppableId: string;
   /** Function to render action buttons for each track */
-  renderTrackButtons?: (track: Track | undefined, index: number) => React.ReactNode;
+  renderTrackButtons?: (
+    track: Track | undefined,
+    index: number
+  ) => React.ReactNode;
   /** Additional props for TrackResultStore */
   trackResultProps?: {
     minimized?: boolean;
@@ -35,7 +38,7 @@ interface DraggableTrackListProps {
 }
 
 export default function DraggableTrackList({
-  trackIds,
+  tracksPlaylist,
   tracks,
   moveTrack,
   droppableId,
@@ -49,17 +52,17 @@ export default function DraggableTrackList({
     <DragDropContext onDragEnd={onDragEnd}>
       <Droppable droppableId={droppableId}>
         {(provided: DroppableProvided) => (
-          <Box
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-          >
-            {trackIds.map((trackId, idx) => {
+          <Box ref={provided.innerRef} {...provided.droppableProps}>
+            {tracksPlaylist.map((trackPlay, idx) => {
               // Find the track in the tracks array for fallback
-              const track = tracks.find(t => t.track_id === trackId);
-              const username = track?.username || 'saegey';
-              const draggableKey = `${username}:${trackId}`;
+              const track = tracks.find(
+                (t) =>
+                  t.track_id === trackPlay.track_id &&
+                  t.friend_id === trackPlay.friend_id
+              );
+              const draggableKey = `${trackPlay.track_id}:${trackPlay.friend_id}`;
               const isCurrentTrack = currentTrackIndex === idx;
-              
+
               return (
                 <Draggable
                   key={draggableKey}
@@ -79,13 +82,19 @@ export default function DraggableTrackList({
                       borderRadius={isCurrentTrack ? "md" : undefined}
                     >
                       <TrackResultStore
-                        key={`${droppableId}-${trackId}`}
-                        trackId={trackId}
-                        username={username}
+                        key={`${droppableId}-${trackPlay.track_id}:${trackPlay.friend_id}`}
+                        trackId={trackPlay.track_id}
+                        friendId={trackPlay.friend_id}
                         fallbackTrack={track}
-                        buttons={renderTrackButtons ? [renderTrackButtons(track, idx)] : undefined}
+                        buttons={
+                          renderTrackButtons
+                            ? [renderTrackButtons(track, idx)]
+                            : undefined
+                        }
                         minimized={trackResultProps?.minimized}
-                        playlistCount={trackResultProps?.playlistCount?.[trackId]}
+                        playlistCount={
+                          trackResultProps?.playlistCount?.[trackPlay.track_id]
+                        }
                       />
                     </Box>
                   )}

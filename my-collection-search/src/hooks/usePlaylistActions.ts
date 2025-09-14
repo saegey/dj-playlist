@@ -1,8 +1,8 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/lib/queryKeys';
-import type { Track } from '@/types/track';
-import { useTrackStore } from '@/stores/trackStore';
-import { exportPlaylistToPDF } from '@/lib/exportPlaylistPdf';
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queryKeys";
+import type { Track } from "@/types/track";
+import { useTrackStore } from "@/stores/trackStore";
+import { exportPlaylistToPDF } from "@/lib/exportPlaylistPdf";
 
 /**
  * Hook for playlist export and utility actions
@@ -11,28 +11,31 @@ import { exportPlaylistToPDF } from '@/lib/exportPlaylistPdf';
 export function usePlaylistActions(playlistId?: number) {
   const queryClient = useQueryClient();
   const { getTrack } = useTrackStore();
-  
+
   // Get tracks from track store
   const getTracks = (): Track[] => {
     if (!playlistId) return [];
-    
-    const trackIds = queryClient.getQueryData(queryKeys.playlistTrackIds(playlistId)) as string[] || [];
-    if (trackIds.length === 0) return [];
-    
-    // Use track store instead of query cache - try new friend_id approach first, fallback to username
-    const tracks = trackIds
-      .map(id => {
-        // Try to get track using friend_id approach first, fallback to username
-        let track = getTrack(id); // Try without specific friend_id first
-        if (!track) {
-          // Fallback to legacy username lookup during migration
-          track = useTrackStore.getState().getTrackByUsername(id, 'saegey');
-        }
-        return track;
+
+    const tracksPlaylist =
+      (queryClient.getQueryData(queryKeys.playlistTrackIds(playlistId)) as {
+        track_id: string;
+        friend_id: number;
+      }[]) || [];
+    if (tracksPlaylist.length === 0) return [];
+    console.log("usePlaylistActions found", tracksPlaylist);
+
+    const tracks = tracksPlaylist
+      .map((t) => {
+        return getTrack(t.track_id, t.friend_id);
       })
       .filter(Boolean) as Track[];
-      
-    console.log('usePlaylistActions getTracks:', tracks.length, 'out of', trackIds.length);
+
+    console.log(
+      "usePlaylistActions getTracks:",
+      tracks.length,
+      "out of",
+      tracksPlaylist.length
+    );
     return tracks;
   };
 
@@ -47,11 +50,13 @@ export function usePlaylistActions(playlistId?: number) {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
 
-    let formatted = '';
+    let formatted = "";
     if (hours > 0) {
-      formatted = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      formatted = `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
+        .toString()
+        .padStart(2, "0")}`;
     } else {
-      formatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      formatted = `${minutes}:${seconds.toString().padStart(2, "0")}`;
     }
 
     return { seconds: totalSeconds, formatted };
@@ -59,7 +64,7 @@ export function usePlaylistActions(playlistId?: number) {
 
   // Export playlist as JSON
   const exportPlaylist = () => {
-    console.log('Exporting playlist as JSON');
+    console.log("Exporting playlist as JSON");
     const tracks = getTracks();
     console.log(`Playlist has ${tracks.length} tracks`);
     if (tracks.length === 0) return;
@@ -68,17 +73,17 @@ export function usePlaylistActions(playlistId?: number) {
       tracks,
       exportDate: new Date().toISOString(),
       totalTracks: tracks.length,
-      ...getTotalPlaytime()
+      ...getTotalPlaytime(),
     };
 
     const blob = new Blob([JSON.stringify(playlistData, null, 2)], {
-      type: 'application/json'
+      type: "application/json",
     });
-    
+
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `playlist-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `playlist-${new Date().toISOString().split("T")[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -89,11 +94,12 @@ export function usePlaylistActions(playlistId?: number) {
   const exportToPDF = (filename?: string) => {
     const tracks = getTracks();
     const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
-    
+
     exportPlaylistToPDF({
       playlist: tracks,
       totalPlaytimeFormatted,
-      filename: filename || `playlist-${new Date().toISOString().split('T')[0]}.pdf`
+      filename:
+        filename || `playlist-${new Date().toISOString().split("T")[0]}.pdf`,
     });
   };
 

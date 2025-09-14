@@ -7,13 +7,16 @@ import type { Track } from "@/types/track";
 import { queryKeys } from "@/lib/queryKeys";
 import { useTrackStore } from "@/stores/trackStore";
 
-export function usePlaylistTracksQuery(trackIds: string[], enabled = true) {
+export function usePlaylistTracksQuery(
+  trackRefs: { track_id: string; friend_id: number }[],
+  enabled = true
+) {
   const { setTracks } = useTrackStore();
   
   const query = useQuery<Track[], Error>({
-    queryKey: queryKeys.playlistTracks(trackIds),
-    queryFn: () => fetchTracksByIds(trackIds),
-    enabled: enabled && trackIds.length > 0,
+    queryKey: queryKeys.playlistTracks(trackRefs),
+    queryFn: () => fetchTracksByIds(trackRefs),
+    enabled: enabled && trackRefs.length > 0,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
     refetchOnWindowFocus: false,

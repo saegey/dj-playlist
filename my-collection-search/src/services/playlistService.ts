@@ -1,12 +1,16 @@
 // src/services/playlistService.ts
-export async function importPlaylist(name: string, tracks: string[] | Array<{track_id: string, friend_id: number}>, friendId?: number) {
+export async function importPlaylist(
+  name: string,
+  tracks: string[] | Array<{ track_id: string; friend_id: number }>,
+  friendId?: number
+) {
   const res = await fetch("/api/playlists", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ 
-      name, 
+    body: JSON.stringify({
+      name,
       tracks,
-      default_friend_id: friendId 
+      default_friend_id: friendId,
     }),
   });
   return res;
@@ -18,17 +22,22 @@ export async function fetchPlaylists() {
   return await res.json();
 }
 
-export async function fetchPlaylistTrackIds(id: number): Promise<string[]> {
+export async function fetchPlaylistTrackIds(
+  id: number
+): Promise<{ track_id: string; friend_id: number; position: number }[]> {
   const res = await fetch(`/api/playlists/${id}/tracks`);
   if (!res.ok) throw new Error("Failed to fetch playlist tracks");
   const data = await res.json();
-  return Array.isArray(data.track_ids) ? data.track_ids : [];
+  console.log("Fetched playlist track ids:", data);
+  return data.tracks;
 }
 
 // Generate a genetic ordering for a playlist via API and normalize the response
 import type { Track } from "@/types/track";
 
-export async function generateGeneticPlaylist(playlist: Track[]): Promise<Track[]> {
+export async function generateGeneticPlaylist(
+  playlist: Track[]
+): Promise<Track[]> {
   const res = await fetch("/api/playlists/genetic", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -47,7 +56,10 @@ export async function generateGeneticPlaylist(playlist: Track[]): Promise<Track[
   return result;
 }
 
-export async function updatePlaylist(id: number, data: { name?: string; tracks?: string[]; default_friend_id?: number }) {
+export async function updatePlaylist(
+  id: number,
+  data: { name?: string; tracks?: string[]; default_friend_id?: number }
+) {
   const res = await fetch("/api/playlists", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

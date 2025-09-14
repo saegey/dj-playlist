@@ -28,11 +28,12 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
 
   // New query-based hooks
-  const { trackIds, isPending: trackIdsLoading } =
+  const { tracks: tracksPlaylist, isPending: trackIdsLoading } =
     usePlaylistTrackIdsQuery(playlistId);
+  console.log("tracksPlaylist", tracksPlaylist);
   const { tracks, isPending: tracksLoading } = usePlaylistTracksQuery(
-    trackIds,
-    trackIds.length > 0
+    tracksPlaylist,
+    tracksPlaylist.length > 0
   );
 
   // New mutation and action hooks
@@ -65,7 +66,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
         <PlaylistItemMenu
           key="menu"
           idx={idx}
-          total={trackIds.length}
+          total={tracksPlaylist.length}
           track={track}
           moveTrack={moveTrack}
           removeFromPlaylist={removeFromPlaylist}
@@ -74,7 +75,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
         />
       ) : null;
     },
-    [trackIds.length, moveTrack, removeFromPlaylist, openTrackEditor]
+    [tracksPlaylist.length, moveTrack, removeFromPlaylist, openTrackEditor]
   );
 
   if (trackIdsLoading || tracksLoading) {
@@ -112,7 +113,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     );
   }
 
-  if (trackIds.length === 0) {
+  if (tracksPlaylist.length === 0) {
     return (
       <Box overflowY="auto">
         <EmptyState.Root size={"sm"}>
@@ -144,7 +145,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
         </Box>
         <Flex flexGrow={1} justify="flex-end" align="flex-start">
           <PlaylistActionsMenu
-            disabled={trackIds.length === 0}
+            disabled={tracksPlaylist.length === 0}
             onSortGreedy={() => {
               console.log("sort greed");
               sortGreedy();
@@ -159,7 +160,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
       </Flex>
       <Box overflowY="auto">
         <DraggableTrackList
-          trackIds={trackIds}
+          tracksPlaylist={tracksPlaylist}
           tracks={tracks}
           moveTrack={moveTrack}
           droppableId="playlist-droppable"

@@ -58,12 +58,12 @@ async function getAllPlaylistsWithTracks() {
     "SELECT playlist_id, track_id, friend_id FROM playlist_tracks WHERE playlist_id = ANY($1) ORDER BY position ASC",
     [playlistIds]
   );
-  const tracksByPlaylist: Record<number, string[]> = {};
+  const tracksByPlaylist: Record<number, PlaylistTrackRow[]> = {};
 
   tracksRes.rows.forEach((row: PlaylistTrackRow) => {
     if (!tracksByPlaylist[row.playlist_id])
       tracksByPlaylist[row.playlist_id] = [];
-    tracksByPlaylist[row.playlist_id].push(row.track_id);
+    tracksByPlaylist[row.playlist_id].push(row);
   });
   return playlists.map((p: Playlist) => ({
     ...p,
@@ -75,15 +75,15 @@ async function getAllPlaylistsWithTracks() {
 interface PlaylistTrackInput {
   track_id: string;
   friend_id?: number;
+  position?: number;
 }
 
 // Helper: create playlist and insert tracks
 async function createPlaylistWithTracks(data: {
   name: string;
-  tracks: (string | PlaylistTrackInput)[];
-  default_friend_id?: number;
+  tracks: PlaylistTrackInput[];
 }) {
-  const { name, tracks, default_friend_id } = data;
+  const { name, tracks } = data;
   const playlistRes = await pool.query(
     "INSERT INTO playlists (name) VALUES ($1) RETURNING *",
     [name]
@@ -94,20 +94,17 @@ async function createPlaylistWithTracks(data: {
     // Resolve friend_id for each track
     const resolvedTracks = await Promise.all(
       tracks.map(async (track, i) => {
-        const trackId = typeof track === "string" ? track : track.track_id;
-        let friendId: number;
+        let friendId: number | undefined;
 
         if (typeof track === "object" && track.friend_id) {
           friendId = track.friend_id;
-        } else if (default_friend_id) {
-          friendId = default_friend_id;
         } else {
-          // Resolve friend_id from existing track data
-          friendId = await resolveFriendIdForTrack(trackId);
+          // fallback: resolve friendId if not provided
+          friendId = await resolveFriendIdForTrack(track.track_id);
         }
 
         return {
-          track_id: trackId,
+          track_id: track.track_id,
           friend_id: friendId,
           position: i,
         };
@@ -131,7 +128,12 @@ async function createPlaylistWithTracks(data: {
 
   return {
     ...playlist,
-    tracks: tracks.map((t) => (typeof t === "string" ? t : t.track_id)) || [],
+    tracks:
+      tracks.map((t) => ({
+        track_id: t.track_id,
+        friend_id: t.friend_id,
+        position: t.position,
+      })) || [],
   };
 }
 

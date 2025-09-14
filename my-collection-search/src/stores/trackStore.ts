@@ -8,7 +8,6 @@ interface TrackStore {
   setTracks: (tracks: Track[]) => void;
   updateTrack: (trackId: string, friendId: number, updates: Partial<Track>) => void;
   getTrack: (trackId: string, friendId?: number) => Track | undefined;
-  getTrackByUsername: (trackId: string, username?: string) => Track | undefined; // Legacy support
   hasTrack: (trackId: string, friendId?: number) => boolean;
   clearTracks: () => void;
   // internal: list of fields we preserve on setTracks to prevent stale seeds from clobbering local edits
@@ -17,10 +16,6 @@ interface TrackStore {
 
 const createTrackKey = (trackId: string, friendId?: number): string => {
   return `${trackId}:${friendId || 'default'}`;
-};
-
-const createTrackKeyByUsername = (trackId: string, username?: string): string => {
-  return `${trackId}:${username || 'default'}`;
 };
 
 export const useTrackStore = create<TrackStore>((set, get) => ({
@@ -45,8 +40,7 @@ export const useTrackStore = create<TrackStore>((set, get) => ({
 
   setTrack: (track: Track) => {
     set((state) => {
-      const username = track.username || 'default';
-      const key = createTrackKey(track.track_id, username);
+      const key = createTrackKey(track.track_id, track.friend_id);
       const prev = state.tracks.get(key);
       const newTracks = new Map(state.tracks);
       newTracks.set(key, track);
@@ -54,7 +48,7 @@ export const useTrackStore = create<TrackStore>((set, get) => ({
       if (isStoreDebugEnabled()) {
         storeLog('setTrack', [
           ['key', key],
-          ['username', username],
+          ['friend_id', track.friend_id],
           ['prev', prev],
           ['next', track],
           ['diff', diffObjectKeys(prev as unknown as Record<string, unknown>, track as unknown as Record<string, unknown>)],
@@ -87,11 +81,6 @@ export const useTrackStore = create<TrackStore>((set, get) => ({
           const changed = Object.keys(diff).length > 0;
           if (changed) {
             newTracks.set(key, nextValue);
-            // Also set with legacy username key during migration
-            if (track.username) {
-              const legacyKey = createTrackKeyByUsername(track.track_id, track.username);
-              newTracks.set(legacyKey, nextValue);
-            }
             hasChanges = true;
             if (isStoreDebugEnabled()) {
               storeLog('setTracks:item', [
@@ -107,11 +96,7 @@ export const useTrackStore = create<TrackStore>((set, get) => ({
         } else {
           // New entry
           newTracks.set(key, track);
-          // Also set with legacy username key during migration
-          if (track.username) {
-            const legacyKey = createTrackKeyByUsername(track.track_id, track.username);
-            newTracks.set(legacyKey, track);
-          }
+
           hasChanges = true;
           if (isStoreDebugEnabled()) {
             storeLog('setTracks:item:new', [
@@ -153,13 +138,7 @@ export const useTrackStore = create<TrackStore>((set, get) => ({
       const newTracks = new Map(state.tracks);
       const updatedTrack = { ...existingTrack, ...updates };
       newTracks.set(key, updatedTrack);
-      // Also update legacy username key if it exists
-      if (existingTrack.username) {
-        const legacyKey = createTrackKeyByUsername(trackId, existingTrack.username);
-        if (state.tracks.has(legacyKey)) {
-          newTracks.set(legacyKey, updatedTrack);
-        }
-      }
+
       if (isStoreDebugEnabled()) {
         storeLog('updateTrack', [
           ['key', key],
@@ -178,10 +157,6 @@ export const useTrackStore = create<TrackStore>((set, get) => ({
     return get().tracks.get(key);
   },
 
-  getTrackByUsername: (trackId: string, username?: string) => {
-    const key = createTrackKeyByUsername(trackId, username);
-    return get().tracks.get(key);
-  },
 
   hasTrack: (trackId: string, friendId?: number) => {
     const key = createTrackKey(trackId, friendId);

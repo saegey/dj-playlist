@@ -8,12 +8,15 @@ import { http } from "./http";
  * @returns Array of Track objects
  * @throws Error when the request fails
  */
-export async function fetchTracksByIds(trackIds: string[]): Promise<Track[]> {
-  if (!trackIds || trackIds.length === 0) return [];
+export async function fetchTracksByIds(tracks: {
+  friend_id: number;
+  track_id: string;
+}[]): Promise<Track[]> {
+  if (!tracks || tracks.length === 0) return [];
   return await http<Track[]>("/api/tracks/batch", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ track_ids: trackIds }),
+    body: JSON.stringify({ tracks }),
   });
 }
 

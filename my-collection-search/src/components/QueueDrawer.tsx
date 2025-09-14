@@ -161,7 +161,13 @@ export default function QueueDrawer({
               minH={0}
             >
               {playlist.length === 0 ? (
-                <Box p={8}>
+               <Box
+                  flex="1"
+                  minH={0}
+                  overflowY="auto"
+                  maxW={["8xl", "2xl", "2xl"]}
+                  pt={3}
+                >
                   <EmptyState.Root size="sm">
                     <EmptyState.Content>
                       <EmptyState.Indicator>
@@ -177,7 +183,13 @@ export default function QueueDrawer({
                   </EmptyState.Root>
                 </Box>
               ) : (
-                <Box px={4} pt={4} pb={4} flex="1" minH={0} overflowY="auto">
+                <Box
+                  flex="1"
+                  minH={0}
+                  overflowY="auto"
+                  maxW={["8xl", "2xl", "2xl"]}
+                  pt={3}
+                >
                   <DraggableTrackList
                     trackIds={trackIds}
                     tracks={playlist}
