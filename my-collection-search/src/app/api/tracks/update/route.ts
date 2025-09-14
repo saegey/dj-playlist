@@ -12,8 +12,8 @@ export async function PATCH(req: Request) {
     const { Pool } = await import("pg");
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const currentRes = await pool.query(
-      "SELECT * FROM tracks WHERE track_id = $1 AND username = $2",
-      [data.track_id, data.username]
+      "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2",
+      [data.track_id, data.friend_id]
     );
     const current = currentRes.rows[0];
 
@@ -55,8 +55,8 @@ export async function PATCH(req: Request) {
         embedding = await getTrackEmbedding(updated);
         const pgVector = `[${embedding.join(",")}]`;
         await pool.query(
-          "UPDATE tracks SET embedding = $1 WHERE track_id = $2 AND username = $3",
-          [pgVector, updated.track_id, updated.username]
+          "UPDATE tracks SET embedding = $1 WHERE track_id = $2 AND friend_id = $3",
+          [pgVector, updated.track_id, updated.friend_id]
         );
         updated.embedding = embedding;
       } catch (embedError) {

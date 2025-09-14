@@ -206,10 +206,14 @@ export function MissingAppleProvider({
 
   const saveTrack = useCallback(
     async (data: Partial<Track> & { track_id: string; username?: string }) => {
+      if (data.friend_id === undefined) {
+        throw new Error("No friend_id");
+      }
+
       try {
         const payload: TrackEditFormProps = {
           track_id: data.track_id,
-          friend_id: data.friend_id ?? selectedUsername?.id,
+          friend_id: data.friend_id,
           title: data.title,
           artist: data.artist,
           album: data.album,
@@ -249,7 +253,7 @@ export function MissingAppleProvider({
         alert("Failed to update track");
       }
     },
-    [mutateSaveTrack, selectedUsername, total, currentGlobalIndex, goTo]
+    [mutateSaveTrack, total, currentGlobalIndex, goTo]
   );
 
   const lookupDiscogs = useCallback(
@@ -262,7 +266,8 @@ export function MissingAppleProvider({
       }
 
       const params = new URLSearchParams({ track_id: id });
-      if (selectedUsername) params.set("friend_id", selectedUsername.id.toString());
+      if (selectedUsername)
+        params.set("friend_id", selectedUsername.id.toString());
       const res = await fetch(`/api/ai/discogs?${params.toString()}`);
       if (!res.ok) {
         setDiscogsByTrack((prev) => ({ ...prev, [id]: null }));

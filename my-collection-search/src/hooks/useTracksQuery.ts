@@ -18,12 +18,12 @@ export function useTracksQuery() {
     // Optimistic update: update Zustand store immediately
     onMutate: async (form: TrackEditFormProps) => {
       const track_id = form.track_id;
-      const username = form.username || "default";
+      const friend_id = form.friend_id;
 
-      if (!track_id) return;
+      if (!friend_id) return;
 
       // Get current track from store for rollback
-      const currentTrack = getTrack(track_id, username);
+      const currentTrack = getTrack(track_id, friend_id);
 
       // Build optimistic updates
       const updates: Partial<Track> = {
@@ -46,11 +46,11 @@ export function useTracksQuery() {
       };
 
       // Apply optimistic update
-      updateTrack(track_id, username, updates);
+      updateTrack(track_id, friend_id, updates);
       console.log("Optimistically updated track", track_id, "with", updates);
 
       // Return previous state for potential rollback
-      return { currentTrack, track_id, username };
+      return { currentTrack, track_id, friend_id };
     },
     onError: (_err, _form, context) => {
       // Rollback to previous state

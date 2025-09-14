@@ -31,7 +31,7 @@ export async function getPlaylistCountsForTracks(
 // Update a track by track_id, allowing partial updates (e.g. tags, metadata)
 type UpdateTrackInput = {
   track_id: string;
-  username: string;
+  friend_id: number;
   title?: string | null;
   artist?: string | null;
   album?: string | null;
@@ -60,7 +60,7 @@ const UPDATABLE_COLUMNS = {
   spotify_url: "spotify_url",
   local_audio_url: "local_audio_url",
   duration_seconds: "duration_seconds",
-  notes: 'notes',
+  notes: "notes",
   bpm: "bpm",
   key: "key",
   danceability: "danceability",
@@ -68,8 +68,8 @@ const UPDATABLE_COLUMNS = {
 } as const;
 
 export async function updateTrack(data: UpdateTrackInput) {
-  const { track_id, username, ...fields } = data;
-  if (!track_id || !username) return null;
+  const { track_id, friend_id, ...fields } = data;
+  if (!track_id || !friend_id) return null;
 
   // Keep everything except `undefined`. Allow null and "" to pass through.
   const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
@@ -77,8 +77,8 @@ export async function updateTrack(data: UpdateTrackInput) {
   // Nothing to update? Return current row.
   if (entries.length === 0) {
     const currentRes = await pool.query(
-      "SELECT * FROM tracks WHERE track_id = $1 AND username = $2",
-      [track_id, username]
+      "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2",
+      [track_id, friend_id]
     );
     return currentRes.rows[0] ?? null;
   }
@@ -106,13 +106,13 @@ export async function updateTrack(data: UpdateTrackInput) {
   // setClauses.push(`updated_at = NOW()`);
 
   // WHERE params
-  values.push(track_id, username);
+  values.push(track_id, friend_id);
 
   // If after whitelisting there’s still nothing to set, just return current.
   if (setClauses.length === 0) {
     const currentRes = await pool.query(
-      "SELECT * FROM tracks WHERE track_id = $1 AND username = $2",
-      [track_id, username]
+      "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2",
+      [track_id, friend_id]
     );
     return currentRes.rows[0] ?? null;
   }
@@ -120,7 +120,7 @@ export async function updateTrack(data: UpdateTrackInput) {
   const sql = `
     UPDATE tracks
     SET ${setClauses.join(", ")}
-    WHERE track_id = $${idx} AND username = $${idx + 1}
+    WHERE track_id = $${idx} AND friend_id = $${idx + 1}
     RETURNING *;
   `;
 

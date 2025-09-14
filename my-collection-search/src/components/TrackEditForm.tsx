@@ -47,7 +47,7 @@ export interface TrackEditFormProps {
   soundcloud_url?: string;
   star_rating?: number;
   duration_seconds?: number | null; // Optional for new tracks
-  friend_id: number; // Optional friend ID for shared libraries
+  friend_id: number;
 }
 
 export default function TrackEditForm({
@@ -83,7 +83,7 @@ export default function TrackEditForm({
     star_rating:
       typeof track?.star_rating === "number" ? track!.star_rating : 0,
     duration_seconds: track?.duration_seconds || undefined, // Optional for new tracks
-    username: track?.username || "",
+    friend_id: track?.friend_id,
   });
 
   React.useEffect(() => {
@@ -105,7 +105,7 @@ export default function TrackEditForm({
       star_rating:
         typeof track.star_rating === "number" ? track.star_rating : 0,
       duration_seconds: track.duration_seconds || undefined,
-      username: track.username,
+      friend_id: track.friend_id,
     });
   }, [track]);
 
@@ -188,6 +188,9 @@ export default function TrackEditForm({
     e.preventDefault();
     setLoading(true);
     try {
+      if (!form.friend_id) {
+        throw new Error("Track is missing friend_id");
+      }
       // Strip query params from soundcloud_url if present
       const cleanForm = {
         ...form,
@@ -196,6 +199,7 @@ export default function TrackEditForm({
         key: form.key || null,
         danceability: Number(form.danceability) || null,
         duration_seconds: Number(form.duration_seconds) || null,
+        friend_id: form.friend_id,
       };
       await Promise.resolve(onSave(cleanForm));
     } finally {
@@ -253,11 +257,15 @@ export default function TrackEditForm({
 
   const handleAnalyzeAudio = async () => {
     try {
+      if (!form.friend_id) {
+        throw new Error("Track is missing friend_id");
+      }
       const data = await analyze({
         apple_music_url: form.apple_music_url,
         youtube_url: form.youtube_url,
         soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
         track_id: form.track_id,
+        friend_id: form.friend_id,
         spotify_url: form.spotify_url,
       });
       console.log("Analysis result:", data);

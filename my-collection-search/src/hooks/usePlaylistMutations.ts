@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
-import { generateGeneticPlaylist } from "@/services/playlistService";
+import { generateGeneticPlaylist, updatePlaylist } from "@/services/playlistService";
 import type { Track } from "@/types/track";
 import { useTrackStore } from "@/stores/trackStore";
+import { toaster } from "@/components/ui/toaster";
 import {
   buildCompatibilityGraph,
   greedyPath,
@@ -55,19 +56,57 @@ export function usePlaylistMutations(playlistId?: number) {
     updateTrackRefs(newRefs);
   };
 
-  // Remove track from playlist
+  // Mutation for removing track from playlist
+  const removeTrackMutation = useMutation({
+    mutationFn: async (trackIdToRemove: string) => {
+      if (!playlistId) throw new Error("No playlist ID");
+      const trackRefs = getTrackIds();
+      const newRefs = trackRefs.filter((r) => r.track_id !== trackIdToRemove);
+      const res = await updatePlaylist(playlistId, { tracks: newRefs });
+      if (!res.ok) throw new Error("Failed to remove track from playlist");
+      return newRefs;
+    },
+    onSuccess: (newRefs) => {
+      updateTrackRefs(newRefs);
+      toaster.create({ title: "Track removed from playlist", type: "success" });
+    },
+    onError: (error) => {
+      console.error("Failed to remove track from playlist:", error);
+      toaster.create({ title: "Failed to remove track from playlist", type: "error" });
+    }
+  });
+
+  // Mutation for adding track to playlist  
+  const addTrackMutation = useMutation({
+    mutationFn: async (track: Track) => {
+      if (!playlistId) throw new Error("No playlist ID");
+      const trackRefs = getTrackIds();
+      if (trackRefs.some((r) => r.track_id === track.track_id)) {
+        return trackRefs; // Track already exists, no change needed
+      }
+      const newRefs = [...trackRefs, { track_id: track.track_id, friend_id: track.friend_id! }];
+      const res = await updatePlaylist(playlistId, { tracks: newRefs });
+      if (!res.ok) throw new Error("Failed to add track to playlist");
+      return newRefs;
+    },
+    onSuccess: (newRefs, track) => {
+      updateTrackRefs(newRefs);
+      toaster.create({ title: `"${track.title}" added to playlist`, type: "success" });
+    },
+    onError: (error) => {
+      console.error("Failed to add track to playlist:", error);
+      toaster.create({ title: "Failed to add track to playlist", type: "error" });
+    }
+  });
+
+  // Remove track from playlist (with server persistence)
   const removeFromPlaylist = (trackIdToRemove: string) => {
-    const trackRefs = getTrackIds();
-    const newRefs = trackRefs.filter((r) => r.track_id !== trackIdToRemove);
-    updateTrackRefs(newRefs);
+    removeTrackMutation.mutate(trackIdToRemove);
   };
 
+  // Add track to playlist (with server persistence) 
   const addToPlaylist = (track: Track) => {
-    const trackRefs = getTrackIds();
-    if (!trackRefs.some((r) => r.track_id === track.track_id)) {
-      const newRefs = [...trackRefs, { track_id: track.track_id, friend_id: track.friend_id! }];
-      updateTrackRefs(newRefs);
-    }
+    addTrackMutation.mutate(track);
   };
 
   // Clear entire playlist

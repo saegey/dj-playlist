@@ -11,7 +11,6 @@ import React, {
 } from "react";
 import type { Playlist, Track } from "@/types/track";
 import { importPlaylist } from "@/services/playlistService";
-import { fetchTracksByIds } from "@/services/trackService";
 import {
   useRecommendations,
   type TrackWithEmbedding as TrackWithEmbeddingFromHook,
@@ -159,7 +158,6 @@ interface PlaylistsContextType {
   // network / io
   fetchPlaylists: () => Promise<void>;
   // handleCreatePlaylist: () => Promise<void>;
-  handleLoadPlaylist: (trackIds: string[], id: number) => Promise<void>;
   savePlaylist: () => Promise<void>;
   exportPlaylist: () => void;
 
@@ -248,12 +246,8 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   }, [playlist]);
 
   const sortGenetic = useCallback(async () => {
-    // Placeholder for genetic sorting logic
-    // You can implement the genetic algorithm here and update the playlist accordingly
-    console.log("Genetic sorting is not yet implemented.");
     try {
       const result = await sortGeneticMutation(playlist);
-      console.log("Genetic sort result:", result);
 
       dispatch({ type: "REPLACE", tracks: result });
     } catch (e) {
@@ -265,38 +259,6 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
       return;
     }
   }, [playlist, sortGeneticMutation]);
-
-  const handleLoadPlaylist = useCallback(
-    async (trackIds: string[], id: number) => {
-      setOrderMode("original");
-      if (!trackIds?.length) {
-        dispatch({ type: "CLEAR" });
-        setPlaylistInfo({ name: "" });
-        return;
-      }
-      try {
-        setLoadingPlaylists({ id });
-        const data = await fetchTracksByIds(trackIds);
-        dispatch({ type: "REPLACE", tracks: data });
-
-        const loaded = playlists.find(
-          (pl) =>
-            Array.isArray(pl.tracks) &&
-            pl.tracks.length === trackIds.length &&
-            pl.tracks.every((tid, i) => tid === trackIds[i])
-        );
-        setPlaylistInfo(
-          loaded ? { id: loaded.id, name: loaded.name } : { name: "" }
-        );
-      } catch (e) {
-        console.error("Error loading playlist tracks:", e);
-        alert("Failed to load playlist tracks");
-      } finally {
-        setLoadingPlaylists(false);
-      }
-    },
-    [playlists]
-  );
 
   const savePlaylist = useCallback(async () => {
     const res = await importPlaylist(
@@ -366,7 +328,6 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
     clearPlaylist,
     fetchPlaylists,
 
-    handleLoadPlaylist,
     savePlaylist,
     exportPlaylist,
     getRecommendations,

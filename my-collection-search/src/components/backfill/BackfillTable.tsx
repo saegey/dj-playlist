@@ -3,6 +3,7 @@
 import React from "react";
 import { Checkbox, Spinner, Table, Text } from "@chakra-ui/react";
 import type { BackfillTrack } from "./types";
+import { useTrack } from "@/hooks/useTrack";
 
 type Props = {
   tracks: BackfillTrack[];
@@ -12,13 +13,113 @@ type Props = {
   onToggleAll: () => void;
 };
 
-export default function BackfillTable({ tracks, selected, analyzing, onToggleOne, onToggleAll }: Props) {
+function BackfillRow({
+  track,
+  isSelected,
+  analyzing,
+  onToggle,
+}: {
+  track: BackfillTrack;
+  isSelected: boolean;
+  analyzing: boolean;
+  onToggle: () => void;
+}) {
+  // Pull live status/error from store overlay so UI reflects optimistic updates
+  const storeTrack = useTrack(track.track_id, track.friend_id);
+  const status =
+    (storeTrack as unknown as BackfillTrack | undefined)?.status ??
+    track.status;
+  const errorMsg =
+    (storeTrack as unknown as BackfillTrack | undefined)?.errorMsg ??
+    track.errorMsg;
+
+  return (
+    <Table.Row key={track.id} data-selected={isSelected ? "" : undefined}>
+      <Table.Cell>
+        <Checkbox.Root
+          checked={isSelected}
+          onChange={onToggle}
+          disabled={analyzing}
+        >
+          <Checkbox.HiddenInput />
+          <Checkbox.Control />
+        </Checkbox.Root>
+      </Table.Cell>
+      <Table.Cell maxW="220px">
+        <Text truncate title={track.title}>
+          {track.title}
+        </Text>
+      </Table.Cell>
+      <Table.Cell maxW="140px">
+        <Text truncate title={track.artist}>
+          {track.artist}
+        </Text>
+      </Table.Cell>
+      <Table.Cell>
+        {track.apple_music_url ? (
+          <a
+            href={track.apple_music_url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Apple
+          </a>
+        ) : track.youtube_url ? (
+          <a href={track.youtube_url} target="_blank" rel="noopener noreferrer">
+            Youtube
+          </a>
+        ) : track.soundcloud_url ? (
+          <a
+            href={track.soundcloud_url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            SoundCloud
+          </a>
+        ) : track.spotify_url ? (
+          <a href={track.spotify_url} target="_blank" rel="noopener noreferrer">
+            Spotify
+          </a>
+        ) : (
+          <Text color="gray.400">—</Text>
+        )}
+      </Table.Cell>
+      <Table.Cell>
+        {status === "analyzing" ? (
+          <Spinner size="xs" />
+        ) : status === "success" ? (
+          <Text color="green.500">✓</Text>
+        ) : status === "error" ? (
+          <Text color="red.500">{errorMsg || "Error"}</Text>
+        ) : (
+          <Text color="gray.400">—</Text>
+        )}
+      </Table.Cell>
+    </Table.Row>
+  );
+}
+
+export default function BackfillTable({
+  tracks,
+  selected,
+  analyzing,
+  onToggleOne,
+  onToggleAll,
+}: Props) {
   if (tracks.length === 0) return null;
 
   const allSelected = selected.size === tracks.length && tracks.length > 0;
   return (
-    <Table.ScrollArea borderWidth="1px" maxHeight={["calc(100vh - 400px)", "calc(100vh - 300px)"]}>
-      <Table.Root size="sm" variant="outline" showColumnBorder fontSize={["xs", "sm", "sm"]}>
+    <Table.ScrollArea
+      borderWidth="1px"
+      maxHeight={["calc(100vh - 400px)", "calc(100vh - 300px)"]}
+    >
+      <Table.Root
+        size="sm"
+        variant="outline"
+        showColumnBorder
+        fontSize={["xs", "sm", "sm"]}
+      >
         <Table.Header>
           <Table.Row>
             <Table.ColumnHeader width={"5%"}>
@@ -39,60 +140,13 @@ export default function BackfillTable({ tracks, selected, analyzing, onToggleOne
         </Table.Header>
         <Table.Body>
           {tracks.map((track) => (
-            <Table.Row key={track.id} data-selected={selected.has(track.track_id) ? "" : undefined}>
-              <Table.Cell>
-                <Checkbox.Root
-                  checked={selected.has(track.track_id)}
-                  onChange={() => onToggleOne(track.track_id)}
-                  disabled={analyzing}
-                >
-                  <Checkbox.HiddenInput />
-                  <Checkbox.Control />
-                </Checkbox.Root>
-              </Table.Cell>
-              <Table.Cell maxW="220px">
-                <Text truncate title={track.title}>
-                  {track.title}
-                </Text>
-              </Table.Cell>
-              <Table.Cell maxW="140px">
-                <Text truncate title={track.artist}>
-                  {track.artist}
-                </Text>
-              </Table.Cell>
-              <Table.Cell>
-                {track.apple_music_url ? (
-                  <a href={track.apple_music_url} target="_blank" rel="noopener noreferrer">
-                    Apple
-                  </a>
-                ) : track.youtube_url ? (
-                  <a href={track.youtube_url} target="_blank" rel="noopener noreferrer">
-                    Youtube
-                  </a>
-                ) : track.soundcloud_url ? (
-                  <a href={track.soundcloud_url} target="_blank" rel="noopener noreferrer">
-                    SoundCloud
-                  </a>
-                ) : track.spotify_url ? (
-                  <a href={track.spotify_url} target="_blank" rel="noopener noreferrer">
-                    Spotify
-                  </a>
-                ) : (
-                  <Text color="gray.400">—</Text>
-                )}
-              </Table.Cell>
-              <Table.Cell>
-                {track.status === "analyzing" ? (
-                  <Spinner size="xs" />
-                ) : track.status === "success" ? (
-                  <Text color="green.500">✓</Text>
-                ) : track.status === "error" ? (
-                  <Text color="red.500">{track.errorMsg || "Error"}</Text>
-                ) : (
-                  <Text color="gray.400">—</Text>
-                )}
-              </Table.Cell>
-            </Table.Row>
+            <BackfillRow
+              key={track.id}
+              track={track}
+              isSelected={selected.has(track.track_id)}
+              analyzing={analyzing}
+              onToggle={() => onToggleOne(track.track_id)}
+            />
           ))}
         </Table.Body>
       </Table.Root>

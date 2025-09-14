@@ -94,14 +94,20 @@ export default function FriendsDiscogsSection() {
         ) : friends.length === 0 ? (
           <Text color="gray.400">No friends added yet.</Text>
         ) : (
-          friends.map((username: string) => (
-            <HStack key={username} width="100%" justifyContent="space-between">
-              <Text fontWeight="medium">{username}</Text>
-              <HStack justifyContent="flex-end" width="100%">
+          friends.map((friend) => (
+            <HStack
+              key={friend.username}
+              width="100%"
+              justifyContent="space-between"
+            >
+              <Text fontWeight="medium">{friend.username}</Text>
+              <HStack justifyContent="flex-end" flexGrow={1}>
                 <Button
                   size="xs"
                   colorScheme="blue"
-                  onClick={() => discogsSync.mutate({ username })}
+                  onClick={() =>
+                    discogsSync.mutate({ username: friend.username })
+                  }
                   loading={discogsSync.isPending}
                   disabled={discogsSync.isPending}
                   title="Sync Discogs"
@@ -111,7 +117,7 @@ export default function FriendsDiscogsSection() {
                 <Button
                   size="xs"
                   colorPalette="red"
-                  onClick={() => handleRemoveFriend(username)} // opens dialog + streams
+                  onClick={() => handleRemoveFriend(friend.username)} // opens dialog + streams
                   title="Remove friend"
                   disabled={removeFriendPending}
                 >

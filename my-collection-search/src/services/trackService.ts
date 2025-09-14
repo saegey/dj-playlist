@@ -8,10 +8,12 @@ import { http } from "./http";
  * @returns Array of Track objects
  * @throws Error when the request fails
  */
-export async function fetchTracksByIds(tracks: {
-  friend_id: number;
-  track_id: string;
-}[]): Promise<Track[]> {
+export async function fetchTracksByIds(
+  tracks: {
+    friend_id: number;
+    track_id: string;
+  }[]
+): Promise<Track[]> {
   if (!tracks || tracks.length === 0) return [];
   return await http<Track[]>("/api/tracks/batch", {
     method: "POST",
@@ -30,7 +32,7 @@ export async function saveTrack(data: TrackEditFormProps): Promise<Track> {
 
 export async function vectorizeTrack(args: {
   track_id: string;
-  username: string;
+  friend_id: number;
 }): Promise<void> {
   await http<unknown>("/api/tracks/vectorize", {
     method: "POST",
@@ -41,6 +43,7 @@ export async function vectorizeTrack(args: {
 
 export type AnalyzeArgs = {
   track_id: string;
+  friend_id: number;
   apple_music_url?: string | null;
   youtube_url?: string | null;
   soundcloud_url?: string | null;
@@ -105,11 +108,11 @@ export async function fetchTrackMetadata(
 
 export async function fetchTrackById(params: {
   track_id: string;
-  username: string;
+  friend_id: number;
 }): Promise<Track> {
   const url = `/api/tracks/${encodeURIComponent(
     params.track_id
-  )}?username=${encodeURIComponent(params.username)}`;
+  )}?friend_id=${encodeURIComponent(params.friend_id)}`;
   return await http<Track>(url, { method: "GET", cache: "no-store" });
 }
 

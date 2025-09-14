@@ -95,13 +95,16 @@ export default function BackfillAudioPage() {
 
   const handleVectorizeSelected = async () => {
     setAnalyzing(true);
-  for (const trackId of selected) {
+    for (const trackId of selected) {
       updateStatus({ track_id: trackId, status: "analyzing", errorMsg: null });
       try {
+        const track = pageTracks.find((t) => t.track_id === trackId);
+        if (!track?.friend_id) {
+          throw new Error(`Track ${trackId} is missing friend_id`);
+        }
         await vectorize({
           track_id: trackId,
-          username:
-            pageTracks.find((t) => t.track_id === trackId)?.username ?? "",
+          friend_id: track.friend_id,
         });
         updateStatus({ track_id: trackId, status: "success", errorMsg: null });
       } catch (err) {
@@ -124,21 +127,25 @@ export default function BackfillAudioPage() {
     for (const trackId of selected) {
       updateStatus({ track_id: trackId, status: "analyzing", errorMsg: null });
       try {
+        const track = pageTracks.find((t) => t.track_id === trackId);
+        if (!track) {
+          throw new Error(`Track ${trackId} not found in page data`);
+        }
+        if (!track.friend_id) {
+          throw new Error(`Track ${trackId} is missing friend_id`);
+        }
+
         const data = await analyze({
           track_id: trackId,
-          apple_music_url: pageTracks.find((t) => t.track_id === trackId)
-            ?.apple_music_url,
-          youtube_url: pageTracks.find((t) => t.track_id === trackId)
-            ?.youtube_url,
-          soundcloud_url: pageTracks.find((t) => t.track_id === trackId)
-            ?.soundcloud_url,
-          spotify_url: pageTracks.find((t) => t.track_id === trackId)
-            ?.spotify_url,
+          friend_id: track.friend_id,
+          apple_music_url: track.apple_music_url,
+          youtube_url: track.youtube_url,
+          soundcloud_url: track.soundcloud_url,
+          spotify_url: track.spotify_url,
         });
 
         saveTrack({
-          username:
-            pageTracks.find((t) => t.track_id === trackId)?.username ?? "",
+          friend_id: track.friend_id,
           track_id: trackId,
           bpm:
             typeof data.rhythm?.bpm === "number"

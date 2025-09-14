@@ -28,7 +28,7 @@ export default function TrackEditDialog({
   const prevOpenRef = useRef<boolean>(dialogOpen);
   const { data: fetchedTrack } = useTrackByIdQuery(
     editTrack?.track_id,
-    editTrack?.username,
+    editTrack?.friend_id,
     dialogOpen
   );
 
@@ -68,7 +68,7 @@ export default function TrackEditDialog({
       soundcloud_url: data.soundcloud_url,
       star_rating: data.star_rating,
       duration_seconds: data.duration_seconds,
-      username: data.username ?? (editTrack?.username || ""),
+      friend_id: data.friend_id,
     };
     setLoaded(mapped);
   }, [fetchedTrack, editTrack?.username]);

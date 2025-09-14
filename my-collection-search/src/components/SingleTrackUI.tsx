@@ -91,9 +91,9 @@ export default function SingleTrackUI() {
     <Box>
       <Flex align="center" gap={4} direction="column">
         <TrackResultStore
-          key={`${track.track_id}:${track.username || 'default'}`} // Force re-render on track change
+          key={`${track.track_id}:${track.friend_id}`} // Force re-render on track change
           trackId={track.track_id}
-          username={track.username || 'default'} // Ensure username is never undefined
+          friendId={track.friend_id}
           fallbackTrack={track}
           allowMinimize={false}
           buttons={[

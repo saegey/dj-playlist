@@ -58,7 +58,7 @@ export async function generateGeneticPlaylist(
 
 export async function updatePlaylist(
   id: number,
-  data: { name?: string; tracks?: string[]; default_friend_id?: number }
+  data: { name?: string; tracks?: { track_id: string; friend_id: number }[] }
 ) {
   const res = await fetch("/api/playlists", {
     method: "PATCH",

@@ -5,7 +5,7 @@ import { vectorizeTrack } from "@/services/trackService";
 
 type VectorizeArgs = {
   track_id: string;
-  username: string;
+  friend_id: number;
 };
 
 export function useVectorizeTrackMutation() {
