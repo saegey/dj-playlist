@@ -27,12 +27,12 @@ export function usePlaylistMutations(playlistId?: number) {
     );
   };
 
-  // Update track IDs in cache
-  const updateTrackIds = (newTrackIds: string[]) => {
+  // Update track refs in cache
+  const updateTrackRefs = (newTrackRefs: TrackRef[]) => {
     if (!playlistId) return;
     queryClient.setQueryData(
       queryKeys.playlistTrackIds(playlistId),
-      newTrackIds
+      newTrackRefs
     );
   };
 
@@ -52,27 +52,27 @@ export function usePlaylistMutations(playlistId?: number) {
     const [moved] = newRefs.splice(fromIdx, 1);
     newRefs.splice(toIdx, 0, moved);
 
-    updateTrackIds(newRefs.map((r) => r.track_id));
+    updateTrackRefs(newRefs);
   };
 
   // Remove track from playlist
   const removeFromPlaylist = (trackIdToRemove: string) => {
     const trackRefs = getTrackIds();
     const newRefs = trackRefs.filter((r) => r.track_id !== trackIdToRemove);
-    updateTrackIds(newRefs.map((r) => r.track_id));
+    updateTrackRefs(newRefs);
   };
 
   const addToPlaylist = (track: Track) => {
     const trackRefs = getTrackIds();
     if (!trackRefs.some((r) => r.track_id === track.track_id)) {
-      const newTrackIds = [...trackRefs.map((r) => r.track_id), track.track_id];
-      updateTrackIds(newTrackIds);
+      const newRefs = [...trackRefs, { track_id: track.track_id, friend_id: track.friend_id! }];
+      updateTrackRefs(newRefs);
     }
   };
 
   // Clear entire playlist
   const clearPlaylist = () => {
-    updateTrackIds([]);
+    updateTrackRefs([]);
   };
 
   // Sort playlist using greedy algorithm
@@ -93,12 +93,7 @@ export function usePlaylistMutations(playlistId?: number) {
       })
       .filter(Boolean) as Track[];
 
-    console.log(
-      "Greedy sort tracks from store:",
-      tracks.length,
-      "out of",
-      trackRefs.length
-    );
+
     if (tracks.length === 0) {
       console.warn(
         "No tracks found in store for IDs:",
@@ -122,13 +117,14 @@ export function usePlaylistMutations(playlistId?: number) {
     const compatibilityEdges = buildCompatibilityGraph(enrichedPlaylist);
     const optimalPath = greedyPath(enrichedPlaylist, compatibilityEdges);
 
-    // Reorder track IDs based on optimal path
-    const sortedTrackIds = optimalPath.map(
-      (orderIdx) => tracks[enrichedPlaylist[orderIdx].idx].track_id
-    );
-    console.log("Greedy sorted track IDs:", sortedTrackIds);
+    // Reorder track refs based on optimal path
+    const sortedTrackRefs = optimalPath.map((orderIdx) => {
+      const track = tracks[enrichedPlaylist[orderIdx].idx];
+      return { track_id: track.track_id, friend_id: track.friend_id! };
+    });
+    console.log("Greedy sorted track refs:", sortedTrackRefs);
 
-    updateTrackIds(sortedTrackIds);
+    updateTrackRefs(sortedTrackRefs);
   };
 
   // Genetic sort mutation
@@ -156,8 +152,11 @@ export function usePlaylistMutations(playlistId?: number) {
     },
     onSuccess: (sortedTracks) => {
       if (sortedTracks.length > 0) {
-        const sortedTrackIds = sortedTracks.map((track) => track.track_id);
-        updateTrackIds(sortedTrackIds);
+        const sortedTrackRefs = sortedTracks.map((track) => ({
+          track_id: track.track_id,
+          friend_id: track.friend_id!
+        }));
+        updateTrackRefs(sortedTrackRefs);
       }
     },
   });

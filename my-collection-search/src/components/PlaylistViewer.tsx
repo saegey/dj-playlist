@@ -23,6 +23,7 @@ import { usePlaylistMutations } from "@/hooks/usePlaylistMutations";
 import { usePlaylistActions } from "@/hooks/usePlaylistActions";
 import PlaylistRecommendations from "./PlaylistRecommendations";
 import { Track } from "@/types/track";
+import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
@@ -30,7 +31,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   // New query-based hooks
   const { tracks: tracksPlaylist, isPending: trackIdsLoading } =
     usePlaylistTrackIdsQuery(playlistId);
-  console.log("tracksPlaylist", tracksPlaylist);
+
   const { tracks, isPending: tracksLoading } = usePlaylistTracksQuery(
     tracksPlaylist,
     tracksPlaylist.length > 0
@@ -45,6 +46,8 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     sortGenetic,
     isGeneticSorting,
   } = usePlaylistMutations(playlistId);
+
+  const { replacePlaylist } = usePlaylistPlayer();
 
   const { exportPlaylist, exportToPDF, getTotalPlaytime } =
     usePlaylistActions(playlistId);
@@ -155,6 +158,12 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
             onExportPdf={() => exportToPDF("playlist.pdf")}
             onOpenSaveDialog={playlistId ? saveExisting : openSaveDialog}
             isGeneticSorting={isGeneticSorting}
+            enqueuePlaylist={() =>
+              replacePlaylist(tracks, {
+                autoplay: true,
+                startIndex: 0,
+              })
+            }
           />
         </Flex>
       </Flex>

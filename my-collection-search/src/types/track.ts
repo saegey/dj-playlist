@@ -30,7 +30,7 @@ export type Track = {
   star_rating?: number;
   username?: string; // Username of the user who added this track
   _semanticScore?: number; // Optional semantic score for AI recommendations
-  friend_id: number
+  friend_id: number;
 };
 
 // Spotify track type based on API response
@@ -112,7 +112,7 @@ export type AppleMusicResult = {
 export interface Playlist {
   id: number;
   name: string;
-  tracks: string[];
+  tracks: { track_id: string; friend_id: number; position: number }[];
   created_at: string;
 }
 

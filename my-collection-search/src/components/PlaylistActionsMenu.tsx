@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button, Menu, Flex, Box } from "@chakra-ui/react";
-import { FiMoreVertical, FiSave } from "react-icons/fi";
+import { FiMoreVertical, FiPlay, FiSave } from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
 // import { MdOutlineClearAll } from "react-icons/md";
@@ -15,9 +15,8 @@ export interface PlaylistActionsMenuProps {
   onExportJson: () => void;
   onExportPdf: () => void;
   onOpenSaveDialog: () => void;
-  // onClear: () => void;
   isGeneticSorting?: boolean;
-}
+  enqueuePlaylist: () => void;}
 
 /**
  * Dumb, presentational component that renders the playlist actions menu.
@@ -30,7 +29,7 @@ export default function PlaylistActionsMenu({
   onExportJson,
   onExportPdf,
   onOpenSaveDialog,
-  // onClear,
+  enqueuePlaylist,
   isGeneticSorting,
 }: PlaylistActionsMenuProps) {
   return (
@@ -89,6 +88,17 @@ export default function PlaylistActionsMenu({
           </Menu.Item>
           <Menu.Item value="save" onSelect={onOpenSaveDialog}>
             <FiSave /> Save Playlist
+          </Menu.Item>
+          <Box
+            as="hr"
+            my={1}
+            borderColor="gray.200"
+            borderWidth={0}
+            borderTopWidth={1}
+          />
+
+           <Menu.Item value="enqueue" onSelect={enqueuePlaylist}>
+            <FiPlay /> Enqueue Playlist
           </Menu.Item>
           {/* <Menu.Item
             value="clear"
