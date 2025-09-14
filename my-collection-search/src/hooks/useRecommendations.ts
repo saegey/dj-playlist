@@ -31,10 +31,14 @@ function computeAverageEmbedding(list: TrackWithEmbedding[]): number[] | null {
  */
 export function useRecommendations() {
   const { client: meiliClient, ready } = useMeili();
-  const { username: selectedUsername } = useUsername();
+  const { friend: selectedFriend } = useUsername();
+  console.log("useRecommendations: selectedFriend =", selectedFriend);
 
   const getRecommendations = useCallback(
-    async (k: number = 25, playlist: TrackWithEmbedding[] = []): Promise<Track[]> => {
+    async (
+      k: number = 25,
+      playlist: TrackWithEmbedding[] = []
+    ): Promise<Track[]> => {
       const playlistAvgEmbedding = computeAverageEmbedding(playlist);
       if (!playlistAvgEmbedding || playlistAvgEmbedding.length === 0) return [];
       if (!ready || !meiliClient) return [];
@@ -43,9 +47,8 @@ export function useRecommendations() {
         const index = meiliClient.index("tracks");
         const playlistIds = playlist.map((t) => t.track_id);
         let filter = `NOT track_id IN [${playlistIds.join(",")}]`;
-        if (selectedUsername) {
-          const safeUser = selectedUsername.replace(/'/g, "''");
-          filter += ` AND username = '${safeUser}'`;
+        if (selectedFriend) {
+          filter += ` AND friend_id = '${selectedFriend.id}'`;
         }
         const results = await index.search(undefined, {
           vector: playlistAvgEmbedding,
@@ -58,7 +61,7 @@ export function useRecommendations() {
         return [];
       }
     },
-    [meiliClient, ready, selectedUsername]
+    [meiliClient, ready, selectedFriend]
   );
 
   return getRecommendations;

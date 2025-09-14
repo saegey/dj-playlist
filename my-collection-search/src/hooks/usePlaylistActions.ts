@@ -22,7 +22,6 @@ export function usePlaylistActions(playlistId?: number) {
         friend_id: number;
       }[]) || [];
     if (tracksPlaylist.length === 0) return [];
-    console.log("usePlaylistActions found", tracksPlaylist);
 
     const tracks = tracksPlaylist
       .map((t) => {
@@ -30,12 +29,6 @@ export function usePlaylistActions(playlistId?: number) {
       })
       .filter(Boolean) as Track[];
 
-    console.log(
-      "usePlaylistActions getTracks:",
-      tracks.length,
-      "out of",
-      tracksPlaylist.length
-    );
     return tracks;
   };
 

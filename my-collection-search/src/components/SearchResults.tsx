@@ -63,8 +63,6 @@ const SearchResults: React.FC = () => {
     limit: 20,
   });
 
-  console.log('Friends', friends)
-
   const lastResultRef = React.useRef<HTMLDivElement>(null);
   const observer = React.useRef<IntersectionObserver | null>(null);
 

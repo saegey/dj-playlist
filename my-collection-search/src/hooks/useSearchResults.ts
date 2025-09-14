@@ -155,7 +155,7 @@ export function useSearchResults({
   // Return track info instead of full track objects to force components to read from store
   const trackInfo = results.map((track) => ({
     trackId: track.track_id,
-    friendId: track.friend_id || 'default'
+    friendId: track.friend_id
   }));
 
   // --- Playlist counts (dependent query on unique IDs) ---

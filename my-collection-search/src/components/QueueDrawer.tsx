@@ -9,6 +9,7 @@ import {
   Button,
   EmptyState,
   VStack,
+  Container,
 } from "@chakra-ui/react";
 import { FiX, FiSave, FiTrash2, FiPlay } from "react-icons/fi";
 import { LuMusic } from "react-icons/lu";
@@ -45,8 +46,10 @@ export default function QueueDrawer({
   const { Dialog: SaveDialog, open: openSaveDialog } = useQueueSaveDialog();
 
   // Create track IDs array from playlist
-  const trackIds = React.useMemo(() => {
-    return playlist.map((track) => track.track_id);
+  const tracksPlaylist = React.useMemo(() => {
+    return playlist.map((track) => {
+      return { track_id: track.track_id, friend_id: track.friend_id };
+    });
   }, [playlist]);
 
   // Render function for queue item buttons
@@ -57,7 +60,7 @@ export default function QueueDrawer({
       const isCurrentTrack = idx === currentTrackIndex;
 
       return (
-        <Flex gap={1} align="center">
+        <Flex gap={1} alignItems="right">
           {!isCurrentTrack && (
             <Button
               size="xs"
@@ -159,9 +162,10 @@ export default function QueueDrawer({
               flexDirection="column"
               overflow="hidden"
               minH={0}
+              alignItems={"center"}
             >
               {playlist.length === 0 ? (
-               <Box
+                <Box
                   flex="1"
                   minH={0}
                   overflowY="auto"
@@ -183,26 +187,35 @@ export default function QueueDrawer({
                   </EmptyState.Root>
                 </Box>
               ) : (
-                <Box
-                  flex="1"
+                <Container
                   minH={0}
                   overflowY="auto"
                   maxW={["8xl", "2xl", "2xl"]}
                   pt={3}
+                  alignItems={"center"}
                 >
-                  <DraggableTrackList
-                    trackIds={trackIds}
-                    tracks={playlist}
-                    moveTrack={moveTrackInQueue}
-                    droppableId="queue-droppable"
-                    renderTrackButtons={renderQueueButtons}
-                    currentTrackIndex={currentTrackIndex}
-                    trackResultProps={{
-                      minimized: true,
-                    }}
-                  />
+                  <Flex
+                    p={[0, 3]}
+                    mb={2}
+                    flexDirection="column"
+                    flexGrow={1}
+                    minHeight={0}
+                    width={"100%"}
+                  >
+                    <DraggableTrackList
+                      tracksPlaylist={tracksPlaylist}
+                      tracks={playlist}
+                      moveTrack={moveTrackInQueue}
+                      droppableId="queue-droppable"
+                      renderTrackButtons={renderQueueButtons}
+                      currentTrackIndex={currentTrackIndex}
+                      trackResultProps={{
+                        minimized: true,
+                      }}
+                    />
+                  </Flex>
                   <Box h={{ base: "72px", md: "84px" }} />
-                </Box>
+                </Container>
               )}
             </Drawer.Body>
 

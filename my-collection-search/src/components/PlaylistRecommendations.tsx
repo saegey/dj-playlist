@@ -4,8 +4,9 @@ import React from "react";
 import { Box, Text, Button, Menu } from "@chakra-ui/react";
 import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
-import { FiMoreVertical } from "react-icons/fi";
+import { FiEdit, FiMoreVertical, FiPlus, FiPlusSquare } from "react-icons/fi";
 import { useRecommendations } from "@/hooks/useRecommendations";
+import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 export interface PlaylistRecommendationsProps {
   playlist: Track[];
@@ -22,6 +23,7 @@ export default function PlaylistRecommendations({
 }: PlaylistRecommendationsProps) {
   const [recs, setRecs] = React.useState<Track[]>([]);
   const getRecommendations = useRecommendations();
+  const { appendToQueue } = usePlaylistPlayer();
 
   React.useEffect(() => {
     let cancelled = false;
@@ -55,18 +57,27 @@ export default function PlaylistRecommendations({
             buttons={[
               <Menu.Root key="menu">
                 <Menu.Trigger asChild>
-                  <Button variant="plain" size={["xs", "sm", "md"]}>
+                  <Button variant="plain" size={["xs", "sm", "sm"]}>
                     <FiMoreVertical />
                   </Button>
                 </Menu.Trigger>
 
                 <Menu.Positioner>
                   <Menu.Content>
-                    <Menu.Item onSelect={() => onAddToPlaylist(rec)} value="add">
-                      Add to Playlist
+                    <Menu.Item
+                      onSelect={() => onAddToPlaylist(rec)}
+                      value="add"
+                    >
+                      <FiPlus /> Add to Playlist
                     </Menu.Item>
                     <Menu.Item onSelect={() => onEditTrack(rec)} value="edit">
-                      Edit Track
+                      <FiEdit /> Edit Track
+                    </Menu.Item>
+                    <Menu.Item
+                      onSelect={() => appendToQueue(rec)}
+                      value="queue"
+                    >
+                      <FiPlusSquare /> Add to Queue
                     </Menu.Item>
                   </Menu.Content>
                 </Menu.Positioner>

@@ -9,7 +9,6 @@ import {
   Button,
   Icon,
   RatingGroup,
-  Float,
   Badge,
   SimpleGrid,
 } from "@chakra-ui/react";
@@ -64,7 +63,7 @@ export default function TrackResult({
   // Minimized view (only render after mount to avoid hydration mismatch)
   if (minimized && !expanded && hasMounted) {
     return (
-      <Box borderWidth="1px" borderRadius="md" p={2} mb={2} position="relative">
+      <Box borderWidth="1px" borderRadius="md" p={3} mb={2} position="relative">
         <Flex alignItems="center" gap={2}>
           {/* Track summary (clickable to expand) */}
           <Box
@@ -208,10 +207,20 @@ export default function TrackResult({
           </Text>
         </Flex>
 
-        {/* Action menu */}
-        <Float mr={3} mt={3}>
+        {/* Action menu - top-right, expands left, stays within card */}
+        <Box
+          position="absolute"
+          top={0}
+          left={2}
+          right={0}
+          display="flex"
+          justifyContent="flex-end"
+          alignItems="center"
+          gap={2}
+          pointerEvents="auto"
+        >
           {buttons}
-        </Float>
+        </Box>
       </Flex>
       <Flex direction="column" flex={1}>
         <Flex alignItems="center" gap={2} mt={1}>

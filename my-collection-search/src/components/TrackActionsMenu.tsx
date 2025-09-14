@@ -21,7 +21,7 @@ export default function TrackActionsMenu({ track }: Props) {
   return (
     <Menu.Root>
       <Menu.Trigger asChild>
-        <Button variant="plain" size={["xs", "sm", "md"]}>
+        <Button variant="outline" size={["xs", "sm", "sm"]}>
           <FiMoreVertical />
         </Button>
       </Menu.Trigger>
