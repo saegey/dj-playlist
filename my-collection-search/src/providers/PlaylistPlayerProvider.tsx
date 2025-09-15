@@ -25,8 +25,6 @@ type PlaylistPlayerContextValue = {
   playlist: Track[];
   playlistLength: number;
   // Playback position
-  currentTime: number;
-  duration: number;
   seek: (time: number) => void;
 
   play: () => void;
@@ -49,9 +47,17 @@ type PlaylistPlayerContextValue = {
   audioElement: React.ReactNode;
 };
 
+type PlaylistPlayerTimeContextValue = {
+  currentTime: number;
+  duration: number;
+};
+
 const PlaylistPlayerContext = createContext<PlaylistPlayerContextValue | null>(
   null
 );
+
+const PlaylistPlayerTimeContext =
+  createContext<PlaylistPlayerTimeContextValue | null>(null);
 
 export function PlaylistPlayerProvider({
   children,
@@ -60,6 +66,35 @@ export function PlaylistPlayerProvider({
   children: React.ReactNode;
   initial?: Track[];
 }) {
+  const STORAGE_KEY = "mcs:player";
+  type MediaSessionLike = {
+    metadata: MediaMetadata | null;
+    playbackState?: "none" | "paused" | "playing";
+    setActionHandler?: (
+      action:
+        | "play"
+        | "pause"
+        | "previoustrack"
+        | "nexttrack"
+        | "stop"
+        | "seekbackward"
+        | "seekforward"
+        | "seekto",
+      handler:
+        | ((details?: { seekOffset?: number; seekTime?: number }) => void)
+        | null
+    ) => void;
+    setPositionState?: (state: {
+      duration: number;
+      playbackRate?: number;
+      position?: number;
+    }) => void;
+  };
+  const getMediaSession = React.useCallback((): MediaSessionLike | null => {
+    if (typeof navigator === "undefined") return null;
+    const nav = navigator as unknown as { mediaSession?: MediaSessionLike };
+    return nav.mediaSession ?? null;
+  }, []);
   const playlistRef = useRef<Track[]>(initial);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -72,6 +107,8 @@ export function PlaylistPlayerProvider({
   const [volume, setVolumeState] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const pendingSeekRef = useRef<number | null>(null);
+  const lastSavedSecondRef = useRef<number | null>(null);
 
   const play = useCallback(() => {
     const pl = playlistRef.current;
@@ -202,23 +239,27 @@ export function PlaylistPlayerProvider({
 
   const moveTrackInQueue = useCallback((fromIndex: number, toIndex: number) => {
     const playlist = playlistRef.current;
-    if (fromIndex < 0 || fromIndex >= playlist.length || 
-        toIndex < 0 || toIndex >= playlist.length || 
-        fromIndex === toIndex) {
+    if (
+      fromIndex < 0 ||
+      fromIndex >= playlist.length ||
+      toIndex < 0 ||
+      toIndex >= playlist.length ||
+      fromIndex === toIndex
+    ) {
       return;
     }
 
     const newPlaylist = [...playlist];
     const [movedTrack] = newPlaylist.splice(fromIndex, 1);
     newPlaylist.splice(toIndex, 0, movedTrack);
-    
+
     playlistRef.current = newPlaylist;
     setPlVersion((v) => v + 1);
 
     // Adjust current track index if needed
     setCurrentTrackIndex((currentIdx) => {
       if (currentIdx === null) return null;
-      
+
       if (currentIdx === fromIndex) {
         // The currently playing track was moved
         return toIndex;
@@ -242,14 +283,14 @@ export function PlaylistPlayerProvider({
 
     const newPlaylist = [...playlist];
     newPlaylist.splice(index, 1);
-    
+
     playlistRef.current = newPlaylist;
     setPlVersion((v) => v + 1);
 
     // Adjust current track index if needed
     setCurrentTrackIndex((currentIdx) => {
       if (currentIdx === null) return null;
-      
+
       if (currentIdx === index) {
         // The currently playing track was removed
         // If there are tracks after this one, play the next one (same index)
@@ -342,12 +383,26 @@ export function PlaylistPlayerProvider({
     }
   }, [volume, plVersion]);
 
-  // Time/duration listeners
+  // Time/duration listeners (also apply pending seek once metadata is available)
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
-    const onLoadedMetadata = () => setDuration(audio.duration || 0);
+    const onLoadedMetadata = () => {
+      setDuration(audio.duration || 0);
+      if (
+        pendingSeekRef.current != null &&
+        Number.isFinite(pendingSeekRef.current)
+      ) {
+        const dur = audio.duration || 0;
+        const clamped = Math.max(0, Math.min(dur || 0, pendingSeekRef.current));
+        try {
+          audio.currentTime = clamped;
+          setCurrentTime(clamped);
+        } catch {}
+        pendingSeekRef.current = null;
+      }
+    };
     const onDurationChange = () => setDuration(audio.duration || 0);
     audio.addEventListener("timeupdate", onTimeUpdate);
     audio.addEventListener("loadedmetadata", onLoadedMetadata);
@@ -398,6 +453,78 @@ export function PlaylistPlayerProvider({
     []
   );
 
+  // --- Persistence: hydrate from localStorage on mount ---
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw) as {
+        playlist?: Track[];
+        currentTrackIndex?: number | null;
+        isPlaying?: boolean;
+        volume?: number;
+        currentTime?: number;
+      };
+
+      if (Array.isArray(data.playlist)) {
+        playlistRef.current = data.playlist as Track[];
+        setPlVersion((v) => v + 1);
+      }
+      if (
+        typeof data.currentTrackIndex === "number" ||
+        data.currentTrackIndex === null
+      ) {
+        setCurrentTrackIndex(data.currentTrackIndex ?? null);
+      }
+      if (typeof data.isPlaying === "boolean") {
+        setIsPlaying(data.isPlaying);
+      }
+      if (typeof data.volume === "number") {
+        const vol = Math.max(0, Math.min(1, data.volume));
+        setVolumeState(vol);
+        if (audioRef.current) audioRef.current.volume = vol;
+      }
+      if (typeof data.currentTime === "number") {
+        pendingSeekRef.current = data.currentTime;
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  // Helper to persist full state
+  const persistState = useCallback(
+    (override?: Partial<{ currentTime: number }>) => {
+      try {
+        const payload = {
+          playlist: playlistRef.current,
+          currentTrackIndex,
+          isPlaying,
+          volume,
+          currentTime: override?.currentTime ?? currentTime,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch {
+        // ignore storage errors
+      }
+    },
+    [currentTrackIndex, isPlaying, volume, currentTime]
+  );
+
+  // Persist when structural state changes
+  useEffect(() => {
+    persistState();
+  }, [plVersion, currentTrackIndex, isPlaying, volume, persistState]);
+
+  // Persist playback position approximately once per second
+  useEffect(() => {
+    const sec = Math.floor(currentTime || 0);
+    if (lastSavedSecondRef.current === sec) return;
+    lastSavedSecondRef.current = sec;
+    persistState({ currentTime });
+  }, [currentTime, persistState]);
+
+  // Main context value excludes time-sensitive values to prevent constant re-renders
   const value = useMemo<PlaylistPlayerContextValue>(() => {
     // Reference plVersion so dependency is meaningful and value recomputes when playlist changes
     void plVersion;
@@ -408,8 +535,6 @@ export function PlaylistPlayerProvider({
       currentTrack, // use state here
       playlist: pl,
       playlistLength: pl.length,
-      currentTime,
-      duration,
       seek,
 
       play,
@@ -434,10 +559,8 @@ export function PlaylistPlayerProvider({
   }, [
     isPlaying,
     currentTrackIndex,
-    currentTrack, // included in deps
-    plVersion, // include plVersion so playlist updates trigger
-    currentTime,
-    duration,
+    currentTrack,
+    plVersion,
     seek,
     play,
     pause,
@@ -456,10 +579,131 @@ export function PlaylistPlayerProvider({
     audioElement,
   ]);
 
+  // Time-sensitive context value updates frequently
+  const timeValue = useMemo<PlaylistPlayerTimeContextValue>(
+    () => ({
+      currentTime,
+      duration,
+    }),
+    [currentTime, duration]
+  );
+
+  // Media Session API: expose metadata and bind hardware media keys
+  useEffect(() => {
+    const mediaSession = getMediaSession();
+    if (!mediaSession) return;
+
+    // Update metadata for lock screen / system UI
+    try {
+      if (currentTrack) {
+        mediaSession.metadata = new window.MediaMetadata({
+          title: currentTrack.title,
+          artist: currentTrack.artist,
+          album: currentTrack.album,
+          artwork: currentTrack.album_thumbnail
+            ? [
+                {
+                  src: currentTrack.album_thumbnail,
+                  sizes: "96x96",
+                  type: "image/png",
+                },
+              ]
+            : undefined,
+        });
+      } else {
+        mediaSession.metadata = null;
+      }
+    } catch {}
+
+    const getNow = () => audioRef.current?.currentTime ?? 0;
+
+    // Action handlers
+    try {
+      mediaSession.setActionHandler?.("play", play);
+      mediaSession.setActionHandler?.("pause", pause);
+      mediaSession.setActionHandler?.("previoustrack", playPrev);
+      mediaSession.setActionHandler?.("nexttrack", playNext);
+      mediaSession.setActionHandler?.("stop", stop);
+      mediaSession.setActionHandler?.(
+        "seekbackward",
+        (details?: { seekOffset?: number }) => {
+          const offset =
+            typeof details?.seekOffset === "number" ? details.seekOffset : 10;
+          seek(getNow() - offset);
+        }
+      );
+      mediaSession.setActionHandler?.(
+        "seekforward",
+        (details?: { seekOffset?: number }) => {
+          const offset =
+            typeof details?.seekOffset === "number" ? details.seekOffset : 10;
+          seek(getNow() + offset);
+        }
+      );
+      mediaSession.setActionHandler?.(
+        "seekto",
+        (details?: { seekTime?: number }) => {
+          if (typeof details?.seekTime === "number") {
+            seek(details.seekTime);
+          }
+        }
+      );
+    } catch {}
+
+    return () => {
+      try {
+        mediaSession.setActionHandler?.("play", null);
+        mediaSession.setActionHandler?.("pause", null);
+        mediaSession.setActionHandler?.("previoustrack", null);
+        mediaSession.setActionHandler?.("nexttrack", null);
+        mediaSession.setActionHandler?.("stop", null);
+        mediaSession.setActionHandler?.("seekbackward", null);
+        mediaSession.setActionHandler?.("seekforward", null);
+        mediaSession.setActionHandler?.("seekto", null);
+      } catch {}
+    };
+  }, [
+    currentTrack,
+    play,
+    pause,
+    playPrev,
+    playNext,
+    stop,
+    seek,
+    getMediaSession,
+  ]);
+
+  // Reflect playback state to OS controls
+  useEffect(() => {
+    const mediaSession = getMediaSession();
+    if (!mediaSession) return;
+    try {
+      mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    } catch {}
+  }, [isPlaying, getMediaSession]);
+
+  // Keep OS position state in sync
+  useEffect(() => {
+    const mediaSession = getMediaSession();
+    if (!mediaSession || typeof mediaSession.setPositionState !== "function")
+      return;
+    try {
+      if (Number.isFinite(duration) && duration > 0) {
+        mediaSession.setPositionState({
+          duration,
+          playbackRate: 1.0,
+          position: currentTime || 0,
+        });
+      }
+    } catch {}
+  }, [currentTime, duration, getMediaSession]);
+
   return (
     <PlaylistPlayerContext.Provider value={value}>
-      {children}
-      {audioElement}
+      <PlaylistPlayerTimeContext.Provider value={timeValue}>
+        {children}
+        {audioElement}
+      </PlaylistPlayerTimeContext.Provider>
     </PlaylistPlayerContext.Provider>
   );
 }
@@ -469,6 +713,15 @@ export function usePlaylistPlayer() {
   if (!ctx)
     throw new Error(
       "usePlaylistPlayer must be used within PlaylistPlayerProvider"
+    );
+  return ctx;
+}
+
+export function usePlaylistPlayerTime() {
+  const ctx = useContext(PlaylistPlayerTimeContext);
+  if (!ctx)
+    throw new Error(
+      "usePlaylistPlayerTime must be used within PlaylistPlayerProvider"
     );
   return ctx;
 }

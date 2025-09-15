@@ -1,6 +1,9 @@
+"use client";
+
 import React from "react";
 import { Box, Input, Text, InputGroup } from "@chakra-ui/react";
 import { LuSearch } from "react-icons/lu";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import TrackResultStore from "@/components/TrackResultStore";
 import UsernameSelect from "./UsernameSelect";
@@ -45,6 +48,9 @@ const TrackResultItem: React.FC<{
 };
 
 const SearchResults: React.FC = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
     showSpotifyUsernames: true,
@@ -96,6 +102,28 @@ const SearchResults: React.FC = () => {
     }, 300);
     return () => clearTimeout(handler);
   }, [debouncedValue, onQueryChange, query]);
+
+  // Hydrate query from URL (?q=...) on first mount
+  React.useEffect(() => {
+    const urlQ = searchParams?.get("q") ?? "";
+    if (urlQ && urlQ !== debouncedValue) {
+      setDebouncedValue(urlQ);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep URL in sync when effective query changes
+  React.useEffect(() => {
+    if (!pathname) return;
+    const params = new URLSearchParams(searchParams?.toString());
+    if (query && query.length > 0) {
+      params.set("q", query);
+    } else {
+      params.delete("q");
+    }
+    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    router.replace(newUrl);
+  }, [query, pathname, router, searchParams]);
 
   return (
     <Box>

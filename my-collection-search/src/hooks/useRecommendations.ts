@@ -32,7 +32,6 @@ function computeAverageEmbedding(list: TrackWithEmbedding[]): number[] | null {
 export function useRecommendations() {
   const { client: meiliClient, ready } = useMeili();
   const { friend: selectedFriend } = useUsername();
-  console.log("useRecommendations: selectedFriend =", selectedFriend);
 
   const getRecommendations = useCallback(
     async (

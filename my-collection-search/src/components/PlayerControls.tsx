@@ -7,7 +7,6 @@ import {
   Flex,
   HStack,
   IconButton,
-  Image,
   Text,
   VStack,
   Slider,
@@ -25,34 +24,9 @@ import {
 } from "react-icons/fi";
 import { Track } from "@/types/track";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
-
-const Artwork: React.FC<{ src?: string; alt?: string; size?: string }> = ({ 
-  src, 
-  alt, 
-  size = "48px" 
-}) => {
-  if (!src) {
-    return (
-      <Box
-        width={size}
-        height={size}
-        bg="bg.muted"
-        borderRadius="md"
-      />
-    );
-  }
-
-  return (
-    <Image
-      src={src || "/images/placeholder-artwork.png"}
-      alt={alt || "Artwork"}
-      boxSize={size}
-      objectFit="cover"
-      borderRadius="md"
-      borderWidth="1px"
-    />
-  );
-};
+import ProgressSlider from "@/components/player/ProgressSlider";
+import CompactProgressSlider from "@/components/player/CompactProgressSlider";
+import Artwork from "@/components/player/Artwork";
 
 interface PlayerControlsProps {
   /** Whether to show the queue button */
@@ -78,8 +52,6 @@ export default function PlayerControls({
     isPlaying,
     currentTrackIndex,
     currentTrack,
-    currentTime,
-    duration,
     seek,
     play,
     pause,
@@ -101,49 +73,10 @@ export default function PlayerControls({
   const canPrev = safeIndex !== null && safeIndex > 0;
   const canNext = safeIndex !== null && safeIndex < safeLen - 1;
 
-  const progress = useMemo(() => {
-    if (!duration || duration <= 0) return 0;
-    return Math.max(0, Math.min(100, (currentTime / duration) * 100));
-  }, [currentTime, duration]);
-
-  const fmt = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = Math.floor(secs % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
-
   return (
     <Box>
       {/* Playhead slider - only show if not compact */}
-      {!compact && (
-        <HStack gap={3} align="center" mb={2}>
-          <Text fontSize="xs" minW="36px" textAlign="right" color="fg.muted">
-            {fmt(currentTime || 0)}
-          </Text>
-          <Box flex="1">
-            <Slider.Root
-              width="100%"
-              value={[progress]}
-              onValueChange={(e) => {
-                const pct = e.value[0] ?? 0;
-                const target =
-                  (Math.max(0, Math.min(100, pct)) / 100) * (duration || 0);
-                if (Number.isFinite(target)) seek(target);
-              }}
-            >
-              <Slider.Control>
-                <Slider.Track>
-                  <Slider.Range />
-                </Slider.Track>
-                <Slider.Thumbs rounded="full" />
-              </Slider.Control>
-            </Slider.Root>
-          </Box>
-          <Text fontSize="xs" minW="36px" color="fg.muted">
-            {fmt(duration || 0)}
-          </Text>
-        </HStack>
-      )}
+      {!compact && <ProgressSlider seek={seek} />}
 
       {/* Mobile track info - only in compact mode */}
       {compact && (
@@ -155,18 +88,10 @@ export default function PlayerControls({
             minW={0}
             display={{ base: "flex", md: "none" }}
           >
-            <Text
-              fontWeight="semibold"
-              fontSize="sm"
-              maxW="100%"
-            >
+            <Text fontWeight="semibold" fontSize="sm" maxW="100%">
               {currentTrack ? currentTrack.title : "No track playing"}
             </Text>
-            <Text
-              color="fg.muted"
-              fontSize="xs"
-              maxW="100%"
-            >
+            <Text color="fg.muted" fontSize="xs" maxW="100%">
               {currentTrack ? currentTrack.artist : "—"}
             </Text>
           </VStack>
@@ -203,11 +128,7 @@ export default function PlayerControls({
             >
               {currentTrack ? currentTrack.title : "No track playing"}
             </Text>
-            <Text
-              color="fg.muted"
-              fontSize="xs"
-              maxW="40vw"
-            >
+            <Text color="fg.muted" fontSize="xs" maxW="40vw">
               {currentTrack ? currentTrack.artist : "—"}
             </Text>
           </VStack>
@@ -308,31 +229,7 @@ export default function PlayerControls({
       {/* Progress bar for compact mode */}
       {compact && (
         <Box mt={2}>
-          <Slider.Root
-            width="100%"
-            value={[progress]}
-            onValueChange={(e) => {
-              const pct = e.value[0] ?? 0;
-              const target =
-                (Math.max(0, Math.min(100, pct)) / 100) * (duration || 0);
-              if (Number.isFinite(target)) seek(target);
-            }}
-          >
-            <Slider.Control>
-              <Slider.Track height="2px">
-                <Slider.Range />
-              </Slider.Track>
-              <Slider.Thumbs rounded="full" />
-            </Slider.Control>
-          </Slider.Root>
-          <Flex justify="space-between" mt={1}>
-            <Text fontSize="xs" color="fg.muted">
-              {fmt(currentTime || 0)}
-            </Text>
-            <Text fontSize="xs" color="fg.muted">
-              {fmt(duration || 0)}
-            </Text>
-          </Flex>
+          <CompactProgressSlider seek={seek} />
         </Box>
       )}
     </Box>

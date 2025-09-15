@@ -2,7 +2,14 @@
 "use client";
 
 import { Friend } from "@/types/track";
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 type UsernameContextValue = {
   friend: Friend | null;
@@ -19,14 +26,89 @@ export function UsernameProvider({
   children: React.ReactNode;
   initialFriend?: Friend | null;
 }) {
-  const [friend, setFriend] = useState<Friend | null>(initialFriend);
+  const STORAGE_KEY = "mcs:selectedFriend";
+  const [friend, _setFriend] = useState<Friend | null>(initialFriend);
+
+  const persist = useCallback((f: Friend | null) => {
+    try {
+      if (f) localStorage.setItem(STORAGE_KEY, JSON.stringify(f));
+      else localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore storage errors (private mode, quota, etc.)
+    }
+  }, []);
+
+  const setFriend = useCallback(
+    (f: Friend | null) => {
+      _setFriend(f);
+      persist(f);
+    },
+    [persist]
+  );
+
+  const clearFriend = useCallback(() => setFriend(null), [setFriend]);
+
+  // Hydrate from localStorage on mount (unless initialFriend provided)
+  useEffect(() => {
+    if (initialFriend) {
+      _setFriend(initialFriend);
+      persist(initialFriend);
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as unknown;
+        if (
+          parsed &&
+          typeof parsed === "object" &&
+          "id" in parsed &&
+          "username" in parsed
+        ) {
+          _setFriend(parsed as Friend);
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync across tabs via the storage event
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key !== STORAGE_KEY) return;
+      try {
+        if (e.newValue) {
+          const parsed = JSON.parse(e.newValue) as unknown;
+          if (
+            parsed &&
+            typeof parsed === "object" &&
+            "id" in parsed &&
+            "username" in parsed
+          ) {
+            _setFriend(parsed as Friend);
+          } else {
+            _setFriend(null);
+          }
+        } else {
+          _setFriend(null);
+        }
+      } catch {
+        _setFriend(null);
+      }
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, []);
+
   const value = useMemo(
     () => ({
       friend,
       setFriend,
-      clearFriend: () => setFriend(null),
+      clearFriend,
     }),
-    [friend]
+    [friend, setFriend, clearFriend]
   );
 
   return (

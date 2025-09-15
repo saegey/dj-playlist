@@ -132,7 +132,7 @@ export default function QueueDrawer({
                     disabled={playlist.length === 0}
                   >
                     <FiSave />
-                    Save as Playlist
+                    Save
                   </Button>
                   <Button
                     size="sm"
@@ -142,7 +142,7 @@ export default function QueueDrawer({
                     colorPalette="red"
                   >
                     <FiTrash2 />
-                    Clear Queue
+                    Clear
                   </Button>
                   <Drawer.CloseTrigger asChild>
                     <Button size="sm" variant="ghost">
