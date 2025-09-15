@@ -207,7 +207,7 @@ export default function BulkNotesPage() {
               disabled={!selected.size}
             >
               <FiCopy />
-              Copy Prompt
+              Copy
             </Button>
           </Group>
         </SimpleGrid>

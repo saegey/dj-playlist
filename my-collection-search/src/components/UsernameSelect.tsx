@@ -3,11 +3,17 @@
 
 import * as React from "react";
 import {
-  Select,
+  Button,
+  Menu,
   Portal,
-  createListCollection,
   Spinner,
+  useBreakpointValue,
+  HStack,
+  Icon,
+  Box,
 } from "@chakra-ui/react";
+import type { ButtonProps } from "@chakra-ui/react";
+import { FiUser, FiX } from "react-icons/fi";
 import { useUsername } from "@/providers/UsernameProvider";
 import { Friend } from "@/types/track";
 
@@ -15,9 +21,9 @@ export type UsernameSelectProps = {
   usernames: Friend[];
   includeAllOption?: boolean;
   /** Chakra responsive size array is fine here */
-  size?: ("xs" | "sm" | "md" | "lg")[];
-  variant?: "subtle" | "outline";
-  width?: string;
+  size?: ButtonProps["size"] | ButtonProps["size"][];
+  variant?: ButtonProps["variant"] | ButtonProps["variant"][];
+  width?: string | number;
   /** Loading state for when usernames are being fetched */
   isLoading?: boolean;
   /** Text to show while loading */
@@ -48,71 +54,84 @@ export default function UsernameSelect({
   const { friend: ctxValue, setFriend: setCtxValue } = useUsername();
   const selectedFriend: Friend | null = value ?? (ctxValue as Friend | null);
 
-  const items = React.useMemo(
-    () =>
-      includeAllOption
-        ? [
-            { label: "All Libraries", value: "" },
-            ...usernames.map((u) => ({ label: u.username, value: String(u.id) })),
-          ]
-        : usernames.map((u) => ({ label: u.username, value: String(u.id) })),
-    [usernames, includeAllOption]
-  );
+  const buttonLabel = React.useMemo(() => {
+    if (isLoading) return loadingText;
+    if (selectedFriend) return selectedFriend.username;
+    if (includeAllOption) return "All Libraries";
+    return "Choose user library";
+  }, [isLoading, loadingText, selectedFriend, includeAllOption]);
 
-  const collection = React.useMemo(
-    () =>
-      createListCollection({
-        items,
-      }),
-    [items]
-  );
+  const handleSelect = (friend: Friend | null) => {
+    // External change only when selecting a friend (not All)
+    if (friend && onChange) onChange(friend.id);
+    setCtxValue(friend);
+  };
+
+  // Resolve responsive size/variant to a concrete token for Button
+  const resolvedSize = useBreakpointValue(
+    Array.isArray(size)
+      ? (size as ButtonProps["size"][])
+      : [size as ButtonProps["size"]]
+  ) as ButtonProps["size"] | undefined;
+  const resolvedVariant = useBreakpointValue(
+    Array.isArray(variant)
+      ? (variant as ButtonProps["variant"][])
+      : [variant as ButtonProps["variant"]]
+  ) as ButtonProps["variant"] | undefined;
 
   return (
-    <Select.Root
-      collection={collection}
-      value={selectedFriend?.id != null ? [String(selectedFriend.id)] : includeAllOption ? [""] : undefined}
-      onValueChange={(vals) => {
-        const idStr = vals.value[0] ?? "";
-        const idNum = idStr === "" ? null : Number(idStr);
-        // Fire external change with friend_id when available
-        if (onChange && idNum !== null && !Number.isNaN(idNum)) {
-          onChange(idNum);
-        }
-        // Update context with full Friend object (or null for All)
-        const friendObj = idNum === null ? null : usernames.find((u) => u.id === idNum) || null;
-        setCtxValue(friendObj);
-      }}
-      width={width}
-      size={size}
-      variant={variant}
-      disabled={isLoading && disableWhileLoading}
-      aria-busy={isLoading}
-    >
-      <Select.HiddenSelect />
-      <Select.Control>
-        <Select.Trigger>
-          <Select.ValueText
-            placeholder={isLoading ? loadingText : "Choose user library"}
-          />
-        </Select.Trigger>
-        <Select.IndicatorGroup>
-          {isLoading && <Spinner size="xs" mr={2} />}
-          <Select.Indicator />
-          <Select.ClearTrigger />
-        </Select.IndicatorGroup>
-      </Select.Control>
+    <Menu.Root>
+      <Menu.Trigger>
+        <Button
+          width={width}
+          size={resolvedSize}
+          variant={resolvedVariant}
+          disabled={isLoading && disableWhileLoading}
+          aria-busy={isLoading}
+          justifyContent="space-between"
+        >
+          <HStack w="100%" justify="space-between">
+            <HStack>
+              <Icon as={FiUser} />
+              {isLoading && <Spinner size="xs" />}
+              <Box>{buttonLabel}</Box>
+            </HStack>
+            {selectedFriend && (
+              <Icon
+                as={FiX}
+                aria-label="Clear selection"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleSelect(null);
+                }}
+                cursor="pointer"
+                color="fg.muted"
+              />
+            )}
+          </HStack>
+        </Button>
+      </Menu.Trigger>
       <Portal>
-        <Select.Positioner>
-          <Select.Content>
-            {items.map((item) => (
-              <Select.Item key={String(item.value)} item={item}>
-                {item.label}
-                <Select.ItemIndicator />
-              </Select.Item>
+        <Menu.Positioner>
+          <Menu.Content>
+            {includeAllOption && (
+              <Menu.Item value="all" onClick={() => handleSelect(null)}>
+                All Libraries
+              </Menu.Item>
+            )}
+            {usernames.map((u) => (
+              <Menu.Item
+                key={u.id}
+                value={String(u.id)}
+                onClick={() => handleSelect(u)}
+              >
+                {u.username}
+              </Menu.Item>
             ))}
-          </Select.Content>
-        </Select.Positioner>
+          </Menu.Content>
+        </Menu.Positioner>
       </Portal>
-    </Select.Root>
+    </Menu.Root>
   );
 }
