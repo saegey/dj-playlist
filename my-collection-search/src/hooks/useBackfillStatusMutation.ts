@@ -10,6 +10,7 @@ export type TrackStatusUpdate = {
   friend_id?: number; // enable precise store updates
   status?: TrackStatus;
   errorMsg?: string | null;
+  progress?: number;
 };
 
 export function useBackfillStatusMutation() {
@@ -34,6 +35,9 @@ export function useBackfillStatusMutation() {
         }
         if (update.errorMsg !== undefined) {
           storeUpdate.errorMsg = update.errorMsg ?? undefined;
+        }
+        if (update.progress !== undefined) {
+          storeUpdate.progress = update.progress;
         }
 
         // Determine friend_id: use provided, else find from store by track_id

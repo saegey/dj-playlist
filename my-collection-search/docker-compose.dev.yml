@@ -25,11 +25,14 @@ services:
       # Make file watching reliable in Docker on macOS/Windows
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
+      REDIS_URL: redis://redis:6379
+      ESSENTIA_API_URL: http://essentia:8001/analyze
       # Optional: adjust polling interval (ms)
       # WATCHPACK_POLLING_INTERVAL: "1000"
     depends_on:
       - db
       - meili
+      - redis
     volumes:
       # Mount source code for live reload
       - .:/app:delegated
@@ -100,6 +103,35 @@ services:
     ports:
       - "8002:8002"
 
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  worker:
+    build:
+      context: .
+    container_name: worker
+    environment:
+      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
+      MEILISEARCH_HOST: ${MEILISEARCH_HOST}
+      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY}
+      REDIS_URL: redis://redis:6379
+      ESSENTIA_API_URL: http://essentia:8001/analyze
+    depends_on:
+      - redis
+      - db
+      - meili
+      - essentia
+    volumes:
+      - .:/app:delegated
+      - /app/node_modules
+      - music_data:/app/audio
+    command: sh -c "npm install && npm run worker"
+
 volumes:
   db_data:
   meili_data:
@@ -107,3 +139,4 @@ volumes:
   db_dumps:
   discogs_exports:
   spotify_exports:
+  redis_data:

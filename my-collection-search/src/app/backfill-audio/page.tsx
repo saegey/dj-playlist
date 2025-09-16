@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Spinner, Text, Container } from "@chakra-ui/react";
+import { Spinner, Text, Container, Button, Box } from "@chakra-ui/react";
+import Link from "next/link";
+import { LuEye } from "react-icons/lu";
 
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useMeili } from "@/providers/MeiliProvider";
@@ -16,6 +18,7 @@ import { useSearchResults } from "@/hooks/useSearchResults";
 import { useBackfillStatusMutation } from "@/hooks/useBackfillStatusMutation";
 import { useVectorizeTrackMutation } from "@/hooks/useVectorizeTrackMutation";
 import { useAnalyzeTrackMutation } from "@/hooks/useAnalyzeTrackMutation";
+import { useAsyncAnalyzeTrackMutation } from "@/hooks/useAsyncAnalyzeTrackMutation";
 
 // BackfillTrack moved to components/backfill/types
 
@@ -35,6 +38,9 @@ export default function BackfillAudioPage() {
   const { mutate: updateStatus } = useBackfillStatusMutation();
   const { mutateAsync: vectorize } = useVectorizeTrackMutation();
   const { mutateAsync: analyze } = useAnalyzeTrackMutation();
+  const { mutateAsync: analyzeAsync } = useAsyncAnalyzeTrackMutation();
+
+  const [useAsyncProcessing, setUseAsyncProcessing] = useState(true);
 
   // Build Meili filter (AND conditions)
   const filter = useMemo(() => {
@@ -93,6 +99,7 @@ export default function BackfillAudioPage() {
     setSelected(new Set(pageTracks.map((t) => t.track_id)));
   const deselectAll = () => setSelected(new Set());
 
+
   const handleVectorizeSelected = async () => {
     setAnalyzing(true);
     for (const trackId of selected) {
@@ -124,60 +131,106 @@ export default function BackfillAudioPage() {
   const handleAnalyzeSelected = async () => {
     setAnalyzing(true);
 
-    for (const trackId of selected) {
-      updateStatus({ track_id: trackId, status: "analyzing", errorMsg: null });
-      try {
-        const track = pageTracks.find((t) => t.track_id === trackId);
-        if (!track) {
-          throw new Error(`Track ${trackId} not found in page data`);
-        }
-        if (!track.friend_id) {
-          throw new Error(`Track ${trackId} is missing friend_id`);
-        }
+    if (useAsyncProcessing) {
+      // Use async processing with queue
+      for (const trackId of selected) {
+        try {
+          const track = pageTracks.find((t) => t.track_id === trackId);
+          if (!track) {
+            throw new Error(`Track ${trackId} not found in page data`);
+          }
+          if (!track.friend_id) {
+            throw new Error(`Track ${trackId} is missing friend_id`);
+          }
 
-        const data = await analyze({
-          track_id: trackId,
-          friend_id: track.friend_id,
-          apple_music_url: track.apple_music_url,
-          youtube_url: track.youtube_url,
-          soundcloud_url: track.soundcloud_url,
-          spotify_url: track.spotify_url,
-        });
+          await analyzeAsync({
+            track_id: trackId,
+            friend_id: track.friend_id,
+            apple_music_url: track.apple_music_url,
+            youtube_url: track.youtube_url,
+            soundcloud_url: track.soundcloud_url,
+            spotify_url: track.spotify_url,
+            preferred_downloader: 'spotdl' // Use spotdl for better quality
+          });
 
-        saveTrack({
-          friend_id: track.friend_id,
-          track_id: trackId,
-          bpm:
-            typeof data.rhythm?.bpm === "number"
-              ? Number(Math.round(data.rhythm.bpm))
-              : undefined,
-          key:
-            data.tonal?.key_edma?.key && data.tonal?.key_edma?.scale
-              ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
-              : undefined,
-          danceability:
-            typeof data.rhythm?.danceability === "number"
-              ? Math.round(data.rhythm.danceability * 1000) / 1000
-              : undefined,
-          duration_seconds:
-            typeof data.metadata?.audio_properties?.length === "number"
-              ? Math.round(data.metadata.audio_properties.length)
-              : undefined,
-          // mood_happy: data.mood_happy,
-          // mood_sad: data.mood_sad,
-          // mood_relaxed: data.mood_relaxed,
-          // mood_aggressive: data.mood_aggressive,
-        });
-        updateStatus({ track_id: trackId, status: "success", errorMsg: null });
-      } catch (err) {
+          // Show enqueued status
+          updateStatus({
+            track_id: trackId,
+            status: "enqueued",
+            errorMsg: null,
+          });
+        } catch (err) {
+          updateStatus({
+            track_id: trackId,
+            status: "error",
+            errorMsg:
+              err && typeof err === "object" && "message" in err
+                ? String((err as { message?: unknown }).message)
+                : "Unknown error",
+          });
+        }
+      }
+    } else {
+      // Fallback to synchronous processing
+      for (const trackId of selected) {
         updateStatus({
           track_id: trackId,
-          status: "error",
-          errorMsg:
-            err && typeof err === "object" && "message" in err
-              ? String((err as { message?: unknown }).message)
-              : "Unknown error",
+          status: "analyzing",
+          errorMsg: null,
         });
+        try {
+          const track = pageTracks.find((t) => t.track_id === trackId);
+          if (!track) {
+            throw new Error(`Track ${trackId} not found in page data`);
+          }
+          if (!track.friend_id) {
+            throw new Error(`Track ${trackId} is missing friend_id`);
+          }
+
+          const data = await analyze({
+            track_id: trackId,
+            friend_id: track.friend_id,
+            apple_music_url: track.apple_music_url,
+            youtube_url: track.youtube_url,
+            soundcloud_url: track.soundcloud_url,
+            spotify_url: track.spotify_url,
+          });
+
+          saveTrack({
+            friend_id: track.friend_id,
+            track_id: trackId,
+            bpm:
+              typeof data.rhythm?.bpm === "number"
+                ? Number(Math.round(data.rhythm.bpm))
+                : undefined,
+            key:
+              data.tonal?.key_edma?.key && data.tonal?.key_edma?.scale
+                ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
+                : undefined,
+            danceability:
+              typeof data.rhythm?.danceability === "number"
+                ? Math.round(data.rhythm.danceability * 1000) / 1000
+                : undefined,
+            duration_seconds:
+              typeof data.metadata?.audio_properties?.length === "number"
+                ? Math.round(data.metadata.audio_properties.length)
+                : undefined,
+          });
+          updateStatus({
+            track_id: trackId,
+            status: "success",
+            errorMsg: null,
+          });
+        } catch (err) {
+          updateStatus({
+            track_id: trackId,
+            status: "error",
+            errorMsg:
+              err && typeof err === "object" && "message" in err
+                ? String((err as { message?: unknown }).message)
+                : "Unknown error",
+          });
+        }
       }
     }
     setAnalyzing(false);
@@ -186,7 +239,18 @@ export default function BackfillAudioPage() {
   return (
     <>
       <Container>
-        {/* Pagination UI */}
+        {/* Job Queue Link */}
+        <Box mb={4} display="flex" justifyContent="flex-end">
+          <Link href="/jobs">
+            <Button
+              variant="outline"
+              size="sm"
+            >
+              <LuEye />
+              View Job Queue
+            </Button>
+          </Link>
+        </Box>
 
         <BackfillFilters
           friends={usernames}
@@ -198,6 +262,8 @@ export default function BackfillAudioPage() {
           showMissingVectors={showMissingVectors}
           setShowMissingVectors={setShowMissingVectors}
           analyzing={analyzing}
+          useAsyncProcessing={useAsyncProcessing}
+          setUseAsyncProcessing={setUseAsyncProcessing}
         />
 
         {/* ActionBar appears when items are selected */}

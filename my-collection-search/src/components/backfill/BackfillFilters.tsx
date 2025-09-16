@@ -16,6 +16,8 @@ type Props = {
   showMissingVectors: boolean;
   setShowMissingVectors: (v: boolean) => void;
   analyzing: boolean;
+  useAsyncProcessing?: boolean;
+  setUseAsyncProcessing?: (v: boolean) => void;
 };
 
 export default function BackfillFilters({
@@ -28,9 +30,11 @@ export default function BackfillFilters({
   showMissingVectors,
   setShowMissingVectors,
   analyzing,
+  useAsyncProcessing,
+  setUseAsyncProcessing,
 }: Props) {
   return (
-    <SimpleGrid columns={[1, null, 5]} gap={4} mt={3} mb={8}>
+    <SimpleGrid columns={[1, null, 6]} gap={4} mt={3} mb={8}>
       <InputGroup startElement={<LuSearch size={16} />}>
         <Input
           type="text"
@@ -69,6 +73,19 @@ export default function BackfillFilters({
         isLoading={usernamesLoading}
         loadingText="Loading usernames..."
       />
+      {setUseAsyncProcessing && (
+        <Switch.Root
+          checked={useAsyncProcessing}
+          onCheckedChange={(e) => setUseAsyncProcessing(e.checked)}
+        >
+          <Switch.Label>Async Processing</Switch.Label>
+          <Switch.HiddenInput />
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+          <Switch.Label />
+        </Switch.Root>
+      )}
     </SimpleGrid>
   );
 }
