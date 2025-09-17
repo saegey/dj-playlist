@@ -1,41 +1,16 @@
-# Use Node base image
-FROM node:20-bullseye
+# Use Node base image with Debian Bookworm (Python 3.11)
+FROM node:20-bookworm
 
 # Install system dependencies
 RUN apt-get update && \
   apt-get install -y wget gnupg2 && \
-  echo "deb http://apt.postgresql.org/pub/repos/apt bullseye-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
+  echo "deb http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
   wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
-  apt-get update && \ 
+  apt-get update && \
   apt-get install -y \
-  ffmpeg \
-  python3 \
-  python3-pip \
   git \
-  atomicparsley \
   postgresql-client-15 \
   && rm -rf /var/lib/apt/lists/*
-
-# Install youtube-dl
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt || echo "pip failed, ignoring"
-
-# Install Freyr
-RUN npm install -g git+https://github.com/miraclx/freyr-js.git
-
-# --- Essentia ---
-# Building Essentia from source is complex.
-# You may need to clone and build if you need advanced analysis.
-# Example placeholder if you want to install:
-# RUN git clone https://github.com/MTG/essentia.git \
-#   && cd essentia \
-#   && git submodule update --init --recursive \
-#   && mkdir build \
-#   && cd build \
-#   && cmake .. \
-#   && make -j$(nproc) \
-#   && make install
 
 # Copy app code
 WORKDIR /app

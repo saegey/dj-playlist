@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getJobStatus, QUEUE_NAMES, QueueType } from "@/queues/audioQueue";
+import { redisJobService } from "@/services/redisJobService";
 
 export async function GET(
   request: Request,
@@ -7,8 +7,6 @@ export async function GET(
 ) {
   try {
     const { jobId } = await params;
-    const { searchParams } = new URL(request.url);
-    const queueName = searchParams.get("queue") || QUEUE_NAMES.DOWNLOAD_AUDIO;
 
     if (!jobId) {
       return NextResponse.json(
@@ -17,15 +15,7 @@ export async function GET(
       );
     }
 
-    // Validate queue name
-    if (!Object.values(QUEUE_NAMES).includes(queueName as QueueType)) {
-      return NextResponse.json(
-        { error: "Invalid queue name" },
-        { status: 400 }
-      );
-    }
-
-    const jobStatus = await getJobStatus(jobId, queueName);
+    const jobStatus = await redisJobService.getJobStatus(jobId);
 
     if (!jobStatus) {
       return NextResponse.json(
@@ -34,17 +24,23 @@ export async function GET(
       );
     }
 
+    // Convert Redis format to expected format
     return NextResponse.json({
-      id: jobStatus.id,
-      name: jobStatus.name,
-      state: jobStatus.state,
+      id: jobStatus.job_id,
+      name: "download-audio",
+      state: jobStatus.status === 'queued' ? 'waiting' :
+             jobStatus.status === 'processing' ? 'active' :
+             jobStatus.status,
       progress: jobStatus.progress || 0,
-      data: jobStatus.data,
-      returnvalue: jobStatus.returnvalue,
-      finishedOn: jobStatus.finishedOn,
-      failedReason: jobStatus.failedReason,
-      attemptsMade: jobStatus.attemptsMade,
-      processedOn: jobStatus.processedOn,
+      data: {
+        track_id: jobStatus.track_id,
+        friend_id: jobStatus.friend_id,
+      },
+      returnvalue: jobStatus.result,
+      finishedOn: jobStatus.status === 'completed' || jobStatus.status === 'failed' ? jobStatus.updated_at : undefined,
+      failedReason: jobStatus.error,
+      attemptsMade: 1,
+      processedOn: jobStatus.status === 'processing' || jobStatus.status === 'completed' || jobStatus.status === 'failed' ? jobStatus.updated_at : undefined,
     });
 
   } catch (error) {

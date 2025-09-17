@@ -1,12 +1,5 @@
 import { NextResponse } from "next/server";
-
-import { getDownloadQueue, getAnalyzeQueue } from "@/queues/audioQueue";
-import { AnalysisResult } from "@/services/analysisService";
-
-export type JobReturnValue =
-  | { success: true; analysisResult?: AnalysisResult; local_audio_url?: string }
-  | { success: false; error?: string }
-  | undefined;
+import { redisJobService } from "@/services/redisJobService";
 
 export type JobData = {
   track_id: string;
@@ -23,7 +16,6 @@ export interface JobInfo {
   state: string;
   progress: number;
   data: JobData;
-  returnvalue?: JobReturnValue;
   finishedOn?: number;
   failedReason?: string;
   attemptsMade: number;
@@ -33,14 +25,7 @@ export interface JobInfo {
 
 export async function DELETE() {
   try {
-    const downloadQueue = getDownloadQueue();
-    const analyzeQueue = getAnalyzeQueue();
-
-    // Clear all jobs from both queues
-    await Promise.all([
-      downloadQueue.obliterate({ force: true }),
-      analyzeQueue.obliterate({ force: true }),
-    ]);
+    await redisJobService.clearAllJobs();
 
     return NextResponse.json({
       success: true,
@@ -58,125 +43,48 @@ export async function DELETE() {
 
 export async function GET() {
   try {
-    const downloadQueue = getDownloadQueue();
-    const analyzeQueue = getAnalyzeQueue();
+    const jobs = await redisJobService.getAllJobs();
+    const summary = await redisJobService.getJobSummary();
 
-    // Get jobs from both queues (increased limits to see more jobs)
-    const [downloadJobs, analyzeJobs] = await Promise.all([
-      Promise.all([
-        downloadQueue.getWaiting(),
-        downloadQueue.getActive(),
-        downloadQueue.getCompleted(0, 100), // Show more completed jobs
-        downloadQueue.getFailed(0, 100), // Show more failed jobs
-      ]),
-      Promise.all([
-        analyzeQueue.getWaiting(),
-        analyzeQueue.getActive(),
-        analyzeQueue.getCompleted(0, 100),
-        analyzeQueue.getFailed(0, 100),
-      ]),
-    ]);
-
-    // Format download jobs
-    const allDownloadJobs = [
-      ...downloadJobs[0], // waiting
-      ...downloadJobs[1], // active
-      ...downloadJobs[2], // completed
-      ...downloadJobs[3], // failed
-    ];
-
-    // Format analyze jobs
-    const allAnalyzeJobs = [
-      ...analyzeJobs[0], // waiting
-      ...analyzeJobs[1], // active
-      ...analyzeJobs[2], // completed
-      ...analyzeJobs[3], // failed
-    ];
-
-    // Convert to our JobInfo format
-    const formatJob = (
-      job: {
-        id: string;
-        name: string;
-        data: JobData;
-        progress?: number;
-        returnvalue?: JobReturnValue;
-        finishedOn?: number;
-        failedReason?: string;
-        attemptsMade?: number;
-        processedOn?: number;
+    // Convert Redis JobStatus to our JobInfo format
+    const formattedJobs: JobInfo[] = jobs.map((job) => ({
+      id: job.job_id,
+      name: "download-audio",
+      state:
+        job.status === "queued"
+          ? "waiting"
+          : job.status === "processing"
+          ? "active"
+          : job.status,
+      progress: job.progress,
+      data: {
+        track_id: job.track_id,
+        friend_id: job.friend_id,
       },
-      queue: string
-    ): JobInfo => ({
-      id: job.id,
-      name: job.name,
-      state: job.finishedOn
-        ? job.failedReason
-          ? "failed"
-          : "completed"
-        : job.processedOn
-        ? "active"
-        : "waiting",
-      progress: job.progress || 0,
-      data: job.data,
-      returnvalue: job.returnvalue,
-      finishedOn: job.finishedOn,
-      failedReason: job.failedReason,
-      attemptsMade: job.attemptsMade || 0,
-      processedOn: job.processedOn,
-      queue,
-    });
-
-    const formattedDownloadJobs = allDownloadJobs.map((job) =>
-      formatJob(
-        {
-          id: job.id ?? "",
-          name: job.name ?? "",
-          data: job.data,
-          progress: typeof job.progress === "number" ? job.progress : Number(job.progress) || 0,
-          returnvalue: job.returnvalue,
-          finishedOn: job.finishedOn,
-          failedReason: job.failedReason,
-          attemptsMade: job.attemptsMade,
-          processedOn: job.processedOn,
-        },
-        "download"
-      )
-    );
-    const formattedAnalyzeJobs = allAnalyzeJobs.map((job) =>
-      formatJob(
-        {
-          id: job.id ?? "",
-          name: job.name ?? "",
-          data: job.data,
-          progress: typeof job.progress === "number" ? job.progress : Number(job.progress) || 0,
-          returnvalue: job.returnvalue,
-          finishedOn: job.finishedOn,
-          failedReason: job.failedReason,
-          attemptsMade: job.attemptsMade,
-          processedOn: job.processedOn,
-        },
-        "analyze"
-      )
-    );
-
-    // Combine and sort by most recent first
-    const allJobs = [...formattedDownloadJobs, ...formattedAnalyzeJobs].sort(
-      (a, b) => {
-        const aTime = a.finishedOn || a.processedOn || Date.now();
-        const bTime = b.finishedOn || b.processedOn || Date.now();
-        return bTime - aTime;
-      }
-    );
+      returnvalue: job.result,
+      finishedOn:
+        job.status === "completed" || job.status === "failed"
+          ? job.updated_at
+          : undefined,
+      failedReason: job.error,
+      attemptsMade: 1, // Default for now
+      processedOn:
+        job.status === "processing" ||
+        job.status === "completed" ||
+        job.status === "failed"
+          ? job.updated_at
+          : undefined,
+      queue: "download",
+    }));
 
     return NextResponse.json({
-      jobs: allJobs,
+      jobs: formattedJobs,
       summary: {
-        total: allJobs.length,
-        waiting: allJobs.filter((j) => j.state === "waiting").length,
-        active: allJobs.filter((j) => j.state === "active").length,
-        completed: allJobs.filter((j) => j.state === "completed").length,
-        failed: allJobs.filter((j) => j.state === "failed").length,
+        total: summary.total,
+        waiting: summary.queued,
+        active: summary.processing,
+        completed: summary.completed,
+        failed: summary.failed,
       },
     });
   } catch (error) {

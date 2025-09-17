@@ -52,73 +52,64 @@ export class AudioService {
 
     let filePath: string | null = null;
 
-    // If a preferred downloader is specified, try that first for applicable URLs
-    if (preferred_downloader && spotify_url) {
+    // 1. Prefer SpotDL with Apple Music URL if present
+    if (apple_music_url) {
+      console.log(`[AudioService] Trying SpotDL with Apple Music URL: ${apple_music_url}`);
+      try {
+        filePath = await this.downloadFromSpotDL(apple_music_url);
+      } catch (spotdlAppleErr) {
+        console.warn("SpotDL Apple Music download failed, will try fallback downloaders.", spotdlAppleErr);
+      }
+    }
+
+    // 2. If a preferred downloader is specified, try that for Spotify
+    if (!filePath && preferred_downloader && spotify_url) {
       if (preferred_downloader === "spotdl") {
-        console.log(
-          `Using preferred downloader SpotDL for Spotify: ${spotify_url}`
-        );
+        console.log(`Using preferred downloader SpotDL for Spotify: ${spotify_url}`);
         try {
           filePath = await this.downloadFromSpotDL(spotify_url);
         } catch (spotdlErr) {
-          console.warn(
-            "SpotDL download failed, will try fallback downloaders.",
-            spotdlErr
-          );
+          console.warn("SpotDL download failed, will try fallback downloaders.", spotdlErr);
         }
       } else if (preferred_downloader === "freyr") {
-        console.log(
-          `Using preferred downloader Freyr for Spotify: ${spotify_url}`
-        );
+        console.log(`Using preferred downloader Freyr for Spotify: ${spotify_url}`);
         try {
           filePath = await this.downloadFromSpotify(spotify_url);
         } catch (freyrErr) {
-          console.warn(
-            "Freyr download failed, will try fallback downloaders.",
-            freyrErr
-          );
+          console.warn("Freyr download failed, will try fallback downloaders.", freyrErr);
         }
       }
     }
 
-    // Fallback to original priority order if preferred downloader failed or wasn't specified
+    // 3. Fallback to original priority order if above failed
 
-    // Try Apple Music first (only freyr supports this)
-    if (!filePath && apple_music_url && preferred_downloader !== "spotdl") {
-      console.log(`Downloading from Apple Music: ${apple_music_url}`);
+    // Try Apple Music with Freyr if SpotDL failed
+    if (!filePath && apple_music_url) {
+      console.log(`Downloading from Apple Music (Freyr): ${apple_music_url}`);
       try {
         filePath = await this.downloadFromAppleMusic(apple_music_url);
       } catch (appleErr) {
-        console.warn(
-          "Apple Music download failed, will try next source.",
-          appleErr
-        );
+        console.warn("Apple Music (Freyr) download failed, will try next source.", appleErr);
       }
     }
 
-    // Try Spotify if Apple failed (use freyr if spotdl wasn't already tried)
+    // Try Spotify with Freyr if SpotDL wasn't already tried
     if (!filePath && spotify_url && preferred_downloader !== "spotdl") {
-      console.log(`Downloading from Spotify: ${spotify_url}`);
+      console.log(`Downloading from Spotify (Freyr): ${spotify_url}`);
       try {
         filePath = await this.downloadFromSpotify(spotify_url);
       } catch (spotifyErr) {
-        console.warn(
-          "Spotify download failed, will try next source.",
-          spotifyErr
-        );
+        console.warn("Spotify (Freyr) download failed, will try next source.", spotifyErr);
       }
     }
 
-    // Try Spotify with SpotDL if freyr wasn't already tried
+    // Try Spotify with SpotDL if Freyr wasn't already tried
     if (!filePath && spotify_url && preferred_downloader !== "freyr") {
-      console.log(`Downloading from Spotify with SpotDL: ${spotify_url}`);
+      console.log(`Downloading from Spotify (SpotDL): ${spotify_url}`);
       try {
         filePath = await this.downloadFromSpotDL(spotify_url);
       } catch (spotdlErr) {
-        console.warn(
-          "SpotDL download failed, will try next source.",
-          spotdlErr
-        );
+        console.warn("Spotify (SpotDL) download failed, will try next source.", spotdlErr);
       }
     }
 
@@ -138,18 +129,12 @@ export class AudioService {
       try {
         filePath = await this.downloadFromSoundCloud(soundcloud_url);
       } catch (scErr) {
-        throw new Error(
-          `SoundCloud download failed: ${
-            scErr instanceof Error ? scErr.message : String(scErr)
-          }`
-        );
+        throw new Error(`SoundCloud download failed: ${scErr instanceof Error ? scErr.message : String(scErr)}`);
       }
     }
 
     if (!filePath) {
-      throw new Error(
-        "No valid audio file could be downloaded from any source."
-      );
+      throw new Error("No valid audio file could be downloaded from any source.");
     }
 
     // Convert to wav and move files

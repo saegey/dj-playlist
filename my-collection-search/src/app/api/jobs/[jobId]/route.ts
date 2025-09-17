@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDownloadQueue, getAnalyzeQueue } from "@/queues/audioQueue";
+import { redisJobService } from "@/services/redisJobService";
 
 export async function GET(
   request: Request,
@@ -15,45 +15,36 @@ export async function GET(
       );
     }
 
-    // Try to find the job in both queues
-    const downloadQueue = getDownloadQueue();
-    const analyzeQueue = getAnalyzeQueue();
+    const jobStatus = await redisJobService.getJobStatus(jobId);
 
-    let job = await downloadQueue.getJob(jobId);
-    let queueType = "download";
-
-    if (!job) {
-      job = await analyzeQueue.getJob(jobId);
-      queueType = "analyze";
-    }
-
-    if (!job) {
+    if (!jobStatus) {
       return NextResponse.json(
         { error: "Job not found" },
         { status: 404 }
       );
     }
 
-    // Get job state
-    const state = await job.getState();
-
     const jobDetails = {
-      id: job.id,
-      name: job.name,
-      state,
-      queue: queueType,
-      data: job.data,
-      progress: job.progress || 0,
-      returnvalue: job.returnvalue,
-      finishedOn: job.finishedOn,
-      processedOn: job.processedOn,
-      failedReason: job.failedReason,
-      attemptsMade: job.attemptsMade || 0,
-      delay: job.delay,
-      timestamp: job.timestamp,
-      opts: job.opts,
-      // Add logs if available
-      logs: job.log || [],
+      id: jobStatus.job_id,
+      name: "download-audio",
+      state: jobStatus.status === 'queued' ? 'waiting' :
+             jobStatus.status === 'processing' ? 'active' :
+             jobStatus.status,
+      queue: "download",
+      data: {
+        track_id: jobStatus.track_id,
+        friend_id: jobStatus.friend_id,
+      },
+      progress: jobStatus.progress || 0,
+      returnvalue: jobStatus.result,
+      finishedOn: jobStatus.status === 'completed' || jobStatus.status === 'failed' ? jobStatus.updated_at : undefined,
+      processedOn: jobStatus.status === 'processing' || jobStatus.status === 'completed' || jobStatus.status === 'failed' ? jobStatus.updated_at : undefined,
+      failedReason: jobStatus.error,
+      attemptsMade: 1,
+      delay: 0,
+      timestamp: jobStatus.created_at,
+      opts: {},
+      logs: [],
     };
 
     return NextResponse.json(jobDetails);

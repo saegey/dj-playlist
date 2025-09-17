@@ -1,26 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getDownloadEvents,
-  getAnalyzeEvents,
-  QUEUE_NAMES,
-  QueueType,
-} from "@/queues/audioQueue";
+import { redisJobService } from "@/services/redisJobService";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
   const { jobId } = await params;
-  const { searchParams } = new URL(request.url);
-  const queueName = searchParams.get("queue") || QUEUE_NAMES.DOWNLOAD_AUDIO;
 
   if (!jobId) {
     return NextResponse.json({ error: "Job ID is required" }, { status: 400 });
-  }
-
-  // Validate queue name
-  if (!Object.values(QUEUE_NAMES).includes(queueName as QueueType)) {
-    return NextResponse.json({ error: "Invalid queue name" }, { status: 400 });
   }
 
   // Set up SSE response
@@ -28,14 +16,10 @@ export async function GET(
 
   const readable = new ReadableStream({
     start(controller) {
-      console.log(`Starting SSE stream for job ${jobId} in queue ${queueName}`);
-
-      const events =
-        queueName === QUEUE_NAMES.DOWNLOAD_AUDIO
-          ? getDownloadEvents()
-          : getAnalyzeEvents();
+      console.log(`Starting SSE stream for job ${jobId}`);
 
       let isCompleted = false;
+      let pollInterval = undefined as undefined | NodeJS.Timeout;
 
       // Helper to send SSE data
       const sendEvent = (eventType: string, data: unknown) => {
@@ -49,36 +33,59 @@ export async function GET(
       const closeStream = () => {
         if (!isCompleted) {
           isCompleted = true;
+          if (pollInterval) clearInterval(pollInterval);
           sendEvent("complete", { message: "Stream completed" });
           controller.close();
         }
       };
 
-      // Listen for job progress
-      events.on("progress", ({ jobId: eventJobId, data: progress }) => {
-        if (eventJobId === jobId && !isCompleted) {
-          sendEvent("progress", { jobId: eventJobId, progress });
-        }
-      });
+      // Poll job status every 2 seconds
+      const pollJobStatus = async () => {
+        if (isCompleted) return;
 
-      // Listen for job completion
-      events.on("completed", ({ jobId: eventJobId, returnvalue }) => {
-        if (eventJobId === jobId && !isCompleted) {
-          sendEvent("completed", { jobId: eventJobId, result: returnvalue });
+        try {
+          const jobStatus = await redisJobService.getJobStatus(jobId);
+
+          if (!jobStatus) {
+            sendEvent("error", { jobId, error: "Job not found" });
+            closeStream();
+            return;
+          }
+
+          // Send progress update
+          sendEvent("progress", {
+            jobId,
+            progress: jobStatus.progress,
+            status: jobStatus.status,
+          });
+
+          // Check if job is completed or failed
+          if (jobStatus.status === "completed") {
+            sendEvent("completed", {
+              jobId,
+              result: jobStatus.result,
+            });
+            closeStream();
+          } else if (jobStatus.status === "failed") {
+            sendEvent("failed", {
+              jobId,
+              error: jobStatus.error,
+            });
+            closeStream();
+          }
+        } catch (error) {
+          console.error(`Error polling job ${jobId}:`, error);
+          sendEvent("error", { jobId, error: "Failed to get job status" });
           closeStream();
         }
-      });
-
-      // Listen for job failure
-      events.on("failed", ({ jobId: eventJobId, failedReason }) => {
-        if (eventJobId === jobId && !isCompleted) {
-          sendEvent("failed", { jobId: eventJobId, error: failedReason });
-          closeStream();
-        }
-      });
+      };
 
       // Send initial connection event
-      sendEvent("connected", { jobId, queue: queueName });
+      sendEvent("connected", { jobId });
+
+      // Start polling
+      pollJobStatus(); // Initial poll
+      pollInterval = setInterval(pollJobStatus, 2000); // Poll every 2 seconds
 
       // Handle client disconnect
       request.signal.addEventListener("abort", () => {
@@ -96,6 +103,7 @@ export async function GET(
       const originalClose = controller.close.bind(controller);
       controller.close = () => {
         clearTimeout(timeout);
+        if (pollInterval) clearInterval(pollInterval);
         originalClose();
       };
     },

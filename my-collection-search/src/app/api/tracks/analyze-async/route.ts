@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addDownloadJob, JOB_PRIORITIES } from "@/queues/audioQueue";
+import { redisJobService } from "@/services/redisJobService";
 
 export async function POST(request: Request) {
   try {
@@ -33,18 +33,15 @@ export async function POST(request: Request) {
     console.log(`Queueing download job for track ${track_id}`);
 
     // Add job to download queue
-    const jobId = await addDownloadJob(
-      {
-        track_id,
-        friend_id: parseInt(friend_id, 10),
-        apple_music_url,
-        spotify_url,
-        youtube_url,
-        soundcloud_url,
-        preferred_downloader
-      },
-      JOB_PRIORITIES.NORMAL
-    );
+    const jobId = await redisJobService.createDownloadJob({
+      track_id,
+      friend_id: parseInt(friend_id, 10),
+      apple_music_url,
+      spotify_url,
+      youtube_url,
+      soundcloud_url,
+      preferred_downloader
+    });
 
     return NextResponse.json({
       success: true,
