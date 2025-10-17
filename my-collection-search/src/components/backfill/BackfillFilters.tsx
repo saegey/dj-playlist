@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Input, SimpleGrid, Switch, InputGroup } from "@chakra-ui/react";
+import { Input, SimpleGrid, Switch, InputGroup, Link, Button } from "@chakra-ui/react";
 import UsernameSelect from "@/components/UsernameSelect";
-import { LuSearch } from "react-icons/lu";
+import { LuEye, LuSearch } from "react-icons/lu";
 import { Friend } from "@/types/track";
 
 type Props = {
@@ -30,7 +30,7 @@ export default function BackfillFilters({
   analyzing,
 }: Props) {
   return (
-    <SimpleGrid columns={[1, null, 5]} gap={4} mt={3} mb={8}>
+    <SimpleGrid columns={[1, null, 6]} gap={4} mt={3} mb={8}>
       <InputGroup startElement={<LuSearch size={16} />}>
         <Input
           type="text"
@@ -69,6 +69,15 @@ export default function BackfillFilters({
         isLoading={usernamesLoading}
         loadingText="Loading usernames..."
       />
+                <Link href="/jobs">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                  >
+                    <LuEye />
+                    View Job Queue
+                  </Button>
+                </Link>
     </SimpleGrid>
   );
 }

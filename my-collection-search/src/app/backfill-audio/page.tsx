@@ -7,7 +7,6 @@ import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useMeili } from "@/providers/MeiliProvider";
 import BackfillFilters from "@/components/backfill/BackfillFilters";
 import { useUsername } from "@/providers/UsernameProvider";
-import { useTracksQuery } from "@/hooks/useTracksQuery";
 import BackfillActionBar from "@/components/backfill/BackfillActionBar";
 import BackfillTable from "@/components/backfill/BackfillTable";
 import BackfillPagination from "@/components/backfill/BackfillPagination";
@@ -15,7 +14,7 @@ import type { BackfillTrack } from "@/components/backfill/types";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import { useBackfillStatusMutation } from "@/hooks/useBackfillStatusMutation";
 import { useVectorizeTrackMutation } from "@/hooks/useVectorizeTrackMutation";
-import { useAnalyzeTrackMutation } from "@/hooks/useAnalyzeTrackMutation";
+import { useAsyncAnalyzeTrackMutation } from "@/hooks/useAsyncAnalyzeTrackMutation";
 
 // BackfillTrack moved to components/backfill/types
 
@@ -31,10 +30,9 @@ export default function BackfillAudioPage() {
   const [page, setPage] = useState(1);
   const pageSize = 15;
   const { client: meiliClient, ready } = useMeili();
-  const { saveTrack } = useTracksQuery();
   const { mutate: updateStatus } = useBackfillStatusMutation();
   const { mutateAsync: vectorize } = useVectorizeTrackMutation();
-  const { mutateAsync: analyze } = useAnalyzeTrackMutation();
+  const { mutateAsync: analyze } = useAsyncAnalyzeTrackMutation();
 
   // Build Meili filter (AND conditions)
   const filter = useMemo(() => {
@@ -93,6 +91,7 @@ export default function BackfillAudioPage() {
     setSelected(new Set(pageTracks.map((t) => t.track_id)));
   const deselectAll = () => setSelected(new Set());
 
+
   const handleVectorizeSelected = async () => {
     setAnalyzing(true);
     for (const trackId of selected) {
@@ -124,8 +123,13 @@ export default function BackfillAudioPage() {
   const handleAnalyzeSelected = async () => {
     setAnalyzing(true);
 
+    // Queue all selected tracks for async processing
     for (const trackId of selected) {
-      updateStatus({ track_id: trackId, status: "analyzing", errorMsg: null });
+      updateStatus({
+        track_id: trackId,
+        status: "analyzing",
+        errorMsg: null,
+      });
       try {
         const track = pageTracks.find((t) => t.track_id === trackId);
         if (!track) {
@@ -135,7 +139,8 @@ export default function BackfillAudioPage() {
           throw new Error(`Track ${trackId} is missing friend_id`);
         }
 
-        const data = await analyze({
+        // Queue the track for async processing using gamdl worker
+        const response = await analyze({
           track_id: trackId,
           friend_id: track.friend_id,
           apple_music_url: track.apple_music_url,
@@ -144,31 +149,12 @@ export default function BackfillAudioPage() {
           spotify_url: track.spotify_url,
         });
 
-        saveTrack({
-          friend_id: track.friend_id,
+        console.log(`Queued track ${trackId} for processing, job ID: ${response.jobId}`);
+        updateStatus({
           track_id: trackId,
-          bpm:
-            typeof data.rhythm?.bpm === "number"
-              ? Number(Math.round(data.rhythm.bpm))
-              : undefined,
-          key:
-            data.tonal?.key_edma?.key && data.tonal?.key_edma?.scale
-              ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
-              : undefined,
-          danceability:
-            typeof data.rhythm?.danceability === "number"
-              ? Math.round(data.rhythm.danceability * 1000) / 1000
-              : undefined,
-          duration_seconds:
-            typeof data.metadata?.audio_properties?.length === "number"
-              ? Math.round(data.metadata.audio_properties.length)
-              : undefined,
-          // mood_happy: data.mood_happy,
-          // mood_sad: data.mood_sad,
-          // mood_relaxed: data.mood_relaxed,
-          // mood_aggressive: data.mood_aggressive,
+          status: "success",
+          errorMsg: null,
         });
-        updateStatus({ track_id: trackId, status: "success", errorMsg: null });
       } catch (err) {
         updateStatus({
           track_id: trackId,
@@ -186,7 +172,7 @@ export default function BackfillAudioPage() {
   return (
     <>
       <Container>
-        {/* Pagination UI */}
+        {/* Job Queue Link */}
 
         <BackfillFilters
           friends={usernames}

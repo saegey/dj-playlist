@@ -1,4 +1,3 @@
-# essentia
-# numpy<2
 yt-dlp
 scdl
+spotdl

@@ -25,11 +25,12 @@ import SpotifyPickerDialog from "@/components/SpotifyPickerDialog";
 import YouTubePickerDialog from "@/components/YouTubePickerDialog";
 import TrackEditFormSkeleton from "@/components/TrackEditFormSkeleton";
 import { createTrackEditActionsWrapper } from "@/components/TrackEditActionsWrapper";
-import { useAnalyzeTrackMutation } from "@/hooks/useAnalyzeTrackMutation";
+import { useAsyncAnalyzeTrackMutation } from "@/hooks/useAsyncAnalyzeTrackMutation";
 import { useUploadTrackAudioMutation } from "@/hooks/useUploadTrackAudioMutation";
 import { buildTrackMetadataPrompt } from "@/lib/prompts";
 import { useTrackMetadataMutation } from "@/hooks/useTrackMetadataMutation";
 import { useYouTubeMusicSearchMutation } from "@/hooks/useYouTubeMusicSearchMutation";
+import { toaster } from "@/components/ui/toaster";
 
 export interface TrackEditFormProps {
   track_id: string; // Optional for new tracks
@@ -135,7 +136,7 @@ export default function TrackEditForm({
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const { mutateAsync: analyze, isPending: analyzeLoading } =
-    useAnalyzeTrackMutation();
+    useAsyncAnalyzeTrackMutation();
   const { mutateAsync: uploadAudio, isPending: uploadLoading } =
     useUploadTrackAudioMutation();
   const { mutateAsync: fetchMetadata, isPending: aiLoading } =
@@ -260,7 +261,7 @@ export default function TrackEditForm({
       if (!form.friend_id) {
         throw new Error("Track is missing friend_id");
       }
-      const data = await analyze({
+      const response = await analyze({
         apple_music_url: form.apple_music_url,
         youtube_url: form.youtube_url,
         soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
@@ -268,29 +269,20 @@ export default function TrackEditForm({
         friend_id: form.friend_id,
         spotify_url: form.spotify_url,
       });
-      console.log("Analysis result:", data);
-      setForm((prev) => ({
-        ...prev,
-        bpm:
-          typeof data.rhythm?.bpm === "number"
-            ? String(Math.round(data.rhythm.bpm))
-            : prev.bpm,
-        key:
-          data.tonal?.key_edma?.key && data.tonal?.key_edma?.scale
-            ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
-            : prev.key,
-        danceability:
-          typeof data.rhythm?.danceability === "number"
-            ? data.rhythm.danceability.toFixed(3)
-            : prev.danceability,
-        duration_seconds:
-          typeof data.metadata?.audio_properties?.length === "number"
-            ? Math.round(data.metadata.audio_properties.length)
-            : prev.duration_seconds,
-      }));
+      console.log("Analysis job queued:", response);
+
+      toaster.create({
+        title: "Audio Analysis Queued",
+        description: `Job ID: ${response.jobId}. The track will be analyzed automatically. Check the Job Queue for progress.`,
+        type: "success",
+      });
     } catch (err) {
       console.error("Audio analysis error:", err);
-      alert("Error analyzing audio");
+      toaster.create({
+        title: "Audio Analysis Failed",
+        description: "Error queuing audio analysis: " + (err instanceof Error ? err.message : err),
+        type: "error",
+      });
     }
   };
 

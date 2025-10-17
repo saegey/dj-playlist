@@ -68,6 +68,22 @@ export async function analyzeTrack(
   });
 }
 
+export type AsyncAnalyzeResponse = {
+  success: boolean;
+  jobId: string;
+  message: string;
+};
+
+export async function analyzeTrackAsync(
+  args: AnalyzeArgs
+): Promise<AsyncAnalyzeResponse> {
+  return await http<AsyncAnalyzeResponse>("/api/tracks/analyze-async", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+}
+
 export type UploadTrackAudioArgs = {
   file: File;
   track_id: string;

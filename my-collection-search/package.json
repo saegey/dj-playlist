@@ -10,7 +10,9 @@
     "lint": "next lint",
     "migrate": "node-pg-migrate",
     "search": "../meilisearch --master-key=mysupersecretkey",
-    "psql": "docker-compose exec db psql -U djplaylist -d djplaylist"
+    "psql": "docker-compose exec db psql -U djplaylist -d djplaylist",
+    "worker": "tsx src/workers/index.ts",
+    "worker:dev": "nodemon --watch src --ext ts,js --exec 'npm run worker'"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",
@@ -27,6 +29,7 @@
     "essentia.js": "^0.1.3",
     "framer-motion": "^12.23.0",
     "install": "^0.13.0",
+    "ioredis": "^5.7.0",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.1",
     "meilisearch": "^0.51.0",
@@ -40,22 +43,27 @@
     "react-dom": "^19.0.0",
     "react-icons": "^5.5.0",
     "react-markdown": "^10.1.0",
+    "uuid": "^13.0.0",
     "wait-port": "^1.1.0",
     "yt-search": "^2.13.1",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/ioredis": "^4.28.10",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/pg": "^8.15.4",
     "@types/plist": "^3.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/uuid": "^10.0.0",
     "@types/yt-search": "^2.10.3",
     "eslint": "^9",
     "eslint-config-next": "15.3.5",
     "node-pg-migrate": "^8.0.3",
+    "nodemon": "^3.1.10",
+    "tsx": "^4.20.5",
     "typescript": "^5"
   }
 }
