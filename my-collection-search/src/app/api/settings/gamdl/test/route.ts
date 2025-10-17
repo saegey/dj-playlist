@@ -44,10 +44,12 @@ export async function POST() {
         const lines = content.split('\n').filter(line => line.trim() && !line.startsWith('#'));
 
         // Check for Apple Music related cookies
-        const hasAppleCookies = lines.some(line =>
-          line.toLowerCase().includes('apple') ||
-          line.toLowerCase().includes('music.apple.com')
-        );
+        const hasAppleCookies = lines.some(line => {
+          const parts = line.split('\t').map(s => s.trim().toLowerCase());
+          // Netscape cookie format: domain is usually the first field
+          const domain = parts[0];
+          return domain === 'music.apple.com' || domain.endsWith('.music.apple.com');
+        });
 
         // Check cookie format (basic validation)
         const hasValidFormat = lines.every(line => {
