@@ -29,6 +29,9 @@ export function useJobEventsSSE() {
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === "undefined") return;
+
     // Create SSE connection
     eventSourceRef.current = new EventSource("/api/jobs/events");
 
@@ -128,5 +131,5 @@ export function useJobEventsSSE() {
     };
   }, [queryClient, updateTrack]);
 
-  return eventSourceRef.current?.readyState === EventSource.OPEN;
+  return typeof window !== "undefined" && eventSourceRef.current?.readyState === EventSource.OPEN;
 }
