@@ -35,7 +35,12 @@ export async function parseCookieFile(filePath: string): Promise<Partial<CookieF
 
         domains.add(domain);
 
-        if (domain.includes('apple') || domain.includes('music.apple.com')) {
+        // Normalize domain (strip leading dot)
+        const normalizedDomain = domain.startsWith('.') ? domain.slice(1) : domain;
+        if (
+          normalizedDomain === 'music.apple.com' ||
+          normalizedDomain.endsWith('.music.apple.com')
+        ) {
           hasAppleMusic = true;
         }
 
