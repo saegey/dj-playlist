@@ -66,6 +66,18 @@ export function getReleasePath(
   return releasePath;
 }
 
+export function getReleaseWritePath(
+  username: string,
+  releaseId: string
+): string {
+  // For writing new releases, determine the path based on username
+  if (username && process.env.DISCOGS_USERNAME && username !== process.env.DISCOGS_USERNAME) {
+    return path.join(DISCOGS_EXPORTS_DIR, `${username}_release_${releaseId}.json`);
+  } else {
+    return path.join(DISCOGS_EXPORTS_DIR, `release_${releaseId}.json`);
+  }
+}
+
 export function loadAlbum(releasePath: string): DiscogsRelease | null {
   try {
     return JSON.parse(fs.readFileSync(releasePath, "utf-8"));

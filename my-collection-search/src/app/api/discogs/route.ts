@@ -3,7 +3,7 @@
 
 import {
   saveManifest,
-  getReleasePath,
+  getReleaseWritePath,
   createExportsDir,
   getManifestReleaseIds,
   getManifestPath,
@@ -120,10 +120,7 @@ export async function GET(request: NextRequest) {
 
             try {
               const details = await getReleaseDetails(releaseId);
-              const filePath = getReleasePath(username, releaseId);
-              if (!filePath) {
-                throw new Error("Failed to determine file path for release");
-              }
+              const filePath = getReleaseWritePath(username, releaseId);
               fs.writeFileSync(filePath, JSON.stringify(details, null, 2));
               newReleases.push(releaseId);
               controller.enqueue(
