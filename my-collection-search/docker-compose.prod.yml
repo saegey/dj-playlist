@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/saegey/myapp:v1.0.71
+    image: ghcr.io/saegey/myapp:v1.0.73
     container_name: myapp
     ports:
       - "3000:3000"
@@ -62,27 +62,40 @@ services:
       - meili_data:/meili_data
 
   essentia:
-    image: ghcr.io/saegey/essentia-api:v1.0.57
+    image: ghcr.io/saegey/essentia-api:v1.0.73
     container_name: essentia-api
     ports:
       - "8001:8001"
 
   ga-service:
-    image: ghcr.io/saegey/ga-service:v1.0.57
+    image: ghcr.io/saegey/ga-service:v1.0.73
     container_name: ga-service
     ports:
       - "8002:8002"
 
-  # watchtower:
-  #   image: containrrr/watchtower
-  #   restart: always
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #   environment:
-  #     - WATCHTOWER_CLEANUP=true
-  #     - WATCHTOWER_POLL_INTERVAL=3600 # Check hourly
-  #   depends_on:
-  #     - app
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  download-worker:
+    image: ghcr.io/saegey/download-worker:v1.0.73
+    container_name: download-worker
+    environment:
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
+      GAMDL_COOKIE_FILE: /app/cookies/music.apple.com_cookies.txt
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - music_data:/app/audio
+      - ./cookies:/app/cookies:ro  # Mount local cookies directory as read-only
+    restart: unless-stopped
+
 
 volumes:
   db_data:
