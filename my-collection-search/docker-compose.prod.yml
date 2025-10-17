@@ -104,3 +104,5 @@ volumes:
   db_dumps:
   discogs_exports:
   spotify_exports:
+  redis_data:
+  cookie_data:
