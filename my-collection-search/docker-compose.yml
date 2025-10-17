@@ -36,7 +36,8 @@ services:
       - music_data:/app/audio
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
-      - spotify_exports:/app/spotify_exports  
+      - spotify_exports:/app/spotify_exports
+      - cookie_data:/app/cookies  
   
   migrate:
     build:
@@ -110,13 +111,13 @@ services:
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
-      GAMDL_COOKIE_FILE: /app/cookies/music.apple.com_cookies.txt
+      GAMDL_COOKIE_FILE: /app/cookies/gamdl_cookies.txt
     depends_on:
       - redis
       - db
     volumes:
       - music_data:/app/audio
-      - ./cookies:/app/cookies:ro  # Mount local cookies directory as read-only
+      - cookie_data:/app/cookies  # Shared cookie storage with app service
     restart: unless-stopped
 
 volumes:
@@ -127,3 +128,4 @@ volumes:
   discogs_exports:
   spotify_exports:
   redis_data:
+  cookie_data:

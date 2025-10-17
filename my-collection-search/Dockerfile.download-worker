@@ -18,8 +18,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy worker scripts
 COPY worker/ .
 
-# Create audio output directory
-RUN mkdir -p /app/audio
+# Create audio output and download directories
+RUN mkdir -p /app/audio /app/downloads
 
 # Run the RQ worker
 CMD ["python", "download_worker.py"]

@@ -3,12 +3,12 @@
 import { useMutation } from "@tanstack/react-query";
 import {
   analyzeTrackAsync,
-  type AsyncAnalyzeArgs,
+  type AnalyzeArgs,
   type AsyncAnalyzeResponse,
-} from "@/services/asyncTrackService";
+} from "@/services/trackService";
 
 export function useAsyncAnalyzeTrackMutation() {
-  return useMutation<AsyncAnalyzeResponse, Error, AsyncAnalyzeArgs>({
-    mutationFn: async (args: AsyncAnalyzeArgs) => analyzeTrackAsync(args),
+  return useMutation<AsyncAnalyzeResponse, Error, AnalyzeArgs>({
+    mutationFn: async (args: AnalyzeArgs) => analyzeTrackAsync(args),
   });
 }

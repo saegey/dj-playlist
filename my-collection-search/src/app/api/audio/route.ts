@@ -67,7 +67,24 @@ export async function GET(request: Request) {
   // Parse "bytes=start-end"
   const [startStr, endStr] = range.replace(/bytes=/, "").split("-");
   const start = parseInt(startStr, 10);
-  const end = endStr ? parseInt(endStr, 10) : totalSize - 1;
+  let end = endStr ? parseInt(endStr, 10) : totalSize - 1;
+
+  // Validate and clamp range values
+  if (isNaN(start) || start < 0) {
+    return NextResponse.json({ error: "Invalid range start" }, { status: 416 });
+  }
+  if (start >= totalSize) {
+    return NextResponse.json({ error: "Range start beyond file size" }, { status: 416 });
+  }
+
+  // Clamp end to valid range
+  end = Math.min(end, totalSize - 1);
+
+  // Ensure start <= end
+  if (start > end) {
+    return NextResponse.json({ error: "Invalid range: start > end" }, { status: 416 });
+  }
+
   const chunkSize = end - start + 1;
 
   // Create a stream for just the requested range

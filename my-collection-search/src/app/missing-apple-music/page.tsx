@@ -24,7 +24,6 @@ function MissingAudio() {
             <UsernameSelect
               usernames={friends}
               width="200px"
-              variant="outline"
             />
           </Box>
         </HStack>

@@ -14,6 +14,8 @@ import {
   Stack,
   Button,
   Progress,
+  VStack,
+  HStack,
 } from "@chakra-ui/react";
 import { LuRefreshCw, LuTrash2 } from "react-icons/lu";
 import { useJobsQuery } from "@/hooks/useJobsQuery";
@@ -56,6 +58,48 @@ export default function JobsPage() {
         {state.charAt(0).toUpperCase() + state.slice(1)}
       </Badge>
     );
+  };
+
+  const getDownloaderInfo = (job: { data?: Record<string, unknown> }) => {
+    const data = job.data || {};
+
+    // Determine which downloader will be used based on available URLs
+    if (data.apple_music_url) {
+      return {
+        name: "gamdl",
+        source: "Apple Music",
+        color: "purple" as const,
+        quality: String(data.quality || "best")
+      };
+    } else if (data.youtube_url) {
+      return {
+        name: "yt-dlp",
+        source: "YouTube",
+        color: "red" as const,
+        quality: "audio"
+      };
+    } else if (data.soundcloud_url) {
+      return {
+        name: "yt-dlp",
+        source: "SoundCloud",
+        color: "orange" as const,
+        quality: "audio"
+      };
+    } else if (data.spotify_url) {
+      return {
+        name: "spotdl",
+        source: "Spotify",
+        color: "green" as const,
+        quality: "320k"
+      };
+    }
+
+    return {
+      name: "unknown",
+      source: "Unknown",
+      color: "gray" as const,
+      quality: "unknown"
+    };
   };
 
   const formatTimestamp = (timestamp?: number) => {
@@ -175,6 +219,7 @@ export default function JobsPage() {
                 <Table.ColumnHeader>Job ID</Table.ColumnHeader>
                 <Table.ColumnHeader>Track ID</Table.ColumnHeader>
                 <Table.ColumnHeader>Queue</Table.ColumnHeader>
+                <Table.ColumnHeader>Downloader</Table.ColumnHeader>
                 <Table.ColumnHeader>Status</Table.ColumnHeader>
                 <Table.ColumnHeader>Progress</Table.ColumnHeader>
                 <Table.ColumnHeader>Duration</Table.ColumnHeader>
@@ -207,6 +252,28 @@ export default function JobsPage() {
                   </Table.Cell>
                   <Table.Cell>
                     <Badge variant="outline">{job.queue}</Badge>
+                  </Table.Cell>
+                  <Table.Cell>
+                    {(() => {
+                      const downloaderInfo = getDownloaderInfo(job);
+                      return (
+                        <VStack align="start" gap={1}>
+                          <HStack gap={1}>
+                            <Badge colorScheme={downloaderInfo.color} variant="solid" size="sm">
+                              {downloaderInfo.name}
+                            </Badge>
+                            <Text fontSize="xs" color="gray.500">
+                              {downloaderInfo.source}
+                            </Text>
+                          </HStack>
+                          {downloaderInfo.quality !== "unknown" && (
+                            <Text fontSize="xs" color="gray.400">
+                              {downloaderInfo.quality}
+                            </Text>
+                          )}
+                        </VStack>
+                      );
+                    })()}
                   </Table.Cell>
                   <Table.Cell>
                     <Box>

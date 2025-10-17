@@ -3,7 +3,6 @@
 
 import * as React from "react";
 import {
-  Button,
   Menu,
   Portal,
   Spinner,
@@ -12,7 +11,6 @@ import {
   Icon,
   Box,
 } from "@chakra-ui/react";
-import type { ButtonProps } from "@chakra-ui/react";
 import { FiUser, FiX } from "react-icons/fi";
 import { useUsername } from "@/providers/UsernameProvider";
 import { Friend } from "@/types/track";
@@ -21,8 +19,7 @@ export type UsernameSelectProps = {
   usernames: Friend[];
   includeAllOption?: boolean;
   /** Chakra responsive size array is fine here */
-  size?: ButtonProps["size"] | ButtonProps["size"][];
-  variant?: ButtonProps["variant"] | ButtonProps["variant"][];
+  size?: string | string[];
   width?: string | number;
   /** Loading state for when usernames are being fetched */
   isLoading?: boolean;
@@ -42,7 +39,6 @@ export default function UsernameSelect({
   usernames,
   includeAllOption = false,
   size = ["sm", "md", "md"],
-  variant = "subtle",
   width = "100%",
   isLoading = false,
   loadingText = "Loading...",
@@ -67,28 +63,31 @@ export default function UsernameSelect({
     setCtxValue(friend);
   };
 
-  // Resolve responsive size/variant to a concrete token for Button
+  // Resolve responsive size to a concrete token for styling
   const resolvedSize = useBreakpointValue(
-    Array.isArray(size)
-      ? (size as ButtonProps["size"][])
-      : [size as ButtonProps["size"]]
-  ) as ButtonProps["size"] | undefined;
-  const resolvedVariant = useBreakpointValue(
-    Array.isArray(variant)
-      ? (variant as ButtonProps["variant"][])
-      : [variant as ButtonProps["variant"]]
-  ) as ButtonProps["variant"] | undefined;
+    Array.isArray(size) ? size : [size]
+  ) as string | undefined;
 
   return (
     <Menu.Root>
-      <Menu.Trigger>
-        <Button
+      <Menu.Trigger asChild>
+        <Box
+          as="button"
           width={width}
-          size={resolvedSize}
-          variant={resolvedVariant}
-          disabled={isLoading && disableWhileLoading}
           aria-busy={isLoading}
+          display="flex"
+          alignItems="center"
           justifyContent="space-between"
+          px={3}
+          py={2}
+          bg="bg.subtle"
+          borderWidth="1px"
+          borderColor="border.subtle"
+          borderRadius="md"
+          cursor={isLoading && disableWhileLoading ? "not-allowed" : "pointer"}
+          opacity={isLoading && disableWhileLoading ? 0.5 : 1}
+          _hover={isLoading && disableWhileLoading ? {} : { bg: "bg.muted" }}
+          minH={resolvedSize === "sm" ? 8 : resolvedSize === "md" ? 10 : 12}
         >
           <HStack w="100%" justify="space-between">
             <HStack>
@@ -110,7 +109,7 @@ export default function UsernameSelect({
               />
             )}
           </HStack>
-        </Button>
+        </Box>
       </Menu.Trigger>
       <Portal>
         <Menu.Positioner>

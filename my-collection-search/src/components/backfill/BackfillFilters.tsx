@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Input, SimpleGrid, Switch, InputGroup } from "@chakra-ui/react";
+import { Input, SimpleGrid, Switch, InputGroup, Link, Button } from "@chakra-ui/react";
 import UsernameSelect from "@/components/UsernameSelect";
-import { LuSearch } from "react-icons/lu";
+import { LuEye, LuSearch } from "react-icons/lu";
 import { Friend } from "@/types/track";
 
 type Props = {
@@ -16,8 +16,6 @@ type Props = {
   showMissingVectors: boolean;
   setShowMissingVectors: (v: boolean) => void;
   analyzing: boolean;
-  useAsyncProcessing?: boolean;
-  setUseAsyncProcessing?: (v: boolean) => void;
 };
 
 export default function BackfillFilters({
@@ -30,8 +28,6 @@ export default function BackfillFilters({
   showMissingVectors,
   setShowMissingVectors,
   analyzing,
-  useAsyncProcessing,
-  setUseAsyncProcessing,
 }: Props) {
   return (
     <SimpleGrid columns={[1, null, 6]} gap={4} mt={3} mb={8}>
@@ -73,19 +69,15 @@ export default function BackfillFilters({
         isLoading={usernamesLoading}
         loadingText="Loading usernames..."
       />
-      {setUseAsyncProcessing && (
-        <Switch.Root
-          checked={useAsyncProcessing}
-          onCheckedChange={(e) => setUseAsyncProcessing(e.checked)}
-        >
-          <Switch.Label>Async Processing</Switch.Label>
-          <Switch.HiddenInput />
-          <Switch.Control>
-            <Switch.Thumb />
-          </Switch.Control>
-          <Switch.Label />
-        </Switch.Root>
-      )}
+                <Link href="/jobs">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                  >
+                    <LuEye />
+                    View Job Queue
+                  </Button>
+                </Link>
     </SimpleGrid>
   );
 }

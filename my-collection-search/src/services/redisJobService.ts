@@ -1,5 +1,6 @@
 import { getRedisConnection } from "@/lib/redis";
 import { v4 as uuidv4 } from "uuid";
+import { Pool } from "pg";
 
 export interface DownloadJobData {
   job_id: string;
@@ -10,6 +11,16 @@ export interface DownloadJobData {
   youtube_url?: string;
   soundcloud_url?: string;
   preferred_downloader?: "freyr" | "spotdl" | "yt-dlp" | "scdl";
+  // Gamdl-specific settings
+  quality?: "best" | "high" | "standard" | "lossless";
+  format?: "m4a" | "mp3" | "aac" | "flac";
+  save_cover?: boolean;
+  cover_format?: "jpg" | "png" | "raw";
+  save_lyrics?: boolean;
+  lyrics_format?: "lrc" | "srt" | "ttml";
+  overwrite_existing?: boolean;
+  skip_music_videos?: boolean;
+  max_retries?: number;
 }
 
 export interface JobStatus {
@@ -41,11 +52,60 @@ export interface JobSummary {
 export class RedisJobService {
   private redis = getRedisConnection();
 
+  /**
+   * Fetch gamdl settings for a friend, creating defaults if not exists
+   */
+  private async getGamdlSettings(friendId: number) {
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+    try {
+      // Ensure settings exist (create with defaults if not)
+      await pool.query(`
+        INSERT INTO gamdl_settings (friend_id)
+        VALUES ($1)
+        ON CONFLICT (friend_id) DO NOTHING
+      `, [friendId]);
+
+      // Get the settings
+      const result = await pool.query(`
+        SELECT audio_quality as quality, audio_format as format,
+               save_cover, cover_format, save_lyrics, lyrics_format,
+               overwrite_existing, skip_music_videos, max_retries
+        FROM gamdl_settings
+        WHERE friend_id = $1
+      `, [friendId]);
+
+      return result.rows[0] || {};
+    } catch (error) {
+      console.error(`Failed to fetch gamdl settings for friend ${friendId}:`, error);
+      // Return defaults if database fails
+      return {
+        quality: 'best',
+        format: 'm4a',
+        save_cover: false,
+        cover_format: 'jpg',
+        save_lyrics: false,
+        lyrics_format: 'lrc',
+        overwrite_existing: false,
+        skip_music_videos: true,
+        max_retries: 3
+      };
+    } finally {
+      await pool.end();
+    }
+  }
+
   async createDownloadJob(
     data: Omit<DownloadJobData, "job_id">
   ): Promise<string> {
     const job_id = uuidv4();
+
+    // Fetch gamdl settings for the friend if not already provided
+    const gamdlSettings = data.friend_id ? await this.getGamdlSettings(data.friend_id) : {};
+
+    // Merge provided data with fetched settings (provided data takes precedence)
     const jobData: DownloadJobData = {
+      ...gamdlSettings,
       ...data,
       job_id,
     };
