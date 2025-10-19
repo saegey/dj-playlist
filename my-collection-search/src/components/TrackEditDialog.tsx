@@ -42,7 +42,7 @@ export default function TrackEditDialog({
 
   // Map fetched data to form props when available
   useEffect(() => {
-    if (!fetchedTrack) return;
+    if (!fetchedTrack || !dialogOpen) return;
     const data = fetchedTrack;
     const toNumberOrNull = (v: unknown): number | null => {
       if (typeof v === "number") return v;
@@ -69,9 +69,10 @@ export default function TrackEditDialog({
       star_rating: data.star_rating,
       duration_seconds: data.duration_seconds,
       friend_id: data.friend_id,
+      local_audio_url: data.local_audio_url,
     };
     setLoaded(mapped);
-  }, [fetchedTrack, editTrack?.username]);
+  }, [fetchedTrack, editTrack?.username, dialogOpen]);
 
   if (!editTrack || !editTrack.username) return null;
 

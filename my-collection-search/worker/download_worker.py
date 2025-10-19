@@ -645,33 +645,96 @@ def download_with_gamdl(url: str, output_dir: str, track_id: str, job_data: Dict
         raise Exception(error_msg)
 
 def download_with_ytdlp(url: str, output_dir: str, track_id: str) -> Optional[str]:
-    """Download using yt-dlp"""
+    """Download using yt-dlp with robust format selection"""
     try:
         output_template = f"{output_dir}/{track_id}.%(ext)s"
 
-        cmd = [
-            'yt-dlp',
-            '-f bestaudio/best -x --audio-format m4a',
-            # '--audio-format', 'mp3',
-            # '--audio-quality', '320K',
-            '--output', output_template,
-            url
+        # Try multiple strategies for YouTube downloads
+        strategies = [
+            # Strategy 1: Android client with multiple format options
+            {
+                'args': [
+                    'yt-dlp',
+                    '--extractor-args', 'youtube:player_client=android',
+                    '-f', 'bestaudio[ext=m4a]/bestaudio/best',
+                    '-x',
+                    '--audio-format', 'm4a',
+                    '--no-playlist',
+                    '--output', output_template,
+                    url
+                ],
+                'name': 'Android client'
+            },
+            # Strategy 2: iOS client
+            {
+                'args': [
+                    'yt-dlp',
+                    '--extractor-args', 'youtube:player_client=ios',
+                    '-f', 'bestaudio/best',
+                    '-x',
+                    '--audio-format', 'm4a',
+                    '--no-playlist',
+                    '--output', output_template,
+                    url
+                ],
+                'name': 'iOS client'
+            },
+            # Strategy 3: Web client with legacy format selection
+            {
+                'args': [
+                    'yt-dlp',
+                    '--extractor-args', 'youtube:player_client=web',
+                    '-f', 'ba/b',
+                    '-x',
+                    '--audio-format', 'm4a',
+                    '--output', output_template,
+                    url
+                ],
+                'name': 'Web client'
+            },
+            # Strategy 4: No client specification, any audio format
+            {
+                'args': [
+                    'yt-dlp',
+                    '-f', 'bestaudio/best',
+                    '-x',
+                    '--audio-format', 'm4a',
+                    '--output', output_template,
+                    url
+                ],
+                'name': 'Default extraction'
+            },
         ]
 
-        result = run_subprocess(cmd, timeout=300)
+        last_error = None
+        for i, strategy in enumerate(strategies, 1):
+            logger.info(f"Trying strategy {i}/{len(strategies)}: {strategy['name']}")
+            try:
+                result = run_subprocess(strategy['args'], timeout=300)
 
-        if result.returncode != 0:
-            raise Exception(f"yt-dlp failed: {result.stderr}")
+                if result.returncode == 0:
+                    # Find the downloaded file
+                    for file in os.listdir(output_dir):
+                        if file.startswith(track_id) and (file.endswith('.m4a') or file.endswith('.mp3')):
+                            logger.info(f"Successfully downloaded with strategy: {strategy['name']}")
+                            return os.path.join(output_dir, file)
 
-        # Find the downloaded file
-        for file in os.listdir(output_dir):
-            if file.startswith(track_id) and file.endswith('.mp3'):
-                return os.path.join(output_dir, file)
+                    logger.warning(f"Strategy {strategy['name']} completed but file not found")
+                else:
+                    last_error = result.stderr
+                    logger.warning(f"Strategy {strategy['name']} failed with exit code {result.returncode}")
 
-        raise Exception("Downloaded file not found")
+            except subprocess.TimeoutExpired:
+                logger.warning(f"Strategy {strategy['name']} timed out")
+                last_error = "Download timeout"
+            except Exception as e:
+                logger.warning(f"Strategy {strategy['name']} error: {e}")
+                last_error = str(e)
 
-    except subprocess.TimeoutExpired:
-        raise Exception("Download timeout (5 minutes)")
+        # All strategies failed
+        error_msg = f"All download strategies failed. Last error: {last_error}"
+        raise Exception(error_msg)
+
     except Exception as e:
         raise Exception(f"yt-dlp error: {str(e)}")
 

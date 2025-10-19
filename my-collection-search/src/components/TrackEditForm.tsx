@@ -49,6 +49,7 @@ export interface TrackEditFormProps {
   star_rating?: number;
   duration_seconds?: number | null; // Optional for new tracks
   friend_id: number;
+  local_audio_url?: string | null;
 }
 
 export default function TrackEditForm({
@@ -114,6 +115,8 @@ export default function TrackEditForm({
   const { mutateAsync: searchYouTubeMusic, isPending: youtubeLoading } =
     useYouTubeMusicSearchMutation();
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
+  const [showRemoveAudioConfirm, setShowRemoveAudioConfirm] = useState(false);
+  const [removeAudioLoading, setRemoveAudioLoading] = useState(false);
 
   const spotifyPicker = useSpotifyPicker({
     onSelect: (track) => {
@@ -286,6 +289,49 @@ export default function TrackEditForm({
     }
   };
 
+  const handleRemoveAudioClick = () => {
+    setShowRemoveAudioConfirm(true);
+  };
+
+  const handleRemoveAudioConfirm = async () => {
+    setRemoveAudioLoading(true);
+    try {
+      if (!form.friend_id) {
+        throw new Error("Track is missing friend_id");
+      }
+
+      // Call onSave with local_audio_url set to null to remove it
+      await Promise.resolve(
+        onSave({
+          ...form,
+          bpm: Number(form.bpm) || null,
+          key: form.key || null,
+          danceability: Number(form.danceability) || null,
+          duration_seconds: Number(form.duration_seconds) || null,
+          friend_id: form.friend_id,
+          soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
+          local_audio_url: null,
+        })
+      );
+
+      toaster.create({
+        title: "Audio Removed",
+        description: "Local audio file has been removed",
+        type: "success",
+      });
+
+      setShowRemoveAudioConfirm(false);
+    } catch (err) {
+      toaster.create({
+        title: "Remove Audio Failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        type: "error",
+      });
+    } finally {
+      setRemoveAudioLoading(false);
+    }
+  };
+
   const TrackEditActionsWrapper = createTrackEditActionsWrapper({
     aiLoading: aiLoading,
     onFetchAI: fetchFromChatGPT,
@@ -302,6 +348,9 @@ export default function TrackEditForm({
       setFile(file);
       handleFileUpload();
     },
+    hasAudio: !!track?.local_audio_url,
+    onRemoveAudio: handleRemoveAudioClick,
+    removeAudioLoading: removeAudioLoading,
   });
 
   return (
@@ -487,6 +536,44 @@ export default function TrackEditForm({
                     track={track}
                     onSelect={(song) => applePicker.select(song)}
                   />
+
+                  {/* --- Remove Audio Confirmation Dialog --- */}
+                  <Dialog.Root
+                    open={showRemoveAudioConfirm}
+                    onOpenChange={(d) => setShowRemoveAudioConfirm(d.open)}
+                  >
+                    <Dialog.Backdrop />
+                    <Dialog.Positioner>
+                      <Dialog.Content>
+                        <Dialog.Header>
+                          <Dialog.Title>Remove Audio</Dialog.Title>
+                        </Dialog.Header>
+                        <Dialog.Body>
+                          <Text>
+                            Are you sure you want to remove the local audio file? This
+                            action cannot be undone.
+                          </Text>
+                        </Dialog.Body>
+                        <Dialog.Footer>
+                          <Button
+                            variant="outline"
+                            onClick={() => setShowRemoveAudioConfirm(false)}
+                            disabled={removeAudioLoading}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            colorPalette="red"
+                            onClick={handleRemoveAudioConfirm}
+                            loading={removeAudioLoading}
+                            disabled={removeAudioLoading}
+                          >
+                            Remove
+                          </Button>
+                        </Dialog.Footer>
+                      </Dialog.Content>
+                    </Dialog.Positioner>
+                  </Dialog.Root>
                 </Box>
               )}
             </Dialog.Body>

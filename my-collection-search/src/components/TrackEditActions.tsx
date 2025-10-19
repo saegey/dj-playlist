@@ -25,6 +25,10 @@ export interface TrackEditActionsProps {
 
   uploadLoading: boolean;
   onFileSelected: (file: File | null) => void;
+
+  hasAudio: boolean;
+  onRemoveAudio: () => void;
+  removeAudioLoading: boolean;
 }
 
 export default function TrackEditActions(props: TrackEditActionsProps) {
@@ -40,6 +44,9 @@ export default function TrackEditActions(props: TrackEditActionsProps) {
     onAnalyzeAudio,
     uploadLoading,
     onFileSelected,
+    hasAudio,
+    onRemoveAudio,
+    removeAudioLoading,
   } = props;
 
   return (
@@ -82,15 +89,28 @@ export default function TrackEditActions(props: TrackEditActionsProps) {
         <SiSpotify /> Search Spotify
       </Button>
 
-      <Button
-        variant="outline"
-        size="sm"
-        loading={analyzeLoading}
-        disabled={analyzeDisabled}
-        onClick={onAnalyzeAudio}
-      >
-        <FiDownload /> Fetch Audio
-      </Button>
+      {hasAudio ? (
+        <Button
+          variant="outline"
+          size="sm"
+          colorPalette="red"
+          loading={removeAudioLoading}
+          disabled={removeAudioLoading}
+          onClick={onRemoveAudio}
+        >
+          <FiDownload /> Remove Audio
+        </Button>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          loading={analyzeLoading}
+          disabled={analyzeDisabled}
+          onClick={onAnalyzeAudio}
+        >
+          <FiDownload /> Fetch Audio
+        </Button>
+      )}
 
       <FileUpload.Root
         disabled={uploadLoading}

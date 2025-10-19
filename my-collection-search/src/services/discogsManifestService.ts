@@ -1,7 +1,13 @@
 /**
  * Get the manifest file path for a given username.
+ * For the current user (DISCOGS_USERNAME), returns manifest.json
+ * For other users (friends), returns manifest_${username}.json
  */
 export function getManifestPath(username: string): string {
+  const currentUser = process.env.DISCOGS_USERNAME;
+  if (currentUser && username === currentUser) {
+    return path.join(DISCOGS_EXPORTS_DIR, "manifest.json");
+  }
   return path.join(DISCOGS_EXPORTS_DIR, `manifest_${username}.json`);
 }
 /**
@@ -32,7 +38,7 @@ export function getManifestFiles(): string[] {
   if (!fs.existsSync(DISCOGS_EXPORTS_DIR)) return [];
   return fs
     .readdirSync(DISCOGS_EXPORTS_DIR)
-    .filter((f) => /^manifest_.+\.json$/.test(f));
+    .filter((f) => /^manifest(_.*)?\.json$/.test(f));
 }
 
 export function createExportsDir() {
@@ -86,12 +92,39 @@ export function loadAlbum(releasePath: string): DiscogsRelease | null {
   }
 }
 
-export function saveManifest(manifestPath: string, releaseIds: string[]) {
+export function saveManifest(
+  manifestPath: string,
+  releaseIds: string[],
+  deletedReleaseIds?: string[]
+) {
+  // Read existing manifest to preserve deletedReleaseIds if not provided
+  let existingDeletedIds: string[] = [];
+  if (!deletedReleaseIds && fs.existsSync(manifestPath)) {
+    try {
+      const existing = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+      existingDeletedIds = existing.deletedReleaseIds || [];
+    } catch {
+      // ignore parse errors
+    }
+  }
+
   const manifest = {
     releaseIds: Array.from(new Set(releaseIds)),
+    deletedReleaseIds: deletedReleaseIds
+      ? Array.from(new Set(deletedReleaseIds))
+      : existingDeletedIds,
     lastSynced: new Date().toISOString(),
   };
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+}
+
+export function deleteRelease(username: string, releaseId: string): boolean {
+  const releasePath = getReleasePath(username, releaseId);
+  if (releasePath && fs.existsSync(releasePath)) {
+    fs.unlinkSync(releasePath);
+    return true;
+  }
+  return false;
 }
 
 export function extractTracksFromAlbum(
@@ -136,8 +169,19 @@ export function parseManifestFile(manifestFile: string) {
     fs.readFileSync(path.join(DISCOGS_EXPORTS_DIR, manifestFile), "utf-8")
   );
 
-  const username =
-    manifest.username || manifestFile.replace(/^manifest_|\.json$/g, "");
+  // If manifest has username field, use that
+  if (manifest.username) {
+    return { manifest, username: manifest.username };
+  }
+
+  // For manifest.json (current user), use DISCOGS_USERNAME or extract from filename
+  if (manifestFile === "manifest.json") {
+    const username = process.env.DISCOGS_USERNAME || "current_user";
+    return { manifest, username };
+  }
+
+  // For manifest_username.json format, extract username from filename
+  const username = manifestFile.replace(/^manifest_|\.json$/g, "");
   return { manifest, username };
 }
 
