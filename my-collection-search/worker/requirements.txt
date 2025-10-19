@@ -1,5 +1,5 @@
 redis==5.0.1
-yt-dlp==2025.09.05
+yt-dlp==2025.10.14
 gamdl==2.6.5
 requests==2.31.0
 psycopg2-binary==2.9.9

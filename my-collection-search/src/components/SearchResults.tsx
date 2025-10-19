@@ -126,7 +126,7 @@ const SearchResults: React.FC = () => {
   }, [query, pathname, router, searchParams]);
 
   return (
-    <Box>
+    <Box mb={'100px'}>
       <Box display="flex" flexDirection={["column", "row"]} gap={3} mb={3}>
         <InputGroup startElement={<LuSearch size={16} />}>
           <Input
