@@ -1,7 +1,7 @@
 # GrooveNET
 ## Your favorite vinyl playist DJ app
 
-![screenshot](https://github.com/saegey/personal-blog/blob/main/content/grooveNetdemo.gif?raw=true)
+![screenshot](https://raw.githubusercontent.com/saegey/dj-playlist/refs/heads/main/content/grooveNetdemo.gif)
 
 A full-stack Next.js app for managing, analyzing, and syncing vinyl music collections with multiple music platforms. Seamlessly import your Discogs collection, enrich metadata with Apple Music, Spotify, and YouTube, perform audio analysis, and create intelligent playlists.
 
