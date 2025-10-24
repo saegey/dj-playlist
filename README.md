@@ -1,5 +1,4 @@
 # GrooveNET
-## Your favorite vinyl playist DJ app
 
 ![screenshot](https://raw.githubusercontent.com/saegey/dj-playlist/refs/heads/main/content/grooveNetdemo.gif)
 
