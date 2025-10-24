@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { Box, Input, Text, InputGroup } from "@chakra-ui/react";
-import { LuSearch } from "react-icons/lu";
+import { Box, Input, Text, InputGroup, IconButton, Flex } from "@chakra-ui/react";
+import { LuSearch, LuLayoutGrid, LuTable, LuMaximize2, LuMinimize2 } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import TrackResultStore from "@/components/TrackResultStore";
+import TrackTableViewWithLoader from "@/components/TrackTableViewWithLoader";
 import UsernameSelect from "./UsernameSelect";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useSearchResults } from "@/hooks/useSearchResults";
@@ -18,9 +19,10 @@ const TrackResultItem: React.FC<{
   isLast: boolean;
   playlistCount?: number;
   lastResultRef?: React.RefObject<HTMLDivElement | null>;
-}> = ({ trackId, friendId, isLast, playlistCount, lastResultRef }) => {
+  compact?: boolean;
+}> = ({ trackId, friendId, isLast, playlistCount, lastResultRef, compact }) => {
   const track = useTrack(trackId, friendId);
-  
+
   if (!track) {
     return null; // Track not yet loaded in store
   }
@@ -33,6 +35,7 @@ const TrackResultItem: React.FC<{
       allowMinimize={false}
       playlistCount={playlistCount}
       buttons={[<TrackActionsMenu key="menu" track={track} />]}
+      compact={compact}
     />
   );
 
@@ -46,6 +49,7 @@ const TrackResultItem: React.FC<{
 
   return trackResult;
 };
+
 
 const SearchResults: React.FC = () => {
   const router = useRouter();
@@ -68,6 +72,32 @@ const SearchResults: React.FC = () => {
     mode: "infinite",
     limit: 20,
   });
+
+  // View mode state with localStorage persistence
+  const [viewMode, setViewMode] = React.useState<"card" | "table">("card");
+  const [compactMode, setCompactMode] = React.useState(false);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem("searchViewMode");
+    if (saved === "card" || saved === "table") {
+      setViewMode(saved);
+    }
+    const savedCompact = localStorage.getItem("searchCompactMode");
+    if (savedCompact === "true") {
+      setCompactMode(true);
+    }
+  }, []);
+
+  const handleViewModeChange = (mode: "card" | "table") => {
+    setViewMode(mode);
+    localStorage.setItem("searchViewMode", mode);
+  };
+
+  const handleCompactModeToggle = () => {
+    const newCompact = !compactMode;
+    setCompactMode(newCompact);
+    localStorage.setItem("searchCompactMode", String(newCompact));
+  };
 
   const lastResultRef = React.useRef<HTMLDivElement>(null);
   const observer = React.useRef<IntersectionObserver | null>(null);
@@ -139,6 +169,34 @@ const SearchResults: React.FC = () => {
           />
         </InputGroup>
         <UsernameSelect usernames={friends} />
+        <Flex gap={1} alignItems="center">
+          <IconButton
+            aria-label="Card view"
+            size="sm"
+            variant={viewMode === "card" ? "solid" : "ghost"}
+            onClick={() => handleViewModeChange("card")}
+          >
+            <LuLayoutGrid />
+          </IconButton>
+          <IconButton
+            aria-label="Table view"
+            size="sm"
+            variant={viewMode === "table" ? "solid" : "ghost"}
+            onClick={() => handleViewModeChange("table")}
+          >
+            <LuTable />
+          </IconButton>
+          {viewMode === "card" && (
+            <IconButton
+              aria-label={compactMode ? "Expand cards" : "Compact cards"}
+              size="sm"
+              variant={compactMode ? "solid" : "ghost"}
+              onClick={handleCompactModeToggle}
+            >
+              {compactMode ? <LuMaximize2 /> : <LuMinimize2 />}
+            </IconButton>
+          )}
+        </Flex>
       </Box>
 
       {loading ? (
@@ -155,19 +213,34 @@ const SearchResults: React.FC = () => {
             {estimatedResults.toLocaleString()} results found
           </Text>
 
-          {trackInfo.map((info, idx) => {
-            const isLast = idx === trackInfo.length - 1;
-            return (
-              <TrackResultItem
-                key={`search-${info.trackId}`}
-                trackId={info.trackId}
-                friendId={info.friendId}
-                isLast={isLast}
-                playlistCount={playlistCounts[info.trackId]}
-                lastResultRef={isLast ? lastResultRef : undefined}
+          {viewMode === "card" ? (
+            // Card view (existing)
+            trackInfo.map((info, idx) => {
+              const isLast = idx === trackInfo.length - 1;
+              return (
+                <TrackResultItem
+                  key={`search-${info.trackId}`}
+                  trackId={info.trackId}
+                  friendId={info.friendId}
+                  isLast={isLast}
+                  playlistCount={playlistCounts[info.trackId]}
+                  lastResultRef={isLast ? lastResultRef : undefined}
+                  compact={compactMode}
+                />
+              );
+            })
+          ) : (
+            // Table view
+            <>
+              <TrackTableViewWithLoader
+                trackInfo={trackInfo}
+                playlistCounts={playlistCounts}
+                buttons={(track) => <TrackActionsMenu track={track} />}
               />
-            );
-          })}
+              {/* Intersection observer trigger for infinite scroll */}
+              {hasMore && <Box ref={lastResultRef} height="20px" />}
+            </>
+          )}
         </>
       )}
       {/* End of results/infinite scroll */}

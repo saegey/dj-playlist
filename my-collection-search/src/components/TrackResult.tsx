@@ -10,7 +10,6 @@ import {
   Icon,
   RatingGroup,
   Badge,
-  SimpleGrid,
 } from "@chakra-ui/react";
 import { SiDiscogs, SiApplemusic, SiYoutube, SiSpotify } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
@@ -109,28 +108,36 @@ export default function TrackResult({
       borderRadius={[0, "md"]}
       p={[0, 3]}
       mb={2}
-      flexDirection="column"
-      flexGrow={1}
-      minHeight={0}
+      gap={3}
+      position="relative"
       width={"100%"}
     >
-      <Flex gap={3} position={"relative"} width={"100%"}>
+      {/* Album Art with Play Overlay */}
+      <Box
+        position="relative"
+        flexShrink={0}
+        width={["70px", "80px", "90px"]}
+        height={["70px", "80px", "90px"]}
+      >
         {track.local_audio_url ? (
           <Box
             position="relative"
             borderRadius="md"
             overflow="hidden"
             cursor="pointer"
+            width="100%"
+            height="100%"
             tabIndex={0}
             onClick={() =>
               replacePlaylist([track], { autoplay: true, startIndex: 0 })
             }
-            _hover={{ "& .overlay": { opacity: 1 } }} // <-- parent controls child
+            _hover={{ "& .overlay": { opacity: 1 } }}
           >
             <Image
               src={track.album_thumbnail}
               alt={track.title}
-              boxSize={["50px", "60px", "70px"]}
+              width="100%"
+              height="100%"
               objectFit="cover"
               borderRadius="md"
               transition="opacity 0.2s ease"
@@ -140,232 +147,210 @@ export default function TrackResult({
             <Box
               className="overlay"
               position="absolute"
-              inset={0}
+              top={0}
+              left={0}
+              right={0}
+              bottom={0}
               display="flex"
               alignItems="center"
               justifyContent="center"
               opacity={0}
               transition="opacity 0.15s ease"
               pointerEvents="none"
-              bg="blackAlpha.300"
-              zIndex={1}
+              bg="blackAlpha.500"
+              borderRadius="md"
             >
-              <Flex
-                bg="blackAlpha.400"
-                width="100%"
-                height={"100%"}
-                boxShadow="md"
-                alignItems={"center"}
-                justifyContent={"center"}
-              >
-                <Icon as={FaPlay} boxSize={7} color="white" />
-              </Flex>
+              <Icon as={FaPlay} boxSize={8} color="white" />
             </Box>
           </Box>
         ) : (
           <Image
             src={track.album_thumbnail}
             alt={track.title}
-            boxSize={["50px", "60px", "70px"]}
+            width="100%"
+            height="100%"
             objectFit="cover"
             borderRadius="md"
           />
         )}
+      </Box>
 
-        <Flex direction="column" flex={1}>
-          <Text
-            fontSize={["sm", "md", "md"]}
-            fontWeight="bold"
-            whiteSpace="nowrap"
-            maxLines={1}
-            overflow="hidden"
-            textOverflow="ellipsis"
-          >
-            {track.title}{" "}
-            {score && (
-              <Badge
-                colorPalette={
-                  score > 90 ? "green" : score > 75 ? "yellow" : "red"
-                }
-                size={["xs", "sm", "sm"]}
-              >
-                {score.toFixed(2)}%
-              </Badge>
-            )}
-          </Text>
-          <Text fontSize={["sm", "md", "md"]}>{track.artist}</Text>
-          <Text
-            fontSize={["xs", "sm", "sm"]}
-            color="brand.muted"
-            whiteSpace="nowrap"
-            maxLines={1}
-            overflow="hidden"
-            maxWidth={["250px", "350px", "450px"]}
-            textOverflow="ellipsis"
-          >
-            {track.album} ({track.year})
-          </Text>
-        </Flex>
-
-        {/* Action menu - top-right, expands left, stays within card */}
-        <Box
-          position="absolute"
-          top={0}
-          left={2}
-          right={0}
-          display="flex"
-          justifyContent="flex-end"
-          alignItems="center"
-          gap={2}
-          pointerEvents="auto"
-        >
-          {buttons}
-        </Box>
-      </Flex>
-      <Flex direction="column" flex={1}>
-        <Flex alignItems="center" gap={2} mt={1}>
-          <RatingGroup.Root value={track.star_rating ?? 0} readOnly>
-            {Array.from({ length: 5 }).map((_, index) => (
-              <RatingGroup.Item key={index} index={index + 1}>
-                <RatingGroup.ItemIndicator fontSize="sm" />
-              </RatingGroup.Item>
-            ))}
-          </RatingGroup.Root>
-          {typeof playlistCount === "number" && playlistCount > 0 && (
-            <Text fontSize={["xs", "sm", "sm"]} color="brand.muted" mt={1}>
-              In {playlistCount} playlist{playlistCount === 1 ? "" : "s"}
+      {/* Main Content - Now using grid layout for better space utilization */}
+      <Flex direction="column" flex={1} minW={0} gap={2}>
+        {/* Row 1: Title, Artist, Album in a more compact layout */}
+        <Box>
+          <Flex alignItems="baseline" gap={2} flexWrap="wrap" pr={10}>
+            <Text
+              fontSize={["md", "lg", "lg"]}
+              fontWeight="bold"
+              overflow="hidden"
+              textOverflow="ellipsis"
+              whiteSpace="nowrap"
+              flex="1 1 auto"
+              minW="200px"
+            >
+              {track.title}
+              {score && (
+                <Badge
+                  ml={2}
+                  colorPalette={
+                    score > 90 ? "green" : score > 75 ? "yellow" : "red"
+                  }
+                  size={["xs", "sm", "sm"]}
+                >
+                  {score.toFixed(1)}%
+                </Badge>
+              )}
             </Text>
-          )}
-        </Flex>
-        <Flex gap={2} mt={1} flexWrap="wrap" mb={2} overflowX="auto">
-          {/* Styles, genres, tags */}
+          </Flex>
+          <Flex gap={2} fontSize={["sm", "md", "md"]} color="gray.600" mt={0.5} flexWrap="wrap" alignItems="center" pr={10}>
+            <Text fontWeight="medium">{track.artist}</Text>
+            <Text color="gray.400">•</Text>
+            <Text overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" flex="1 1 auto" minW="150px">
+              {track.album} {track.year && `(${track.year})`}
+            </Text>
+            <RatingGroup.Root value={track.star_rating ?? 0} readOnly size="xs">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <RatingGroup.Item key={index} index={index + 1}>
+                  <RatingGroup.ItemIndicator />
+                </RatingGroup.Item>
+              ))}
+            </RatingGroup.Root>
+            {track.username && (
+              <>
+                <Text color="gray.400">•</Text>
+                <Text fontSize="sm" color="gray.500">
+                  {track.username}
+                </Text>
+              </>
+            )}
+            {typeof playlistCount === "number" && playlistCount > 0 && (
+              <>
+                <Text color="gray.400">•</Text>
+                <Text fontSize="sm" color="gray.500">
+                  {playlistCount} playlist{playlistCount === 1 ? "" : "s"}
+                </Text>
+              </>
+            )}
+          </Flex>
+        </Box>
 
-          {Array.isArray(track.genres) && track.genres.length > 0 && (
-            <>
-              {track.genres.map((genre) => (
+        {/* Row 2: Technical details and links on same line */}
+        <Flex gap={4} fontSize={["xs", "sm", "sm"]} flexWrap="wrap" alignItems="center">
+          {/* Technical Details */}
+          <Flex gap={3} color="gray.600" flexWrap="wrap">
+            {track.position && <Text>Pos: {track.position}</Text>}
+            {track.duration_seconds && track.duration_seconds > 0 && (
+              <Text>{formatSeconds(track.duration_seconds)}</Text>
+            )}
+            {track.bpm && <Text>{track.bpm} BPM</Text>}
+            {track.key && (
+              <Text>
+                {track.key} ({keyToCamelot(track.key)})
+              </Text>
+            )}
+            {track.danceability && <Text>Dance: {track.danceability}</Text>}
+            {track.mood_happy && <Text>Happy: {track.mood_happy}</Text>}
+            {track.mood_aggressive && <Text>Agg: {track.mood_aggressive}</Text>}
+          </Flex>
+
+          {/* Service Links - inline */}
+          <Flex gap={2} ml="auto">
+            {track.discogs_url && (
+              <Link href={track.discogs_url} target="_blank" aria-label="Discogs">
+                <SiDiscogs size={18} />
+              </Link>
+            )}
+            {track.spotify_url && (
+              <Link href={track.spotify_url} target="_blank" aria-label="Spotify">
+                <SiSpotify size={18} />
+              </Link>
+            )}
+            {track.apple_music_url && (
+              <Link href={track.apple_music_url} target="_blank" aria-label="Apple Music">
+                <SiApplemusic size={18} />
+              </Link>
+            )}
+            {track.youtube_url && (
+              <Link href={track.youtube_url} target="_blank" aria-label="YouTube">
+                <SiYoutube size={18} />
+              </Link>
+            )}
+          </Flex>
+        </Flex>
+
+        {/* Row 3: Genres/Styles */}
+        {(Array.isArray(track.genres) && track.genres.length > 0) ||
+        (Array.isArray(track.styles) && track.styles.length > 0) ||
+        ((typeof track.local_tags === "string" &&
+          track.local_tags !== "{}" &&
+          track.local_tags !== "") ||
+          (Array.isArray(track.local_tags) && track.local_tags.length > 0)) ? (
+          <Flex gap={2} flexWrap="wrap">
+            {Array.isArray(track.genres) &&
+              track.genres.map((genre) => (
                 <Badge key={genre} size={["xs", "sm", "sm"]} variant="surface">
                   {genre}
                 </Badge>
               ))}
-            </>
-          )}
-          {Array.isArray(track.styles) && track.styles.length > 0 && (
-            <>
-              {track.styles.map((style) => (
+            {Array.isArray(track.styles) &&
+              track.styles.map((style) => (
                 <Badge key={style} size={["xs", "sm", "sm"]} variant="outline">
                   {style}
                 </Badge>
               ))}
-            </>
-          )}
-          {((typeof track.local_tags === "string" &&
-            track.local_tags !== "{}" &&
-            track.local_tags !== "") ||
-            (Array.isArray(track.local_tags) &&
-              track.local_tags.length > 0)) && (
-            <Badge
-              key={
-                Array.isArray(track.local_tags)
-                  ? track.local_tags.join(",")
-                  : track.local_tags
-              }
-              size={["xs", "sm", "sm"]}
-              variant="solid"
-            >
-              {Array.isArray(track.local_tags)
-                ? track.local_tags.join(", ")
-                : track.local_tags}
-            </Badge>
-          )}
-        </Flex>
+            {((typeof track.local_tags === "string" &&
+              track.local_tags !== "{}" &&
+              track.local_tags !== "") ||
+              (Array.isArray(track.local_tags) &&
+                track.local_tags.length > 0)) && (
+              <Badge
+                key={
+                  Array.isArray(track.local_tags)
+                    ? track.local_tags.join(",")
+                    : track.local_tags
+                }
+                size={["xs", "sm", "sm"]}
+                variant="solid"
+              >
+                {Array.isArray(track.local_tags)
+                  ? track.local_tags.join(", ")
+                  : track.local_tags}
+              </Badge>
+            )}
+          </Flex>
+        ) : null}
 
-        {/* Details line */}
-        <Box bg={["bg", "bg.muted"]} pl={[0, 4]} pb={2} borderRadius="md">
-          <SimpleGrid columns={[2, null, 3]} gap={1} mt={2}>
-            {[
-              { label: "Pos", value: track.position },
-              {
-                label: "Dur",
-                value:
-                  track.duration_seconds && track.duration_seconds > 0
-                    ? formatSeconds(track.duration_seconds || 0)
-                    : null,
-              },
-              { label: "BPM", value: track.bpm },
-              {
-                label: "Key",
-                value: track.key
-                  ? `${track.key} - ${keyToCamelot(track.key)}`
-                  : null,
-              },
-              { label: "Dance", value: track.danceability },
-              { label: "Happy", value: track.mood_happy },
-              { label: "Agg", value: track.mood_aggressive },
-            ]
-              .filter(
-                (field) =>
-                  field.value !== undefined &&
-                  field.value !== null &&
-                  field.value !== ""
-              )
-              .map((field) => (
-                <Text fontSize={["xs", "sm", "sm"]} key={field.label}>
-                  <strong>{field.label}:</strong> {field.value}
-                </Text>
-              ))}
-          </SimpleGrid>
-        </Box>
+        {/* Row 4: Notes (if present) */}
+        {track.notes && <ExpandableMarkdown text={track.notes} maxLength={100} />}
 
-        {track.notes && (
-          <Box mt={2}>
-            <ExpandableMarkdown text={track.notes} maxLength={100} />
-          </Box>
-        )}
-
-        {/* Links and audio */}
-        <Flex gap={2} mt={2}>
-          {track.discogs_url && (
-            <Link href={track.discogs_url} target="_blank" aria-label="Discogs">
-              <SiDiscogs size={20} style={{ verticalAlign: "middle" }} />
-            </Link>
-          )}
-          {track.spotify_url && (
-            <Link href={track.spotify_url} target="_blank">
-              <SiSpotify size={20} style={{ verticalAlign: "middle" }} />
-            </Link>
-          )}
-          {track.apple_music_url && (
-            <Link href={track.apple_music_url} target="_blank">
-              <SiApplemusic size={20} style={{ verticalAlign: "middle" }} />
-            </Link>
-          )}
-          {track.youtube_url && (
-            <Link href={track.youtube_url} target="_blank">
-              <SiYoutube size={20} style={{ verticalAlign: "middle" }} />
-            </Link>
-          )}
-          {track.username && (
-            <Text fontSize="sm" color="gray.500">
-              User: {track.username}
-            </Text>
-          )}
-        </Flex>
-
-        {/* Minimize button */}
-        <Flex mt={2}>
-          {allowMinimize && (
+        {/* Hide button - only if minimizable */}
+        {allowMinimize && (
+          <Box>
             <Button
               size="xs"
-              variant="outline"
+              variant="ghost"
               onClick={() => setExpanded(false)}
             >
-              Hide
+              Collapse
             </Button>
-          )}
-        </Flex>
+          </Box>
+        )}
       </Flex>
 
-      {footer && <Box mt={2}>{footer}</Box>}
+      {/* Action Menu - Absolute positioned top-right */}
+      <Box
+        position="absolute"
+        top={2}
+        right={2}
+        display="flex"
+        gap={2}
+      >
+        {buttons}
+      </Box>
+
+      {/* Footer */}
+      {footer && <Box mt={2} width="100%">{footer}</Box>}
     </Flex>
   );
 }
