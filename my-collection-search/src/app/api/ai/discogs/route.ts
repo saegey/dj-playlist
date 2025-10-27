@@ -1,29 +1,11 @@
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
+import { DiscogsRelease } from "@/types/track";
 
 const DISCOGS_EXPORTS_DIR = path.resolve(process.cwd(), "discogs_exports");
 
-type DiscogsTrack = {
-  position: string;
-  title: string;
-  duration: string;
-  artists?: { name: string }[];
-};
 
-type DiscogsRelease = {
-  id: number | string;
-  title: string;
-  artists?: { name: string }[];
-  artists_sort?: string;
-  year?: number;
-  styles?: string[];
-  genres?: string[];
-  uri?: string;
-  thumb?: string;
-  videos?: { uri: string; title: string; description?: string; duration?: number; embed?: boolean }[];
-  tracklist: DiscogsTrack[];
-};
 
 function sanitizeId(s: string) {
   return s.trim().replace(/[^A-Za-z0-9\-_]/g, "");

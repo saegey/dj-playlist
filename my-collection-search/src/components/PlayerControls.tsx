@@ -27,6 +27,8 @@ import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import ProgressSlider from "@/components/player/ProgressSlider";
 import CompactProgressSlider from "@/components/player/CompactProgressSlider";
 import Artwork from "@/components/player/Artwork";
+import ArtistLink from "./ArtistLink";
+import AlbumLink from "./AlbumLink";
 
 interface PlayerControlsProps {
   /** Whether to show the queue button */
@@ -107,15 +109,20 @@ export default function PlayerControls({
       >
         {/* Left: Artwork + track info */}
         <HStack minW={0} gap={3} flex="1">
-          <Artwork
-            src={(currentTrack as Track)?.album_thumbnail}
-            alt={
-              currentTrack
-                ? `${currentTrack.artist} - ${currentTrack.title}`
-                : "Artwork"
-            }
-            size={compact ? "40px" : "48px"}
-          />
+          <AlbumLink
+            releaseId={currentTrack?.release_id}
+            friendId={currentTrack?.friend_id}
+          >
+            <Artwork
+              src={(currentTrack as Track)?.album_thumbnail}
+              alt={
+                currentTrack
+                  ? `${currentTrack.artist} - ${currentTrack.title}`
+                  : "Artwork"
+              }
+              size={compact ? "40px" : "48px"}
+            />
+          </AlbumLink>
           <VStack
             align="start"
             minW={0}
@@ -129,7 +136,16 @@ export default function PlayerControls({
               {currentTrack ? currentTrack.title : "No track playing"}
             </Text>
             <Text color="fg.muted" fontSize="xs" maxW="40vw">
-              {currentTrack ? currentTrack.artist : "—"}
+              {currentTrack ? (
+                <ArtistLink
+                  artist={currentTrack.artist}
+                  friendId={currentTrack.friend_id}
+                >
+                  {currentTrack.artist}
+                </ArtistLink>
+              ) : (
+                "—"
+              )}
             </Text>
           </VStack>
         </HStack>

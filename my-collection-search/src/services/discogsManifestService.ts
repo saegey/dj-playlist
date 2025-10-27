@@ -51,25 +51,31 @@ export function getReleasePath(
   username: string,
   releaseId: string
 ): string | null {
-  let releasePath = path.join(DISCOGS_EXPORTS_DIR, `release_${releaseId}.json`);
+  // For friends, prioritize their specific release file
   if (
-    !fs.existsSync(releasePath) &&
     username &&
     process.env.DISCOGS_USERNAME &&
     username !== process.env.DISCOGS_USERNAME
   ) {
-    const alt = path.join(
+    const friendPath = path.join(
       DISCOGS_EXPORTS_DIR,
       `${username}_release_${releaseId}.json`
     );
-    if (fs.existsSync(alt)) {
-      releasePath = alt;
+    if (fs.existsSync(friendPath)) {
+      return friendPath;
     }
   }
-  if (!fs.existsSync(releasePath)) {
-    return null;
+
+  // Fall back to current user's release file
+  const currentUserPath = path.join(
+    DISCOGS_EXPORTS_DIR,
+    `release_${releaseId}.json`
+  );
+  if (fs.existsSync(currentUserPath)) {
+    return currentUserPath;
   }
-  return releasePath;
+
+  return null;
 }
 
 export function getReleaseWritePath(
@@ -77,8 +83,15 @@ export function getReleaseWritePath(
   releaseId: string
 ): string {
   // For writing new releases, determine the path based on username
-  if (username && process.env.DISCOGS_USERNAME && username !== process.env.DISCOGS_USERNAME) {
-    return path.join(DISCOGS_EXPORTS_DIR, `${username}_release_${releaseId}.json`);
+  if (
+    username &&
+    process.env.DISCOGS_USERNAME &&
+    username !== process.env.DISCOGS_USERNAME
+  ) {
+    return path.join(
+      DISCOGS_EXPORTS_DIR,
+      `${username}_release_${releaseId}.json`
+    );
   } else {
     return path.join(DISCOGS_EXPORTS_DIR, `release_${releaseId}.json`);
   }
@@ -139,15 +152,16 @@ export function extractTracksFromAlbum(
       .replace(/[^A-Za-z0-9\-_]/g, "");
     return {
       track_id,
+      release_id: album.id.toString(), // Add release_id for album linking
       title: tr.title,
       artist: tr.artists?.map((a) => a.name).join(", ") || artist_name,
       album: album.title,
-      year: album.year,
+      year: album.year ?? null,
       styles: album.styles || [],
       genres: album.genres || [],
       duration: tr.duration,
-      discogs_url: album.uri,
-      album_thumbnail: album.thumb,
+  discogs_url: album.uri ?? "",
+  album_thumbnail: album.thumb ?? "",
       position: tr.position,
       duration_seconds:
         typeof tr.duration_seconds === "number"
@@ -160,6 +174,7 @@ export function extractTracksFromAlbum(
       apple_music_url: tr.apple_music_url || null,
       local_audio_url: tr.local_audio_url || null,
       username,
+      date_added: album.date_added || null, // Add date_added from album
     };
   });
 }
