@@ -130,23 +130,23 @@ export type SpotifyApiTrack = {
 };
 
 export interface DiscogsRelease {
-  id: string;
+  id: number | string;
   title: string;
-  artists: { name: string }[];
+  artists?: { name: string }[];
   artists_sort?: string;
-  year: number;
-  styles: string[];
-  genres: string[];
-  uri: string;
-  thumb: string;
-  date_added?: string; // When user added to collection (from collection API)
-  tracklist: {
-    position: string;
-    title: string;
-    duration: string;
-    artists: { name: string }[];
-  }[];
-}
+  year?: number;
+  styles?: string[];
+  genres?: string[];
+  uri?: string;
+  thumb?: string;
+  videos?: { uri: string; title: string; description?: string; duration?: number; embed?: boolean }[];
+  tracklist: ProcessedTrack[];
+  date_added: string;
+  date_changed: string;
+  labels?: Array<{ name: string; catno: string }>;
+  country?: string;
+  formats?: string;
+};
 
 export interface DiscogsTrack {
   track_id: string;

@@ -1,23 +1,6 @@
 import { Pool } from "pg";
-import { Album } from "@/types/track";
+import { Album, DiscogsRelease } from "@/types/track";
 
-interface DiscogsReleaseForAlbum {
-  id: string;
-  title: string;
-  artists_sort?: string;
-  artists?: Array<{ name: string }>;
-  year?: number;
-  genres?: string[];
-  styles?: string[];
-  thumb?: string;
-  uri?: string;
-  date_added?: string;
-  date_changed?: string;
-  tracklist?: any[];
-  labels?: Array<{ name: string; catno: string }>;
-  country?: string;
-  formats?: Array<{ name: string }>;
-}
 
 export interface AlbumToUpsert {
   release_id: string;
@@ -60,13 +43,13 @@ async function getFriendId(pool: Pool, username: string): Promise<number> {
  * Convert a Discogs release to an AlbumToUpsert object
  */
 export function discogsReleaseToAlbum(
-  release: DiscogsReleaseForAlbum,
+  release: DiscogsRelease,
   friendId: number
 ): AlbumToUpsert {
   const artist = release.artists_sort || release.artists?.[0]?.name || "Unknown Artist";
 
   return {
-    release_id: release.id,
+    release_id: String(release.id),
     friend_id: friendId,
     title: release.title,
     artist,
@@ -81,7 +64,7 @@ export function discogsReleaseToAlbum(
     label: release.labels?.[0]?.name,
     catalog_number: release.labels?.[0]?.catno,
     country: release.country,
-    format: release.formats?.[0]?.name,
+    format: Array.isArray(release.formats) ? release.formats?.[0]?.name : [],
   };
 }
 

@@ -8,10 +8,10 @@ import { Album } from "@/types/track";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { releaseId: string } }
+  { params }: { params: Promise<{ releaseId: string }> }
 ) {
   try {
-    const { releaseId } = params;
+    const { releaseId } = await params;
     const searchParams = request.nextUrl.searchParams;
     const friendId = searchParams.get("friend_id");
 

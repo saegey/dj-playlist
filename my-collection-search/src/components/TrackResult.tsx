@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
-import NextLink from "next/link";
+import ArtistLink from "./ArtistLink";
+import AlbumLink from "./AlbumLink";
 import {
   Box,
   Flex,
@@ -77,27 +78,13 @@ export default function TrackResult({
               {track.title}
             </Text>
             <Text fontSize="sm">
-              {track.release_id && track.friend_id ? (
-                <Link
-                  as={NextLink}
-                  href={`/albums/${track.release_id}?friend_id=${track.friend_id}`}
-                  _hover={{ textDecoration: "underline" }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {track.album}
-                </Link>
-              ) : (
-                track.album
-              )}{" "}
-              -{" "}
-              <Link
-                as={NextLink}
-                href={`/albums?q=${encodeURIComponent(track.artist)}${track.friend_id ? `&friend_id=${track.friend_id}` : ""}`}
-                _hover={{ textDecoration: "underline" }}
-                onClick={(e) => e.stopPropagation()}
-              >
+              <AlbumLink releaseId={track.release_id} friendId={track.friend_id} stopPropagation>
+                {track.album}
+              </AlbumLink>{" "}
+              - {" "}
+              <ArtistLink artist={track.artist} friendId={track.friend_id} stopPropagation>
                 {track.artist}
-              </Link>
+              </ArtistLink>
             </Text>
             <Flex fontSize="sm" color="gray.600" gap={2}>
               <Text>{formatSeconds(track.duration_seconds || 0)}</Text>
@@ -227,28 +214,22 @@ export default function TrackResult({
             </Text>
           </Flex>
           <Flex gap={2} fontSize={["sm", "md", "md"]} color="gray.600" mt={0.5} flexWrap="wrap" alignItems="center" pr={10}>
-            <Link
-              as={NextLink}
-              href={`/albums?q=${encodeURIComponent(track.artist)}${track.friend_id ? `&friend_id=${track.friend_id}` : ""}`}
-              _hover={{ textDecoration: "underline" }}
-            >
+            <ArtistLink artist={track.artist} friendId={track.friend_id}>
               <Text fontWeight="medium">{track.artist}</Text>
-            </Link>
+            </ArtistLink>
             <Text color="gray.400">•</Text>
             <Box overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" flex="1 1 auto" minW="150px">
-              {track.release_id ? (
-                <Link
-                  as={NextLink}
-                  href={`/albums/${track.release_id}?friend_id=${track.friend_id}`}
-                  _hover={{ textDecoration: "underline" }}
-                >
-                  {track.album} {track.year && `(${track.year})`}
-                </Link>
-              ) : (
-                <Text as="span">
-                  {track.album} {track.year && `(${track.year})`}
-                </Text>
-              )}
+              <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
+                {track.release_id ? (
+                  <Text as="span">
+                    {track.album} {track.year && `(${track.year})`}
+                  </Text>
+                ) : (
+                  <Text as="span">
+                    {track.album} {track.year && `(${track.year})`}
+                  </Text>
+                )}
+              </AlbumLink>
             </Box>
             <RatingGroup.Root value={track.star_rating ?? 0} readOnly size="xs">
               {Array.from({ length: 5 }).map((_, index) => (

@@ -1,5 +1,5 @@
 "use client";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, InfiniteData } from "@tanstack/react-query";
 import {
   searchAlbums,
   updateAlbum,
@@ -8,6 +8,7 @@ import {
   AlbumUpdateParams,
 } from "@/services/albumService";
 import { Album } from "@/types/track";
+import { AlbumSearchResponse } from "@/services/albumService";
 
 /**
  * Hook for infinite scroll album search
@@ -39,7 +40,6 @@ export function useAlbumsInfiniteQuery(params: Omit<AlbumSearchParams, "offset">
  * Hook for single page album search (no infinite scroll)
  */
 export function useAlbumsQuery(params: AlbumSearchParams) {
-  const queryClient = useQueryClient();
 
   return useInfiniteQuery({
     queryKey: ["albums", params],
@@ -81,17 +81,17 @@ export function useUpdateAlbumMutation() {
       // Also invalidate the specific album detail
       queryClient.invalidateQueries({
         queryKey: ["album", data.album.release_id, data.album.friend_id]
-      });
+      })
 
       // Optionally update the specific album in cache
-      queryClient.setQueriesData<{ pages: any[] }>(
+      queryClient.setQueriesData<InfiniteData<AlbumSearchResponse> | undefined>(
         { queryKey: ["albums"] },
         (old) => {
           if (!old) return old;
 
           return {
             ...old,
-            pages: old.pages.map((page) => ({
+            pages: old.pages.map((page: AlbumSearchResponse) => ({
               ...page,
               hits: page.hits.map((album: Album) =>
                 album.release_id === data.album.release_id &&

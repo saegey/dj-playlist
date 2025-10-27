@@ -1,37 +1,14 @@
 // API endpoint to backfill albums table from existing Discogs release files
 // This reads all release JSONs, creates album records, and indexes them in MeiliSearch
 
-import { NextRequest, NextResponse } from "next/server";
 import { Pool } from "pg";
-import fs from "fs";
-import path from "path";
 import { getMeiliClient } from "@/lib/meili";
 import {
-  DISCOGS_EXPORTS_DIR,
   getManifestFiles,
   parseManifestFile,
   getReleasePath,
   loadAlbum,
 } from "@/services/discogsManifestService";
-
-interface AlbumRecord {
-  release_id: string;
-  friend_id: number;
-  title: string;
-  artist: string;
-  year?: string;
-  genres?: string[];
-  styles?: string[];
-  album_thumbnail?: string;
-  discogs_url?: string;
-  date_added?: string;
-  date_changed?: string;
-  track_count: number;
-  label?: string;
-  catalog_number?: string;
-  country?: string;
-  format?: string;
-}
 
 async function getFriendId(pool: Pool, username: string): Promise<number> {
   const result = await pool.query(
@@ -49,7 +26,7 @@ async function getFriendId(pool: Pool, username: string): Promise<number> {
   return result.rows[0].id;
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -93,9 +70,7 @@ export async function POST(request: NextRequest) {
               const releasePath = getReleasePath(username, releaseId);
               if (!releasePath) {
                 controller.enqueue(
-                  encoder.encode(
-                    `⚠️  Release file not found: ${releaseId}\n`
-                  )
+                  encoder.encode(`⚠️  Release file not found: ${releaseId}\n`)
                 );
                 continue;
               }
@@ -103,19 +78,20 @@ export async function POST(request: NextRequest) {
               const album = loadAlbum(releasePath);
               if (!album) {
                 controller.enqueue(
-                  encoder.encode(
-                    `⚠️  Could not load album: ${releaseId}\n`
-                  )
+                  encoder.encode(`⚠️  Could not load album: ${releaseId}\n`)
                 );
                 continue;
               }
 
               // Extract album data
-              const albumRecord: AlbumRecord = {
+              const albumRecord = {
                 release_id: releaseId,
                 friend_id: friendId,
                 title: album.title,
-                artist: album.artists_sort || album.artists?.[0]?.name || "Unknown Artist",
+                artist:
+                  album.artists_sort ||
+                  album.artists?.[0]?.name ||
+                  "Unknown Artist",
                 year: album.year?.toString(),
                 genres: album.genres || [],
                 styles: album.styles || [],
@@ -124,10 +100,12 @@ export async function POST(request: NextRequest) {
                 date_added: album.date_added,
                 date_changed: album.date_changed,
                 track_count: album.tracklist?.length || 0,
-                label: album.labels?.[0]?.name,
+                label: album.labels ? album.labels[0]?.name : [],
                 catalog_number: album.labels?.[0]?.catno,
                 country: album.country,
-                format: album.formats?.[0]?.name,
+                format: Array.isArray(album.formats)
+                  ? album.formats?.[0]?.name
+                  : [],
               };
 
               // Upsert album to database
