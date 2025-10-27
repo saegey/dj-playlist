@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import NextLink from "next/link";
 import {
   Box,
   Flex,
@@ -37,6 +38,7 @@ export type TrackResultProps = {
   allowMinimize?: boolean;
   footer?: React.ReactNode;
   playlistCount?: number;
+  showUsername?: boolean; // Whether to show friend/username badge
 };
 
 export default function TrackResult({
@@ -46,6 +48,7 @@ export default function TrackResult({
   allowMinimize = true,
   footer,
   playlistCount,
+  showUsername = true,
 }: TrackResultProps) {
   const [expanded, setExpanded] = useState(false);
   const [hasMounted, setHasMounted] = React.useState(false);
@@ -74,7 +77,27 @@ export default function TrackResult({
               {track.title}
             </Text>
             <Text fontSize="sm">
-              {track.album} - {track.artist}
+              {track.release_id && track.friend_id ? (
+                <Link
+                  as={NextLink}
+                  href={`/albums/${track.release_id}?friend_id=${track.friend_id}`}
+                  _hover={{ textDecoration: "underline" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {track.album}
+                </Link>
+              ) : (
+                track.album
+              )}{" "}
+              -{" "}
+              <Link
+                as={NextLink}
+                href={`/albums?q=${encodeURIComponent(track.artist)}${track.friend_id ? `&friend_id=${track.friend_id}` : ""}`}
+                _hover={{ textDecoration: "underline" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {track.artist}
+              </Link>
             </Text>
             <Flex fontSize="sm" color="gray.600" gap={2}>
               <Text>{formatSeconds(track.duration_seconds || 0)}</Text>
@@ -83,7 +106,7 @@ export default function TrackResult({
               <Text>
                 {track.key} - {keyToCamelot(track.key)}
               </Text>
-              {track.username && (
+              {showUsername && track.username && (
                 <Text fontSize="sm">User: {track.username}</Text>
               )}
             </Flex>
@@ -204,11 +227,29 @@ export default function TrackResult({
             </Text>
           </Flex>
           <Flex gap={2} fontSize={["sm", "md", "md"]} color="gray.600" mt={0.5} flexWrap="wrap" alignItems="center" pr={10}>
-            <Text fontWeight="medium">{track.artist}</Text>
+            <Link
+              as={NextLink}
+              href={`/albums?q=${encodeURIComponent(track.artist)}${track.friend_id ? `&friend_id=${track.friend_id}` : ""}`}
+              _hover={{ textDecoration: "underline" }}
+            >
+              <Text fontWeight="medium">{track.artist}</Text>
+            </Link>
             <Text color="gray.400">•</Text>
-            <Text overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" flex="1 1 auto" minW="150px">
-              {track.album} {track.year && `(${track.year})`}
-            </Text>
+            <Box overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" flex="1 1 auto" minW="150px">
+              {track.release_id ? (
+                <Link
+                  as={NextLink}
+                  href={`/albums/${track.release_id}?friend_id=${track.friend_id}`}
+                  _hover={{ textDecoration: "underline" }}
+                >
+                  {track.album} {track.year && `(${track.year})`}
+                </Link>
+              ) : (
+                <Text as="span">
+                  {track.album} {track.year && `(${track.year})`}
+                </Text>
+              )}
+            </Box>
             <RatingGroup.Root value={track.star_rating ?? 0} readOnly size="xs">
               {Array.from({ length: 5 }).map((_, index) => (
                 <RatingGroup.Item key={index} index={index + 1}>
@@ -216,7 +257,7 @@ export default function TrackResult({
                 </RatingGroup.Item>
               ))}
             </RatingGroup.Root>
-            {track.username && (
+            {showUsername && track.username && (
               <>
                 <Text color="gray.400">•</Text>
                 <Text fontSize="sm" color="gray.500">

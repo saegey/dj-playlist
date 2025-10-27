@@ -71,7 +71,11 @@ export async function POST(request: Request) {
       const index = meiliClient.index("tracks");
       await index.updateDocuments(updatedTracks);
     }
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      updated: updatedTracks.length,
+      tracks: updatedTracks,
+    });
   } catch (error) {
     console.error("Error in bulk notes update:", error);
     return NextResponse.json(

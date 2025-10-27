@@ -17,8 +17,8 @@ import {
 } from "@chakra-ui/react";
 import { TbPlaylist } from "react-icons/tb";
 import { SiApplemusic } from "react-icons/si";
-import { LuAudioLines } from "react-icons/lu";
-import { IoBookSharp, IoMusicalNotes, IoSettings } from "react-icons/io5";
+import { LuAudioLines, LuCloudDownload } from "react-icons/lu";
+import { IoBookSharp, IoMusicalNotes, IoSettings, IoAlbums } from "react-icons/io5";
 import { FiMenu } from "react-icons/fi";
 // import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 
@@ -27,11 +27,13 @@ interface TopMenuBarProps {
 }
 
 const menuItems = [
-  { href: "/", label: "Library" },
+  { href: "/", label: "Tracks" },
+  { href: "/albums", label: "Albums" },
   { href: "/playlists", label: "Playlists" },
   { href: "/missing-apple-music", label: "Match" },
   { href: "/backfill-audio", label: "Audio" },
   { href: "/bulk-notes", label: "Metadata" },
+  { href: "/jobs", label: "Jobs" },
   { href: "/settings", label: "Settings" },
 ];
 
@@ -109,6 +111,8 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
                     const icon =
                       item.href === "/"
                         ? IoMusicalNotes
+                        : item.href === "/tracks"
+                        ? IoAlbums
                         : item.href === "/missing-apple-music"
                         ? SiApplemusic
                         : item.href === "/backfill-audio"
@@ -119,6 +123,8 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
                         ? IoSettings
                         : item.href === "/playlists"
                         ? TbPlaylist
+                        : item.href === "/jobs"
+                        ? LuCloudDownload
                         : IoBookSharp;
 
                     const ItemIcon = icon;

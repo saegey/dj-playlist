@@ -139,6 +139,7 @@ export function extractTracksFromAlbum(
       .replace(/[^A-Za-z0-9\-_]/g, "");
     return {
       track_id,
+      release_id: album.id.toString(), // Add release_id for album linking
       title: tr.title,
       artist: tr.artists?.map((a) => a.name).join(", ") || artist_name,
       album: album.title,
@@ -160,6 +161,7 @@ export function extractTracksFromAlbum(
       apple_music_url: tr.apple_music_url || null,
       local_audio_url: tr.local_audio_url || null,
       username,
+      date_added: album.date_added || null, // Add date_added from album
     };
   });
 }

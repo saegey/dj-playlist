@@ -141,7 +141,9 @@ export type BulkNotesUpdate = {
 };
 
 export type BulkNotesResponse = {
+  success: boolean;
   updated?: number;
+  tracks?: Track[];
   [k: string]: unknown;
 };
 
