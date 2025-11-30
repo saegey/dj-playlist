@@ -2,8 +2,10 @@
 # Use Node base image with Debian Bookworm (Python 3.11)
 FROM node:20-bookworm
 
-# Install system dependencies
-RUN --mount=type=cache,target=/var/cache/apt \
+# Install system dependencies (with cached apt) and ensure lockfiles are cleared
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+  --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+  rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock && \
   apt-get update && \
   apt-get install -y wget gnupg2 && \
   echo "deb http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
