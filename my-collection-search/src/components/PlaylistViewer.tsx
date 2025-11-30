@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, type ChangeEvent } from "react";
+import React, { useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   Box,
   EmptyState,
@@ -9,6 +9,7 @@ import {
   VStack,
   Skeleton,
 } from "@chakra-ui/react";
+import { useQueryClient } from "@tanstack/react-query";
 import { FiHeadphones } from "react-icons/fi";
 
 import DraggableTrackList from "@/components/DraggableTrackList";
@@ -26,11 +27,14 @@ import { Track } from "@/types/track";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import FriendSelectDialog from "@/components/FriendSelectDialog";
 import { toaster } from "@/components/ui/toaster";
-import { updatePlaylist } from "@/services/playlistService";
+import { importPlaylist, updatePlaylist } from "@/services/playlistService";
+import NamePlaylistDialog from "@/components/NamePlaylistDialog";
+import { queryKeys } from "@/lib/queryKeys";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   // State for friend selection dialog
   const [friendSelectDialogOpen, setFriendSelectDialogOpen] = useState(false);
@@ -73,6 +77,20 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     open: openSaveDialog,
     saveExisting,
   } = usePlaylistSaveDialog(playlistId);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [duplicateName, setDuplicateName] = useState("");
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameName, setRenameName] = useState("");
+
+  useEffect(() => {
+    if (playlistName) {
+      setRenameName(playlistName);
+      setDuplicateName(`${playlistName} (Copy)`);
+    } else if (playlistId) {
+      setRenameName(`Playlist ${playlistId}`);
+      setDuplicateName(`Playlist ${playlistId} (Copy)`);
+    }
+  }, [playlistId, playlistName]);
 
   // Get total playtime for display
   const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
@@ -141,6 +159,76 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     setPendingImport(null);
     setSelectedFriendId(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDuplicatePlaylist = async (name: string) => {
+    const finalName = name.trim();
+    if (!finalName) {
+      toaster.create({ title: "Please enter a playlist name", type: "error" });
+      return;
+    }
+    if (tracksPlaylist.length === 0) {
+      toaster.create({ title: "Cannot duplicate an empty playlist", type: "error" });
+      return;
+    }
+    try {
+      const res = await importPlaylist(
+        finalName,
+        tracksPlaylist.map(({ track_id, friend_id }) => ({
+          track_id,
+          friend_id,
+        }))
+      );
+      if (!res.ok) throw new Error("Failed to duplicate playlist");
+      toaster.create({
+        title: `Duplicated playlist as "${finalName}"`,
+        type: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.playlists() });
+      setDuplicateDialogOpen(false);
+    } catch (err) {
+      console.error("Duplicate playlist error:", err);
+      toaster.create({ title: "Failed to duplicate playlist", type: "error" });
+    }
+  };
+
+  const handleRenamePlaylist = async (name: string) => {
+    const finalName = name.trim();
+    if (!finalName) {
+      toaster.create({ title: "Please enter a playlist name", type: "error" });
+      return;
+    }
+    if (!playlistId) {
+      toaster.create({ title: "Cannot rename an unsaved playlist", type: "error" });
+      return;
+    }
+    try {
+      const res = await updatePlaylist(playlistId, { name: finalName });
+      if (!res.ok) throw new Error("Failed to rename playlist");
+      toaster.create({
+        title: "Playlist renamed",
+        type: "success",
+      });
+      queryClient.setQueryData(
+        queryKeys.playlistTrackIds(playlistId),
+        (prev: unknown) => {
+          if (
+            prev &&
+            typeof prev === "object" &&
+            !Array.isArray(prev) &&
+            "playlist_name" in (prev as Record<string, unknown>)
+          ) {
+            return { ...(prev as Record<string, unknown>), playlist_name: finalName };
+          }
+          return prev;
+        }
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.playlists() });
+      setRenameDialogOpen(false);
+    } catch (err) {
+      console.error("Rename playlist error:", err);
+      toaster.create({ title: "Failed to rename playlist", type: "error" });
+    }
   };
 
   // Render function for playlist item menu buttons
@@ -297,15 +385,17 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
             }}
             onSortGenetic={sortGenetic}
             onExportJson={exportPlaylist}
-            onImportJson={() => fileInputRef.current?.click()}
-            onExportPdf={() => exportToPDF("playlist.pdf")}
-            onOpenSaveDialog={playlistId ? saveExisting : openSaveDialog}
-            isGeneticSorting={isGeneticSorting}
-            enqueuePlaylist={() =>
-              replacePlaylist(tracks, {
-                autoplay: true,
-                startIndex: 0,
-              })
+          onImportJson={() => fileInputRef.current?.click()}
+          onExportPdf={() => exportToPDF("playlist.pdf")}
+          onOpenSaveDialog={playlistId ? saveExisting : openSaveDialog}
+          isGeneticSorting={isGeneticSorting}
+          onDuplicate={playlistId ? () => setDuplicateDialogOpen(true) : undefined}
+          onRename={playlistId ? () => setRenameDialogOpen(true) : undefined}
+          enqueuePlaylist={() =>
+            replacePlaylist(tracks, {
+              autoplay: true,
+              startIndex: 0,
+            })
             }
           />
         </Flex>
@@ -328,6 +418,23 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           onEditTrack={openTrackEditor}
         />
         <SaveDialog />
+        <NamePlaylistDialog
+          open={duplicateDialogOpen}
+          name={duplicateName}
+          setName={setDuplicateName}
+          trackCount={tracksPlaylist.length}
+          confirmLabel="Duplicate Playlist"
+          onConfirm={handleDuplicatePlaylist}
+          onCancel={() => setDuplicateDialogOpen(false)}
+        />
+        <NamePlaylistDialog
+          open={renameDialogOpen}
+          name={renameName}
+          setName={setRenameName}
+          confirmLabel="Rename Playlist"
+          onConfirm={handleRenamePlaylist}
+          onCancel={() => setRenameDialogOpen(false)}
+        />
         <input
           type="file"
           accept=".json,application/json"

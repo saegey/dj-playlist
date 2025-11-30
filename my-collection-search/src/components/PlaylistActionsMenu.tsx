@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button, Menu, Flex, Box } from "@chakra-ui/react";
-import { FiMoreVertical, FiPlay, FiSave } from "react-icons/fi";
+import { FiMoreVertical, FiPlay, FiSave, FiEdit, FiCopy } from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
 // import { MdOutlineClearAll } from "react-icons/md";
@@ -16,8 +16,11 @@ export interface PlaylistActionsMenuProps {
   onImportJson: () => void;
   onExportPdf: () => void;
   onOpenSaveDialog: () => void;
+  onDuplicate?: () => void;
+  onRename?: () => void;
   isGeneticSorting?: boolean;
-  enqueuePlaylist: () => void;}
+  enqueuePlaylist: () => void;
+}
 
 /**
  * Dumb, presentational component that renders the playlist actions menu.
@@ -31,6 +34,8 @@ export default function PlaylistActionsMenu({
   onImportJson,
   onExportPdf,
   onOpenSaveDialog,
+  onDuplicate,
+  onRename,
   enqueuePlaylist,
   isGeneticSorting,
 }: PlaylistActionsMenuProps) {
@@ -94,6 +99,27 @@ export default function PlaylistActionsMenu({
           <Menu.Item value="save" onSelect={onOpenSaveDialog}>
             <FiSave /> Save Playlist
           </Menu.Item>
+          {(onDuplicate || onRename) && (
+            <>
+              <Box
+                as="hr"
+                my={1}
+                borderColor="gray.200"
+                borderWidth={0}
+                borderTopWidth={1}
+              />
+              {onDuplicate && (
+                <Menu.Item value="duplicate" onSelect={onDuplicate}>
+                  <FiCopy /> Duplicate Playlist
+                </Menu.Item>
+              )}
+              {onRename && (
+                <Menu.Item value="rename" onSelect={onRename}>
+                  <FiEdit /> Rename Playlist
+                </Menu.Item>
+              )}
+            </>
+          )}
           <Box
             as="hr"
             my={1}
@@ -102,7 +128,7 @@ export default function PlaylistActionsMenu({
             borderTopWidth={1}
           />
 
-           <Menu.Item value="enqueue" onSelect={enqueuePlaylist}>
+          <Menu.Item value="enqueue" onSelect={enqueuePlaylist}>
             <FiPlay /> Enqueue Playlist
           </Menu.Item>
           {/* <Menu.Item

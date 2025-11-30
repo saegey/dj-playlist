@@ -1,9 +1,11 @@
+# syntax=docker/dockerfile:1.7
 FROM ghcr.io/mgoltzsche/essentia
 RUN apk add --no-cache python3 py3-pip
 
 # create venv & install
 COPY requirements.txt /tmp/requirements.txt
-RUN python3 -m venv /venv \
+RUN --mount=type=cache,target=/root/.cache/pip \
+     python3 -m venv /venv \
      && . /venv/bin/activate \
      && pip install --no-cache-dir -r /tmp/requirements.txt
 ENV PATH="/venv/bin:$PATH"

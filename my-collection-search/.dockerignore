@@ -1,6 +1,15 @@
+audio
+cookies
+data.ms
+discogs_exports
+spotify_exports
 public/audio
 tmp
 dumps
 node_modules
+.next
+coverage
+*.log
+*.local
 .git
 .DS_Store
