@@ -32,6 +32,8 @@ jobs:
           file: ./my-collection-search/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: ghcr.io/${{ github.repository_owner }}/myapp:${{ github.ref_name }}
           build-args: |
             OPENAI_API_KEY=dummy
@@ -79,6 +81,8 @@ jobs:
           file: ./essentia-api/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: ghcr.io/${{ github.repository_owner }}/essentia-api:${{ github.ref_name }}
 
       - name: Image digest
@@ -111,6 +115,8 @@ jobs:
           file: ./ga-service/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: ghcr.io/${{ github.repository_owner }}/ga-service:${{ github.ref_name }}
 
       - name: Image digest
@@ -143,6 +149,8 @@ jobs:
           file: ./my-collection-search/Dockerfile.download-worker
           push: true
           platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: ghcr.io/${{ github.repository_owner }}/download-worker:${{ github.ref_name }}
 
       - name: Image digest

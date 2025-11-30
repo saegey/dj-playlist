@@ -2,7 +2,9 @@
 FROM python:3.12-slim
 
 # Install system dependencies
-RUN --mount=type=cache,target=/var/cache/apt \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock && \
     apt-get update && apt-get install -y \
     ffmpeg \
     git \
