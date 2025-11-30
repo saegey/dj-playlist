@@ -318,9 +318,8 @@ function AlbumDetailContent() {
               <Button
                 colorScheme="blue"
                 onClick={handleEnqueueAlbum}
-                leftIcon={<FiPlay />}
               >
-                Play Album
+                <FiPlay />Play Album
               </Button>
             )}
 

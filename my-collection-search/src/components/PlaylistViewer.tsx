@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, type ChangeEvent } from "react";
 import {
   Box,
   EmptyState,
@@ -36,7 +36,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const [friendSelectDialogOpen, setFriendSelectDialogOpen] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
   const [pendingImport, setPendingImport] = useState<{
-    tracks: Array<{ track_id: string; username?: string }>;
+    tracks: Array<{ track_id: string; username?: string; friend_id?: number }>;
   } | null>(null);
 
   // New query-based hooks
@@ -78,20 +78,28 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
 
   // Append tracks to the current playlist
-  const appendTracksToPlaylist = async (newTracks: Array<{ track_id: string; friend_id: number }>) => {
+  const appendTracksToPlaylist = async (
+    newTracks: Array<{ track_id: string; friend_id: number }>
+  ) => {
     if (!playlistId) return;
 
     try {
       // Combine existing tracks with new tracks
       const combinedTracks = [
-        ...tracksPlaylist.map(t => ({ track_id: t.track_id, friend_id: t.friend_id })),
-        ...newTracks
+        ...tracksPlaylist.map((t) => ({
+          track_id: t.track_id,
+          friend_id: t.friend_id,
+        })),
+        ...newTracks,
       ];
 
       const res = await updatePlaylist(playlistId, { tracks: combinedTracks });
 
       if (res.ok) {
-        toaster.create({ title: `Appended ${newTracks.length} tracks to playlist`, type: "success" });
+        toaster.create({
+          title: `Appended ${newTracks.length} tracks to playlist`,
+          type: "success",
+        });
         refetchTrackIds();
       } else {
         toaster.create({ title: "Failed to append tracks", type: "error" });
@@ -100,6 +108,39 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
       console.error("Append error:", err);
       toaster.create({ title: "Error appending tracks", type: "error" });
     }
+  };
+
+  const handleFriendSelectConfirm = async () => {
+    if (!pendingImport || !selectedFriendId) return;
+    try {
+      const resolved = pendingImport.tracks
+        .map((t) => ({
+          track_id: t.track_id,
+          friend_id: t.friend_id ?? selectedFriendId,
+        }))
+        .filter(
+          (t): t is { track_id: string; friend_id: number } =>
+            typeof t.track_id === "string" && typeof t.friend_id === "number"
+        );
+
+      if (resolved.length === 0) {
+        toaster.create({ title: "No valid tracks to import", type: "error" });
+        return;
+      }
+
+      await appendTracksToPlaylist(resolved);
+    } finally {
+      setFriendSelectDialogOpen(false);
+      setPendingImport(null);
+      setSelectedFriendId(null);
+    }
+  };
+
+  const handleFriendSelectCancel = () => {
+    setFriendSelectDialogOpen(false);
+    setPendingImport(null);
+    setSelectedFriendId(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   // Render function for playlist item menu buttons
@@ -120,6 +161,65 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     },
     [tracksPlaylist.length, moveTrack, removeFromPlaylist, openTrackEditor]
   );
+
+  // Import JSON and append to this playlist
+  const handleImportJson = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = JSON.parse(await file.text());
+      const tracksData: Array<{
+        track_id?: string;
+        friend_id?: number;
+        username?: string;
+      }> = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.tracks)
+        ? data.tracks
+        : [];
+
+      const cleanTracks = tracksData
+        .map((t) => ({
+          track_id: t.track_id,
+          friend_id: t.friend_id,
+          username: t.username,
+        }))
+        .filter((t) => typeof t.track_id === "string" && t.track_id.length > 0);
+
+      if (cleanTracks.length === 0) {
+        toaster.create({
+          title: "No valid tracks found in JSON",
+          type: "error",
+        });
+        return;
+      }
+
+      const missingFriend = cleanTracks.some(
+        (t) => typeof t.friend_id !== "number"
+      );
+      if (missingFriend) {
+        setPendingImport({
+          tracks: cleanTracks as Array<{
+            track_id: string;
+            username?: string;
+            friend_id?: number;
+          }>,
+        });
+        setFriendSelectDialogOpen(true);
+        return;
+      }
+
+      await appendTracksToPlaylist(
+        cleanTracks as Array<{ track_id: string; friend_id: number }>
+      );
+    } catch (err) {
+      console.error("Import JSON error:", err);
+      toaster.create({ title: "Error importing playlist JSON", type: "error" });
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   if (trackIdsLoading || tracksLoading) {
     return (
@@ -228,6 +328,21 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           onEditTrack={openTrackEditor}
         />
         <SaveDialog />
+        <input
+          type="file"
+          accept=".json,application/json"
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={handleImportJson}
+        />
+        <FriendSelectDialog
+          open={friendSelectDialogOpen}
+          selectedFriendId={selectedFriendId}
+          setSelectedFriendId={(id) => setSelectedFriendId(id)}
+          trackCount={pendingImport?.tracks.length}
+          onConfirm={handleFriendSelectConfirm}
+          onCancel={handleFriendSelectCancel}
+        />
       </Box>
     </>
   );

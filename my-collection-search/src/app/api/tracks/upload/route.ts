@@ -3,17 +3,24 @@ import { promises as fs } from "fs";
 import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
+import type { Pool } from "pg";
 
 export const runtime = "nodejs"; // Ensure Node.js runtime for file system access
 
 const execAsync = promisify(exec);
 
+type AnalysisResult = {
+  rhythm?: { bpm?: number; danceability?: number };
+  tonal?: { key_edma?: { key?: string; scale?: string } };
+  metadata?: { audio_properties?: { length?: number } };
+};
+
 // Helper function to update database and MeiliSearch
 async function processAudioFile(
-  pool: any,
+  pool: Pool,
   local_audio_url: string,
   track_id: string,
-  analysisResult: any
+  analysisResult: AnalysisResult
 ) {
   const bpm = analysisResult?.rhythm?.bpm
     ? Math.round(analysisResult.rhythm.bpm)
@@ -94,7 +101,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Call Essentia API using the wav file
-  let analysisResult;
+  let analysisResult: AnalysisResult;
   try {
     const essentiaApiUrl =
       process.env.ESSENTIA_API_URL || "http://essentia:8001/analyze";
@@ -134,7 +141,7 @@ export async function POST(req: NextRequest) {
         `ffmpeg -y -i "${filePath}" -c:a libfdk_aac -b:a 192k "${audioDest}"`
       );
     } catch (libfdkError) {
-      console.warn("libfdk_aac not available, falling back to aac codec");
+      console.warn("libfdk_aac not available, falling back to aac codec", libfdkError);
       await execAsync(
         `ffmpeg -y -i "${filePath}" -c:a aac -b:a 192k "${audioDest}"`
       );

@@ -32,7 +32,7 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
   openTrackEditor,
   size = "xs",
 }) => {
-  const { openForTrack, PlaylistDialog, NameDialog } = useAddToPlaylistDialog();
+  const { openForTrack, PlaylistDialog } = useAddToPlaylistDialog();
   const isFirst = idx === 0;
   const isLast = idx === total - 1;
   return (

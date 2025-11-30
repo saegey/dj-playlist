@@ -206,7 +206,7 @@ const SearchResults: React.FC = () => {
 
           {viewMode === "card" ? (
             // Card view (existing)
-            trackInfo.map((info, idx) => {
+            trackInfo.map((info) => {
               return (
                 <TrackResultItem
                   key={`search-${info.trackId}`}
