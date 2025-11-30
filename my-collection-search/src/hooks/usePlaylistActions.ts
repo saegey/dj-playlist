@@ -16,12 +16,20 @@ export function usePlaylistActions(playlistId?: number) {
   const getTracks = (): Track[] => {
     if (!playlistId) return [];
 
-    const tracksPlaylist =
-      (queryClient.getQueryData(queryKeys.playlistTrackIds(playlistId)) as {
-        track_id: string;
-        friend_id: number;
-      }[]) || [];
-    if (tracksPlaylist.length === 0) return [];
+    const cached = queryClient.getQueryData(
+      queryKeys.playlistTrackIds(playlistId)
+    ) as
+      | { track_id: string; friend_id: number }[]
+      | { tracks?: { track_id: string; friend_id: number }[] }
+      | undefined;
+
+    const tracksPlaylist = Array.isArray(cached)
+      ? cached
+      : cached?.tracks ?? [];
+
+    if (!Array.isArray(tracksPlaylist) || tracksPlaylist.length === 0) {
+      return [];
+    }
 
     const tracks = tracksPlaylist
       .map((t) => {
@@ -62,8 +70,16 @@ export function usePlaylistActions(playlistId?: number) {
     console.log(`Playlist has ${tracks.length} tracks`);
     if (tracks.length === 0) return;
 
+    // Export tracks with username for cross-installation compatibility
+    const exportTracks = tracks.map((t) => ({
+      ...t,
+      // Ensure track_id and username are present for cross-installation compatibility
+      track_id: t.track_id,
+      username: t.username,
+    }));
+
     const playlistData = {
-      tracks,
+      tracks: exportTracks,
       exportDate: new Date().toISOString(),
       totalTracks: tracks.length,
       ...getTotalPlaytime(),

@@ -2,7 +2,7 @@
 "use client";
 import { useState } from "react";
 import { Button, SimpleGrid } from "@chakra-ui/react";
-import { FiDatabase, FiBriefcase } from "react-icons/fi";
+import { FiDatabase, FiBriefcase, FiTrash2 } from "react-icons/fi";
 import { SiDiscogs, SiSpotify } from "react-icons/si";
 import { toaster } from "@/components/ui/toaster";
 import {
@@ -15,6 +15,7 @@ import {
 import { useIngestSpotifyIndex } from "@/hooks/useSpotifyQuery";
 import { useBackupsQuery } from "@/hooks/useBackupsQuery";
 import { useSettingsDialogs } from "@/providers/SettingsDialogProvider";
+import { useCleanupAlbums, useBackfillReleaseId } from "@/hooks/useAlbumsQuery";
 import ManifestVerificationDialog from "@/components/settings/dialogs/ManifestVerificationDialog";
 import RemovedReleasesDialog from "@/components/settings/dialogs/RemovedReleasesDialog";
 import type { VerificationResult } from "@/services/internalApi/discogs";
@@ -39,6 +40,8 @@ export default function ActionsGrid() {
   const spotifyIndex = useIngestSpotifyIndex();
   const { addBackup, addBackupLoading } = useBackupsQuery();
   const { setSpotifySyncOpen } = useSettingsDialogs();
+  const cleanupAlbums = useCleanupAlbums();
+  const backfillReleaseId = useBackfillReleaseId();
 
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [verificationResults, setVerificationResults] = useState<
@@ -49,7 +52,9 @@ export default function ActionsGrid() {
     discogsIndex.isPending ||
     discogsSync.isPending ||
     addBackupLoading ||
-    verifyManifests.isPending;
+    verifyManifests.isPending ||
+    cleanupAlbums.isPending ||
+    backfillReleaseId.isPending;
 
   const handleSyncClick = async () => {
     try {
@@ -238,6 +243,54 @@ export default function ActionsGrid() {
 
       <Button onClick={() => setSpotifySyncOpen(true)} disabled={disableAll}>
         <SiSpotify /> Sync Spotify
+      </Button>
+
+      <Button
+        onClick={() =>
+          backfillReleaseId.mutate(undefined, {
+            onSuccess: () => {
+              toaster.create({
+                title: "Backfill Complete",
+                type: "success",
+                description: "Fixed tracks missing release_id",
+              });
+            },
+            onError: (e: Error) =>
+              toaster.create({
+                title: "Backfill Failed",
+                type: "error",
+                description: e.message,
+              }),
+          })
+        }
+        loading={backfillReleaseId.isPending}
+        disabled={disableAll}
+      >
+        <FiDatabase /> Fix Track Links
+      </Button>
+
+      <Button
+        onClick={() =>
+          cleanupAlbums.mutate(undefined, {
+            onSuccess: () => {
+              toaster.create({
+                title: "Album Cleanup Complete",
+                type: "success",
+                description: "Removed albums with no tracks",
+              });
+            },
+            onError: (e: Error) =>
+              toaster.create({
+                title: "Album Cleanup Failed",
+                type: "error",
+                description: e.message,
+              }),
+          })
+        }
+        loading={cleanupAlbums.isPending}
+        disabled={disableAll}
+      >
+        <FiTrash2 /> Cleanup Empty Albums
       </Button>
 
       <ManifestVerificationDialog

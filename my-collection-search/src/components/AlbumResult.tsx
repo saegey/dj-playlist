@@ -14,6 +14,7 @@ import {
   Input,
   Textarea,
 } from "@chakra-ui/react";
+import { useColorModeValue } from "@/components/ui/color-mode";
 import { SiDiscogs } from "react-icons/si";
 import { Album } from "@/types/track";
 import { useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
@@ -42,6 +43,11 @@ export default function AlbumResult({
     album.purchase_price?.toString() || ""
   );
   const [condition, setCondition] = useState(album.condition || "");
+  const mutedText = useColorModeValue("gray.600", "gray.300");
+  const subtleText = useColorModeValue("gray.500", "gray.400");
+  const panelBg = useColorModeValue("gray.50", "gray.900");
+  const panelBorder = useColorModeValue("gray.200", "gray.700");
+  const titleColor = useColorModeValue("blue.600", "blue.300");
 
   const updateMutation = useUpdateAlbumMutation();
 
@@ -82,7 +88,7 @@ export default function AlbumResult({
               href={`/albums/${album.release_id}?friend_id=${album.friend_id}`}
               _hover={{ textDecoration: "underline" }}
             >
-              <Text fontWeight="bold" fontSize="lg" color="blue.600">
+              <Text fontWeight="bold" fontSize="lg" color={titleColor}>
                 {album.title}
               </Text>
             </Link>
@@ -91,7 +97,7 @@ export default function AlbumResult({
               href={`/albums?q=${encodeURIComponent(album.artist)}&friend_id=${album.friend_id}`}
               _hover={{ textDecoration: "underline" }}
             >
-              <Text fontSize="md" color="gray.600">
+              <Text fontSize="md" color={mutedText}>
                 {album.artist}
               </Text>
             </Link>
@@ -121,13 +127,13 @@ export default function AlbumResult({
                 </RatingGroup.Item>
               ))}
             </RatingGroup.Root>
-            <Text fontSize="sm" color="gray.500">
+            <Text fontSize="sm" color={subtleText}>
               ({rating}/5)
             </Text>
           </Flex>
 
           {/* Metadata */}
-          <Flex gap={3} flexWrap="wrap" fontSize="sm" color="gray.600">
+          <Flex gap={3} flexWrap="wrap" fontSize="sm" color={mutedText}>
             {album.year && <Text>{album.year}</Text>}
             {album.format && <Text>{album.format}</Text>}
             {album.label && <Text>{album.label}</Text>}
@@ -156,14 +162,21 @@ export default function AlbumResult({
 
           {/* Date added */}
           {album.date_added && (
-            <Text fontSize="sm" color="gray.500">
+            <Text fontSize="sm" color={subtleText}>
               Added: {formatDate(album.date_added)}
             </Text>
           )}
 
           {/* Editable fields */}
           {showEditFields && isEditing && (
-            <Box mt={2} p={3} borderWidth="1px" borderRadius="md" bg="gray.50">
+            <Box
+              mt={2}
+              p={3}
+              borderWidth="1px"
+              borderRadius="md"
+              bg={panelBg}
+              borderColor={panelBorder}
+            >
               <Flex direction="column" gap={2}>
                 <Box>
                   <Text fontSize="sm" fontWeight="bold" mb={1}>
@@ -228,14 +241,14 @@ export default function AlbumResult({
 
           {/* Notes display (when not editing) */}
           {!isEditing && album.album_notes && (
-            <Box p={2} bg="gray.50" borderRadius="md">
+            <Box p={2} bg={panelBg} borderRadius="md" borderWidth="1px" borderColor={panelBorder}>
               <Text fontSize="sm">{album.album_notes}</Text>
             </Box>
           )}
 
           {/* Purchase info display */}
           {!isEditing && (album.purchase_price || album.condition) && (
-            <Flex gap={3} fontSize="sm" color="gray.600">
+            <Flex gap={3} fontSize="sm" color={mutedText}>
               {album.purchase_price && (
                 <Text>Price: ${album.purchase_price}</Text>
               )}

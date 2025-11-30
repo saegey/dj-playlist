@@ -6,13 +6,14 @@ import { FiMoreVertical, FiPlay, FiSave } from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
 // import { MdOutlineClearAll } from "react-icons/md";
-import { LuFileJson } from "react-icons/lu";
+import { LuFileJson, LuFileInput } from "react-icons/lu";
 
 export interface PlaylistActionsMenuProps {
   disabled?: boolean;
   onSortGreedy: () => void;
   onSortGenetic: () => void;
   onExportJson: () => void;
+  onImportJson: () => void;
   onExportPdf: () => void;
   onOpenSaveDialog: () => void;
   isGeneticSorting?: boolean;
@@ -27,6 +28,7 @@ export default function PlaylistActionsMenu({
   onSortGreedy,
   onSortGenetic,
   onExportJson,
+  onImportJson,
   onExportPdf,
   onOpenSaveDialog,
   enqueuePlaylist,
@@ -82,6 +84,9 @@ export default function PlaylistActionsMenu({
             }}
           >
             <LuFileJson /> Export JSON
+          </Menu.Item>
+          <Menu.Item value="import-json" onSelect={onImportJson}>
+            <LuFileInput /> Import & Append JSON
           </Menu.Item>
           <Menu.Item value="export-pdf" onSelect={onExportPdf}>
             <PiFilePdf /> Export PDF

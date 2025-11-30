@@ -68,6 +68,7 @@ export function useSearchResults({
   const infiniteQuery = useInfiniteQuery<SearchPage, Error>({
     queryKey: queryKeys.tracks({ q: query, filter: searchFilter, limit, mode }),
     enabled: enabled && isInfinite,
+    refetchOnWindowFocus: false,
     queryFn: async (context): Promise<SearchPage> => {
       const pageParam =
         typeof context.pageParam === "number" ? context.pageParam : 0;
@@ -102,6 +103,7 @@ export function useSearchResults({
       page: page ?? 1,
     }),
     enabled: enabled && !isInfinite && !!effClient,
+    refetchOnWindowFocus: false,
     queryFn: async (): Promise<SearchPage> => {
       const index = effClient!.index<Track>("tracks");
       const currentPage = Math.max(1, page ?? 1);
@@ -235,6 +237,10 @@ export function useSearchResults({
   const loading = isInfinite
     ? bootstrapping || infiniteQuery.isPending || infiniteQuery.isFetching
     : bootstrapping || singlePageQuery.isPending || singlePageQuery.isFetching;
+  const initialLoading = isInfinite
+    ? bootstrapping || infiniteQuery.isPending
+    : bootstrapping || singlePageQuery.isPending;
+  const loadingMore = isInfinite ? infiniteQuery.isFetchingNextPage : false;
 
   // setLoading existed in the old API; provide a no-op to avoid breakage.
   const setLoading = useCallback(() => {
@@ -251,6 +257,8 @@ export function useSearchResults({
     // status
     hasMore,
     loading,
+    initialLoading,
+    loadingMore,
 
     // actions
     loadMore,

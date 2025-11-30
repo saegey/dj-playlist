@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useState } from "react";
 import {
   Box,
   EmptyState,
@@ -24,13 +24,28 @@ import { usePlaylistActions } from "@/hooks/usePlaylistActions";
 import PlaylistRecommendations from "./PlaylistRecommendations";
 import { Track } from "@/types/track";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import FriendSelectDialog from "@/components/FriendSelectDialog";
+import { toaster } from "@/components/ui/toaster";
+import { updatePlaylist } from "@/services/playlistService";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // State for friend selection dialog
+  const [friendSelectDialogOpen, setFriendSelectDialogOpen] = useState(false);
+  const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
+  const [pendingImport, setPendingImport] = useState<{
+    tracks: Array<{ track_id: string; username?: string }>;
+  } | null>(null);
 
   // New query-based hooks
-  const { tracks: tracksPlaylist, isPending: trackIdsLoading } =
-    usePlaylistTrackIdsQuery(playlistId);
+  const {
+    tracks: tracksPlaylist,
+    playlistName,
+    isPending: trackIdsLoading,
+    refetch: refetchTrackIds,
+  } = usePlaylistTrackIdsQuery(playlistId);
 
   const { tracks, isPending: tracksLoading } = usePlaylistTracksQuery(
     tracksPlaylist,
@@ -61,6 +76,31 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
 
   // Get total playtime for display
   const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
+
+  // Append tracks to the current playlist
+  const appendTracksToPlaylist = async (newTracks: Array<{ track_id: string; friend_id: number }>) => {
+    if (!playlistId) return;
+
+    try {
+      // Combine existing tracks with new tracks
+      const combinedTracks = [
+        ...tracksPlaylist.map(t => ({ track_id: t.track_id, friend_id: t.friend_id })),
+        ...newTracks
+      ];
+
+      const res = await updatePlaylist(playlistId, { tracks: combinedTracks });
+
+      if (res.ok) {
+        toaster.create({ title: `Appended ${newTracks.length} tracks to playlist`, type: "success" });
+        refetchTrackIds();
+      } else {
+        toaster.create({ title: "Failed to append tracks", type: "error" });
+      }
+    } catch (err) {
+      console.error("Append error:", err);
+      toaster.create({ title: "Error appending tracks", type: "error" });
+    }
+  };
 
   // Render function for playlist item menu buttons
   const renderPlaylistButtons = React.useCallback(
@@ -140,7 +180,9 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     <>
       <Flex align="flex-start" w="100%" pt={3}>
         <Box>
-          <Text>Playlist - {playlistId}</Text>
+          <Text fontWeight="semibold">
+            {playlistName || `Playlist ${playlistId ?? ""}`.trim()}
+          </Text>
           <Text fontSize="sm" color="gray.500" mb={2}>
             Total Playtime: {totalPlaytimeFormatted}
             {/* Playlist Recommendations */}
@@ -155,6 +197,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
             }}
             onSortGenetic={sortGenetic}
             onExportJson={exportPlaylist}
+            onImportJson={() => fileInputRef.current?.click()}
             onExportPdf={() => exportToPDF("playlist.pdf")}
             onOpenSaveDialog={playlistId ? saveExisting : openSaveDialog}
             isGeneticSorting={isGeneticSorting}

@@ -106,3 +106,95 @@ export function useUpdateAlbumMutation() {
     },
   });
 }
+
+/**
+ * Hook for cleaning up albums with no tracks
+ */
+export function useCleanupAlbums() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/albums/cleanup", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to cleanup albums");
+      }
+
+      if (!response.body) {
+        throw new Error("No response body");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullMessage = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        fullMessage += chunk;
+      }
+
+      return { message: fullMessage };
+    },
+    onSuccess: () => {
+      // Invalidate all album queries to refetch with cleaned data
+      queryClient.invalidateQueries({ queryKey: ["albums"] });
+    },
+  });
+}
+
+/**
+ * Get summary of albums that would be cleaned up (without deleting)
+ */
+export async function getAlbumsCleanupSummary() {
+  const response = await fetch("/api/albums/cleanup");
+  if (!response.ok) {
+    throw new Error("Failed to fetch cleanup summary");
+  }
+  return response.json();
+}
+
+/**
+ * Hook for backfilling release_id on tracks
+ */
+export function useBackfillReleaseId() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/tracks/backfill-release-id", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to backfill release_id");
+      }
+
+      if (!response.body) {
+        throw new Error("No response body");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullMessage = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        fullMessage += chunk;
+      }
+
+      return { message: fullMessage };
+    },
+    onSuccess: () => {
+      // Invalidate all queries to refetch with corrected data
+      queryClient.invalidateQueries({ queryKey: ["albums"] });
+      queryClient.invalidateQueries({ queryKey: ["tracks"] });
+    },
+  });
+}

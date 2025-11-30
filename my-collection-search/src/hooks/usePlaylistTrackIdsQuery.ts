@@ -1,7 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchPlaylistTrackIds } from "@/services/playlistService";
+import {
+  fetchPlaylistTrackIds,
+  type PlaylistTrackIdsResponse,
+} from "@/services/playlistService";
 import { usePlaylistTracksQuery } from "@/hooks/usePlaylistTracksQuery";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -16,10 +19,7 @@ export function usePlaylistTrackIdsQuery(
   options?: Options
 ) {
   const idNum = typeof playlistId === "string" ? Number(playlistId) : playlistId ?? undefined;
-  const query = useQuery<
-    { track_id: string; friend_id: number; position: number }[],
-    Error
-  >({
+  const query = useQuery<PlaylistTrackIdsResponse, Error>({
     queryKey: idNum ? queryKeys.playlistTrackIds(idNum) : ["playlist", idNum, "track-ids"],
     queryFn: async () => {
       const result = await fetchPlaylistTrackIds(idNum as number);
@@ -33,7 +33,8 @@ export function usePlaylistTrackIdsQuery(
 
   return {
     ...query,
-    tracks: query.data ?? [],
+    tracks: query.data?.tracks ?? [],
+    playlistName: query.data?.playlist_name ?? null,
   };
 }
 
