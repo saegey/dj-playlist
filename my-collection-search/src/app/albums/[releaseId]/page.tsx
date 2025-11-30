@@ -20,11 +20,14 @@ import {
 } from "@chakra-ui/react";
 import { SiDiscogs } from "react-icons/si";
 import { IoArrowBack } from "react-icons/io5";
+import { FiPlay } from "react-icons/fi";
 import NextLink from "next/link";
 
 import { useAlbumDetailQuery, useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
 import TrackResult from "@/components/TrackResult";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
+import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import { toaster } from "@/components/ui/toaster";
 
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
@@ -42,6 +45,7 @@ function AlbumDetailContent() {
 
   const { data, isLoading, error } = useAlbumDetailQuery(releaseId, friendId);
   const updateMutation = useUpdateAlbumMutation();
+  const { replacePlaylist } = usePlaylistPlayer();
 
   const [isEditing, setIsEditing] = React.useState(false);
   const [rating, setRating] = React.useState(0);
@@ -70,6 +74,28 @@ function AlbumDetailContent() {
       condition: condition || undefined,
     });
     setIsEditing(false);
+  };
+
+  const handleEnqueueAlbum = () => {
+    if (!data?.tracks || data.tracks.length === 0) {
+      toaster.create({
+        title: "No Tracks",
+        description: "This album has no tracks to play",
+        type: "warning",
+      });
+      return;
+    }
+
+    replacePlaylist(data.tracks, {
+      autoplay: true,
+      startIndex: 0,
+    });
+
+    toaster.create({
+      title: "Album Enqueued",
+      description: `Playing ${data.album.title} by ${data.album.artist}`,
+      type: "success",
+    });
   };
 
   if (!friendId) {
@@ -287,7 +313,16 @@ function AlbumDetailContent() {
           )}
 
           {/* Action buttons */}
-          <Flex gap={3} mt={2}>
+          <Flex gap={3} mt={2} flexWrap="wrap">
+            {tracks.length > 0 && (
+              <Button
+                colorScheme="blue"
+                onClick={handleEnqueueAlbum}
+              >
+                <FiPlay />Play Album
+              </Button>
+            )}
+
             {album.discogs_url && (
               <Link href={album.discogs_url} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline">

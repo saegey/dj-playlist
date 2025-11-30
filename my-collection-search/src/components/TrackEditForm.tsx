@@ -137,7 +137,6 @@ export default function TrackEditForm({
   });
 
   const [loading, setLoading] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
   const { mutateAsync: analyze, isPending: analyzeLoading } =
     useAsyncAnalyzeTrackMutation();
   const { mutateAsync: uploadAudio, isPending: uploadLoading } =
@@ -145,11 +144,10 @@ export default function TrackEditForm({
   const { mutateAsync: fetchMetadata, isPending: aiLoading } =
     useTrackMetadataMutation();
 
-  const handleFileUpload = async () => {
-    if (!file) return;
+  const handleFileUpload = async (selectedFile: File) => {
     try {
       const { analysis: data } = await uploadAudio({
-        file,
+        file: selectedFile,
         track_id: form.track_id,
       });
       setForm((prev) => ({
@@ -171,11 +169,20 @@ export default function TrackEditForm({
             ? Math.round(data.metadata.audio_properties.length)
             : prev.duration_seconds,
       }));
+
+      toaster.create({
+        title: "Upload Successful",
+        description: "Audio file uploaded and analyzed",
+        type: "success",
+      });
     } catch (err) {
-      alert("Upload failed: " + (err instanceof Error ? err.message : err));
+      toaster.create({
+        title: "Upload Failed",
+        description: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
-    setFile(null);
   };
 
   const handleStarRating = (rating: number) => {
@@ -345,8 +352,9 @@ export default function TrackEditForm({
     onAnalyzeAudio: handleAnalyzeAudio,
     uploadLoading: uploadLoading,
     onFileSelected: (file) => {
-      setFile(file);
-      handleFileUpload();
+      if (file) {
+        handleFileUpload(file);
+      }
     },
     hasAudio: !!track?.local_audio_url,
     onRemoveAudio: handleRemoveAudioClick,

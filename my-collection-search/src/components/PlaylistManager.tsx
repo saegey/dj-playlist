@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import DeletePlaylistDialog from "@/components/DeletePlaylistDialog";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
+import FriendSelectDialog from "@/components/FriendSelectDialog";
 import {
   Box,
   Text,
@@ -62,6 +63,14 @@ export default function PlaylistManager({
   const [importedTracks, setImportedTracks] = useState<string[]>([]);
   const [importedName, setImportedName] = useState("Imported Playlist");
 
+  // State for friend selection dialog
+  const [friendSelectDialogOpen, setFriendSelectDialogOpen] = useState(false);
+  const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
+  const [pendingImport, setPendingImport] = useState<{
+    name: string;
+    tracks: Array<{ track_id: string; username?: string }>;
+  } | null>(null);
+
   // Simple filter for playlists
   const [filter, setFilter] = useState("");
   const filtered = React.useMemo(() => {
@@ -77,31 +86,66 @@ export default function PlaylistManager({
     try {
       const data = JSON.parse(await file.text());
       let name = "Imported Playlist";
-      let tracks: string[] = [];
+      let tracksData: Array<{ track_id: string; username?: string }> = [];
 
+      // Parse different JSON formats
       if (Array.isArray(data)) {
-        tracks = data.map((t) => t.track_id).filter(Boolean);
-        if (!tracks.length) throw new Error("No valid tracks");
-        setImportedName(name);
-        setImportedTracks(tracks);
-        setImportDialogOpen(true);
-        return;
-      } else if (data.name && Array.isArray(data.tracks)) {
-        ({ name, tracks } = data);
-        // Directly import if name and tracks present
+        tracksData = data.map((t) => ({
+          track_id: t.track_id,
+          username: t.username,
+        })).filter((t) => t.track_id);
+      } else if (data.tracks && Array.isArray(data.tracks)) {
+        if (data.name) name = data.name;
+        tracksData = data.tracks.map((t: { track_id: string; username?: string }) => ({
+          track_id: t.track_id,
+          username: t.username,
+        })).filter((t: { track_id: string }) => t.track_id);
       } else {
         throw new Error("Invalid playlist format");
       }
 
-      const res = await importPlaylist(name, tracks);
+      if (!tracksData.length) throw new Error("No valid tracks found");
 
+      // Fetch friends to resolve usernames
+      const friendsRes = await fetch("/api/friends");
+      const friendsData = await friendsRes.json();
+      const friends = friendsData.results || [];
+
+      // Check if we can resolve all usernames to friend_ids
+      const hasUsernames = tracksData.some((t) => t.username);
+      const canResolveAll = hasUsernames && tracksData.every((t) =>
+        !t.username || friends.some((f: { username: string }) => f.username === t.username)
+      );
+
+      if (!hasUsernames || !canResolveAll) {
+        // Need user to select a friend - show friend selection dialog
+        setPendingImport({ name, tracks: tracksData });
+        setFriendSelectDialogOpen(true);
+        return;
+      }
+
+      // Resolve usernames to friend_ids
+      const friendMap = new Map(friends.map((f: { id: number; username: string }) => [f.username, f.id]));
+      const tracks = tracksData.map((t) => ({
+        track_id: t.track_id,
+        friend_id: t.username ? friendMap.get(t.username) : undefined,
+      })).filter((t) => t.friend_id) as Array<{ track_id: string; friend_id: number }>;
+
+      if (!tracks.length) {
+        notify({ title: "Could not resolve any tracks to friends", type: "error" });
+        return;
+      }
+
+      // Import directly
+      const res = await importPlaylist(name, tracks);
       if (res.ok) {
         notify({ title: `Imported '${name}'`, type: "success" });
         fetchPlaylists();
       } else {
         notify({ title: "Failed to import playlist", type: "error" });
       }
-    } catch {
+    } catch (err) {
+      console.error("Import error:", err);
       notify({ title: "Error importing playlist", type: "error" });
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -125,6 +169,32 @@ export default function PlaylistManager({
       setImportDialogOpen(false);
       setImportedTracks([]);
       setImportedName("Imported Playlist");
+    }
+  };
+
+  // Handler for friend selection confirmation
+  const handleFriendSelectConfirm = async () => {
+    if (!pendingImport || !selectedFriendId) return;
+
+    try {
+      const tracks = pendingImport.tracks.map((t) => ({
+        track_id: t.track_id,
+        friend_id: selectedFriendId,
+      }));
+
+      const res = await importPlaylist(pendingImport.name, tracks);
+      if (res.ok) {
+        notify({ title: `Imported '${pendingImport.name}'`, type: "success" });
+        fetchPlaylists();
+      } else {
+        notify({ title: "Failed to import playlist", type: "error" });
+      }
+    } catch {
+      notify({ title: "Error importing playlist", type: "error" });
+    } finally {
+      setFriendSelectDialogOpen(false);
+      setPendingImport(null);
+      setSelectedFriendId(null);
     }
   };
 
@@ -341,6 +411,18 @@ export default function PlaylistManager({
         onConfirm={handleConfirmImport}
         onCancel={() => setImportDialogOpen(false)}
         confirmLabel="Import"
+      />
+      <FriendSelectDialog
+        open={friendSelectDialogOpen}
+        selectedFriendId={selectedFriendId}
+        setSelectedFriendId={setSelectedFriendId}
+        trackCount={pendingImport?.tracks.length}
+        onConfirm={handleFriendSelectConfirm}
+        onCancel={() => {
+          setFriendSelectDialogOpen(false);
+          setPendingImport(null);
+          setSelectedFriendId(null);
+        }}
       />
     </Box>
   );

@@ -16,11 +16,13 @@ import { useSearchParams, useRouter } from "next/navigation";
 import AlbumSearchResults from "@/components/AlbumSearchResults";
 import UsernameSelect from "@/components/UsernameSelect";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
+import { useUsername } from "@/providers/UsernameProvider";
 import { LuSearch } from "react-icons/lu";
 
 function AlbumsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { friend: currentUserFriend } = useUsername();
 
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
@@ -37,6 +39,23 @@ function AlbumsPageContent() {
       : null
   );
 
+  // Set default friend_id to current user's library on initial load
+  React.useEffect(() => {
+    if (!searchParams.get("friend_id") && currentUserFriend && !selectedFriendId) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("friend_id", currentUserFriend.id.toString());
+      if (query) params.set("q", query);
+      if (sort !== "date_added:desc") params.set("sort", sort);
+      router.replace(`/albums?${params.toString()}`);
+    }
+  }, [currentUserFriend, searchParams, selectedFriendId, router, query, sort]);
+
+  // Get the selected Friend object for the UsernameSelect component
+  const selectedFriend = React.useMemo(() => {
+    if (!selectedFriendId) return null;
+    return friends.find((f) => f.id === selectedFriendId) || null;
+  }, [selectedFriendId, friends]);
+
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
@@ -46,11 +65,19 @@ function AlbumsPageContent() {
   };
 
   const handleFriendChange = (friendId: number) => {
-    setSelectedFriendId(friendId);
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("friend_id", friendId.toString());
+    // friendId === 0 means "All Libraries" was selected
+    const params = new URLSearchParams();
     if (query) params.set("q", query);
     if (sort !== "date_added:desc") params.set("sort", sort);
+
+    if (friendId > 0) {
+      setSelectedFriendId(friendId);
+      params.set("friend_id", friendId.toString());
+    } else {
+      // "All Libraries" selected - clear friend_id
+      setSelectedFriendId(null);
+    }
+
     router.push(`/albums?${params.toString()}`);
   };
 
@@ -88,6 +115,7 @@ function AlbumsPageContent() {
                 usernames={friends}
                 includeAllOption={true}
                 onChange={handleFriendChange}
+                value={selectedFriend}
                 size={["sm", "md", "md"]}
               />
             </Box>

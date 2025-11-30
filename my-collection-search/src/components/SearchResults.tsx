@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Box, Input, Text, InputGroup, IconButton, Flex } from "@chakra-ui/react";
+import { Box, Input, Text, InputGroup, IconButton, Flex, Spinner } from "@chakra-ui/react";
 import { LuSearch, LuLayoutGrid, LuTable, LuMaximize2, LuMinimize2 } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -16,11 +16,9 @@ import { useTrack } from "@/hooks/useTrack";
 const TrackResultItem: React.FC<{
   trackId: string;
   friendId: number;
-  isLast: boolean;
   playlistCount?: number;
-  lastResultRef?: React.RefObject<HTMLDivElement | null>;
   compact?: boolean;
-}> = ({ trackId, friendId, isLast, playlistCount, lastResultRef, compact }) => {
+}> = ({ trackId, friendId, playlistCount, compact }) => {
   const track = useTrack(trackId, friendId);
 
   if (!track) {
@@ -38,14 +36,6 @@ const TrackResultItem: React.FC<{
       compact={compact}
     />
   );
-
-  if (isLast && lastResultRef) {
-    return (
-      <Box ref={lastResultRef}>
-        {trackResult}
-      </Box>
-    );
-  }
 
   return trackResult;
 };
@@ -67,7 +57,8 @@ const SearchResults: React.FC = () => {
     playlistCounts,
     hasMore,
     loadMore,
-    loading,
+    initialLoading,
+    loadingMore,
   } = useSearchResults({
     mode: "infinite",
     limit: 20,
@@ -99,21 +90,21 @@ const SearchResults: React.FC = () => {
     localStorage.setItem("searchCompactMode", String(newCompact));
   };
 
-  const lastResultRef = React.useRef<HTMLDivElement>(null);
   const observer = React.useRef<IntersectionObserver | null>(null);
+  const bottomSentinelRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     if (!hasMore) return;
-    if (!lastResultRef.current) return;
+    if (!bottomSentinelRef.current) return;
     if (observer.current) observer.current.disconnect();
     observer.current = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
+      if (entries[0].isIntersecting && !loadingMore) {
         loadMore();
       }
     });
-    observer.current.observe(lastResultRef.current);
+    observer.current.observe(bottomSentinelRef.current);
     return () => observer.current?.disconnect();
-  }, [trackInfo, hasMore, loadMore]);
+  }, [trackInfo.length, hasMore, loadMore, loadingMore]);
 
   // Debounced input state
   const [debouncedValue, setDebouncedValue] = React.useState(query);
@@ -199,7 +190,7 @@ const SearchResults: React.FC = () => {
         </Flex>
       </Box>
 
-      {loading ? (
+      {initialLoading ? (
         <Box mt={8}>
           {[...Array(8)].map((_, i) => (
             <Box key={i} mb={4}>
@@ -215,16 +206,13 @@ const SearchResults: React.FC = () => {
 
           {viewMode === "card" ? (
             // Card view (existing)
-            trackInfo.map((info, idx) => {
-              const isLast = idx === trackInfo.length - 1;
+            trackInfo.map((info) => {
               return (
                 <TrackResultItem
                   key={`search-${info.trackId}`}
                   trackId={info.trackId}
                   friendId={info.friendId}
-                  isLast={isLast}
                   playlistCount={playlistCounts[info.trackId]}
-                  lastResultRef={isLast ? lastResultRef : undefined}
                   compact={compactMode}
                 />
               );
@@ -237,9 +225,15 @@ const SearchResults: React.FC = () => {
                 playlistCounts={playlistCounts}
                 buttons={(track) => <TrackActionsMenu track={track} />}
               />
-              {/* Intersection observer trigger for infinite scroll */}
-              {hasMore && <Box ref={lastResultRef} height="20px" />}
             </>
+          )}
+          {hasMore && (
+            <Box ref={bottomSentinelRef} height="1px" />
+          )}
+          {loadingMore && (
+            <Flex justify="center" py={4}>
+              <Spinner size="md" />
+            </Flex>
           )}
         </>
       )}

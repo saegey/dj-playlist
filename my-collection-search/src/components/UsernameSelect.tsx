@@ -58,8 +58,10 @@ export default function UsernameSelect({
   }, [isLoading, loadingText, selectedFriend, includeAllOption]);
 
   const handleSelect = (friend: Friend | null) => {
-    // External change only when selecting a friend (not All)
-    if (friend && onChange) onChange(friend.id);
+    // Always call onChange when provided, passing the friend_id or 0 for "All"
+    if (onChange) {
+      onChange(friend ? friend.id : 0);
+    }
     setCtxValue(friend);
   };
 

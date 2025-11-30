@@ -22,14 +22,20 @@ export async function fetchPlaylists() {
   return await res.json();
 }
 
+export type PlaylistTrackIdsResponse = {
+  playlist_id: number;
+  playlist_name?: string | null;
+  tracks: { track_id: string; friend_id: number; position: number }[];
+};
+
 export async function fetchPlaylistTrackIds(
   id: number
-): Promise<{ track_id: string; friend_id: number; position: number }[]> {
+): Promise<PlaylistTrackIdsResponse> {
   const res = await fetch(`/api/playlists/${id}/tracks`);
   if (!res.ok) throw new Error("Failed to fetch playlist tracks");
   const data = await res.json();
   console.log("Fetched playlist track ids:", data);
-  return data.tracks;
+  return data as PlaylistTrackIdsResponse;
 }
 
 // Generate a genetic ordering for a playlist via API and normalize the response

@@ -69,16 +69,17 @@ export async function upsertTracks(pool: Pool, tracks: DiscogsTrack[]): Promise<
         styles, genres, duration, position,
         discogs_url, album_thumbnail,
         bpm, key, notes, local_tags,
-        apple_music_url, duration_seconds, username, friend_id
+        apple_music_url, duration_seconds, username, friend_id, release_id
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,
-        $10,$11,$12,$13,$14,$15,$16,$17,$18,$19
+        $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
       )
       ON CONFLICT (track_id, username)
       DO UPDATE SET
         discogs_url     = EXCLUDED.discogs_url,
         album_thumbnail = EXCLUDED.album_thumbnail,
-        friend_id       = EXCLUDED.friend_id
+        friend_id       = EXCLUDED.friend_id,
+        release_id      = EXCLUDED.release_id
       RETURNING *;
       `,
       [
@@ -101,6 +102,7 @@ export async function upsertTracks(pool: Pool, tracks: DiscogsTrack[]): Promise<
         track.duration_seconds,
         track.username,
         friendId,
+        track.release_id,
       ]
     );
     if (insertedRows.length !== 1) {
