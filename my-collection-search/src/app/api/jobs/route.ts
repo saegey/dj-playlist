@@ -8,6 +8,8 @@ export type JobData = {
   spotify_url?: string;
   youtube_url?: string;
   soundcloud_url?: string;
+  title?: string | null;
+  artist?: string | null;
 };
 
 export interface JobInfo {
@@ -60,6 +62,14 @@ export async function GET() {
       data: {
         track_id: job.track_id,
         friend_id: job.friend_id,
+        title:
+          typeof job.result?.title === "string"
+            ? job.result.title
+            : job.track_id,
+        artist:
+          typeof job.result?.artist === "string"
+            ? job.result.artist
+            : undefined,
       },
       returnvalue: job.result,
       finishedOn:

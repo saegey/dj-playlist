@@ -40,7 +40,9 @@ export async function POST(request: Request) {
       spotify_url,
       youtube_url,
       soundcloud_url,
-      preferred_downloader
+      preferred_downloader,
+      title: body?.title,
+      artist: body?.artist,
     });
 
     return NextResponse.json({

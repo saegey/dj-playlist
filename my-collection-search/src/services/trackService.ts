@@ -75,7 +75,7 @@ export type AsyncAnalyzeResponse = {
 };
 
 export async function analyzeTrackAsync(
-  args: AnalyzeArgs
+  args: AnalyzeArgs & { title?: string; artist?: string }
 ): Promise<AsyncAnalyzeResponse> {
   return await http<AsyncAnalyzeResponse>("/api/tracks/analyze-async", {
     method: "POST",

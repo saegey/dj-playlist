@@ -12,6 +12,8 @@ export interface JobInfo {
     spotify_url?: string;
     youtube_url?: string;
     soundcloud_url?: string;
+    title?: string | null;
+    artist?: string | null;
   };
   returnvalue?: AnalysisResult;
   finishedOn?: number;
