@@ -62,8 +62,14 @@ export async function GET() {
       data: {
         track_id: job.track_id,
         friend_id: job.friend_id,
-        title: job.result?.title || job.track_id,
-        artist: job.result?.artist || undefined,
+        title:
+          typeof job.result?.title === "string"
+            ? job.result.title
+            : job.track_id,
+        artist:
+          typeof job.result?.artist === "string"
+            ? job.result.artist
+            : undefined,
       },
       returnvalue: job.result,
       finishedOn:
