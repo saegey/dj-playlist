@@ -231,7 +231,7 @@ async function upsertTracksWithMetadata(
     `;
 
     const updateRes = await pool.query(updateSql, updateParams);
-    if (updateRes.rowCount > 0) {
+    if ((updateRes?.rowCount ?? 0) > 0) {
       continue; // updated existing row
     }
 
