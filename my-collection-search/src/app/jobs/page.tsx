@@ -277,7 +277,7 @@ export default function JobsPage() {
                     {(() => {
                       const info = getTrackInfo(job);
                       return (
-                        <VStack align="start" gap={0} spacing={0}>
+                        <VStack align="start" gap={0}>
                           <Text fontWeight="semibold" fontSize="sm">
                             {info.title}
                           </Text>

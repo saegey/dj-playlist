@@ -23,9 +23,32 @@ export function usePlaylistMutations(playlistId?: number) {
   type TrackRef = { track_id: string; friend_id: number };
   const getTrackIds = (): TrackRef[] => {
     if (!playlistId) return [];
-    return (
-      queryClient.getQueryData(queryKeys.playlistTrackIds(playlistId)) || []
+    const cached = queryClient.getQueryData(
+      queryKeys.playlistTrackIds(playlistId)
     );
+    if (!cached) return [];
+    if (Array.isArray(cached)) {
+      return cached.filter(
+        (r): r is TrackRef =>
+          !!r &&
+          typeof (r as { track_id?: unknown }).track_id === "string" &&
+          typeof (r as { friend_id?: unknown }).friend_id === "number"
+      );
+    }
+    // If legacy shape (object with tracks)
+    if (
+      typeof cached === "object" &&
+      cached !== null &&
+      Array.isArray((cached as { tracks?: unknown }).tracks)
+    ) {
+      return (cached as { tracks: unknown[] }).tracks.filter(
+        (r): r is TrackRef =>
+          !!r &&
+          typeof (r as { track_id?: unknown }).track_id === "string" &&
+          typeof (r as { friend_id?: unknown }).friend_id === "number"
+      );
+    }
+    return [];
   };
 
   // Update track refs in cache
@@ -33,7 +56,26 @@ export function usePlaylistMutations(playlistId?: number) {
     if (!playlistId) return;
     queryClient.setQueryData(
       queryKeys.playlistTrackIds(playlistId),
-      newTrackRefs
+      (prev: unknown) => {
+        // If previous data had playlist metadata, preserve it
+        if (
+          prev &&
+          typeof prev === "object" &&
+          !Array.isArray(prev) &&
+          "tracks" in (prev as { tracks?: unknown })
+        ) {
+          const prevObj = prev as {
+            tracks?: TrackRef[];
+            playlist_name?: string | null;
+            playlist_id?: number;
+          };
+          return {
+            ...prevObj,
+            tracks: newTrackRefs,
+          };
+        }
+        return newTrackRefs;
+      }
     );
   };
 

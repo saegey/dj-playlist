@@ -141,9 +141,11 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           friend_id: t.friend_id ?? selectedFriendId,
         }))
         .filter(
-          (t): t is PlaylistTrackPayload =>
-            typeof t.track_id === "string" && typeof t.friend_id === "number"
-        );
+          (t) =>
+            typeof t.track_id === "string" &&
+            t.track_id.length > 0 &&
+            typeof t.friend_id === "number"
+        ) as PlaylistTrackPayload[];
 
       if (resolved.length === 0) {
         toaster.create({ title: "No valid tracks to import", type: "error" });
@@ -348,7 +350,12 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           mood_relaxed: t.mood_relaxed,
           mood_aggressive: t.mood_aggressive,
         }))
-        .filter((t) => typeof t.track_id === "string" && t.track_id.length > 0);
+        .filter(
+          (t) =>
+            typeof t.track_id === "string" &&
+            t.track_id.length > 0 &&
+            typeof t.friend_id === "number"
+        ) as PlaylistTrackPayload[];
 
       if (cleanTracks.length === 0) {
         toaster.create({

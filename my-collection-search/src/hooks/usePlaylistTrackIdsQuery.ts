@@ -19,7 +19,7 @@ export function usePlaylistTrackIdsQuery(
   options?: Options
 ) {
   const idNum = typeof playlistId === "string" ? Number(playlistId) : playlistId ?? undefined;
-  const query = useQuery<PlaylistTrackIdsResponse, Error>({
+  const query = useQuery<PlaylistTrackIdsResponse | { tracks?: PlaylistTrackIdsResponse["tracks"]; playlist_name?: string }, Error>({
     queryKey: idNum ? queryKeys.playlistTrackIds(idNum) : ["playlist", idNum, "track-ids"],
     queryFn: async () => {
       const result = await fetchPlaylistTrackIds(idNum as number);
@@ -33,8 +33,14 @@ export function usePlaylistTrackIdsQuery(
 
   return {
     ...query,
-    tracks: query.data?.tracks ?? [],
-    playlistName: query.data?.playlist_name ?? null,
+    // Guard against "enabled: false" being treated as pending
+    isPending: query.isPending && query.fetchStatus !== "idle",
+    tracks: Array.isArray(query.data)
+      ? query.data
+      : query.data?.tracks ?? [],
+    playlistName: Array.isArray(query.data)
+      ? null
+      : query.data?.playlist_name ?? null,
   };
 }
 

@@ -7,6 +7,7 @@ TAG_TIME ?= $(shell date -u +%Y%m%dT%H%M%SZ)
 TAG ?= $(TAG_PREFIX)$(TAG_TIME)
 
 .PHONY: tag tag-push compose-dev compose-prod compose-down compose-logs
+.PHONY: build-app build-essentia build-ga-service build-download-worker build-all
 
 tag:
 	@# Refuse to tag if the working tree is dirty
@@ -29,3 +30,18 @@ compose-down:
 
 compose-logs:
 	$(COMPOSE) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.prod.yml logs -f
+
+# Local Docker builds (non-push). Set TAG to override.
+build-app:
+	docker buildx build -t ghcr.io/saegey/myapp:$(TAG) -f $(COMPOSE_DIR)/Dockerfile $(COMPOSE_DIR)
+
+build-essentia:
+	docker buildx build -t ghcr.io/saegey/essentia-api:$(TAG) -f essentia-api/Dockerfile essentia-api
+
+build-ga-service:
+	docker buildx build -t ghcr.io/saegey/ga-service:$(TAG) -f ga-service/Dockerfile ga-service
+
+build-download-worker:
+	docker buildx build -t ghcr.io/saegey/download-worker:$(TAG) -f $(COMPOSE_DIR)/Dockerfile.download-worker $(COMPOSE_DIR)
+
+build-all: build-app build-essentia build-ga-service build-download-worker

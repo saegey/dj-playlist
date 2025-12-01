@@ -10,6 +10,8 @@ export interface DownloadJobData {
   spotify_url?: string;
   youtube_url?: string;
   soundcloud_url?: string;
+  title?: string | null;
+  artist?: string | null;
   preferred_downloader?: "freyr" | "spotdl" | "yt-dlp" | "scdl";
   // Gamdl-specific settings
   quality?: "best" | "high" | "standard" | "lossless";
