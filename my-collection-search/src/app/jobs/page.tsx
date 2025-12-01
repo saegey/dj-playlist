@@ -21,6 +21,7 @@ import { LuRefreshCw, LuTrash2 } from "react-icons/lu";
 import { useJobsQuery } from "@/hooks/useJobsQuery";
 import { useMutation } from "@tanstack/react-query";
 import { clearAllJobs } from "@/services/jobsService";
+import { useTrackStore } from "@/stores/trackStore";
 
 export default function JobsPage() {
   const { data, isLoading, refetch, dataUpdatedAt } = useJobsQuery();
@@ -111,6 +112,33 @@ export default function JobsPage() {
     if (!start || !end) return "-";
     const duration = Math.round((end - start) / 1000);
     return `${duration}s`;
+  };
+
+  const { getTrack } = useTrackStore();
+
+  const getTrackInfo = (job: (typeof jobs)[number]) => {
+    const fromResultTitle =
+      typeof job?.returnvalue === "object" &&
+      job?.returnvalue &&
+      (job.returnvalue as Record<string, unknown>).title;
+    const fromResultArtist =
+      typeof job?.returnvalue === "object" &&
+      job?.returnvalue &&
+      (job.returnvalue as Record<string, unknown>).artist;
+
+    const storeTrack = getTrack(job.data.track_id, job.data.friend_id);
+    const title =
+      (job.data.title as string | undefined) ||
+      (fromResultTitle as string | undefined) ||
+      storeTrack?.title ||
+      job.data.track_id;
+    const artist =
+      (job.data.artist as string | undefined) ||
+      (fromResultArtist as string | undefined) ||
+      storeTrack?.artist ||
+      "Unknown artist";
+
+    return { title, artist, thumb: storeTrack?.album_thumbnail };
   };
 
   return (
@@ -246,9 +274,22 @@ export default function JobsPage() {
                     </Text>
                   </Table.Cell>
                   <Table.Cell>
-                    <Text fontFamily="mono" fontSize="sm">
-                      {job.data.track_id}
-                    </Text>
+                    {(() => {
+                      const info = getTrackInfo(job);
+                      return (
+                        <VStack align="start" gap={0} spacing={0}>
+                          <Text fontWeight="semibold" fontSize="sm">
+                            {info.title}
+                          </Text>
+                          <Text fontSize="xs" color="gray.500">
+                            {info.artist}
+                          </Text>
+                          <Text fontFamily="mono" fontSize="xs" color="gray.400">
+                            {job.data.track_id}
+                          </Text>
+                        </VStack>
+                      );
+                    })()}
                   </Table.Cell>
                   <Table.Cell>
                     <Badge variant="outline">{job.queue}</Badge>

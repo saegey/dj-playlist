@@ -1,7 +1,39 @@
 // src/services/playlistService.ts
+export type PlaylistTrackPayload = {
+  track_id: string;
+  friend_id?: number;
+  username?: string;
+  title?: string;
+  artist?: string;
+  album?: string;
+  year?: string | number;
+  styles?: string[];
+  genres?: string[];
+  duration?: string;
+  duration_seconds?: number;
+  position?: number;
+  discogs_url?: string;
+  apple_music_url?: string | null;
+  youtube_url?: string | null;
+  spotify_url?: string | null;
+  soundcloud_url?: string | null;
+  album_thumbnail?: string | null;
+  local_tags?: string | null;
+  bpm?: number | string | null;
+  key?: string | null;
+  danceability?: number | null;
+  notes?: string | null;
+  star_rating?: number | null;
+  release_id?: string | null;
+  mood_happy?: number | null;
+  mood_sad?: number | null;
+  mood_relaxed?: number | null;
+  mood_aggressive?: number | null;
+};
+
 export async function importPlaylist(
   name: string,
-  tracks: string[] | Array<{ track_id: string; friend_id: number }>,
+  tracks: string[] | PlaylistTrackPayload[],
   friendId?: number
 ) {
   const res = await fetch("/api/playlists", {
@@ -64,7 +96,7 @@ export async function generateGeneticPlaylist(
 
 export async function updatePlaylist(
   id: number,
-  data: { name?: string; tracks?: { track_id: string; friend_id: number }[] }
+  data: { name?: string; tracks?: PlaylistTrackPayload[] }
 ) {
   const res = await fetch("/api/playlists", {
     method: "PATCH",

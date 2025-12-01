@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button, Menu, Flex, Box } from "@chakra-ui/react";
-import { FiMoreVertical, FiPlay, FiSave, FiEdit, FiCopy } from "react-icons/fi";
+import { FiMoreVertical, FiPlay, FiSave, FiEdit, FiCopy, FiDownload } from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
 // import { MdOutlineClearAll } from "react-icons/md";
@@ -18,6 +18,7 @@ export interface PlaylistActionsMenuProps {
   onOpenSaveDialog: () => void;
   onDuplicate?: () => void;
   onRename?: () => void;
+  onEnqueueMissingDownloads?: () => void;
   isGeneticSorting?: boolean;
   enqueuePlaylist: () => void;
 }
@@ -36,6 +37,7 @@ export default function PlaylistActionsMenu({
   onOpenSaveDialog,
   onDuplicate,
   onRename,
+  onEnqueueMissingDownloads,
   enqueuePlaylist,
   isGeneticSorting,
 }: PlaylistActionsMenuProps) {
@@ -118,6 +120,20 @@ export default function PlaylistActionsMenu({
                   <FiEdit /> Rename Playlist
                 </Menu.Item>
               )}
+            </>
+          )}
+          {(onEnqueueMissingDownloads) && (
+            <>
+              <Box
+                as="hr"
+                my={1}
+                borderColor="gray.200"
+                borderWidth={0}
+                borderTopWidth={1}
+              />
+              <Menu.Item value="enqueue-missing" onSelect={onEnqueueMissingDownloads}>
+                <FiDownload /> Enqueue Missing Downloads
+              </Menu.Item>
             </>
           )}
           <Box

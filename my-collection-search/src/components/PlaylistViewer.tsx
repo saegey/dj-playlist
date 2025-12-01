@@ -27,7 +27,12 @@ import { Track } from "@/types/track";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import FriendSelectDialog from "@/components/FriendSelectDialog";
 import { toaster } from "@/components/ui/toaster";
-import { importPlaylist, updatePlaylist } from "@/services/playlistService";
+import {
+  importPlaylist,
+  updatePlaylist,
+  type PlaylistTrackPayload,
+} from "@/services/playlistService";
+import { analyzeTrackAsync } from "@/services/trackService";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -40,7 +45,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const [friendSelectDialogOpen, setFriendSelectDialogOpen] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
   const [pendingImport, setPendingImport] = useState<{
-    tracks: Array<{ track_id: string; username?: string; friend_id?: number }>;
+    tracks: PlaylistTrackPayload[];
   } | null>(null);
 
   // New query-based hooks
@@ -81,6 +86,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const [duplicateName, setDuplicateName] = useState("");
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameName, setRenameName] = useState("");
+  const [isEnqueuingDownloads, setIsEnqueuingDownloads] = useState(false);
 
   useEffect(() => {
     if (playlistName) {
@@ -96,14 +102,12 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
 
   // Append tracks to the current playlist
-  const appendTracksToPlaylist = async (
-    newTracks: Array<{ track_id: string; friend_id: number }>
-  ) => {
+  const appendTracksToPlaylist = async (newTracks: PlaylistTrackPayload[]) => {
     if (!playlistId) return;
 
     try {
       // Combine existing tracks with new tracks
-      const combinedTracks = [
+      const combinedTracks: PlaylistTrackPayload[] = [
         ...tracksPlaylist.map((t) => ({
           track_id: t.track_id,
           friend_id: t.friend_id,
@@ -133,11 +137,11 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     try {
       const resolved = pendingImport.tracks
         .map((t) => ({
-          track_id: t.track_id,
+          ...t,
           friend_id: t.friend_id ?? selectedFriendId,
         }))
         .filter(
-          (t): t is { track_id: string; friend_id: number } =>
+          (t): t is PlaylistTrackPayload =>
             typeof t.track_id === "string" && typeof t.friend_id === "number"
         );
 
@@ -159,6 +163,56 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     setPendingImport(null);
     setSelectedFriendId(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleEnqueueMissingDownloads = async () => {
+    if (!tracks || tracks.length === 0) {
+      toaster.create({ title: "No tracks to enqueue", type: "info" });
+      return;
+    }
+
+    const missingAudio = tracks.filter(
+      (t) =>
+        !t.local_audio_url &&
+        (t.apple_music_url || t.spotify_url || t.youtube_url || t.soundcloud_url)
+    );
+
+    if (missingAudio.length === 0) {
+      toaster.create({ title: "All tracks already have audio", type: "info" });
+      return;
+    }
+
+    setIsEnqueuingDownloads(true);
+    let enqueued = 0;
+    let failed = 0;
+
+    for (const track of missingAudio) {
+      try {
+        await analyzeTrackAsync({
+          track_id: track.track_id,
+          friend_id: track.friend_id,
+          title: track.title,
+          artist: track.artist,
+          apple_music_url: track.apple_music_url || undefined,
+          spotify_url: track.spotify_url || undefined,
+          youtube_url: track.youtube_url || undefined,
+          soundcloud_url: track.soundcloud_url || undefined,
+        });
+        enqueued += 1;
+      } catch (err) {
+        console.error("Failed to enqueue download for track", track.track_id, err);
+        failed += 1;
+      }
+    }
+
+    setIsEnqueuingDownloads(false);
+
+    toaster.create({
+      title: `Enqueued ${enqueued} track${enqueued === 1 ? "" : "s"} for download${
+        failed ? ` (${failed} failed)` : ""
+      }`,
+      type: failed ? "warning" : "success",
+    });
   };
 
   const handleDuplicatePlaylist = async (name: string) => {
@@ -257,11 +311,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
 
     try {
       const data = JSON.parse(await file.text());
-      const tracksData: Array<{
-        track_id?: string;
-        friend_id?: number;
-        username?: string;
-      }> = Array.isArray(data)
+      const tracksData: PlaylistTrackPayload[] = Array.isArray(data)
         ? data
         : Array.isArray(data?.tracks)
         ? data.tracks
@@ -272,6 +322,31 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           track_id: t.track_id,
           friend_id: t.friend_id,
           username: t.username,
+          title: t.title,
+          artist: t.artist,
+          album: t.album,
+          year: t.year,
+          styles: t.styles,
+          genres: t.genres,
+          duration: t.duration,
+          duration_seconds: t.duration_seconds,
+          discogs_url: t.discogs_url,
+          apple_music_url: t.apple_music_url,
+          youtube_url: t.youtube_url,
+          spotify_url: t.spotify_url,
+          soundcloud_url: t.soundcloud_url,
+          album_thumbnail: t.album_thumbnail,
+          local_tags: t.local_tags,
+          bpm: t.bpm as PlaylistTrackPayload["bpm"],
+          key: t.key,
+          danceability: t.danceability as PlaylistTrackPayload["danceability"],
+          notes: t.notes,
+          star_rating: t.star_rating,
+          release_id: t.release_id,
+          mood_happy: t.mood_happy,
+          mood_sad: t.mood_sad,
+          mood_relaxed: t.mood_relaxed,
+          mood_aggressive: t.mood_aggressive,
         }))
         .filter((t) => typeof t.track_id === "string" && t.track_id.length > 0);
 
@@ -288,19 +363,13 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
       );
       if (missingFriend) {
         setPendingImport({
-          tracks: cleanTracks as Array<{
-            track_id: string;
-            username?: string;
-            friend_id?: number;
-          }>,
+          tracks: cleanTracks as PlaylistTrackPayload[],
         });
         setFriendSelectDialogOpen(true);
         return;
       }
 
-      await appendTracksToPlaylist(
-        cleanTracks as Array<{ track_id: string; friend_id: number }>
-      );
+      await appendTracksToPlaylist(cleanTracks as PlaylistTrackPayload[]);
     } catch (err) {
       console.error("Import JSON error:", err);
       toaster.create({ title: "Error importing playlist JSON", type: "error" });
@@ -391,6 +460,9 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           isGeneticSorting={isGeneticSorting}
           onDuplicate={playlistId ? () => setDuplicateDialogOpen(true) : undefined}
           onRename={playlistId ? () => setRenameDialogOpen(true) : undefined}
+          onEnqueueMissingDownloads={
+            isEnqueuingDownloads ? undefined : handleEnqueueMissingDownloads
+          }
           enqueuePlaylist={() =>
             replacePlaylist(tracks, {
               autoplay: true,
