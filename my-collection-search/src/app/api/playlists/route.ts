@@ -239,12 +239,21 @@ async function upsertTracksWithMetadata(
     const insertTitle = title ?? rawTrack.track_id;
     const insertArtist = artist ?? "Unknown Artist";
 
-    // Look up username from friend_id for the compound PK
-    const friendRes = await pool.query(
-      "SELECT username FROM friends WHERE id = $1",
-      [rawTrack.friend_id]
-    );
-    const username = friendRes.rows[0]?.username || null;
+    // Get username: prefer from track data, fallback to friend_id lookup
+    let username = rawTrack.username;
+    if (!username) {
+      const friendRes = await pool.query(
+        "SELECT username FROM friends WHERE id = $1",
+        [rawTrack.friend_id]
+      );
+      username = friendRes.rows[0]?.username;
+    }
+
+    if (!username) {
+      throw new Error(
+        `Cannot insert track ${rawTrack.track_id}: username is required but not found for friend_id ${rawTrack.friend_id}`
+      );
+    }
 
     const insertValues = {
       ...updateValues,
@@ -282,17 +291,14 @@ async function createPlaylistWithTracks(data: {
   const playlist = playlistRes.rows[0];
 
   if (tracks && tracks.length > 0) {
-    // Resolve friend_id for each track (preserve metadata)
+    // Resolve friend_id for each track based on username (not friend_id from import)
     const resolvedTracks = await Promise.all(
       tracks.map(async (track, i) => {
-        let friendId: number | undefined;
-
-        if (typeof track === "object" && track.friend_id) {
-          friendId = track.friend_id;
-        } else {
-          // fallback: resolve friendId if not provided
-          friendId = await resolveFriendIdForTrack(track.track_id, track.username ?? undefined);
-        }
+        // Always resolve friend_id from username for cross-installation compatibility
+        const friendId = await resolveFriendIdForTrack(
+          track.track_id,
+          track.username ?? undefined
+        );
 
         return {
           ...track,
@@ -451,23 +457,20 @@ export async function PATCH(req: Request) {
           [id]
         );
         if (tracks.length > 0) {
-          // Resolve friend_id for each track
+          // Resolve friend_id for each track based on username (not friend_id from import)
           const resolvedTracks = await Promise.all(
             tracks.map(async (track, i) => {
               const trackId =
                 typeof track === "string" ? track : track.track_id;
-              let friendId: number;
+              const username = typeof track === "object" ? track.username ?? undefined : undefined;
 
-              if (typeof track === "object" && track.friend_id) {
-                friendId = track.friend_id;
-              } else if (default_friend_id) {
+              // Always resolve friend_id from username for cross-installation compatibility
+              let friendId: number;
+              if (default_friend_id) {
                 friendId = default_friend_id;
               } else {
-                // Resolve friend_id from existing track data
-                friendId = await resolveFriendIdForTrack(
-                  trackId,
-                  typeof track === "object" ? track.username ?? undefined : undefined
-                );
+                // Resolve friend_id from username, not from imported friend_id
+                friendId = await resolveFriendIdForTrack(trackId, username);
               }
 
               return {
