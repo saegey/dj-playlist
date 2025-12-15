@@ -238,10 +238,19 @@ async function upsertTracksWithMetadata(
     // Insert if no existing row
     const insertTitle = title ?? rawTrack.track_id;
     const insertArtist = artist ?? "Unknown Artist";
+
+    // Look up username from friend_id for the compound PK
+    const friendRes = await pool.query(
+      "SELECT username FROM friends WHERE id = $1",
+      [rawTrack.friend_id]
+    );
+    const username = friendRes.rows[0]?.username || null;
+
     const insertValues = {
       ...updateValues,
       title: insertTitle,
       artist: insertArtist,
+      username,
     };
     const insertColumns = ["track_id", "friend_id", ...columns] as const;
     const insertParams: unknown[] = [
@@ -252,10 +261,8 @@ async function upsertTracksWithMetadata(
     const placeholders = insertColumns.map((_, i) => `$${i + 1}`).join(", ");
     const insertSql = `
       INSERT INTO tracks (${insertColumns.join(", ")})
-      SELECT ${placeholders}
-      WHERE NOT EXISTS (
-        SELECT 1 FROM tracks WHERE track_id = $1 AND friend_id = $2
-      );
+      VALUES (${placeholders})
+      ON CONFLICT (track_id, username) DO NOTHING;
     `;
 
     await pool.query(insertSql, insertParams);

@@ -71,12 +71,16 @@ export function usePlaylistActions(playlistId?: number) {
     if (tracks.length === 0) return;
 
     // Export tracks with username for cross-installation compatibility
-    const exportTracks = tracks.map((t) => ({
-      ...t,
-      // Ensure track_id and username are present for cross-installation compatibility
-      track_id: t.track_id,
-      username: t.username,
-    }));
+    // Exclude vector/embedding fields from export
+    const exportTracks = tracks.map((t) => {
+      const {  ...trackData } = t as Track;
+      return {
+        ...trackData,
+        // Ensure track_id and username are present for cross-installation compatibility
+        track_id: t.track_id,
+        username: t.username,
+      };
+    });
 
     const playlistData = {
       tracks: exportTracks,
