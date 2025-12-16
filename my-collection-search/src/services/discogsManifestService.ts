@@ -172,6 +172,9 @@ export function extractTracksFromAlbum(
       notes: null,
       local_tags: [],
       apple_music_url: tr.apple_music_url || null,
+      spotify_url: tr.spotify_url || null,
+      youtube_url: tr.youtube_url || null,
+      soundcloud_url: tr.soundcloud_url || null,
       local_audio_url: tr.local_audio_url || null,
       username,
       date_added: album.date_added || null, // Add date_added from album
