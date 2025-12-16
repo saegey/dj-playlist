@@ -68,7 +68,7 @@ export default function PlaylistManager({
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
   const [pendingImport, setPendingImport] = useState<{
     name: string;
-    tracks: Array<{ track_id: string; username?: string }>;
+    tracks: Array<any>;
   } | null>(null);
 
   // Simple filter for playlists
@@ -86,20 +86,14 @@ export default function PlaylistManager({
     try {
       const data = JSON.parse(await file.text());
       let name = "Imported Playlist";
-      let tracksData: Array<{ track_id: string; username?: string }> = [];
+      let tracksData: Array<any> = [];
 
       // Parse different JSON formats
       if (Array.isArray(data)) {
-        tracksData = data.map((t) => ({
-          track_id: t.track_id,
-          username: t.username,
-        })).filter((t) => t.track_id);
+        tracksData = data.filter((t) => t.track_id);
       } else if (data.tracks && Array.isArray(data.tracks)) {
         if (data.name) name = data.name;
-        tracksData = data.tracks.map((t: { track_id: string; username?: string }) => ({
-          track_id: t.track_id,
-          username: t.username,
-        })).filter((t: { track_id: string }) => t.track_id);
+        tracksData = data.tracks.filter((t: any) => t.track_id);
       } else {
         throw new Error("Invalid playlist format");
       }
@@ -127,9 +121,9 @@ export default function PlaylistManager({
       // Resolve usernames to friend_ids
       const friendMap = new Map(friends.map((f: { id: number; username: string }) => [f.username, f.id]));
       const tracks = tracksData.map((t) => ({
-        track_id: t.track_id,
+        ...t,
         friend_id: t.username ? friendMap.get(t.username) : undefined,
-      })).filter((t) => t.friend_id) as Array<{ track_id: string; friend_id: number }>;
+      })).filter((t) => t.friend_id);
 
       if (!tracks.length) {
         notify({ title: "Could not resolve any tracks to friends", type: "error" });
@@ -178,7 +172,7 @@ export default function PlaylistManager({
 
     try {
       const tracks = pendingImport.tracks.map((t) => ({
-        track_id: t.track_id,
+        ...t,
         friend_id: selectedFriendId,
       }));
 
