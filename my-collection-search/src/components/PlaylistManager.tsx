@@ -26,7 +26,7 @@ import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
 import { FiHeadphones, FiTrash, FiMoreVertical } from "react-icons/fi";
 import { TbFileImport } from "react-icons/tb";
 import { usePlaylists } from "@/providers/PlaylistsProvider";
-import { importPlaylist } from "@/services/playlistService";
+import { importPlaylist, PlaylistTrackPayload } from "@/services/playlistService";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { FaPlay } from "react-icons/fa";
 import { fetchTracksByIds } from "@/services/trackService";
@@ -68,7 +68,7 @@ export default function PlaylistManager({
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
   const [pendingImport, setPendingImport] = useState<{
     name: string;
-    tracks: Array<any>;
+    tracks: Array<PlaylistTrackPayload>;
   } | null>(null);
 
   // Simple filter for playlists
@@ -86,14 +86,14 @@ export default function PlaylistManager({
     try {
       const data = JSON.parse(await file.text());
       let name = "Imported Playlist";
-      let tracksData: Array<any> = [];
+      let tracksData: Array<PlaylistTrackPayload> = [];
 
       // Parse different JSON formats
       if (Array.isArray(data)) {
         tracksData = data.filter((t) => t.track_id);
       } else if (data.tracks && Array.isArray(data.tracks)) {
         if (data.name) name = data.name;
-        tracksData = data.tracks.filter((t: any) => t.track_id);
+        tracksData = data.tracks.filter((t: PlaylistTrackPayload) => t.track_id);
       } else {
         throw new Error("Invalid playlist format");
       }
