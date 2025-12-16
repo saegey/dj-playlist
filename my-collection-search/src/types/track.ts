@@ -183,6 +183,9 @@ export interface ProcessedTrack {
   artists: DiscogsArtist[];
   duration_seconds?: number | null;
   apple_music_url?: string | null;
+  spotify_url?: string | null;
+  youtube_url?: string | null;
+  soundcloud_url?: string | null;
   local_audio_url?: string | null;
 }
 

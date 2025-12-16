@@ -76,8 +76,18 @@ export async function upsertTracks(pool: Pool, tracks: DiscogsTrack[]): Promise<
       )
       ON CONFLICT (track_id, username)
       DO UPDATE SET
+        title           = EXCLUDED.title,
+        artist          = EXCLUDED.artist,
+        album           = EXCLUDED.album,
+        year            = EXCLUDED.year,
+        styles          = EXCLUDED.styles,
+        genres          = EXCLUDED.genres,
+        duration        = EXCLUDED.duration,
+        position        = EXCLUDED.position,
         discogs_url     = EXCLUDED.discogs_url,
         album_thumbnail = EXCLUDED.album_thumbnail,
+        apple_music_url = EXCLUDED.apple_music_url,
+        duration_seconds = EXCLUDED.duration_seconds,
         friend_id       = EXCLUDED.friend_id,
         release_id      = EXCLUDED.release_id
       RETURNING *;
