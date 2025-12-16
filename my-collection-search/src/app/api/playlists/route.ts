@@ -127,7 +127,6 @@ async function upsertTracksWithMetadata(
     "discogs_url",
     "apple_music_url",
     "youtube_url",
-    "spotify_url",
     "soundcloud_url",
     "album_thumbnail",
     "local_tags",
@@ -190,7 +189,6 @@ async function upsertTracksWithMetadata(
       discogs_url: rawTrack.discogs_url ?? null,
       apple_music_url: rawTrack.apple_music_url ?? null,
       youtube_url: rawTrack.youtube_url ?? null,
-      spotify_url: rawTrack.spotify_url ?? null,
       soundcloud_url: rawTrack.soundcloud_url ?? null,
       album_thumbnail: rawTrack.album_thumbnail ?? null,
       local_tags: rawTrack.local_tags ?? null,
@@ -271,7 +269,7 @@ async function upsertTracksWithMetadata(
     const insertSql = `
       INSERT INTO tracks (${insertColumns.join(", ")})
       VALUES (${placeholders})
-      ON CONFLICT (track_id, username) DO NOTHING;
+      ON CONFLICT (track_id) DO NOTHING;
     `;
 
     await pool.query(insertSql, insertParams);

@@ -120,10 +120,16 @@ export default function PlaylistManager({
 
       // Resolve usernames to friend_ids
       const friendMap = new Map(friends.map((f: { id: number; username: string }) => [f.username, f.id]));
-      const tracks = tracksData.map((t) => ({
-        ...t,
-        friend_id: t.username ? friendMap.get(t.username) : undefined,
-      })).filter((t) => t.friend_id);
+      const tracks: PlaylistTrackPayload[] = tracksData
+        .map((t) => {
+          const friendId = t.username ? friendMap.get(t.username) : undefined;
+          if (!friendId) return null;
+          return {
+            ...t,
+            friend_id: friendId,
+          } as PlaylistTrackPayload;
+        })
+        .filter((t): t is PlaylistTrackPayload => t !== null);
 
       if (!tracks.length) {
         notify({ title: "Could not resolve any tracks to friends", type: "error" });
