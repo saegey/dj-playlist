@@ -182,6 +182,17 @@ export default function PlayerControls({
         audioElement.volume = 0.01;
       }
 
+      // Debug current state
+      console.log('[DAC Mode] Ghost audio state:', {
+        paused: audioElement.paused,
+        readyState: audioElement.readyState,
+        volume: audioElement.volume,
+        muted: audioElement.muted,
+        src: audioElement.src ? 'loaded' : 'none',
+        currentTime: audioElement.currentTime,
+        isPlaying: isPlaying,
+      });
+
       // CRITICAL: Keep it playing for media controls to work
       // Media controls only work if audio is actively playing
       if (isPlaying && audioElement.paused && audioElement.readyState >= 2) {
@@ -251,70 +262,85 @@ export default function PlayerControls({
 
   // Update MediaSession API for media controls (lock screen, keyboard shortcuts)
   React.useEffect(() => {
+    console.log('[MediaSession] Effect triggered - mode:', mode, 'currentTrack:', currentTrack?.title);
+
     if (mode !== 'local-dac') {
       // Clear MediaSession when not in DAC mode
       if ('mediaSession' in navigator) {
+        console.log('[MediaSession] Clearing (not in DAC mode)');
         navigator.mediaSession.metadata = null;
         navigator.mediaSession.playbackState = 'none';
       }
       return;
     }
 
-    if (!currentTrack) return;
-
-    if ('mediaSession' in navigator) {
-      // Update metadata
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: currentTrack.title,
-        artist: currentTrack.artist,
-        album: currentTrack.album || undefined,
-        artwork: currentTrack.album_thumbnail ? [
-          { src: currentTrack.album_thumbnail, sizes: '512x512', type: 'image/jpeg' }
-        ] : undefined,
-      });
-
-      // Update playback state - CRITICAL for media controls to work
-      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-
-      // Update position state - helps browser understand media is active
-      if (mpdStatus.duration > 0) {
-        navigator.mediaSession.setPositionState({
-          duration: mpdStatus.duration,
-          playbackRate: 1,
-          position: mpdStatus.position,
-        });
-      }
-
-      // Set up action handlers
-      navigator.mediaSession.setActionHandler('play', () => {
-        console.log('[MediaSession] Play button pressed');
-        handlePlay();
-      });
-
-      navigator.mediaSession.setActionHandler('pause', () => {
-        console.log('[MediaSession] Pause button pressed');
-        handlePause();
-      });
-
-      navigator.mediaSession.setActionHandler('previoustrack', () => {
-        console.log('[MediaSession] Previous button pressed');
-        if (canPrev) playPrev();
-      });
-
-      navigator.mediaSession.setActionHandler('nexttrack', () => {
-        console.log('[MediaSession] Next button pressed');
-        if (canNext) playNext();
-      });
-
-      navigator.mediaSession.setActionHandler('seekto', (details) => {
-        if (details.seekTime !== undefined) {
-          console.log('[MediaSession] Seek to', details.seekTime);
-          handleSeek(details.seekTime);
-        }
-      });
-
-      console.log('[MediaSession] Updated - State:', isPlaying ? 'playing' : 'paused', 'Track:', currentTrack.title);
+    if (!currentTrack) {
+      console.log('[MediaSession] No current track');
+      return;
     }
+
+    if (!('mediaSession' in navigator)) {
+      console.error('[MediaSession] MediaSession API not available in this browser');
+      return;
+    }
+
+    console.log('[MediaSession] Setting up controls...');
+
+    // Update metadata
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentTrack.title,
+      artist: currentTrack.artist,
+      album: currentTrack.album || undefined,
+      artwork: currentTrack.album_thumbnail ? [
+        { src: currentTrack.album_thumbnail, sizes: '512x512', type: 'image/jpeg' }
+      ] : undefined,
+    });
+
+    // Update playback state - CRITICAL for media controls to work
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    console.log('[MediaSession] Playback state set to:', isPlaying ? 'playing' : 'paused');
+
+    // Update position state - helps browser understand media is active
+    if (mpdStatus.duration > 0) {
+      navigator.mediaSession.setPositionState({
+        duration: mpdStatus.duration,
+        playbackRate: 1,
+        position: mpdStatus.position,
+      });
+      console.log('[MediaSession] Position state set:', mpdStatus.position, '/', mpdStatus.duration);
+    }
+
+    // Set up action handlers
+    console.log('[MediaSession] Setting up action handlers...');
+
+    navigator.mediaSession.setActionHandler('play', () => {
+      console.log('[MediaSession] ✓ Play button pressed');
+      handlePlay();
+    });
+
+    navigator.mediaSession.setActionHandler('pause', () => {
+      console.log('[MediaSession] ✓ Pause button pressed');
+      handlePause();
+    });
+
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      console.log('[MediaSession] ✓ Previous button pressed');
+      if (canPrev) playPrev();
+    });
+
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      console.log('[MediaSession] ✓ Next button pressed');
+      if (canNext) playNext();
+    });
+
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details.seekTime !== undefined) {
+        console.log('[MediaSession] ✓ Seek to', details.seekTime);
+        handleSeek(details.seekTime);
+      }
+    });
+
+    console.log('[MediaSession] ✓ All handlers registered - Track:', currentTrack.title);
 
     return () => {
       if ('mediaSession' in navigator) {
