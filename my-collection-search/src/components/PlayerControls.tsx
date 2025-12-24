@@ -145,20 +145,21 @@ export default function PlayerControls({
     prevPlayingRef.current = isPlaying;
   }, [mode, isPlaying, currentTrack?.track_id, currentTrack?.local_audio_url, mpdStatus.state, localPlayback.play, localPlayback.pause, localPlayback.resume]); // Stable function references
 
-  // Keep browser audio muted when in DAC mode
-  // The "ghost" HTML5 audio keeps playing silently to:
+  // Keep browser audio nearly silent when in DAC mode
+  // The "ghost" HTML5 audio keeps playing quietly to:
   // 1. Maintain position sync even when tab is inactive
   // 2. Enable media controls (play/pause/seek)
   // 3. Prevent browser from stopping playback on inactive tab
+  // NOTE: Must be audible (not muted) for media controls to work
   React.useEffect(() => {
     const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
     if (!audioElement) return;
 
     if (mode === 'local-dac') {
-      // Mute browser audio but let it play as "ghost" audio
-      audioElement.volume = 0;
-      audioElement.muted = true;
-      // DON'T pause - let it play silently for media controls
+      // Set very low volume (1%) - NOT muted, which disables media controls
+      audioElement.muted = false;
+      audioElement.volume = 0.01;
+      console.log('[DAC Mode] Set ghost audio to 1% volume for media controls');
     } else {
       // Restore browser playback in browser mode
       audioElement.muted = false;
@@ -166,20 +167,20 @@ export default function PlayerControls({
     }
   }, [mode, volume]);
 
-  // Ensure browser stays muted in DAC mode and actually playing for media controls
+  // Ensure ghost audio stays at low volume and playing for media controls
   React.useEffect(() => {
     if (mode !== 'local-dac') return;
 
     const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
     if (!audioElement) return;
 
-    const ensureMutedAndPlaying = () => {
-      // Keep it muted (silent ghost audio)
-      if (audioElement.volume > 0 || !audioElement.muted) {
-        audioElement.volume = 0;
-        audioElement.muted = true;
+    const ensureGhostAudioState = () => {
+      // Keep volume at 1% - NOT 0, NOT muted
+      // Media controls require audible (not muted) audio
+      if (audioElement.muted || audioElement.volume !== 0.01) {
+        audioElement.muted = false;
+        audioElement.volume = 0.01;
       }
-
 
       // CRITICAL: Keep it playing for media controls to work
       // Media controls only work if audio is actively playing
@@ -196,20 +197,20 @@ export default function PlayerControls({
     };
 
     // Listen for volume changes and pause events
-    audioElement.addEventListener('volumechange', ensureMutedAndPlaying);
-    audioElement.addEventListener('pause', ensureMutedAndPlaying);
-    audioElement.addEventListener('play', ensureMutedAndPlaying);
+    audioElement.addEventListener('volumechange', ensureGhostAudioState);
+    audioElement.addEventListener('pause', ensureGhostAudioState);
+    audioElement.addEventListener('play', ensureGhostAudioState);
 
     // Initial setup
-    ensureMutedAndPlaying();
+    ensureGhostAudioState();
 
     // Check more frequently (every 500ms) to ensure it stays in sync
-    const interval = setInterval(ensureMutedAndPlaying, 500);
+    const interval = setInterval(ensureGhostAudioState, 500);
 
     return () => {
-      audioElement.removeEventListener('volumechange', ensureMutedAndPlaying);
-      audioElement.removeEventListener('pause', ensureMutedAndPlaying);
-      audioElement.removeEventListener('play', ensureMutedAndPlaying);
+      audioElement.removeEventListener('volumechange', ensureGhostAudioState);
+      audioElement.removeEventListener('pause', ensureGhostAudioState);
+      audioElement.removeEventListener('play', ensureGhostAudioState);
       clearInterval(interval);
     };
   }, [mode, isPlaying]);
@@ -275,6 +276,15 @@ export default function PlayerControls({
       // Update playback state - CRITICAL for media controls to work
       navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
 
+      // Update position state - helps browser understand media is active
+      if (mpdStatus.duration > 0) {
+        navigator.mediaSession.setPositionState({
+          duration: mpdStatus.duration,
+          playbackRate: 1,
+          position: mpdStatus.position,
+        });
+      }
+
       // Set up action handlers
       navigator.mediaSession.setActionHandler('play', () => {
         console.log('[MediaSession] Play button pressed');
@@ -312,7 +322,7 @@ export default function PlayerControls({
         navigator.mediaSession.playbackState = 'none';
       }
     };
-  }, [mode, currentTrack, isPlaying, canPrev, canNext, playPrev, playNext]);
+  }, [mode, currentTrack, isPlaying, canPrev, canNext, playPrev, playNext, mpdStatus.duration, mpdStatus.position]);
 
   return (
     <Box>
