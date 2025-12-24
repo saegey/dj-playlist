@@ -24,6 +24,8 @@ services:
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY}
       REDIS_URL: redis://redis:6379
       ESSENTIA_API_URL: http://essentia:8001/analyze
+      ENABLE_AUDIO_PLAYBACK: ${ENABLE_AUDIO_PLAYBACK:-false}
+      AUDIO_DEVICE: ${AUDIO_DEVICE:-default}
 
     depends_on:
       - db
@@ -35,6 +37,15 @@ services:
       - discogs_exports:/app/discogs_exports
       - spotify_exports:/app/spotify_exports
       - cookie_data:/app/cookies
+      # Optional: Mount ALSA config for dmix (software mixing with AirPlay)
+      # - ./config/asound.conf:/etc/asound.conf:ro
+    # USB DAC audio device passthrough (optional)
+    # Uncomment the lines below to enable USB DAC playback
+    # devices:
+    #   - /dev/snd:/dev/snd  # Pass through all audio devices
+    # Optional: Add specific DAC device if you want to limit to one device
+    #   - /dev/snd/controlC1:/dev/snd/controlC1  # Control interface for card 1
+    #   - /dev/snd/pcmC1D0p:/dev/snd/pcmC1D0p    # Playback device for card 1
   db:
     image: pgvector/pgvector:pg15
     restart: always
@@ -98,6 +109,23 @@ services:
       - music_data:/app/audio
       - cookie_data:/app/cookies  # Shared cookie storage with app service
     restart: unless-stopped
+
+  # AirPlay Receiver (optional)
+  # Uncomment to enable AirPlay streaming to your USB DAC
+  # shairport-sync:
+  #   image: mikebrady/shairport-sync:latest
+  #   container_name: shairport-sync
+  #   network_mode: host  # Required for AirPlay discovery (mDNS/Bonjour)
+  #   restart: unless-stopped
+  #   environment:
+  #     # AirPlay device name (shows up in iOS/Mac AirPlay menu)
+  #     - AIRPLAY_NAME=${AIRPLAY_NAME:-GrooveNET Audio}
+  #   devices:
+  #     - /dev/snd:/dev/snd  # Share audio device with app
+  #   volumes:
+  #     - ./config/shairport-sync.conf:/etc/shairport-sync.conf:ro
+  #   # If using dmix for audio mixing, no special config needed
+  #   # If not using dmix, only one service can use the DAC at a time
 
 
 volumes:
