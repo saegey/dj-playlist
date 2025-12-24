@@ -69,6 +69,19 @@ export default function PlayerControls({
   const { mode, setMode } = usePlaybackMode();
   const localPlayback = useLocalPlayback();
 
+  // Stop DAC playback when track changes or component unmounts
+  React.useEffect(() => {
+    if (mode === 'local-dac') {
+      // When track changes, stop the previous DAC playback
+      // The new track will start when user clicks play
+      return () => {
+        localPlayback.stop().catch(err => {
+          console.error('[DAC Mode] Cleanup failed:', err);
+        });
+      };
+    }
+  }, [currentTrack?.track_id, mode, localPlayback]);
+
   // Keep browser audio muted when in DAC mode
   React.useEffect(() => {
     const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
@@ -161,11 +174,13 @@ export default function PlayerControls({
   const handlePause = async () => {
     if (mode === 'local-dac') {
       try {
-        await localPlayback.pause();
+        // Stop DAC playback completely (pause would just suspend the process)
+        await localPlayback.stop();
+        console.log('[DAC Mode] DAC playback stopped');
         // Update UI state
         browserPause();
       } catch (error) {
-        console.error('Local pause failed:', error);
+        console.error('[DAC Mode] Failed to stop DAC playback:', error);
         browserPause();
       }
     } else {
