@@ -81,6 +81,22 @@ services:
     volumes:
       - meili_data:/meili_data
 
+  # MPD (Music Player Daemon) for local DAC playback
+  mpd:
+    image: vimagick/mpd:latest
+    container_name: mpd
+    restart: unless-stopped
+    ports:
+      - "6600:6600"  # MPD protocol port
+    devices:
+      - /dev/snd:/dev/snd  # Audio device passthrough
+    volumes:
+      - music_data:/var/lib/mpd/music:ro  # Read-only music files
+      - mpd_data:/var/lib/mpd  # MPD state/database
+      - ./config/mpd.conf:/etc/mpd.conf:ro
+    environment:
+      - AUDIO_DEVICE=${AUDIO_DEVICE:-hw:1,0}
+
   # watchtower:
   #   image: containrrr/watchtower
   #   restart: always
@@ -157,3 +173,4 @@ volumes:
   spotify_exports:
   redis_data:
   cookie_data:
+  mpd_data:

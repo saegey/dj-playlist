@@ -10,7 +10,7 @@ import { localPlaybackService } from '@/services/localPlaybackService';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, filename } = body;
+    const { action, filename, seconds } = body;
 
     if (!action) {
       return NextResponse.json(
@@ -28,30 +28,63 @@ export async function POST(request: Request) {
           );
         }
         await localPlaybackService.play(filename);
+        const playStatus = await localPlaybackService.getStatus();
         return NextResponse.json({
           success: true,
-          status: localPlaybackService.getStatus(),
+          status: playStatus,
         });
 
       case 'pause':
-        localPlaybackService.pause();
+        await localPlaybackService.pause();
+        const pauseStatus = await localPlaybackService.getStatus();
         return NextResponse.json({
           success: true,
-          status: localPlaybackService.getStatus(),
+          status: pauseStatus,
         });
 
       case 'resume':
-        localPlaybackService.resume();
+        await localPlaybackService.resume();
+        const resumeStatus = await localPlaybackService.getStatus();
         return NextResponse.json({
           success: true,
-          status: localPlaybackService.getStatus(),
+          status: resumeStatus,
         });
 
       case 'stop':
-        localPlaybackService.stop();
+        await localPlaybackService.stop();
+        const stopStatus = await localPlaybackService.getStatus();
         return NextResponse.json({
           success: true,
-          status: localPlaybackService.getStatus(),
+          status: stopStatus,
+        });
+
+      case 'seek':
+        if (typeof seconds !== 'number') {
+          return NextResponse.json(
+            { error: 'Missing or invalid seconds parameter for seek action' },
+            { status: 400 }
+          );
+        }
+        await localPlaybackService.seek(seconds);
+        const seekStatus = await localPlaybackService.getStatus();
+        return NextResponse.json({
+          success: true,
+          status: seekStatus,
+        });
+
+      case 'volume':
+        const { volume } = body;
+        if (typeof volume !== 'number') {
+          return NextResponse.json(
+            { error: 'Missing or invalid volume parameter' },
+            { status: 400 }
+          );
+        }
+        await localPlaybackService.setVolume(volume);
+        const currentVolume = await localPlaybackService.getVolume();
+        return NextResponse.json({
+          success: true,
+          volume: currentVolume,
         });
 
       default:
@@ -75,7 +108,7 @@ export async function POST(request: Request) {
  */
 export async function GET() {
   try {
-    const status = localPlaybackService.getStatus();
+    const status = await localPlaybackService.getStatus();
     const isEnabled = localPlaybackService.isLocalPlaybackEnabled();
 
     return NextResponse.json({

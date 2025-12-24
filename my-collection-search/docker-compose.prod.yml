@@ -26,6 +26,8 @@ services:
       ESSENTIA_API_URL: http://essentia:8001/analyze
       ENABLE_AUDIO_PLAYBACK: ${ENABLE_AUDIO_PLAYBACK:-false}
       AUDIO_DEVICE: ${AUDIO_DEVICE:-default}
+      MPD_HOST: ${MPD_HOST:-mpd}
+      MPD_PORT: ${MPD_PORT:-6600}
 
     depends_on:
       - db
@@ -41,8 +43,8 @@ services:
       # - ./config/asound.conf:/etc/asound.conf:ro
     # USB DAC audio device passthrough (optional)
     # Uncomment the lines below to enable USB DAC playback
-    # devices:
-    #   - /dev/snd:/dev/snd  # Pass through all audio devices
+    devices:
+      - /dev/snd:/dev/snd  # Pass through all audio devices
     # Optional: Add specific DAC device if you want to limit to one device
     #   - /dev/snd/controlC1:/dev/snd/controlC1  # Control interface for card 1
     #   - /dev/snd/pcmC1D0p:/dev/snd/pcmC1D0p    # Playback device for card 1
@@ -110,6 +112,22 @@ services:
       - cookie_data:/app/cookies  # Shared cookie storage with app service
     restart: unless-stopped
 
+  # MPD (Music Player Daemon) for local DAC playback
+  mpd:
+    image: vimagick/mpd:latest
+    container_name: mpd
+    restart: unless-stopped
+    ports:
+      - "6600:6600"  # MPD protocol port
+    devices:
+      - /dev/snd:/dev/snd  # Audio device passthrough
+    volumes:
+      - music_data:/var/lib/mpd/music:ro  # Read-only music files
+      - mpd_data:/var/lib/mpd  # MPD state/database
+      - ./config/mpd.conf:/etc/mpd.conf:ro
+    environment:
+      - AUDIO_DEVICE=${AUDIO_DEVICE:-hw:1,0}
+
   # AirPlay Receiver (optional)
   # Uncomment to enable AirPlay streaming to your USB DAC
   # shairport-sync:
@@ -130,10 +148,29 @@ services:
 
 volumes:
   db_data:
+    name: teststack_db_data
+    external: true
   meili_data:
+    name: teststack_meili_data
+    external: true
   music_data:
+    name: teststack_music_data
+    external: true
   db_dumps:
+    name: teststack_db_dumps
+    external: true
   discogs_exports:
+    name: teststack_discogs_exports
+    external: true
   spotify_exports:
+    name: teststack_spotify_exports
+    external: true
   redis_data:
+    name: teststack_redis_data
+    external: true
   cookie_data:
+    name: teststack_cookie_data
+    external: true
+  mpd_data:
+    name: teststack_mpd_data
+    external: true
