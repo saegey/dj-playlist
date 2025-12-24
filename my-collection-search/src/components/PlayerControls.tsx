@@ -69,18 +69,18 @@ export default function PlayerControls({
   const { mode, setMode } = usePlaybackMode();
   const localPlayback = useLocalPlayback();
 
-  // Mute browser audio when in DAC mode
+  // Mute browser audio when switching to DAC mode
   React.useEffect(() => {
     const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
-    if (audioElement) {
-      if (mode === 'local-dac') {
-        audioElement.volume = 0; // Mute browser audio
-        audioElement.pause(); // Stop browser playback
-      } else {
-        audioElement.volume = volume; // Restore volume in browser mode
-      }
+    if (!audioElement) return;
+
+    if (mode === 'local-dac') {
+      audioElement.volume = 0; // Mute browser audio
+      audioElement.pause(); // Stop browser playback
+    } else {
+      audioElement.volume = volume; // Restore volume in browser mode
     }
-  }, [mode, volume]);
+  }, [mode]); // Only run when mode changes, NOT when volume changes
 
   const VolumeIcon = useMemo(() => {
     if (volume === 0) return FiVolumeX;
@@ -97,12 +97,12 @@ export default function PlayerControls({
   const handlePlay = async () => {
     if (mode === 'local-dac' && currentTrack?.local_audio_url) {
       try {
-        // First, ensure browser audio is stopped
-        browserPause();
-
         // Play through local DAC
         await localPlayback.play(currentTrack.local_audio_url);
         console.log('Playing through local DAC:', currentTrack.local_audio_url);
+
+        // Update UI state by calling browserPlay, but audio element is muted
+        browserPlay();
       } catch (error) {
         console.error('Local playback failed:', error);
         // Fall back to browser playback
@@ -119,11 +119,14 @@ export default function PlayerControls({
     if (mode === 'local-dac') {
       try {
         await localPlayback.pause();
+        // Update UI state
+        browserPause();
       } catch (error) {
         console.error('Local pause failed:', error);
+        browserPause();
       }
     } else {
-      // Only pause browser if in browser mode
+      // Browser mode
       browserPause();
     }
   };
@@ -261,7 +264,7 @@ export default function PlayerControls({
             />
           </Box>
 
-          {showVolumeControls && (
+          {showVolumeControls && mode === 'browser' && (
             <Box display={{ base: "none", md: "block" }}>
               <HStack align="center" gap={3}>
                 <Icon
