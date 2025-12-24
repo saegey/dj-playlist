@@ -45,8 +45,8 @@ class LocalPlaybackService {
       throw new Error('Local playback is not enabled. Set ENABLE_AUDIO_PLAYBACK=true in .env');
     }
 
-    // Stop any existing playback
-    this.stop();
+    // Stop any existing playback and wait for it to fully exit
+    await this.stopAndWait();
 
     const audioDir = path.resolve('audio');
     const filePath = path.join(audioDir, filename);
@@ -141,6 +141,47 @@ class LocalPlaybackService {
     }
     this.currentState = 'stopped';
     this.currentTrackPath = null;
+  }
+
+  /**
+   * Stop playback and wait for the process to fully exit
+   * This prevents "device busy" errors when starting new playback
+   */
+  private async stopAndWait(): Promise<void> {
+    if (!this.ffmpegProcess) {
+      return;
+    }
+
+    return new Promise((resolve) => {
+      const process = this.ffmpegProcess!;
+
+      console.log('[LocalPlayback] Stopping existing ffmpeg process...');
+
+      const timeout = setTimeout(() => {
+        console.warn('[LocalPlayback] Process did not exit in time, forcing kill');
+        process.kill('SIGKILL');
+        this.ffmpegProcess = null;
+        this.currentState = 'stopped';
+        this.currentTrackPath = null;
+        resolve();
+      }, 2000); // 2 second timeout
+
+      process.once('close', () => {
+        console.log('[LocalPlayback] Previous ffmpeg process exited cleanly');
+        clearTimeout(timeout);
+        this.ffmpegProcess = null;
+        this.currentState = 'stopped';
+        this.currentTrackPath = null;
+
+        // Small delay to ensure ALSA device is fully released
+        setTimeout(() => {
+          console.log('[LocalPlayback] ALSA device should be free now');
+          resolve();
+        }, 100);
+      });
+
+      process.kill('SIGTERM');
+    });
   }
 
   /**
