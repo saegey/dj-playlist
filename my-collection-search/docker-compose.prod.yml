@@ -114,20 +114,16 @@ services:
 
   # PulseAudio - Better buffering than direct ALSA
   pulseaudio:
-    image: lsiobase/pulseaudio:latest
+    image: easypi/pulseaudio:latest
     container_name: pulseaudio
     restart: unless-stopped
     devices:
       - /dev/snd:/dev/snd  # Audio device passthrough
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=America/Los_Angeles
     volumes:
       - pulse_data:/config
       - ./config/pulse-default.pa:/etc/pulse/default.pa:ro
     # Run PulseAudio in system mode
-    command: pulseaudio --system --disallow-exit --disallow-module-loading=false --exit-idle-time=-1
+    command: pulseaudio --system --disallow-exit --disallow-module-loading=false --exit-idle-time=-1 --log-level=info
 
   # MPD (Music Player Daemon) for local DAC playback
   mpd:
