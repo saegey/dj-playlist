@@ -112,19 +112,6 @@ services:
       - cookie_data:/app/cookies  # Shared cookie storage with app service
     restart: unless-stopped
 
-  # PulseAudio - Better buffering than direct ALSA
-  pulseaudio:
-    image: easypi/pulseaudio:latest
-    container_name: pulseaudio
-    restart: unless-stopped
-    devices:
-      - /dev/snd:/dev/snd  # Audio device passthrough
-    volumes:
-      - pulse_data:/config
-      - ./config/pulse-default.pa:/etc/pulse/default.pa:ro
-    # Run PulseAudio in system mode
-    command: pulseaudio --system --disallow-exit --disallow-module-loading=false --exit-idle-time=-1 --log-level=info
-
   # MPD (Music Player Daemon) for local DAC playback
   mpd:
     image: vimagick/mpd:latest
@@ -132,15 +119,14 @@ services:
     restart: unless-stopped
     ports:
       - "6600:6600"  # MPD protocol port
-    depends_on:
-      - pulseaudio
+    devices:
+      - /dev/snd:/dev/snd  # Audio device passthrough
     volumes:
       - music_data:/var/lib/mpd/music:ro  # Read-only music files
       - mpd_data:/var/lib/mpd  # MPD state/database
       - ./config/mpd.conf:/etc/mpd.conf:ro
     environment:
       - AUDIO_DEVICE=${AUDIO_DEVICE:-hw:1,0}
-      - PULSE_SERVER=pulseaudio
 
   # AirPlay Receiver (optional)
   # Uncomment to enable AirPlay streaming to your USB DAC
@@ -187,7 +173,4 @@ volumes:
     external: true
   mpd_data:
     name: teststack_mpd_data
-    external: true
-  pulse_data:
-    name: teststack_pulse_data
     external: true

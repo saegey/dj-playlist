@@ -82,34 +82,20 @@ services:
       - meili_data:/meili_data
 
   # MPD (Music Player Daemon) for local DAC playback
-  # PulseAudio - Better buffering than direct ALSA
-  pulseaudio:
-    image: easypi/pulseaudio:latest
-    container_name: pulseaudio
-    restart: unless-stopped
-    devices:
-      - /dev/snd:/dev/snd  # Audio device passthrough
-    volumes:
-      - pulse_data:/config
-      - ./config/pulse-default.pa:/etc/pulse/default.pa:ro
-    # Run PulseAudio in system mode
-    command: pulseaudio --system --disallow-exit --disallow-module-loading=false --exit-idle-time=-1 --log-level=info
-
   mpd:
     image: vimagick/mpd:latest
     container_name: mpd
     restart: unless-stopped
     ports:
       - "6600:6600"  # MPD protocol port
-    depends_on:
-      - pulseaudio
+    devices:
+      - /dev/snd:/dev/snd  # Audio device passthrough
     volumes:
       - music_data:/var/lib/mpd/music:ro  # Read-only music files
       - mpd_data:/var/lib/mpd  # MPD state/database
       - ./config/mpd.conf:/etc/mpd.conf:ro
     environment:
       - AUDIO_DEVICE=${AUDIO_DEVICE:-hw:1,0}
-      - PULSE_SERVER=pulseaudio
 
   # watchtower:
   #   image: containrrr/watchtower
@@ -188,4 +174,3 @@ volumes:
   redis_data:
   cookie_data:
   mpd_data:
-  pulse_data:
