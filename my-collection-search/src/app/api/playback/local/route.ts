@@ -28,30 +28,34 @@ export async function POST(request: Request) {
           );
         }
         await localPlaybackService.play(filename);
+        const playStatus = await localPlaybackService.getStatus();
         return NextResponse.json({
           success: true,
-          status: localPlaybackService.getStatus(),
+          status: playStatus,
         });
 
       case 'pause':
-        localPlaybackService.pause();
+        await localPlaybackService.pause();
+        const pauseStatus = await localPlaybackService.getStatus();
         return NextResponse.json({
           success: true,
-          status: localPlaybackService.getStatus(),
+          status: pauseStatus,
         });
 
       case 'resume':
-        localPlaybackService.resume();
+        await localPlaybackService.resume();
+        const resumeStatus = await localPlaybackService.getStatus();
         return NextResponse.json({
           success: true,
-          status: localPlaybackService.getStatus(),
+          status: resumeStatus,
         });
 
       case 'stop':
-        localPlaybackService.stop();
+        await localPlaybackService.stop();
+        const stopStatus = await localPlaybackService.getStatus();
         return NextResponse.json({
           success: true,
-          status: localPlaybackService.getStatus(),
+          status: stopStatus,
         });
 
       default:
@@ -75,7 +79,7 @@ export async function POST(request: Request) {
  */
 export async function GET() {
   try {
-    const status = localPlaybackService.getStatus();
+    const status = await localPlaybackService.getStatus();
     const isEnabled = localPlaybackService.isLocalPlaybackEnabled();
 
     return NextResponse.json({

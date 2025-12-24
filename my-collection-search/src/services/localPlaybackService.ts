@@ -1,6 +1,5 @@
-import { spawn, ChildProcess } from 'child_process';
+import { Socket } from 'net';
 import path from 'path';
-import fs from 'fs';
 
 type PlaybackState = 'idle' | 'playing' | 'paused' | 'stopped';
 
@@ -12,32 +11,135 @@ interface PlaybackStatus {
 }
 
 /**
- * LocalPlaybackService - Manages server-side audio playback through ALSA/USB DAC
+ * LocalPlaybackService - Manages server-side audio playback through MPD
  *
- * Uses ffmpeg to play audio files through the configured ALSA device.
- * This allows high-quality audio output through USB DACs while the web UI controls playback.
+ * Uses MPD (Music Player Daemon) for robust, professional audio playback.
+ * MPD protocol is simple text-based TCP communication.
  */
 class LocalPlaybackService {
-  private ffmpegProcess: ChildProcess | null = null;
-  private currentState: PlaybackState = 'idle';
-  private currentTrackPath: string | null = null;
-  private audioDevice: string;
+  private socket: Socket | null = null;
   private isEnabled: boolean;
+  private mpdHost: string;
+  private mpdPort: number;
+  private connectionPromise: Promise<void> | null = null;
 
   constructor() {
-    this.audioDevice = process.env.AUDIO_DEVICE || 'default';
     this.isEnabled = process.env.ENABLE_AUDIO_PLAYBACK === 'true';
+    this.mpdHost = process.env.MPD_HOST || 'mpd';
+    this.mpdPort = parseInt(process.env.MPD_PORT || '6600', 10);
   }
 
   /**
-   * Check if local playback is enabled via environment variables
+   * Connect to MPD server
+   */
+  private async connect(): Promise<void> {
+    if (this.socket && !this.socket.destroyed) {
+      return; // Already connected
+    }
+
+    if (this.connectionPromise) {
+      return this.connectionPromise;
+    }
+
+    this.connectionPromise = new Promise((resolve, reject) => {
+      const socket = new Socket();
+
+      const timeout = setTimeout(() => {
+        socket.destroy();
+        reject(new Error('MPD connection timeout'));
+      }, 5000);
+
+      socket.on('connect', () => {
+        clearTimeout(timeout);
+        console.log('[MPD] Connected to', this.mpdHost, this.mpdPort);
+      });
+
+      socket.on('data', (data) => {
+        const response = data.toString();
+        console.log('[MPD] <<', response.trim());
+
+        if (response.startsWith('OK MPD')) {
+          this.socket = socket;
+          this.connectionPromise = null;
+          resolve();
+        }
+      });
+
+      socket.on('error', (error) => {
+        clearTimeout(timeout);
+        this.connectionPromise = null;
+        console.error('[MPD] Connection error:', error);
+        reject(error);
+      });
+
+      socket.on('close', () => {
+        console.log('[MPD] Connection closed');
+        this.socket = null;
+        this.connectionPromise = null;
+      });
+
+      console.log('[MPD] Connecting to', this.mpdHost, this.mpdPort);
+      socket.connect(this.mpdPort, this.mpdHost);
+    });
+
+    return this.connectionPromise;
+  }
+
+  /**
+   * Send command to MPD and wait for response
+   */
+  private async sendCommand(command: string): Promise<string> {
+    await this.connect();
+
+    if (!this.socket) {
+      throw new Error('Not connected to MPD');
+    }
+
+    const socket = this.socket; // Capture for use in promise
+
+    return new Promise((resolve, reject) => {
+      let response = '';
+
+      const onData = (data: Buffer) => {
+        const text = data.toString();
+        response += text;
+
+        // Check if response is complete
+        if (text.includes('\nOK\n') || text.includes('\nACK')) {
+          socket.removeListener('data', onData);
+
+          if (text.includes('\nACK')) {
+            const match = text.match(/ACK \[(\d+)@(\d+)\] \{([^}]+)\} (.+)/);
+            const error = match ? match[4] : text;
+            reject(new Error(`MPD error: ${error}`));
+          } else {
+            resolve(response);
+          }
+        }
+      };
+
+      socket.on('data', onData);
+
+      console.log('[MPD] >>', command.trim());
+      socket.write(command + '\n');
+
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        socket.removeListener('data', onData);
+        reject(new Error('MPD command timeout'));
+      }, 10000);
+    });
+  }
+
+  /**
+   * Check if local playback is enabled
    */
   isLocalPlaybackEnabled(): boolean {
     return this.isEnabled;
   }
 
   /**
-   * Play an audio file through the local DAC
+   * Play an audio file through MPD
    * @param filename - The filename in the audio directory
    */
   async play(filename: string): Promise<void> {
@@ -45,182 +147,141 @@ class LocalPlaybackService {
       throw new Error('Local playback is not enabled. Set ENABLE_AUDIO_PLAYBACK=true in .env');
     }
 
-    // Stop any existing playback and wait for it to fully exit
-    await this.stopAndWait();
+    try {
+      console.log('[MPD] Playing:', filename);
 
-    const audioDir = path.resolve('audio');
-    const filePath = path.join(audioDir, filename);
+      // Clear playlist, add track, and play
+      await this.sendCommand('clear');
+      await this.sendCommand(`add "${filename}"`);
+      await this.sendCommand('play 0');
 
-    // Validate file exists
-    if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-      throw new Error(`Audio file not found: ${filename}`);
-    }
-
-    this.currentTrackPath = filePath;
-    this.currentState = 'playing';
-
-    // Spawn ffmpeg process (better than ffplay for server-side playback)
-    // -re: Read input at native frame rate (important for real-time playback)
-    // -i: Input file
-    // -vn: Disable video (audio-only)
-    // -f alsa: ALSA output format
-    // plughw: ALSA plugin that provides automatic format conversion
-    const device = `plughw:${this.audioDevice || '1,0'}`;
-    const args = [
-      '-re',
-      '-i', filePath,
-      '-vn',
-      '-f', 'alsa',
-      device,
-    ];
-
-    console.log('[LocalPlayback] Starting ffmpeg with args:', args);
-    console.log('[LocalPlayback] Device:', device, '| File:', filePath);
-
-    this.ffmpegProcess = spawn('ffmpeg', args, {
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-
-    // Log stderr for debugging
-    this.ffmpegProcess.stderr?.on('data', (data) => {
-      console.error('[ffmpeg stderr]:', data.toString());
-    });
-
-    this.ffmpegProcess.stdout?.on('data', (data) => {
-      console.log('[ffmpeg stdout]:', data.toString());
-    });
-
-    this.ffmpegProcess.on('spawn', () => {
-      console.log('[LocalPlayback] ffmpeg process spawned successfully');
-    });
-
-    this.ffmpegProcess.on('close', (code: number | null) => {
-      console.log('[LocalPlayback] ffmpeg process closed with code:', code);
-      if (code === 0) {
-        // Normal exit - track finished
-        this.currentState = 'idle';
-        this.currentTrackPath = null;
-      }
-      this.ffmpegProcess = null;
-    });
-
-    this.ffmpegProcess.on('error', (err: Error) => {
-      console.error('[LocalPlayback] ffmpeg process error:', err);
-      this.currentState = 'stopped';
-      this.ffmpegProcess = null;
-    });
-  }
-
-  /**
-   * Pause playback (sends SIGSTOP to ffmpeg process)
-   */
-  pause(): void {
-    if (this.ffmpegProcess && this.currentState === 'playing') {
-      this.ffmpegProcess.kill('SIGSTOP');
-      this.currentState = 'paused';
+      console.log('[MPD] Playback started');
+    } catch (error) {
+      console.error('[MPD] Play error:', error);
+      throw error;
     }
   }
 
   /**
-   * Resume playback (sends SIGCONT to ffmpeg process)
+   * Pause playback
    */
-  resume(): void {
-    if (this.ffmpegProcess && this.currentState === 'paused') {
-      this.ffmpegProcess.kill('SIGCONT');
-      this.currentState = 'playing';
+  async pause(): Promise<void> {
+    try {
+      await this.sendCommand('pause 1');
+      console.log('[MPD] Paused');
+    } catch (error) {
+      console.error('[MPD] Pause error:', error);
+      throw error;
     }
   }
 
   /**
-   * Stop playback completely
+   * Resume playback
    */
-  stop(): void {
-    if (this.ffmpegProcess) {
-      this.ffmpegProcess.kill('SIGTERM');
-      this.ffmpegProcess = null;
+  async resume(): Promise<void> {
+    try {
+      await this.sendCommand('pause 0');
+      console.log('[MPD] Resumed');
+    } catch (error) {
+      console.error('[MPD] Resume error:', error);
+      throw error;
     }
-    this.currentState = 'stopped';
-    this.currentTrackPath = null;
   }
 
   /**
-   * Stop playback and wait for the process to fully exit
-   * This prevents "device busy" errors when starting new playback
+   * Stop playback
    */
-  private async stopAndWait(): Promise<void> {
-    if (!this.ffmpegProcess) {
-      return;
+  async stop(): Promise<void> {
+    try {
+      await this.sendCommand('stop');
+      console.log('[MPD] Stopped');
+    } catch (error) {
+      console.error('[MPD] Stop error:', error);
+      throw error;
     }
+  }
 
-    return new Promise((resolve) => {
-      const process = this.ffmpegProcess!;
-
-      console.log('[LocalPlayback] Stopping existing ffmpeg process...');
-
-      const timeout = setTimeout(() => {
-        console.warn('[LocalPlayback] Process did not exit in time, forcing kill');
-        process.kill('SIGKILL');
-        this.ffmpegProcess = null;
-        this.currentState = 'stopped';
-        this.currentTrackPath = null;
-        resolve();
-      }, 2000); // 2 second timeout
-
-      process.once('close', () => {
-        console.log('[LocalPlayback] Previous ffmpeg process exited cleanly');
-        clearTimeout(timeout);
-        this.ffmpegProcess = null;
-        this.currentState = 'stopped';
-        this.currentTrackPath = null;
-
-        // Small delay to ensure ALSA device is fully released
-        setTimeout(() => {
-          console.log('[LocalPlayback] ALSA device should be free now');
-          resolve();
-        }, 100);
-      });
-
-      process.kill('SIGTERM');
-    });
+  /**
+   * Seek to a specific position
+   */
+  async seek(seconds: number): Promise<void> {
+    try {
+      await this.sendCommand(`seekcur ${seconds}`);
+      console.log('[MPD] Seeked to', seconds, 'seconds');
+    } catch (error) {
+      console.error('[MPD] Seek error:', error);
+      throw error;
+    }
   }
 
   /**
    * Get current playback status
    */
-  getStatus(): PlaybackStatus {
-    return {
-      state: this.currentState,
-      currentTrack: this.currentTrackPath ? path.basename(this.currentTrackPath) : null,
-      position: 0, // ffplay doesn't easily expose position, would need parsing stderr
-      duration: 0,
-    };
+  async getStatus(): Promise<PlaybackStatus> {
+    try {
+      const response = await this.sendCommand('status');
+      const currentSongResponse = await this.sendCommand('currentsong');
+
+      // Parse status response
+      const parseValue = (key: string, text: string): string | null => {
+        const match = text.match(new RegExp(`^${key}: (.+)$`, 'm'));
+        return match ? match[1] : null;
+      };
+
+      const stateStr = parseValue('state', response);
+      let state: PlaybackState = 'idle';
+      if (stateStr === 'play') state = 'playing';
+      else if (stateStr === 'pause') state = 'paused';
+      else if (stateStr === 'stop') state = 'stopped';
+
+      const file = parseValue('file', currentSongResponse);
+      const elapsed = parseFloat(parseValue('elapsed', response) || '0');
+      const duration = parseFloat(parseValue('duration', response) || '0');
+
+      return {
+        state,
+        currentTrack: file ? path.basename(file) : null,
+        position: elapsed,
+        duration,
+      };
+    } catch (error) {
+      console.error('[MPD] Status error:', error);
+      return {
+        state: 'idle',
+        currentTrack: null,
+        position: 0,
+        duration: 0,
+      };
+    }
   }
 
   /**
-   * Test if ffmpeg is available
+   * Test if MPD is available
    */
   async testPlayback(): Promise<{ success: boolean; error?: string }> {
     if (!this.isEnabled) {
       return { success: false, error: 'Local playback is not enabled' };
     }
 
-    return new Promise((resolve) => {
-      const testProcess = spawn('ffmpeg', ['-version'], {
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
+    try {
+      await this.connect();
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: `MPD connection failed: ${error instanceof Error ? error.message : error}`,
+      };
+    }
+  }
 
-      testProcess.on('close', (code) => {
-        if (code === 0) {
-          resolve({ success: true });
-        } else {
-          resolve({ success: false, error: 'ffmpeg exited with non-zero code' });
-        }
-      });
-
-      testProcess.on('error', (err) => {
-        resolve({ success: false, error: `ffmpeg not found: ${err.message}` });
-      });
-    });
+  /**
+   * Disconnect from MPD
+   */
+  disconnect(): void {
+    if (this.socket) {
+      this.socket.destroy();
+      this.socket = null;
+    }
   }
 }
 

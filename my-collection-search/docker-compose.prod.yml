@@ -26,6 +26,8 @@ services:
       ESSENTIA_API_URL: http://essentia:8001/analyze
       ENABLE_AUDIO_PLAYBACK: ${ENABLE_AUDIO_PLAYBACK:-false}
       AUDIO_DEVICE: ${AUDIO_DEVICE:-default}
+      MPD_HOST: ${MPD_HOST:-mpd}
+      MPD_PORT: ${MPD_PORT:-6600}
 
     depends_on:
       - db
@@ -110,6 +112,23 @@ services:
       - cookie_data:/app/cookies  # Shared cookie storage with app service
     restart: unless-stopped
 
+  # MPD (Music Player Daemon) for local DAC playback
+  mpd:
+    image: vimagick/mpd:latest
+    container_name: mpd
+    restart: unless-stopped
+    ports:
+      - "6600:6600"  # MPD protocol port
+      - "8000:8000"  # HTTP streaming (optional)
+    devices:
+      - /dev/snd:/dev/snd  # Audio device passthrough
+    volumes:
+      - music_data:/var/lib/mpd/music:ro  # Read-only music files
+      - mpd_data:/var/lib/mpd  # MPD state/database
+      - ./config/mpd.conf:/etc/mpd.conf:ro
+    environment:
+      - AUDIO_DEVICE=${AUDIO_DEVICE:-hw:1,0}
+
   # AirPlay Receiver (optional)
   # Uncomment to enable AirPlay streaming to your USB DAC
   # shairport-sync:
@@ -152,4 +171,7 @@ volumes:
     external: true
   cookie_data:
     name: teststack_cookie_data
+    external: true
+  mpd_data:
+    name: teststack_mpd_data
     external: true
