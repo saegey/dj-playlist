@@ -49,7 +49,7 @@ class LocalPlaybackService {
         reject(new Error('MPD connection timeout'));
       }, 5000);
 
-      const onGreeting = (data: Buffer) => {
+      const onGreeting = async (data: Buffer) => {
         const response = data.toString();
         console.log('[MPD] <<', response.trim());
 
@@ -59,6 +59,15 @@ class LocalPlaybackService {
           this.socket = socket;
           this.connectionPromise = null;
           console.log('[MPD] Ready');
+
+          // Set default volume to 50% on connection
+          try {
+            await this.setVolume(50);
+            console.log('[MPD] Default volume set to 50%');
+          } catch (error) {
+            console.error('[MPD] Failed to set default volume:', error);
+          }
+
           resolve();
         }
       };
@@ -222,6 +231,38 @@ class LocalPlaybackService {
     } catch (error) {
       console.error('[MPD] Seek error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Set volume (0-100)
+   */
+  async setVolume(volume: number): Promise<void> {
+    try {
+      const clampedVolume = Math.max(0, Math.min(100, Math.round(volume)));
+      await this.sendCommand(`setvol ${clampedVolume}`);
+      console.log('[MPD] Volume set to', clampedVolume);
+    } catch (error) {
+      console.error('[MPD] Set volume error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get current volume (0-100)
+   */
+  async getVolume(): Promise<number> {
+    try {
+      const response = await this.sendCommand('status');
+      const parseValue = (key: string, text: string): string | null => {
+        const match = text.match(new RegExp(`^${key}: (.+)$`, 'm'));
+        return match ? match[1] : null;
+      };
+      const volumeStr = parseValue('volume', response);
+      return volumeStr ? parseInt(volumeStr, 10) : 100;
+    } catch (error) {
+      console.error('[MPD] Get volume error:', error);
+      return 100;
     }
   }
 

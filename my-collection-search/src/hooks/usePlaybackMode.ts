@@ -139,5 +139,25 @@ export function useLocalPlayback() {
     }
   }, []);
 
-  return { play, pause, resume, stop, seek };
+  const setVolume = useCallback(async (volume: number) => {
+    try {
+      const res = await fetch('/api/playback/local', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'volume', volume }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to set volume');
+      }
+
+      return await res.json();
+    } catch (error) {
+      console.error('Local playback volume error:', error);
+      throw error;
+    }
+  }, []);
+
+  return { play, pause, resume, stop, seek, setVolume };
 }

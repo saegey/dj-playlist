@@ -72,6 +72,21 @@ export async function POST(request: Request) {
           status: seekStatus,
         });
 
+      case 'volume':
+        const { volume } = body;
+        if (typeof volume !== 'number') {
+          return NextResponse.json(
+            { error: 'Missing or invalid volume parameter' },
+            { status: 400 }
+          );
+        }
+        await localPlaybackService.setVolume(volume);
+        const currentVolume = await localPlaybackService.getVolume();
+        return NextResponse.json({
+          success: true,
+          volume: currentVolume,
+        });
+
       default:
         return NextResponse.json(
           { error: `Unknown action: ${action}` },
