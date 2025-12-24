@@ -14,11 +14,11 @@ interface PlaybackStatus {
 /**
  * LocalPlaybackService - Manages server-side audio playback through ALSA/USB DAC
  *
- * Uses ffplay (from ffmpeg) to play audio files through the configured ALSA device.
+ * Uses ffmpeg to play audio files through the configured ALSA device.
  * This allows high-quality audio output through USB DACs while the web UI controls playback.
  */
 class LocalPlaybackService {
-  private ffplayProcess: ChildProcess | null = null;
+  private ffmpegProcess: ChildProcess | null = null;
   private currentState: PlaybackState = 'idle';
   private currentTrackPath: string | null = null;
   private audioDevice: string;
@@ -59,59 +59,56 @@ class LocalPlaybackService {
     this.currentTrackPath = filePath;
     this.currentState = 'playing';
 
-    // Spawn ffplay process
-    // -nodisp: No video display window
-    // -autoexit: Exit when playback finishes
-    // -loglevel error: Show errors but suppress verbose output
-    // -af "aformat=sample_rates=44100|48000": Ensure compatible sample rate
-    // -f alsa: Use ALSA output
-    // -audio_device: Specify which ALSA device to use
+    // Spawn ffmpeg process (better than ffplay for server-side playback)
+    // -re: Read input at native frame rate (important for real-time playback)
+    // -i: Input file
+    // -vn: Disable video (audio-only)
+    // -f alsa: ALSA output format
+    // plughw: ALSA plugin that provides automatic format conversion
     const args = [
-      '-nodisp',
-      '-autoexit',
-      '-loglevel', 'error',
-      '-af', 'aformat=sample_rates=44100|48000',
-      '-f', 'alsa',
-      '-audio_device', this.audioDevice || 'hw:1,0', // Always specify ALSA device
+      '-re',
       '-i', filePath,
+      '-vn',
+      '-f', 'alsa',
+      `plughw:${this.audioDevice || '1,0'}`, // ALSA device with plugin
     ];
 
-    this.ffplayProcess = spawn('ffplay', args, {
+    this.ffmpegProcess = spawn('ffmpeg', args, {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
-    this.ffplayProcess.on('close', (code) => {
+    this.ffmpegProcess.on('close', (code: number | null) => {
       if (code === 0) {
         // Normal exit - track finished
         this.currentState = 'idle';
         this.currentTrackPath = null;
       }
-      this.ffplayProcess = null;
+      this.ffmpegProcess = null;
     });
 
-    this.ffplayProcess.on('error', (err) => {
-      console.error('ffplay error:', err);
+    this.ffmpegProcess.on('error', (err: Error) => {
+      console.error('ffmpeg error:', err);
       this.currentState = 'stopped';
-      this.ffplayProcess = null;
+      this.ffmpegProcess = null;
     });
   }
 
   /**
-   * Pause playback (sends SIGSTOP to ffplay process)
+   * Pause playback (sends SIGSTOP to ffmpeg process)
    */
   pause(): void {
-    if (this.ffplayProcess && this.currentState === 'playing') {
-      this.ffplayProcess.kill('SIGSTOP');
+    if (this.ffmpegProcess && this.currentState === 'playing') {
+      this.ffmpegProcess.kill('SIGSTOP');
       this.currentState = 'paused';
     }
   }
 
   /**
-   * Resume playback (sends SIGCONT to ffplay process)
+   * Resume playback (sends SIGCONT to ffmpeg process)
    */
   resume(): void {
-    if (this.ffplayProcess && this.currentState === 'paused') {
-      this.ffplayProcess.kill('SIGCONT');
+    if (this.ffmpegProcess && this.currentState === 'paused') {
+      this.ffmpegProcess.kill('SIGCONT');
       this.currentState = 'playing';
     }
   }
@@ -120,9 +117,9 @@ class LocalPlaybackService {
    * Stop playback completely
    */
   stop(): void {
-    if (this.ffplayProcess) {
-      this.ffplayProcess.kill('SIGTERM');
-      this.ffplayProcess = null;
+    if (this.ffmpegProcess) {
+      this.ffmpegProcess.kill('SIGTERM');
+      this.ffmpegProcess = null;
     }
     this.currentState = 'stopped';
     this.currentTrackPath = null;
@@ -141,7 +138,7 @@ class LocalPlaybackService {
   }
 
   /**
-   * Test if ffplay is available
+   * Test if ffmpeg is available
    */
   async testPlayback(): Promise<{ success: boolean; error?: string }> {
     if (!this.isEnabled) {
@@ -149,7 +146,7 @@ class LocalPlaybackService {
     }
 
     return new Promise((resolve) => {
-      const testProcess = spawn('ffplay', ['-version'], {
+      const testProcess = spawn('ffmpeg', ['-version'], {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
 
@@ -157,12 +154,12 @@ class LocalPlaybackService {
         if (code === 0) {
           resolve({ success: true });
         } else {
-          resolve({ success: false, error: 'ffplay exited with non-zero code' });
+          resolve({ success: false, error: 'ffmpeg exited with non-zero code' });
         }
       });
 
       testProcess.on('error', (err) => {
-        resolve({ success: false, error: `ffplay not found: ${err.message}` });
+        resolve({ success: false, error: `ffmpeg not found: ${err.message}` });
       });
     });
   }
