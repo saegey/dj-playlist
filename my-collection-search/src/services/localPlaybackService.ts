@@ -62,23 +62,19 @@ class LocalPlaybackService {
     // Spawn ffplay process
     // -nodisp: No video display window
     // -autoexit: Exit when playback finishes
-    // -loglevel quiet: Suppress verbose output
+    // -loglevel error: Show errors but suppress verbose output
     // -af "aformat=sample_rates=44100|48000": Ensure compatible sample rate
     // -f alsa: Use ALSA output
-    // -i: Input file
+    // -audio_device: Specify which ALSA device to use
     const args = [
       '-nodisp',
       '-autoexit',
-      '-loglevel', 'quiet',
+      '-loglevel', 'error',
       '-af', 'aformat=sample_rates=44100|48000',
+      '-f', 'alsa',
+      '-audio_device', this.audioDevice || 'hw:1,0', // Always specify ALSA device
+      '-i', filePath,
     ];
-
-    // Add ALSA device if not using default
-    if (this.audioDevice && this.audioDevice !== 'default') {
-      args.push('-f', 'alsa', '-audio_device', this.audioDevice);
-    }
-
-    args.push('-i', filePath);
 
     this.ffplayProcess = spawn('ffplay', args, {
       stdio: ['ignore', 'pipe', 'pipe'],

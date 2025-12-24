@@ -69,6 +69,19 @@ export default function PlayerControls({
   const { mode, setMode } = usePlaybackMode();
   const localPlayback = useLocalPlayback();
 
+  // Mute browser audio when in DAC mode
+  React.useEffect(() => {
+    const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
+    if (audioElement) {
+      if (mode === 'local-dac') {
+        audioElement.volume = 0; // Mute browser audio
+        audioElement.pause(); // Stop browser playback
+      } else {
+        audioElement.volume = volume; // Restore volume in browser mode
+      }
+    }
+  }, [mode, volume]);
+
   const VolumeIcon = useMemo(() => {
     if (volume === 0) return FiVolumeX;
     if (volume < 0.5) return FiVolume1;
@@ -84,13 +97,19 @@ export default function PlayerControls({
   const handlePlay = async () => {
     if (mode === 'local-dac' && currentTrack?.local_audio_url) {
       try {
+        // First, ensure browser audio is stopped
+        browserPause();
+
+        // Play through local DAC
         await localPlayback.play(currentTrack.local_audio_url);
+        console.log('Playing through local DAC:', currentTrack.local_audio_url);
       } catch (error) {
         console.error('Local playback failed:', error);
         // Fall back to browser playback
         browserPlay();
       }
     } else {
+      // Browser playback mode
       browserPlay();
     }
   };
@@ -103,9 +122,10 @@ export default function PlayerControls({
       } catch (error) {
         console.error('Local pause failed:', error);
       }
+    } else {
+      // Only pause browser if in browser mode
+      browserPause();
     }
-    // Always pause browser playback too
-    browserPause();
   };
 
   return (
