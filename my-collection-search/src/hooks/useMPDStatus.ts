@@ -7,10 +7,11 @@ interface MPDStatus {
 }
 
 /**
- * Poll MPD for current playback status
+ * Stream MPD playback status via Server-Sent Events (SSE)
+ * Much more efficient than polling - server pushes updates
  * Used to sync server-side DAC playback with UI
  */
-export function useMPDStatus(enabled: boolean, pollingInterval = 1000): MPDStatus {
+export function useMPDStatus(enabled: boolean): MPDStatus {
   const [status, setStatus] = useState<MPDStatus>({
     position: 0,
     duration: 0,
@@ -22,39 +23,38 @@ export function useMPDStatus(enabled: boolean, pollingInterval = 1000): MPDStatu
       return;
     }
 
-    let mounted = true;
+    console.log('[useMPDStatus] Connecting to SSE stream');
 
-    const fetchStatus = async () => {
+    // Create EventSource for Server-Sent Events
+    const eventSource = new EventSource('/api/playback/stream');
+
+    eventSource.onmessage = (event) => {
       try {
-        const res = await fetch('/api/playback/local');
-        if (!res.ok) return;
-
-        const data = await res.json();
-        if (!mounted) return;
-
-        if (data.status) {
-          setStatus({
-            position: data.status.position || 0,
-            duration: data.status.duration || 0,
-            state: data.status.state || 'idle',
-          });
-        }
+        const data = JSON.parse(event.data);
+        setStatus({
+          position: data.position || 0,
+          duration: data.duration || 0,
+          state: data.state || 'idle',
+        });
       } catch (error) {
-        console.error('[useMPDStatus] Failed to fetch status:', error);
+        console.error('[useMPDStatus] Failed to parse SSE data:', error);
       }
     };
 
-    // Initial fetch
-    fetchStatus();
+    eventSource.onerror = (error) => {
+      console.error('[useMPDStatus] SSE error:', error);
+      // EventSource will automatically reconnect
+    };
 
-    // Poll for updates
-    const interval = setInterval(fetchStatus, pollingInterval);
+    eventSource.onopen = () => {
+      console.log('[useMPDStatus] SSE connection opened');
+    };
 
     return () => {
-      mounted = false;
-      clearInterval(interval);
+      console.log('[useMPDStatus] Closing SSE connection');
+      eventSource.close();
     };
-  }, [enabled, pollingInterval]);
+  }, [enabled]);
 
   return status;
 }
