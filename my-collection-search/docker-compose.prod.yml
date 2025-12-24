@@ -41,8 +41,8 @@ services:
       # - ./config/asound.conf:/etc/asound.conf:ro
     # USB DAC audio device passthrough (optional)
     # Uncomment the lines below to enable USB DAC playback
-    # devices:
-    #   - /dev/snd:/dev/snd  # Pass through all audio devices
+    devices:
+      - /dev/snd:/dev/snd  # Pass through all audio devices
     # Optional: Add specific DAC device if you want to limit to one device
     #   - /dev/snd/controlC1:/dev/snd/controlC1  # Control interface for card 1
     #   - /dev/snd/pcmC1D0p:/dev/snd/pcmC1D0p    # Playback device for card 1

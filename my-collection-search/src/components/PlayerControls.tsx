@@ -29,6 +29,8 @@ import CompactProgressSlider from "@/components/player/CompactProgressSlider";
 import Artwork from "@/components/player/Artwork";
 import ArtistLink from "./ArtistLink";
 import AlbumLink from "./AlbumLink";
+import PlaybackModeSelector from "@/components/PlaybackModeSelector";
+import { usePlaybackMode, useLocalPlayback } from "@/hooks/usePlaybackMode";
 
 interface PlayerControlsProps {
   /** Whether to show the queue button */
@@ -55,14 +57,17 @@ export default function PlayerControls({
     currentTrackIndex,
     currentTrack,
     seek,
-    play,
-    pause,
+    play: browserPlay,
+    pause: browserPause,
     playNext,
     playPrev,
     playlist,
     volume,
     setVolume,
   } = usePlaylistPlayer();
+
+  const { mode, setMode } = usePlaybackMode();
+  const localPlayback = useLocalPlayback();
 
   const VolumeIcon = useMemo(() => {
     if (volume === 0) return FiVolumeX;
@@ -74,6 +79,34 @@ export default function PlayerControls({
   const safeIndex = currentTrackIndex;
   const canPrev = safeIndex !== null && safeIndex > 0;
   const canNext = safeIndex !== null && safeIndex < safeLen - 1;
+
+  // Handle play based on mode
+  const handlePlay = async () => {
+    if (mode === 'local-dac' && currentTrack?.local_audio_url) {
+      try {
+        await localPlayback.play(currentTrack.local_audio_url);
+      } catch (error) {
+        console.error('Local playback failed:', error);
+        // Fall back to browser playback
+        browserPlay();
+      }
+    } else {
+      browserPlay();
+    }
+  };
+
+  // Handle pause based on mode
+  const handlePause = async () => {
+    if (mode === 'local-dac') {
+      try {
+        await localPlayback.pause();
+      } catch (error) {
+        console.error('Local pause failed:', error);
+      }
+    }
+    // Always pause browser playback too
+    browserPause();
+  };
 
   return (
     <Box>
@@ -168,7 +201,7 @@ export default function PlayerControls({
               size="sm"
               variant="solid"
               colorScheme="red"
-              onClick={pause}
+              onClick={handlePause}
             >
               <FiPause />
             </Button>
@@ -178,7 +211,7 @@ export default function PlayerControls({
               size="sm"
               variant="solid"
               colorScheme="green"
-              onClick={play}
+              onClick={handlePlay}
               disabled={safeLen === 0}
             >
               <FiPlay />
@@ -196,8 +229,18 @@ export default function PlayerControls({
           </IconButton>
         </HStack>
 
-        {/* Right: extras (volume / queue) */}
+        {/* Right: extras (playback mode, volume, queue) */}
         <HStack gap={1} justify="flex-end" flex="1">
+          {/* Playback Mode Selector */}
+          <Box display={{ base: "none", lg: "block" }}>
+            <PlaybackModeSelector
+              value={mode}
+              onChange={setMode}
+              disabled={isPlaying}
+              compact={false}
+            />
+          </Box>
+
           {showVolumeControls && (
             <Box display={{ base: "none", md: "block" }}>
               <HStack align="center" gap={3}>
