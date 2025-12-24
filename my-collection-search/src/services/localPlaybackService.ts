@@ -49,21 +49,25 @@ class LocalPlaybackService {
         reject(new Error('MPD connection timeout'));
       }, 5000);
 
-      socket.on('connect', () => {
-        clearTimeout(timeout);
-        console.log('[MPD] Connected to', this.mpdHost, this.mpdPort);
-      });
-
-      socket.on('data', (data) => {
+      const onGreeting = (data: Buffer) => {
         const response = data.toString();
         console.log('[MPD] <<', response.trim());
 
         if (response.startsWith('OK MPD')) {
+          clearTimeout(timeout);
+          socket.removeListener('data', onGreeting); // Remove greeting listener
           this.socket = socket;
           this.connectionPromise = null;
+          console.log('[MPD] Ready');
           resolve();
         }
+      };
+
+      socket.on('connect', () => {
+        console.log('[MPD] Connected to', this.mpdHost, this.mpdPort);
       });
+
+      socket.on('data', onGreeting);
 
       socket.on('error', (error) => {
         clearTimeout(timeout);
@@ -103,14 +107,17 @@ class LocalPlaybackService {
       const onData = (data: Buffer) => {
         const text = data.toString();
         response += text;
+        console.log('[MPD] << (chunk)', JSON.stringify(text));
+        console.log('[MPD] << (accumulated)', JSON.stringify(response));
 
-        // Check if response is complete
-        if (text.includes('\nOK\n') || text.includes('\nACK')) {
+        // Check if response is complete (MPD terminates responses with "OK\n" or "ACK")
+        if (response.includes('OK\n') || response.includes('ACK')) {
           socket.removeListener('data', onData);
+          console.log('[MPD] Response complete');
 
-          if (text.includes('\nACK')) {
-            const match = text.match(/ACK \[(\d+)@(\d+)\] \{([^}]+)\} (.+)/);
-            const error = match ? match[4] : text;
+          if (response.includes('ACK')) {
+            const match = response.match(/ACK \[(\d+)@(\d+)\] \{([^}]+)\} (.+)/);
+            const error = match ? match[4] : response;
             reject(new Error(`MPD error: ${error}`));
           } else {
             resolve(response);
@@ -120,7 +127,7 @@ class LocalPlaybackService {
 
       socket.on('data', onData);
 
-      console.log('[MPD] >>', command.trim());
+      console.log('[MPD] >>', JSON.stringify(command));
       socket.write(command + '\n');
 
       // Timeout after 10 seconds
