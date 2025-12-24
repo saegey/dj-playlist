@@ -138,15 +138,19 @@ export default function PlayerControls({
   }, [mode, isPlaying, currentTrack?.track_id]); // Don't include localPlayback or local_audio_url to avoid unnecessary re-runs
 
   // Keep browser audio muted when in DAC mode
+  // The "ghost" HTML5 audio keeps playing silently to:
+  // 1. Maintain position sync even when tab is inactive
+  // 2. Enable media controls (play/pause/seek)
+  // 3. Prevent browser from stopping playback on inactive tab
   React.useEffect(() => {
     const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
     if (!audioElement) return;
 
     if (mode === 'local-dac') {
-      // Force browser audio to stay muted and paused in DAC mode
+      // Mute browser audio but let it play as "ghost" audio
       audioElement.volume = 0;
       audioElement.muted = true;
-      audioElement.pause();
+      // DON'T pause - let it play silently for media controls
     } else {
       // Restore browser playback in browser mode
       audioElement.muted = false;
@@ -154,37 +158,29 @@ export default function PlayerControls({
     }
   }, [mode, volume]);
 
-  // Ensure browser stays muted in DAC mode
+  // Ensure browser stays muted in DAC mode (less aggressive now)
   React.useEffect(() => {
     if (mode !== 'local-dac') return;
 
     const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
     if (!audioElement) return;
 
-    const ensureMuted = (e: Event) => {
-      if (mode === 'local-dac') {
-        // Only log and mute, don't pause
-        // Let the audio element play silently for UI state consistency
-        if (audioElement.volume > 0 || !audioElement.muted) {
-          console.log('[DAC Mode] Forcing mute on event:', e.type);
-          audioElement.volume = 0;
-          audioElement.muted = true;
-        }
+    const ensureMuted = () => {
+      // Only mute, never pause - let it play as ghost audio
+      if (audioElement.volume > 0 || !audioElement.muted) {
+        audioElement.volume = 0;
+        audioElement.muted = true;
       }
     };
 
     // Listen for volume changes to keep it muted
     audioElement.addEventListener('volumechange', ensureMuted);
-    audioElement.addEventListener('loadeddata', ensureMuted);
 
     // Initial mute
-    audioElement.volume = 0;
-    audioElement.muted = true;
-    console.log('[DAC Mode] Browser audio muted for DAC playback');
+    ensureMuted();
 
     return () => {
       audioElement.removeEventListener('volumechange', ensureMuted);
-      audioElement.removeEventListener('loadeddata', ensureMuted);
     };
   }, [mode]);
 
