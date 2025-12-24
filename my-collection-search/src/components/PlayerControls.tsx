@@ -93,20 +93,31 @@ export default function PlayerControls({
     const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
     if (!audioElement) return;
 
-    const ensureMuted = () => {
+    const ensureMuted = (e: Event) => {
       if (mode === 'local-dac') {
+        console.log('[DAC Mode] Intercepted audio event:', e.type, '- forcing mute');
         audioElement.volume = 0;
         audioElement.muted = true;
+        audioElement.pause();
       }
     };
 
-    // Listen for play/volumechange events and force mute
+    // Listen for ALL audio events that might start playback
     audioElement.addEventListener('play', ensureMuted);
+    audioElement.addEventListener('playing', ensureMuted);
     audioElement.addEventListener('volumechange', ensureMuted);
+    audioElement.addEventListener('loadeddata', ensureMuted);
+    audioElement.addEventListener('canplay', ensureMuted);
+
+    // Initial mute
+    ensureMuted(new Event('init'));
 
     return () => {
       audioElement.removeEventListener('play', ensureMuted);
+      audioElement.removeEventListener('playing', ensureMuted);
       audioElement.removeEventListener('volumechange', ensureMuted);
+      audioElement.removeEventListener('loadeddata', ensureMuted);
+      audioElement.removeEventListener('canplay', ensureMuted);
     };
   }, [mode, isPlaying]);
 
@@ -127,11 +138,21 @@ export default function PlayerControls({
       try {
         console.log('[DAC Mode] Attempting to play through local DAC:', currentTrack.local_audio_url);
 
+        // CRITICAL: Ensure browser audio is fully muted BEFORE any play call
+        const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
+        if (audioElement) {
+          audioElement.volume = 0;
+          audioElement.muted = true;
+          audioElement.pause();
+          console.log('[DAC Mode] Browser audio forcibly muted and paused');
+        }
+
         // Play through local DAC
         const result = await localPlayback.play(currentTrack.local_audio_url);
         console.log('[DAC Mode] DAC API response:', result);
 
-        // Update UI state by calling browserPlay, but audio element is muted
+        // Update UI state by calling browserPlay
+        // The audio element is muted, so no browser sound will play
         browserPlay();
 
         console.log('[DAC Mode] Play successful');

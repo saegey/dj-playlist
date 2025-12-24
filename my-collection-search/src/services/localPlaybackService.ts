@@ -65,19 +65,37 @@ class LocalPlaybackService {
     // -vn: Disable video (audio-only)
     // -f alsa: ALSA output format
     // plughw: ALSA plugin that provides automatic format conversion
+    const device = `plughw:${this.audioDevice || '1,0'}`;
     const args = [
       '-re',
       '-i', filePath,
       '-vn',
       '-f', 'alsa',
-      `plughw:${this.audioDevice || '1,0'}`, // ALSA device with plugin
+      device,
     ];
+
+    console.log('[LocalPlayback] Starting ffmpeg with args:', args);
+    console.log('[LocalPlayback] Device:', device, '| File:', filePath);
 
     this.ffmpegProcess = spawn('ffmpeg', args, {
       stdio: ['ignore', 'pipe', 'pipe'],
     });
 
+    // Log stderr for debugging
+    this.ffmpegProcess.stderr?.on('data', (data) => {
+      console.error('[ffmpeg stderr]:', data.toString());
+    });
+
+    this.ffmpegProcess.stdout?.on('data', (data) => {
+      console.log('[ffmpeg stdout]:', data.toString());
+    });
+
+    this.ffmpegProcess.on('spawn', () => {
+      console.log('[LocalPlayback] ffmpeg process spawned successfully');
+    });
+
     this.ffmpegProcess.on('close', (code: number | null) => {
+      console.log('[LocalPlayback] ffmpeg process closed with code:', code);
       if (code === 0) {
         // Normal exit - track finished
         this.currentState = 'idle';
@@ -87,7 +105,7 @@ class LocalPlaybackService {
     });
 
     this.ffmpegProcess.on('error', (err: Error) => {
-      console.error('ffmpeg error:', err);
+      console.error('[LocalPlayback] ffmpeg process error:', err);
       this.currentState = 'stopped';
       this.ffmpegProcess = null;
     });
