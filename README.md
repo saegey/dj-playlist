@@ -268,6 +268,282 @@ If using Portainer on a Linux server (x86_64):
 - Analysis results are saved to PostgreSQL and indexed in MeiliSearch
 - Supports MP3, WAV, FLAC, and other common audio formats
 
+## USB DAC Audio Playback (Optional)
+
+GrooveNET supports USB DAC (Digital-to-Analog Converter) passthrough for high-quality audio playback directly from the containerized application. This feature is completely optional and disabled by default.
+
+### Prerequisites
+- USB DAC connected to your host system
+- Docker host must be Linux-based (required for USB device passthrough)
+- ALSA utilities installed on the host (recommended for device detection)
+
+### Setup Instructions
+
+#### Step 1: Detect Your Audio Devices
+
+Run the audio detection script on your host machine (not in a container):
+
+```sh
+cd my-collection-search/scripts
+./detect-audio-devices.sh
+```
+
+This script will display:
+- Available `/dev/snd` devices
+- ALSA sound card information
+- USB audio devices
+- Configuration guidance
+
+**Example output**:
+```
+2. ALSA Sound Cards (from /proc/asound/cards):
+ 0 [PCH            ]: HDA-Intel - HDA Intel PCH
+ 1 [DAC            ]: USB-Audio - FiiO DAC
+```
+
+In this example, the USB DAC is card 1.
+
+#### Step 2: Configure Docker Compose
+
+Edit your `docker-compose.prod.yml` or `docker-compose.yml` file:
+
+**Option A - Pass All Audio Devices (Simplest)**:
+
+Uncomment these lines under the `app` service:
+
+```yaml
+devices:
+  - /dev/snd:/dev/snd  # Pass through all audio devices
+```
+
+**Option B - Pass Specific DAC Only (More Secure)**:
+
+If your USB DAC is card 1 (check the script output):
+
+```yaml
+devices:
+  - /dev/snd/controlC1:/dev/snd/controlC1  # Control interface for card 1
+  - /dev/snd/pcmC1D0p:/dev/snd/pcmC1D0p    # Playback device for card 1
+```
+
+Replace `1` with your actual card number from Step 1.
+
+#### Step 3: Configure Environment Variables
+
+Edit your `.env` file:
+
+```env
+# Enable audio playback features
+ENABLE_AUDIO_PLAYBACK=true
+
+# Set the ALSA device name
+# Use 'default' for the system default device
+# Or specify a card like 'hw:1,0' for card 1, device 0
+AUDIO_DEVICE=hw:1,0
+```
+
+**Device name format**:
+- `default` - System default audio device
+- `hw:X,Y` - Hardware device (card X, device Y)
+- `plughw:X,Y` - Hardware with software conversion (more compatible)
+
+#### Step 4: Restart the Stack
+
+**For Docker Compose**:
+```sh
+docker compose down
+docker compose up -d
+```
+
+**For Portainer**:
+1. Go to **Stacks** → Your Stack → **Editor**
+2. Uncomment the `devices:` section under the `app` service
+3. Go to **Environment variables** and add/update:
+   - `ENABLE_AUDIO_PLAYBACK=true`
+   - `AUDIO_DEVICE=hw:1,0` (adjust card number as needed)
+4. Click **Update the stack**
+
+#### Step 5: Test Audio Playback
+
+Run a test tone to verify the USB DAC is working:
+
+```sh
+# Test with speaker-test (generates a test tone)
+docker exec -it myapp speaker-test -t wav -c 2
+
+# Test with a specific device
+docker exec -it myapp speaker-test -D hw:1,0 -t wav -c 2
+
+# Press Ctrl+C to stop the test
+```
+
+If you hear audio through your USB DAC, the setup is successful!
+
+### Portainer-Specific Setup
+
+If you're using Portainer on an Intel NUC or other Linux server:
+
+1. **Edit Stack Compose File**:
+   - Navigate to **Stacks** → Your Stack → **Editor**
+   - Find the `app` service section
+   - Uncomment the device mapping:
+     ```yaml
+     devices:
+       - /dev/snd:/dev/snd
+     ```
+   - Click **Update the stack**
+
+2. **Set Environment Variables**:
+   - In the same stack editor, scroll to **Environment variables**
+   - Add or edit:
+     - `ENABLE_AUDIO_PLAYBACK` = `true`
+     - `AUDIO_DEVICE` = `hw:1,0` (or your device)
+   - Click **Update the stack**
+
+3. **Verify Deployment**:
+   - Portainer will recreate the container with the new settings
+   - Check logs: **Containers** → `myapp` → **Logs**
+
+### Troubleshooting
+
+**No audio output**:
+```sh
+# Check if the container can see audio devices
+docker exec -it myapp ls -la /dev/snd/
+
+# List available ALSA devices inside container
+docker exec -it myapp aplay -l
+
+# Check if the specified device exists
+docker exec -it myapp cat /proc/asound/cards
+```
+
+**Permission denied errors**:
+- The container user may need to be in the `audio` group
+- Try passing all devices with `/dev/snd:/dev/snd` instead of specific devices
+- Check host permissions: `ls -la /dev/snd/`
+
+**Wrong device playing audio**:
+- Use `AUDIO_DEVICE=hw:X,Y` to specify the exact card number
+- Run the detection script again to verify device numbers haven't changed
+- USB device numbers can change after reboot; consider using `by-id` paths
+
+**USB DAC not detected**:
+- Ensure the USB DAC is connected before starting containers
+- Check `lsusb` on the host to verify USB connection
+- Some DACs require specific kernel drivers or firmware
+
+### Audio Playback in Your App
+
+Once configured, your Next.js app can use the `ENABLE_AUDIO_PLAYBACK` and `AUDIO_DEVICE` environment variables to enable audio playback features in the UI.
+
+#### Quick Integration Example
+
+Add the playback mode selector to your player UI:
+
+```typescript
+import PlaybackModeSelector from '@/components/PlaybackModeSelector';
+import { usePlaybackMode, useLocalPlayback } from '@/hooks/usePlaybackMode';
+
+function MyPlayer() {
+  const { mode, setMode } = usePlaybackMode();
+  const { play, pause, stop } = useLocalPlayback();
+  const { currentTrack, isPlaying } = usePlaylistPlayer();
+
+  // Handle play button
+  const handlePlay = async () => {
+    if (mode === 'local-dac' && currentTrack?.local_audio_url) {
+      await play(currentTrack.local_audio_url);
+    } else {
+      // Use existing browser playback
+      browserPlay();
+    }
+  };
+
+  return (
+    <div>
+      {/* Playback mode selector */}
+      <PlaybackModeSelector value={mode} onChange={setMode} />
+
+      {/* Your existing player controls */}
+      <button onClick={handlePlay}>Play</button>
+    </div>
+  );
+}
+```
+
+For complete integration details, see [`docs/LOCAL_PLAYBACK.md`](my-collection-search/docs/LOCAL_PLAYBACK.md).
+
+### Platform Limitations
+
+- **Linux only**: USB device passthrough requires Linux host OS
+- **Not supported**: macOS, Windows (WSL2 has limited support)
+- **Portainer**: Works great on Linux servers (Intel NUC, Raspberry Pi, etc.)
+- **Development**: May not work in `docker-compose.dev.yml` on macOS
+
+## AirPlay Receiver (Optional)
+
+Turn your Intel NUC with USB DAC into an AirPlay receiver! Stream audio from iOS devices, Macs, and other AirPlay sources directly to your high-quality DAC.
+
+### Features
+
+- **Network Audio Endpoint**: Your server appears as "GrooveNET Audio" in AirPlay menus
+- **Simultaneous Playback**: Use ALSA dmix to play both AirPlay and Next.js app audio simultaneously
+- **Auto-Coordination**: Optional hooks to pause app playback when AirPlay starts
+- **High Quality**: Supports high sample rates and bit depths (96kHz/24-bit)
+
+### Quick Setup
+
+1. **Enable the service** in `docker-compose.prod.yml`:
+   ```yaml
+   # Uncomment the shairport-sync service block
+   shairport-sync:
+     image: mikebrady/shairport-sync:latest
+     network_mode: host  # Required for AirPlay discovery
+     devices:
+       - /dev/snd:/dev/snd
+   ```
+
+2. **Configure for software mixing** (recommended):
+   ```env
+   # In .env
+   AIRPLAY_NAME=GrooveNET Audio
+   AUDIO_DEVICE=dmix:CARD=DAC,DEV=0
+   ```
+
+3. **Mount ALSA config** for dmix:
+   ```yaml
+   # In docker-compose.prod.yml
+   volumes:
+     - ./config/asound.conf:/etc/asound.conf:ro
+   ```
+
+4. **Start the service**:
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d shairport-sync
+   ```
+
+5. **Test**: Open AirPlay menu on your iPhone/Mac and look for "GrooveNET Audio"
+
+### Configuration Options
+
+**Simple Mode (First-Come-First-Served)**:
+- Only one audio source at a time (AirPlay or app)
+- Easiest setup, no mixing required
+- See [docs/AIRPLAY_RECEIVER.md](my-collection-search/docs/AIRPLAY_RECEIVER.md#option-1-simple-first-come-first-served)
+
+**dmix Mode (Recommended)**:
+- Both AirPlay and app can play simultaneously
+- Software mixing with minimal CPU overhead
+- See [docs/AIRPLAY_RECEIVER.md](my-collection-search/docs/AIRPLAY_RECEIVER.md#option-2-software-mixing-with-dmix-recommended)
+
+**Coordinated Mode**:
+- Auto-pause app when AirPlay starts
+- Managed via session hooks
+- See [docs/AIRPLAY_RECEIVER.md](my-collection-search/docs/AIRPLAY_RECEIVER.md#option-3-coordinated-playback-with-hooks)
+
+For complete setup instructions, troubleshooting, and advanced configuration, see the [**AirPlay Receiver Guide**](my-collection-search/docs/AIRPLAY_RECEIVER.md).
+
 ## Environment Variables
 
 ### Required Configuration
@@ -302,6 +578,10 @@ YOUTUBE_API_KEY=your_youtube_api_key
 
 # Optional: AI Features
 OPENAI_API_KEY=your_openai_api_key
+
+# Optional: USB DAC Audio Playback
+ENABLE_AUDIO_PLAYBACK=false
+AUDIO_DEVICE=default
 ```
 
 ### Getting API Credentials
