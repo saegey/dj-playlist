@@ -166,31 +166,46 @@ export default function PlayerControls({
     }
   }, [mode, volume]);
 
-  // Ensure browser stays muted in DAC mode (less aggressive now)
+  // Ensure browser stays muted in DAC mode and actually playing for media controls
   React.useEffect(() => {
     if (mode !== 'local-dac') return;
 
     const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
     if (!audioElement) return;
 
-    const ensureMuted = () => {
-      // Only mute, never pause - let it play as ghost audio
+    const ensureMutedAndPlaying = () => {
+      // Keep it muted (silent ghost audio)
       if (audioElement.volume > 0 || !audioElement.muted) {
         audioElement.volume = 0;
         audioElement.muted = true;
       }
+
+      // CRITICAL: Keep it playing for media controls to work
+      // Media controls only work if audio is actively playing
+      if (isPlaying && audioElement.paused) {
+        console.log('[DAC Mode] Resuming ghost audio for media controls');
+        audioElement.play().catch(err => {
+          console.error('[DAC Mode] Failed to play ghost audio:', err);
+        });
+      }
     };
 
-    // Listen for volume changes to keep it muted
-    audioElement.addEventListener('volumechange', ensureMuted);
+    // Listen for volume changes and pause events
+    audioElement.addEventListener('volumechange', ensureMutedAndPlaying);
+    audioElement.addEventListener('pause', ensureMutedAndPlaying);
 
-    // Initial mute
-    ensureMuted();
+    // Initial setup
+    ensureMutedAndPlaying();
+
+    // Check every 2 seconds to ensure it's still playing
+    const interval = setInterval(ensureMutedAndPlaying, 2000);
 
     return () => {
-      audioElement.removeEventListener('volumechange', ensureMuted);
+      audioElement.removeEventListener('volumechange', ensureMutedAndPlaying);
+      audioElement.removeEventListener('pause', ensureMutedAndPlaying);
+      clearInterval(interval);
     };
-  }, [mode]);
+  }, [mode, isPlaying]);
 
   const VolumeIcon = useMemo(() => {
     if (volume === 0) return FiVolumeX;
@@ -225,6 +240,58 @@ export default function PlayerControls({
       seek(time);
     }
   };
+
+  // Update MediaSession API for media controls (lock screen, keyboard shortcuts)
+  React.useEffect(() => {
+    if (!currentTrack || mode !== 'local-dac') return;
+
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTrack.title,
+        artist: currentTrack.artist,
+        album: currentTrack.album || undefined,
+        artwork: currentTrack.album_thumbnail ? [
+          { src: currentTrack.album_thumbnail, sizes: '512x512', type: 'image/jpeg' }
+        ] : undefined,
+      });
+
+      // Set up action handlers
+      navigator.mediaSession.setActionHandler('play', () => {
+        console.log('[MediaSession] Play');
+        handlePlay();
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        console.log('[MediaSession] Pause');
+        handlePause();
+      });
+
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        console.log('[MediaSession] Previous');
+        if (canPrev) playPrev();
+      });
+
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        console.log('[MediaSession] Next');
+        if (canNext) playNext();
+      });
+
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.seekTime !== undefined) {
+          console.log('[MediaSession] Seek to', details.seekTime);
+          handleSeek(details.seekTime);
+        }
+      });
+
+      console.log('[MediaSession] Metadata updated:', currentTrack.title);
+    }
+
+    return () => {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = null;
+      }
+    };
+  }, [mode, currentTrack, canPrev, canNext, playPrev, playNext, handlePlay, handlePause, handleSeek]);
 
   return (
     <Box>
