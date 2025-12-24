@@ -6,9 +6,8 @@ import {
   HStack,
   Icon,
   Text,
-  Tooltip,
-  useColorModeValue,
 } from "@chakra-ui/react";
+import { Tooltip } from "@/components/ui/tooltip";
 import { FiHeadphones, FiSpeaker } from "react-icons/fi";
 
 export type PlaybackMode = 'browser' | 'local-dac';
@@ -53,9 +52,6 @@ export default function PlaybackModeSelector({
     checkLocalPlayback();
   }, []);
 
-  const selectedBg = useColorModeValue('gray.200', 'gray.700');
-  const hoverBg = useColorModeValue('gray.100', 'gray.600');
-
   if (isChecking) {
     return null; // Don't show while checking
   }
@@ -74,31 +70,31 @@ export default function PlaybackModeSelector({
       )}
 
       <HStack gap={1} bg="bg.muted" borderRadius="md" p={1}>
-        <Tooltip label="Play through web browser">
+        <Tooltip content="Play through web browser">
           <Button
             size={compact ? 'xs' : 'sm'}
             variant="ghost"
-            bg={value === 'browser' ? selectedBg : 'transparent'}
-            _hover={{ bg: value === 'browser' ? selectedBg : hoverBg }}
+            bg={value === 'browser' ? 'bg.emphasized' : 'transparent'}
+            _hover={{ bg: value === 'browser' ? 'bg.emphasized' : 'bg.subtle' }}
             onClick={() => onChange('browser')}
             disabled={disabled}
-            leftIcon={<Icon as={FiHeadphones} />}
           >
-            {!compact && 'Browser'}
+            <Icon as={FiHeadphones} />
+            {!compact && <span style={{ marginLeft: '0.5rem' }}>Browser</span>}
           </Button>
         </Tooltip>
 
-        <Tooltip label="Play through USB DAC (server-side audio)">
+        <Tooltip content="Play through USB DAC (server-side audio)">
           <Button
             size={compact ? 'xs' : 'sm'}
             variant="ghost"
-            bg={value === 'local-dac' ? selectedBg : 'transparent'}
-            _hover={{ bg: value === 'local-dac' ? selectedBg : hoverBg }}
+            bg={value === 'local-dac' ? 'bg.emphasized' : 'transparent'}
+            _hover={{ bg: value === 'local-dac' ? 'bg.emphasized' : 'bg.subtle' }}
             onClick={() => onChange('local-dac')}
             disabled={disabled}
-            leftIcon={<Icon as={FiSpeaker} />}
           >
-            {!compact && 'DAC'}
+            <Icon as={FiSpeaker} />
+            {!compact && <span style={{ marginLeft: '0.5rem' }}>DAC</span>}
           </Button>
         </Tooltip>
       </HStack>
