@@ -183,7 +183,7 @@ export default function PlayerControls({
       }
 
       // Debug current state
-      console.log('[DAC Mode] Ghost audio state:', {
+      const state = {
         paused: audioElement.paused,
         readyState: audioElement.readyState,
         volume: audioElement.volume,
@@ -191,19 +191,48 @@ export default function PlayerControls({
         src: audioElement.src ? 'loaded' : 'none',
         currentTime: audioElement.currentTime,
         isPlaying: isPlaying,
-      });
+        duration: audioElement.duration,
+      };
+      console.log('[DAC Mode] Ghost audio state:', state);
 
       // CRITICAL: Keep it playing for media controls to work
       // Media controls only work if audio is actively playing
       if (isPlaying && audioElement.paused && audioElement.readyState >= 2) {
         console.log('[DAC Mode] Starting ghost audio for media controls');
-        audioElement.play().catch(err => {
+        audioElement.play().then(() => {
+          console.log('[DAC Mode] Ghost audio play() succeeded');
+          // Safari requires explicit MediaSession state update after play
+          if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = 'playing';
+            console.log('[DAC Mode] Forced MediaSession to playing (Safari fix)');
+          }
+        }).catch(err => {
           console.error('[DAC Mode] Failed to play ghost audio:', err);
         });
       } else if (!isPlaying && !audioElement.paused) {
         // When paused, pause the ghost audio too
         console.log('[DAC Mode] Pausing ghost audio');
         audioElement.pause();
+        // Safari requires explicit MediaSession state update after pause
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'paused';
+          console.log('[DAC Mode] Forced MediaSession to paused (Safari fix)');
+        }
+      }
+    };
+
+    // Safari-specific: Update MediaSession when audio element state changes
+    const onAudioPlaying = () => {
+      if ('mediaSession' in navigator && mode === 'local-dac') {
+        navigator.mediaSession.playbackState = 'playing';
+        console.log('[DAC Mode] Audio playing event - MediaSession set to playing');
+      }
+    };
+
+    const onAudioPause = () => {
+      if ('mediaSession' in navigator && mode === 'local-dac') {
+        navigator.mediaSession.playbackState = 'paused';
+        console.log('[DAC Mode] Audio pause event - MediaSession set to paused');
       }
     };
 
@@ -211,6 +240,10 @@ export default function PlayerControls({
     audioElement.addEventListener('volumechange', ensureGhostAudioState);
     audioElement.addEventListener('pause', ensureGhostAudioState);
     audioElement.addEventListener('play', ensureGhostAudioState);
+
+    // Safari fix: Listen to actual playing/pause events
+    audioElement.addEventListener('playing', onAudioPlaying);
+    audioElement.addEventListener('pause', onAudioPause);
 
     // Initial setup
     ensureGhostAudioState();
@@ -222,6 +255,8 @@ export default function PlayerControls({
       audioElement.removeEventListener('volumechange', ensureGhostAudioState);
       audioElement.removeEventListener('pause', ensureGhostAudioState);
       audioElement.removeEventListener('play', ensureGhostAudioState);
+      audioElement.removeEventListener('playing', onAudioPlaying);
+      audioElement.removeEventListener('pause', onAudioPause);
       clearInterval(interval);
     };
   }, [mode, isPlaying]);
