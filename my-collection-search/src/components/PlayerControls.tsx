@@ -68,19 +68,42 @@ export default function PlayerControls({
 
   const { mode, setMode } = usePlaybackMode();
   const localPlayback = useLocalPlayback();
+  const prevTrackIdRef = React.useRef<string | null>(null);
+  const prevPlayingRef = React.useRef<boolean>(false);
 
-  // Stop DAC playback when track changes or component unmounts
+  // Sync DAC playback with player state
   React.useEffect(() => {
-    if (mode === 'local-dac') {
-      // When track changes, stop the previous DAC playback
-      // The new track will start when user clicks play
-      return () => {
-        localPlayback.stop().catch(err => {
-          console.error('[DAC Mode] Cleanup failed:', err);
-        });
-      };
+    if (mode !== 'local-dac') return;
+
+    const currentTrackId = currentTrack?.track_id || null;
+    const wasPlaying = prevPlayingRef.current;
+    const trackChanged = prevTrackIdRef.current !== currentTrackId;
+
+    // Track change detected while playing - stop old track and start new one
+    if (trackChanged && isPlaying && currentTrack?.local_audio_url) {
+      console.log('[DAC Mode] Track changed, restarting playback');
+      localPlayback.play(currentTrack.local_audio_url).catch(err => {
+        console.error('[DAC Mode] Failed to play new track:', err);
+      });
     }
-  }, [currentTrack?.track_id, mode, localPlayback]);
+    // Playback stopped - stop DAC
+    else if (wasPlaying && !isPlaying) {
+      console.log('[DAC Mode] Playback stopped, stopping DAC');
+      localPlayback.stop().catch(err => {
+        console.error('[DAC Mode] Failed to stop DAC:', err);
+      });
+    }
+    // Playback started - start DAC
+    else if (!wasPlaying && isPlaying && currentTrack?.local_audio_url) {
+      console.log('[DAC Mode] Playback started via state change');
+      localPlayback.play(currentTrack.local_audio_url).catch(err => {
+        console.error('[DAC Mode] Failed to start DAC:', err);
+      });
+    }
+
+    prevTrackIdRef.current = currentTrackId;
+    prevPlayingRef.current = isPlaying;
+  }, [mode, isPlaying, currentTrack?.track_id, currentTrack?.local_audio_url, localPlayback]);
 
   // Keep browser audio muted when in DAC mode
   React.useEffect(() => {
@@ -144,49 +167,13 @@ export default function PlayerControls({
   const canPrev = safeIndex !== null && safeIndex > 0;
   const canNext = safeIndex !== null && safeIndex < safeLen - 1;
 
-  // Handle play based on mode
-  const handlePlay = async () => {
-    if (mode === 'local-dac' && currentTrack?.local_audio_url) {
-      try {
-        console.log('[DAC Mode] Playing through local DAC:', currentTrack.local_audio_url);
-
-        // Play through local DAC (will wait for previous playback to stop)
-        const result = await localPlayback.play(currentTrack.local_audio_url);
-        console.log('[DAC Mode] DAC playback started:', result);
-
-        // Update UI state - browser audio element will play silently (muted)
-        browserPlay();
-      } catch (error) {
-        console.error('[DAC Mode] DAC playback failed:', error);
-        // Fall back to browser playback
-        browserPlay();
-      }
-    } else {
-      if (mode === 'local-dac') {
-        console.warn('[DAC Mode] No local_audio_url for track:', currentTrack);
-      }
-      // Browser playback mode
-      browserPlay();
-    }
+  // Handle play/pause - just update UI state, sync effect handles DAC
+  const handlePlay = () => {
+    browserPlay();
   };
 
-  // Handle pause based on mode
-  const handlePause = async () => {
-    if (mode === 'local-dac') {
-      try {
-        // Stop DAC playback completely (pause would just suspend the process)
-        await localPlayback.stop();
-        console.log('[DAC Mode] DAC playback stopped');
-        // Update UI state
-        browserPause();
-      } catch (error) {
-        console.error('[DAC Mode] Failed to stop DAC playback:', error);
-        browserPause();
-      }
-    } else {
-      // Browser mode
-      browserPause();
-    }
+  const handlePause = () => {
+    browserPause();
   };
 
   return (
