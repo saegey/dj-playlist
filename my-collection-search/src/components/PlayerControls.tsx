@@ -31,6 +31,7 @@ import ArtistLink from "./ArtistLink";
 import AlbumLink from "./AlbumLink";
 import PlaybackModeSelector from "@/components/PlaybackModeSelector";
 import { usePlaybackMode, useLocalPlayback } from "@/hooks/usePlaybackMode";
+import { useMPDStatus } from "@/hooks/useMPDStatus";
 
 interface PlayerControlsProps {
   /** Whether to show the queue button */
@@ -70,6 +71,29 @@ export default function PlayerControls({
   const localPlayback = useLocalPlayback();
   const prevTrackIdRef = React.useRef<string | null>(null);
   const prevPlayingRef = React.useRef<boolean>(false);
+
+  // Poll MPD status when in DAC mode
+  const mpdStatus = useMPDStatus(mode === 'local-dac');
+
+  // Sync MPD position to browser audio element for UI consistency
+  React.useEffect(() => {
+    if (mode !== 'local-dac') return;
+
+    const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
+    if (!audioElement) return;
+
+    // Update audio element's currentTime to match MPD position
+    // This will trigger the timeupdate event and update the UI
+    if (mpdStatus.position > 0 && Math.abs(audioElement.currentTime - mpdStatus.position) > 1) {
+      audioElement.currentTime = mpdStatus.position;
+    }
+
+    // Update duration if needed
+    if (mpdStatus.duration > 0 && audioElement.duration !== mpdStatus.duration) {
+      // Can't directly set duration, but it will be read from metadata
+      console.log('[DAC Mode] MPD duration:', mpdStatus.duration);
+    }
+  }, [mode, mpdStatus.position, mpdStatus.duration]);
 
   // Sync DAC playback with player state
   React.useEffect(() => {
@@ -176,10 +200,24 @@ export default function PlayerControls({
     browserPause();
   };
 
+  // Handle seek - call MPD in DAC mode, otherwise use browser seek
+  const handleSeek = async (time: number) => {
+    if (mode === 'local-dac') {
+      try {
+        await localPlayback.seek(time);
+        console.log('[DAC Mode] Seeked to', time);
+      } catch (error) {
+        console.error('[DAC Mode] Seek failed:', error);
+      }
+    } else {
+      seek(time);
+    }
+  };
+
   return (
     <Box>
       {/* Playhead slider - only show if not compact */}
-      {!compact && <ProgressSlider seek={seek} />}
+      {!compact && <ProgressSlider seek={handleSeek} />}
 
       {/* Mobile track info - only in compact mode */}
       {compact && (
@@ -356,7 +394,7 @@ export default function PlayerControls({
       {/* Progress bar for compact mode */}
       {compact && (
         <Box mt={2}>
-          <CompactProgressSlider seek={seek} />
+          <CompactProgressSlider seek={handleSeek} />
         </Box>
       )}
     </Box>

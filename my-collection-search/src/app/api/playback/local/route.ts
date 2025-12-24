@@ -10,7 +10,7 @@ import { localPlaybackService } from '@/services/localPlaybackService';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, filename } = body;
+    const { action, filename, seconds } = body;
 
     if (!action) {
       return NextResponse.json(
@@ -56,6 +56,20 @@ export async function POST(request: Request) {
         return NextResponse.json({
           success: true,
           status: stopStatus,
+        });
+
+      case 'seek':
+        if (typeof seconds !== 'number') {
+          return NextResponse.json(
+            { error: 'Missing or invalid seconds parameter for seek action' },
+            { status: 400 }
+          );
+        }
+        await localPlaybackService.seek(seconds);
+        const seekStatus = await localPlaybackService.getStatus();
+        return NextResponse.json({
+          success: true,
+          status: seekStatus,
         });
 
       default:
