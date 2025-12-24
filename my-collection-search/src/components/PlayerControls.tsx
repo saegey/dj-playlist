@@ -103,6 +103,14 @@ export default function PlayerControls({
     const wasPlaying = prevPlayingRef.current;
     const trackChanged = prevTrackIdRef.current !== currentTrackId;
 
+    // Skip if prevTrackIdRef hasn't been initialized (first render)
+    if (prevTrackIdRef.current === undefined) {
+      // First render - just initialize refs
+      prevTrackIdRef.current = currentTrackId;
+      prevPlayingRef.current = isPlaying;
+      return;
+    }
+
     // Track change detected while playing - stop old track and start new one
     if (trackChanged && isPlaying && currentTrack?.local_audio_url) {
       console.log('[DAC Mode] Track changed, restarting playback');
@@ -127,7 +135,7 @@ export default function PlayerControls({
 
     prevTrackIdRef.current = currentTrackId;
     prevPlayingRef.current = isPlaying;
-  }, [mode, isPlaying, currentTrack?.track_id, currentTrack?.local_audio_url, localPlayback]);
+  }, [mode, isPlaying, currentTrack?.track_id]); // Don't include localPlayback or local_audio_url to avoid unnecessary re-runs
 
   // Keep browser audio muted when in DAC mode
   React.useEffect(() => {

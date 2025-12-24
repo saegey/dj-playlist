@@ -157,10 +157,14 @@ class LocalPlaybackService {
     try {
       console.log('[MPD] Playing:', filename);
 
-      // Clear playlist, add track, and play
-      await this.sendCommand('clear');
-      await this.sendCommand(`add "${filename}"`);
-      await this.sendCommand('play 0');
+      // Use command list for atomic execution (reduces stuttering)
+      await this.sendCommand(
+        `command_list_begin\n` +
+        `clear\n` +
+        `add "${filename}"\n` +
+        `play 0\n` +
+        `command_list_end`
+      );
 
       console.log('[MPD] Playback started');
     } catch (error) {
