@@ -1,0 +1,33 @@
+# Standalone AirPlay Receiver Service
+# This can be deployed as a separate stack in Portainer or merged into your main stack
+
+services:
+  shairport-sync:
+    image: mikebrady/shairport-sync:latest
+    container_name: shairport-sync
+    network_mode: host  # Required for AirPlay discovery (mDNS/Bonjour)
+    restart: unless-stopped
+
+    environment:
+      # AirPlay device name (shows up in iOS/Mac AirPlay menu)
+      - AIRPLAY_NAME=${AIRPLAY_NAME:-GrooveNET Audio}
+
+    devices:
+      # Pass through audio devices to container
+      - /dev/snd:/dev/snd
+
+    volumes:
+      # Shairport Sync configuration
+      - ./config/shairport-sync.conf:/etc/shairport-sync.conf:ro
+
+      # ALSA configuration for dmix (software mixing)
+      # Uncomment if you want simultaneous playback with the Next.js app
+      # - ./config/asound.conf:/etc/asound.conf:ro
+
+      # Optional: Session hooks for auto-pause coordination
+      # Uncomment if you want app to pause when AirPlay starts
+      # - ./scripts/airplay-session-start.sh:/usr/local/bin/airplay-session-start.sh:ro
+      # - ./scripts/airplay-session-end.sh:/usr/local/bin/airplay-session-end.sh:ro
+
+# Note: If running as a separate stack, this service will share the host's audio devices
+# with your main application stack. Make sure both stacks have proper device access configured.
