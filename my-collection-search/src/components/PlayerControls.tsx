@@ -348,8 +348,17 @@ export default function PlayerControls({
 
         {/* Right: extras (playback mode, volume, queue) */}
         <HStack gap={1} justify="flex-end" flex="1">
-          {/* Playback Mode Selector */}
-          <Box display={{ base: "none", lg: "block" }}>
+          {/* Playback Mode Selector - visible on all screens */}
+          {/* Mobile: compact icons only, Desktop: full with text */}
+          <Box display={{ base: "block", md: "none" }}>
+            <PlaybackModeSelector
+              value={mode}
+              onChange={setMode}
+              disabled={isPlaying}
+              compact={true}
+            />
+          </Box>
+          <Box display={{ base: "none", md: "block" }}>
             <PlaybackModeSelector
               value={mode}
               onChange={setMode}

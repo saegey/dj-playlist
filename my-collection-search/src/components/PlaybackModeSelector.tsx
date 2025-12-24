@@ -80,6 +80,7 @@ export default function PlaybackModeSelector({
             disabled={disabled}
           >
             <Icon as={FiHeadphones} />
+            {/* Show text on md+ screens, hide on mobile */}
             {!compact && <span style={{ marginLeft: '0.5rem' }}>Browser</span>}
           </Button>
         </Tooltip>
@@ -94,6 +95,7 @@ export default function PlaybackModeSelector({
             disabled={disabled}
           >
             <Icon as={FiSpeaker} />
+            {/* Show text on md+ screens, hide on mobile */}
             {!compact && <span style={{ marginLeft: '0.5rem' }}>DAC</span>}
           </Button>
         </Tooltip>
