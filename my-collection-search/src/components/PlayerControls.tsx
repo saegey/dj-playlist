@@ -180,29 +180,36 @@ export default function PlayerControls({
         audioElement.muted = true;
       }
 
+
       // CRITICAL: Keep it playing for media controls to work
       // Media controls only work if audio is actively playing
-      if (isPlaying && audioElement.paused) {
-        console.log('[DAC Mode] Resuming ghost audio for media controls');
+      if (isPlaying && audioElement.paused && audioElement.readyState >= 2) {
+        console.log('[DAC Mode] Starting ghost audio for media controls');
         audioElement.play().catch(err => {
           console.error('[DAC Mode] Failed to play ghost audio:', err);
         });
+      } else if (!isPlaying && !audioElement.paused) {
+        // When paused, pause the ghost audio too
+        console.log('[DAC Mode] Pausing ghost audio');
+        audioElement.pause();
       }
     };
 
     // Listen for volume changes and pause events
     audioElement.addEventListener('volumechange', ensureMutedAndPlaying);
     audioElement.addEventListener('pause', ensureMutedAndPlaying);
+    audioElement.addEventListener('play', ensureMutedAndPlaying);
 
     // Initial setup
     ensureMutedAndPlaying();
 
-    // Check every 2 seconds to ensure it's still playing
-    const interval = setInterval(ensureMutedAndPlaying, 2000);
+    // Check more frequently (every 500ms) to ensure it stays in sync
+    const interval = setInterval(ensureMutedAndPlaying, 500);
 
     return () => {
       audioElement.removeEventListener('volumechange', ensureMutedAndPlaying);
       audioElement.removeEventListener('pause', ensureMutedAndPlaying);
+      audioElement.removeEventListener('play', ensureMutedAndPlaying);
       clearInterval(interval);
     };
   }, [mode, isPlaying]);
@@ -243,9 +250,19 @@ export default function PlayerControls({
 
   // Update MediaSession API for media controls (lock screen, keyboard shortcuts)
   React.useEffect(() => {
-    if (!currentTrack || mode !== 'local-dac') return;
+    if (mode !== 'local-dac') {
+      // Clear MediaSession when not in DAC mode
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
+      }
+      return;
+    }
+
+    if (!currentTrack) return;
 
     if ('mediaSession' in navigator) {
+      // Update metadata
       navigator.mediaSession.metadata = new MediaMetadata({
         title: currentTrack.title,
         artist: currentTrack.artist,
@@ -255,24 +272,27 @@ export default function PlayerControls({
         ] : undefined,
       });
 
+      // Update playback state - CRITICAL for media controls to work
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+
       // Set up action handlers
       navigator.mediaSession.setActionHandler('play', () => {
-        console.log('[MediaSession] Play');
+        console.log('[MediaSession] Play button pressed');
         handlePlay();
       });
 
       navigator.mediaSession.setActionHandler('pause', () => {
-        console.log('[MediaSession] Pause');
+        console.log('[MediaSession] Pause button pressed');
         handlePause();
       });
 
       navigator.mediaSession.setActionHandler('previoustrack', () => {
-        console.log('[MediaSession] Previous');
+        console.log('[MediaSession] Previous button pressed');
         if (canPrev) playPrev();
       });
 
       navigator.mediaSession.setActionHandler('nexttrack', () => {
-        console.log('[MediaSession] Next');
+        console.log('[MediaSession] Next button pressed');
         if (canNext) playNext();
       });
 
@@ -283,15 +303,16 @@ export default function PlayerControls({
         }
       });
 
-      console.log('[MediaSession] Metadata updated:', currentTrack.title);
+      console.log('[MediaSession] Updated - State:', isPlaying ? 'playing' : 'paused', 'Track:', currentTrack.title);
     }
 
     return () => {
       if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
       }
     };
-  }, [mode, currentTrack, canPrev, canNext, playPrev, playNext, handlePlay, handlePause, handleSeek]);
+  }, [mode, currentTrack, isPlaying, canPrev, canNext, playPrev, playNext]);
 
   return (
     <Box>
