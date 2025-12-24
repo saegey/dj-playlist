@@ -119,7 +119,6 @@ services:
     restart: unless-stopped
     ports:
       - "6600:6600"  # MPD protocol port
-      - "8000:8000"  # HTTP streaming (optional)
     devices:
       - /dev/snd:/dev/snd  # Audio device passthrough
     volumes:
