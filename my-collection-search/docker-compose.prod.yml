@@ -129,11 +129,11 @@ services:
 
 
 volumes:
-  db_data:
-  meili_data:
-  music_data:
-  db_dumps:
-  discogs_exports:
-  spotify_exports:
-  redis_data:
-  cookie_data:
+  teststack_db_data:
+  teststack_meili_data:
+  teststack_music_data:
+  teststack_db_dumps:
+  teststack_discogs_exports:
+  teststack_spotify_exports:
+  teststack_redis_data:
+  teststack_cookie_data:
