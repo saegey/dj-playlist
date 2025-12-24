@@ -69,18 +69,46 @@ export default function PlayerControls({
   const { mode, setMode } = usePlaybackMode();
   const localPlayback = useLocalPlayback();
 
-  // Mute browser audio when switching to DAC mode
+  // Keep browser audio muted when in DAC mode
   React.useEffect(() => {
     const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
     if (!audioElement) return;
 
     if (mode === 'local-dac') {
-      audioElement.volume = 0; // Mute browser audio
-      audioElement.pause(); // Stop browser playback
+      // Force browser audio to stay muted and paused in DAC mode
+      audioElement.volume = 0;
+      audioElement.muted = true;
+      audioElement.pause();
     } else {
-      audioElement.volume = volume; // Restore volume in browser mode
+      // Restore browser playback in browser mode
+      audioElement.muted = false;
+      audioElement.volume = volume;
     }
-  }, [mode]); // Only run when mode changes, NOT when volume changes
+  }, [mode, volume]);
+
+  // Ensure browser stays muted in DAC mode even when play state changes
+  React.useEffect(() => {
+    if (mode !== 'local-dac') return;
+
+    const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
+    if (!audioElement) return;
+
+    const ensureMuted = () => {
+      if (mode === 'local-dac') {
+        audioElement.volume = 0;
+        audioElement.muted = true;
+      }
+    };
+
+    // Listen for play/volumechange events and force mute
+    audioElement.addEventListener('play', ensureMuted);
+    audioElement.addEventListener('volumechange', ensureMuted);
+
+    return () => {
+      audioElement.removeEventListener('play', ensureMuted);
+      audioElement.removeEventListener('volumechange', ensureMuted);
+    };
+  }, [mode, isPlaying]);
 
   const VolumeIcon = useMemo(() => {
     if (volume === 0) return FiVolumeX;
@@ -97,18 +125,26 @@ export default function PlayerControls({
   const handlePlay = async () => {
     if (mode === 'local-dac' && currentTrack?.local_audio_url) {
       try {
+        console.log('[DAC Mode] Attempting to play through local DAC:', currentTrack.local_audio_url);
+
         // Play through local DAC
-        await localPlayback.play(currentTrack.local_audio_url);
-        console.log('Playing through local DAC:', currentTrack.local_audio_url);
+        const result = await localPlayback.play(currentTrack.local_audio_url);
+        console.log('[DAC Mode] DAC API response:', result);
 
         // Update UI state by calling browserPlay, but audio element is muted
         browserPlay();
+
+        console.log('[DAC Mode] Play successful');
       } catch (error) {
-        console.error('Local playback failed:', error);
+        console.error('[DAC Mode] Local playback failed:', error);
+        console.error('[DAC Mode] Error details:', error instanceof Error ? error.message : error);
         // Fall back to browser playback
         browserPlay();
       }
     } else {
+      if (mode === 'local-dac') {
+        console.warn('[DAC Mode] No local_audio_url available for track:', currentTrack);
+      }
       // Browser playback mode
       browserPlay();
     }
