@@ -118,24 +118,31 @@ export default function PlayerControls({
         console.error('[DAC Mode] Failed to play new track:', err);
       });
     }
-    // Playback stopped - stop DAC
+    // Playback paused - pause DAC (preserves position)
     else if (wasPlaying && !isPlaying) {
-      console.log('[DAC Mode] Playback stopped, stopping DAC');
-      localPlayback.stop().catch(err => {
-        console.error('[DAC Mode] Failed to stop DAC:', err);
+      console.log('[DAC Mode] Playback paused, pausing DAC');
+      localPlayback.pause().catch(err => {
+        console.error('[DAC Mode] Failed to pause DAC:', err);
       });
     }
-    // Playback started - start DAC
+    // Playback started - resume if paused, otherwise play from beginning
     else if (!wasPlaying && isPlaying && currentTrack?.local_audio_url) {
-      console.log('[DAC Mode] Playback started via state change');
-      localPlayback.play(currentTrack.local_audio_url).catch(err => {
-        console.error('[DAC Mode] Failed to start DAC:', err);
-      });
+      if (mpdStatus.state === 'paused') {
+        console.log('[DAC Mode] Resuming paused DAC playback');
+        localPlayback.resume().catch(err => {
+          console.error('[DAC Mode] Failed to resume DAC:', err);
+        });
+      } else {
+        console.log('[DAC Mode] Starting DAC playback');
+        localPlayback.play(currentTrack.local_audio_url).catch(err => {
+          console.error('[DAC Mode] Failed to start DAC:', err);
+        });
+      }
     }
 
     prevTrackIdRef.current = currentTrackId;
     prevPlayingRef.current = isPlaying;
-  }, [mode, isPlaying, currentTrack?.track_id]); // Don't include localPlayback or local_audio_url to avoid unnecessary re-runs
+  }, [mode, isPlaying, currentTrack?.track_id, mpdStatus.state, localPlayback]); // Include mpdStatus.state to detect pause/resume
 
   // Keep browser audio muted when in DAC mode
   // The "ghost" HTML5 audio keeps playing silently to:
