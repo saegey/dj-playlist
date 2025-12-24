@@ -71,6 +71,7 @@ export default function PlayerControls({
   const localPlayback = useLocalPlayback();
   const prevTrackIdRef = React.useRef<string | null>(null);
   const prevPlayingRef = React.useRef<boolean>(false);
+  const isInitializedRef = React.useRef<boolean>(false);
 
   // Poll MPD status when in DAC mode
   const mpdStatus = useMPDStatus(mode === 'local-dac');
@@ -103,11 +104,11 @@ export default function PlayerControls({
     const wasPlaying = prevPlayingRef.current;
     const trackChanged = prevTrackIdRef.current !== currentTrackId;
 
-    // Skip if prevTrackIdRef hasn't been initialized (first render)
-    if (prevTrackIdRef.current === undefined) {
-      // First render - just initialize refs
+    // Skip first render - just initialize refs
+    if (!isInitializedRef.current) {
       prevTrackIdRef.current = currentTrackId;
       prevPlayingRef.current = isPlaying;
+      isInitializedRef.current = true;
       return;
     }
 
@@ -142,7 +143,7 @@ export default function PlayerControls({
 
     prevTrackIdRef.current = currentTrackId;
     prevPlayingRef.current = isPlaying;
-  }, [mode, isPlaying, currentTrack?.track_id, mpdStatus.state, localPlayback]); // Include mpdStatus.state to detect pause/resume
+  }, [mode, isPlaying, currentTrack?.track_id, currentTrack?.local_audio_url, mpdStatus.state, localPlayback.play, localPlayback.pause, localPlayback.resume]); // Stable function references
 
   // Keep browser audio muted when in DAC mode
   // The "ghost" HTML5 audio keeps playing silently to:
