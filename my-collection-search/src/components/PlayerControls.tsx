@@ -145,20 +145,20 @@ export default function PlayerControls({
     prevPlayingRef.current = isPlaying;
   }, [mode, isPlaying, currentTrack?.track_id, currentTrack?.local_audio_url, mpdStatus.state, localPlayback.play, localPlayback.pause, localPlayback.resume]); // Stable function references
 
-  // Keep browser audio muted when in DAC mode
-  // The "ghost" HTML5 audio keeps playing silently to:
+  // Keep browser audio at minimum audible volume in DAC mode
+  // The "ghost" HTML5 audio keeps playing at barely audible level to:
   // 1. Maintain position sync even when tab is inactive
-  // 2. Enable media controls (play/pause/seek) via explicit MediaSession updates
+  // 2. Enable media controls (requires non-zero, non-muted audio)
   // 3. Prevent browser from stopping playback on inactive tab
   React.useEffect(() => {
     const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
     if (!audioElement) return;
 
     if (mode === 'local-dac') {
-      // Fully mute browser audio - MediaSession updates handle controls
-      audioElement.muted = true;
-      audioElement.volume = 0;
-      console.log('[DAC Mode] Ghost audio fully muted - using explicit MediaSession updates');
+      // Set to 0.2% volume (0.002) - barely audible but enables media controls
+      audioElement.muted = false;
+      audioElement.volume = 0.002;
+      console.log('[DAC Mode] Ghost audio set to 0.2% volume for media controls');
     } else {
       // Restore browser playback in browser mode
       audioElement.muted = false;
@@ -174,10 +174,11 @@ export default function PlayerControls({
     if (!audioElement) return;
 
     const ensureGhostAudioState = () => {
-      // Keep audio fully muted - explicit MediaSession updates handle controls
-      if (!audioElement.muted || audioElement.volume !== 0) {
-        audioElement.muted = true;
-        audioElement.volume = 0;
+      // Keep audio at 0.2% volume - NOT muted, NOT zero
+      // Browsers require non-zero, non-muted audio for media controls
+      if (audioElement.muted || audioElement.volume !== 0.002) {
+        audioElement.muted = false;
+        audioElement.volume = 0.002;
       }
 
       // Debug current state
