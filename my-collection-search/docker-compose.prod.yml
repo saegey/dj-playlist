@@ -131,17 +131,25 @@ services:
 volumes:
   db_data:
     name: teststack_db_data
+    external: true
   meili_data:
     name: teststack_meili_data
+    external: true
   music_data:
     name: teststack_music_data
+    external: true
   db_dumps:
     name: teststack_db_dumps
+    external: true
   discogs_exports:
     name: teststack_discogs_exports
+    external: true
   spotify_exports:
     name: teststack_spotify_exports
+    external: true
   redis_data:
     name: teststack_redis_data
+    external: true
   cookie_data:
     name: teststack_cookie_data
+    external: true
