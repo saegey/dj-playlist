@@ -1,6 +1,7 @@
 services:
   app:
-    image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
+    build:
+      context: .
     container_name: myapp
     ports:
       - "3000:3000"
