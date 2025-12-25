@@ -193,6 +193,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Trigger MPD database update so new file is available for playback
+  try {
+    const { localPlaybackService } = await import("@/services/localPlaybackService");
+    if (localPlaybackService.isLocalPlaybackEnabled()) {
+      await localPlaybackService.updateDatabase();
+      console.log("MPD database update triggered after file upload");
+    }
+  } catch (err) {
+    console.warn("Could not update MPD database:", err);
+    // Don't fail the request if MPD update fails
+  }
+
   return NextResponse.json({
     success: true,
     file: file.name,

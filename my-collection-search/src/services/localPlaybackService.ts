@@ -308,6 +308,21 @@ class LocalPlaybackService {
   }
 
   /**
+   * Update MPD's music database
+   * Call this after adding new audio files so MPD knows about them
+   */
+  async updateDatabase(): Promise<void> {
+    try {
+      console.log('[MPD] Updating music database...');
+      await this.sendCommand('update');
+      console.log('[MPD] Database update triggered');
+    } catch (error) {
+      console.error('[MPD] Database update error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Test if MPD is available
    */
   async testPlayback(): Promise<{ success: boolean; error?: string }> {

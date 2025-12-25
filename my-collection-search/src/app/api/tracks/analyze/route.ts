@@ -248,6 +248,18 @@ export async function POST(request: Request) {
         }
       }
 
+      // Trigger MPD database update so new file is available for playback
+      try {
+        const { localPlaybackService } = await import("@/services/localPlaybackService");
+        if (localPlaybackService.isLocalPlaybackEnabled()) {
+          await localPlaybackService.updateDatabase();
+          console.log("MPD database update triggered after file download");
+        }
+      } catch (err) {
+        console.warn("Could not update MPD database:", err);
+        // Don't fail the request if MPD update fails
+      }
+
       return NextResponse.json({ ...analysisResult, local_audio_url });
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
