@@ -177,6 +177,32 @@ class LocalPlaybackService {
 
       console.log('[MPD] Playback started');
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+
+      // If file not found in database, update database and retry once
+      if (errorMsg.includes('No such directory') || errorMsg.includes('No such file')) {
+        console.log('[MPD] File not in database, updating and retrying...');
+
+        try {
+          await this.updateDatabase(true); // Wait for completion
+
+          // Retry playback after database update
+          await this.sendCommand(
+            `command_list_begin\n` +
+            `clear\n` +
+            `add "${filename}"\n` +
+            `play 0\n` +
+            `command_list_end`
+          );
+
+          console.log('[MPD] Playback started after database update');
+          return;
+        } catch (retryError) {
+          console.error('[MPD] Play failed even after database update:', retryError);
+          throw retryError;
+        }
+      }
+
       console.error('[MPD] Play error:', error);
       throw error;
     }
@@ -308,14 +334,38 @@ class LocalPlaybackService {
   }
 
   /**
-   * Update MPD's music database
+   * Update MPD's music database and wait for completion
    * Call this after adding new audio files so MPD knows about them
+   * @param waitForCompletion - If true, waits for MPD to finish scanning (default: true)
    */
-  async updateDatabase(): Promise<void> {
+  async updateDatabase(waitForCompletion: boolean = true): Promise<void> {
     try {
       console.log('[MPD] Updating music database...');
       await this.sendCommand('update');
       console.log('[MPD] Database update triggered');
+
+      if (waitForCompletion) {
+        // Poll status until update is complete
+        // MPD sets "updating_db" in status while scanning
+        const maxWaitTime = 30000; // 30 seconds max
+        const pollInterval = 500; // Poll every 500ms
+        const startTime = Date.now();
+
+        while (Date.now() - startTime < maxWaitTime) {
+          const status = await this.sendCommand('status');
+          const isUpdating = status.includes('updating_db:');
+
+          if (!isUpdating) {
+            console.log('[MPD] Database update completed');
+            return;
+          }
+
+          // Wait before next poll
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+
+        console.warn('[MPD] Database update timeout - may still be in progress');
+      }
     } catch (error) {
       console.error('[MPD] Database update error:', error);
       throw error;
