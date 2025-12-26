@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { Box, Input, Text, InputGroup, IconButton, Flex, Spinner } from "@chakra-ui/react";
-import { LuSearch, LuLayoutGrid, LuTable, LuMaximize2, LuMinimize2 } from "react-icons/lu";
+import { Box, Input, Text, InputGroup, IconButton, Flex, Spinner, Badge } from "@chakra-ui/react";
+import { LuSearch, LuLayoutGrid, LuTable, LuMaximize2, LuMinimize2, LuFilter } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import TrackResultStore from "@/components/TrackResultStore";
@@ -12,6 +12,9 @@ import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { useTrack } from "@/hooks/useTrack";
+import TracksFilterModal, { TracksFilter } from "@/components/TracksFilterModal";
+import { buildMeiliSearchFilters, createEmptyFilters, getActiveFilterCount } from "@/lib/trackFilters";
+import { useUsername } from "@/providers/UsernameProvider";
 
 const TrackResultItem: React.FC<{
   trackId: string;
@@ -45,10 +48,29 @@ const SearchResults: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { friend: currentUserFriend } = useUsername();
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
     showSpotifyUsernames: true,
   });
+
+  // Filter state
+  const [filters, setFilters] = React.useState<TracksFilter>(createEmptyFilters());
+  const [filterModalOpen, setFilterModalOpen] = React.useState(false);
+  const [appliedFilters, setAppliedFilters] = React.useState<TracksFilter>(createEmptyFilters());
+
+  // Build MeiliSearch filter strings, combining with friend_id filter
+  const meiliFilters = React.useMemo(() => {
+    const customFilters = buildMeiliSearchFilters(appliedFilters);
+
+    // Add friend_id filter if a friend is selected
+    if (currentUserFriend?.id) {
+      return [...customFilters, `friend_id = ${currentUserFriend.id}`];
+    }
+
+    return customFilters;
+  }, [appliedFilters, currentUserFriend]);
+
   const {
     query,
     onQueryChange,
@@ -62,6 +84,7 @@ const SearchResults: React.FC = () => {
   } = useSearchResults({
     mode: "infinite",
     limit: 20,
+    filter: meiliFilters.length > 0 ? meiliFilters : undefined,
   });
 
   // View mode state with localStorage persistence
@@ -89,6 +112,20 @@ const SearchResults: React.FC = () => {
     setCompactMode(newCompact);
     localStorage.setItem("searchCompactMode", String(newCompact));
   };
+
+  // Filter handlers
+  const handleApplyFilters = () => {
+    setAppliedFilters(filters);
+    setFilterModalOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    const emptyFilters = createEmptyFilters();
+    setFilters(emptyFilters);
+    setAppliedFilters(emptyFilters);
+  };
+
+  const activeFilterCount = getActiveFilterCount(appliedFilters);
 
   const observer = React.useRef<IntersectionObserver | null>(null);
   const bottomSentinelRef = React.useRef<HTMLDivElement>(null);
@@ -161,6 +198,29 @@ const SearchResults: React.FC = () => {
         </InputGroup>
         <UsernameSelect usernames={friends} />
         <Flex gap={1} alignItems="center">
+          <Box position="relative">
+            <IconButton
+              aria-label="Filter tracks"
+              size="sm"
+              variant={activeFilterCount > 0 ? "solid" : "ghost"}
+              colorPalette={activeFilterCount > 0 ? "blue" : undefined}
+              onClick={() => setFilterModalOpen(true)}
+            >
+              <LuFilter />
+            </IconButton>
+            {activeFilterCount > 0 && (
+              <Badge
+                position="absolute"
+                top="-1"
+                right="-1"
+                size="sm"
+                colorPalette="blue"
+                variant="solid"
+              >
+                {activeFilterCount}
+              </Badge>
+            )}
+          </Box>
           <IconButton
             aria-label="Card view"
             size="sm"
@@ -190,6 +250,16 @@ const SearchResults: React.FC = () => {
         </Flex>
       </Box>
 
+      {/* Filter Modal */}
+      <TracksFilterModal
+        open={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        filters={filters}
+        onFiltersChange={setFilters}
+        onApply={handleApplyFilters}
+        onClear={handleClearFilters}
+      />
+
       {initialLoading ? (
         <Box mt={8}>
           {[...Array(8)].map((_, i) => (
@@ -202,6 +272,11 @@ const SearchResults: React.FC = () => {
         <>
           <Text fontSize="sm" color="gray.500" mb={2}>
             {estimatedResults.toLocaleString()} results found
+            {activeFilterCount > 0 && (
+              <Text as="span" color="blue.500" ml={2}>
+                ({activeFilterCount} filter{activeFilterCount !== 1 ? "s" : ""} active)
+              </Text>
+            )}
           </Text>
 
           {viewMode === "card" ? (

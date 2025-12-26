@@ -5,11 +5,13 @@ import { saveTrack } from "@/services/trackService";
 import type { TrackEditFormProps } from "@/components/TrackEditForm";
 import { useTrackStore } from "@/stores/trackStore";
 import type { Track } from "@/types/track";
+import { useTracksCacheUpdater } from "./useTracksCacheUpdater";
 
 // Shape returned by saveTrack is void; customize if API starts returning a Track
 
 export function useTracksQuery() {
   const { updateTrack, getTrack, setTrack } = useTrackStore();
+  const { updateTracksInCache } = useTracksCacheUpdater();
 
   const saveTrackMutation = useMutation({
     mutationFn: async (data: TrackEditFormProps) => {
@@ -45,8 +47,12 @@ export function useTracksQuery() {
           form.duration_seconds === null ? undefined : form.duration_seconds,
       };
 
-      // Apply optimistic update
+      // Apply optimistic update to Zustand
       updateTrack(track_id, friend_id, updates);
+
+      // Apply optimistic update to React Query caches (search, playlists, albums, recommendations)
+      updateTracksInCache({ track_id, friend_id, ...updates });
+
       console.log("Optimistically updated track", track_id, "with", updates);
 
       // Return previous state for potential rollback
@@ -57,11 +63,14 @@ export function useTracksQuery() {
       if (context?.currentTrack) {
         setTrack(context.currentTrack);
       }
+      // TODO: Also rollback React Query cache updates
     },
     onSuccess: (updatedTrack) => {
       // Apply the server response to the store
       if (updatedTrack?.track_id) {
         setTrack(updatedTrack as Track);
+        // Also update React Query caches with server response
+        updateTracksInCache(updatedTrack as Track);
       }
     },
   });

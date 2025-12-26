@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { Track } from "@/types/track";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
@@ -64,6 +65,50 @@ export function useRecommendations() {
   );
 
   return getRecommendations;
+}
+
+/**
+ * React Query version of recommendations hook.
+ * Returns a query object with data, isLoading, etc.
+ */
+export function useRecommendationsQuery(
+  playlist: TrackWithEmbedding[] = [],
+  limit: number = 50
+) {
+  const { client: meiliClient, ready } = useMeili();
+  const { friend: selectedFriend } = useUsername();
+
+  // Generate a stable key based on playlist track IDs
+  const playlistIds = playlist.map((t) => t.track_id).sort();
+  const friendId = selectedFriend?.id;
+
+  return useQuery({
+    queryKey: ["recommendations", { playlistIds, limit, friendId }],
+    queryFn: async (): Promise<Track[]> => {
+      const playlistAvgEmbedding = computeAverageEmbedding(playlist);
+      if (!playlistAvgEmbedding || playlistAvgEmbedding.length === 0) return [];
+      if (!ready || !meiliClient) return [];
+
+      try {
+        const index = meiliClient.index("tracks");
+        let filter = `NOT track_id IN [${playlistIds.join(",")}]`;
+        if (friendId) {
+          filter += ` AND friend_id = '${friendId}'`;
+        }
+        const results = await index.search(undefined, {
+          vector: playlistAvgEmbedding,
+          limit,
+          filter,
+        });
+        return (results.hits as Track[]) || [];
+      } catch (err) {
+        console.error("Error fetching recommendations:", err);
+        return [];
+      }
+    },
+    enabled: playlist.length > 0 && ready,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 }
 
 export default useRecommendations;

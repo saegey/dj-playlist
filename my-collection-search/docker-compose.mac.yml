@@ -1,0 +1,11 @@
+# Docker Compose override for macOS
+# Disables MPD since macOS doesn't have /dev/snd and audio passthrough works differently
+# Usage: docker compose -f docker-compose.yml -f docker-compose.mac.yml up
+
+services:
+  # Disable MPD on macOS (no /dev/snd support)
+  mpd:
+    profiles:
+      - disabled  # Setting a profile that won't be activated disables this service
+    deploy:
+      replicas: 0  # Alternative way to disable the service

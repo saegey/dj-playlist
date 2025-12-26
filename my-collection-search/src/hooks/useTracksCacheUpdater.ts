@@ -91,6 +91,42 @@ export function useTracksCacheUpdater() {
         });
       }
     );
+
+    // Also update album detail queries that have shape { album: Album, tracks: Track[] }
+    qc.setQueriesData<{ album: unknown; tracks: Track[] } | undefined>(
+      {
+        predicate: (q) =>
+          Array.isArray(q.queryKey) &&
+          q.queryKey[0] === "album" &&
+          q.queryKey.length === 3,
+      },
+      (old) => {
+        if (!old || !Array.isArray(old.tracks)) return old;
+        return {
+          ...old,
+          tracks: old.tracks.map((t) => {
+            const p = patches.find((pp) => pp.track_id === t.track_id);
+            return p ? mergePatchIntoTrack(t, p) : t;
+          }),
+        };
+      }
+    );
+
+    // Also update recommendations queries that cache Track[] directly
+    qc.setQueriesData<Track[] | undefined>(
+      {
+        predicate: (q) =>
+          Array.isArray(q.queryKey) &&
+          q.queryKey[0] === "recommendations",
+      },
+      (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((t) => {
+          const p = patches.find((pp) => pp.track_id === t.track_id);
+          return p ? mergePatchIntoTrack(t, p) : t;
+        });
+      }
+    );
   };
 
   return { updateTracksInCache };

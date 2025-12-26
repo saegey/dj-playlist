@@ -5,7 +5,7 @@ import { Box, Text, Button, Menu } from "@chakra-ui/react";
 import TrackResult from "@/components/TrackResult";
 import type { Track } from "@/types/track";
 import { FiEdit, FiMoreVertical, FiPlus, FiPlusSquare } from "react-icons/fi";
-import { useRecommendations } from "@/hooks/useRecommendations";
+import { useRecommendationsQuery } from "@/hooks/useRecommendations";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 export interface PlaylistRecommendationsProps {
@@ -21,25 +21,8 @@ export default function PlaylistRecommendations({
   onAddToPlaylist,
   onEditTrack,
 }: PlaylistRecommendationsProps) {
-  const [recs, setRecs] = React.useState<Track[]>([]);
-  const getRecommendations = useRecommendations();
+  const { data: recs = [] } = useRecommendationsQuery(playlist, limit);
   const { appendToQueue } = usePlaylistPlayer();
-
-  React.useEffect(() => {
-    let cancelled = false;
-    async function fetchRecs() {
-      if (playlist.length === 0) {
-        setRecs([]);
-        return;
-      }
-      const r = await getRecommendations(limit, playlist);
-      if (!cancelled) setRecs(r);
-    }
-    fetchRecs();
-    return () => {
-      cancelled = true;
-    };
-  }, [playlist, limit, getRecommendations]);
 
   if (recs.length === 0) return null;
 

@@ -24,11 +24,17 @@ export function usePlaylistSaveDialog(playlistId?: number) {
     const cached = queryClient.getQueryData(
       queryKeys.playlistTrackIds(playlistId)
     ) as
+      | { tracks: Array<{ track_id: string; friend_id: number; position?: number }> }
       | Array<{ track_id: string; friend_id: number; position?: number }>
       | string[]
       | undefined;
 
-    // New shape: array of refs
+    // Handle object shape: { tracks: [...], playlist_name, playlist_id }
+    if (cached && typeof cached === 'object' && 'tracks' in cached && Array.isArray(cached.tracks)) {
+      return cached.tracks.map(({ track_id, friend_id }) => ({ track_id, friend_id }));
+    }
+
+    // Handle legacy array shape (for backwards compatibility)
     if (
       Array.isArray(cached) &&
       cached.length > 0 &&
