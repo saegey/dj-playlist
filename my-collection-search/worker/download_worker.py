@@ -358,6 +358,21 @@ def download_audio(job_data: Dict[str, Any]) -> Dict[str, Any]:
 
         update_job_status(job_id, 'processing', 95)
 
+        # Trigger MPD database update so new file is available for playback
+        try:
+            app_url = os.getenv('APP_URL', 'http://app:3000')
+            update_db_url = f"{app_url}/api/playback/update-db"
+            logger.info(f"Triggering MPD database update: {update_db_url}")
+
+            response = requests.post(update_db_url, timeout=10)
+            if response.ok:
+                logger.info("MPD database update triggered successfully")
+            else:
+                logger.warning(f"MPD database update failed: {response.status_code} {response.text}")
+        except Exception as e:
+            logger.warning(f"Could not trigger MPD database update: {e}")
+            # Don't fail the job if MPD update fails
+
         # Return success result
         result = {
             'success': True,
