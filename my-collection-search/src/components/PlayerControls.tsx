@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import {
   Box,
   Button,
@@ -74,31 +74,39 @@ export default function PlayerControls({
   const isInitializedRef = React.useRef<boolean>(false);
 
   // Poll MPD status when in DAC mode
-  const mpdStatus = useMPDStatus(mode === 'local-dac');
+  const mpdStatus = useMPDStatus(mode === "local-dac");
 
   // Sync MPD position to browser audio element for UI consistency
   React.useEffect(() => {
-    if (mode !== 'local-dac') return;
+    if (mode !== "local-dac") return;
 
-    const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
+    const audioElement = document.querySelector(
+      "#playlist-audio"
+    ) as HTMLAudioElement;
     if (!audioElement) return;
 
     // Update audio element's currentTime to match MPD position
     // This will trigger the timeupdate event and update the UI
-    if (mpdStatus.position > 0 && Math.abs(audioElement.currentTime - mpdStatus.position) > 1) {
+    if (
+      mpdStatus.position > 0 &&
+      Math.abs(audioElement.currentTime - mpdStatus.position) > 1
+    ) {
       audioElement.currentTime = mpdStatus.position;
     }
 
     // Update duration if needed
-    if (mpdStatus.duration > 0 && audioElement.duration !== mpdStatus.duration) {
+    if (
+      mpdStatus.duration > 0 &&
+      audioElement.duration !== mpdStatus.duration
+    ) {
       // Can't directly set duration, but it will be read from metadata
-      console.log('[DAC Mode] MPD duration:', mpdStatus.duration);
+      console.log("[DAC Mode] MPD duration:", mpdStatus.duration);
     }
   }, [mode, mpdStatus.position, mpdStatus.duration]);
 
   // Sync DAC playback with player state
   React.useEffect(() => {
-    if (mode !== 'local-dac') return;
+    if (mode !== "local-dac") return;
 
     const currentTrackId = currentTrack?.track_id || null;
     const wasPlaying = prevPlayingRef.current;
@@ -114,36 +122,46 @@ export default function PlayerControls({
 
     // Track change detected while playing - stop old track and start new one
     if (trackChanged && isPlaying && currentTrack?.local_audio_url) {
-      console.log('[DAC Mode] Track changed, restarting playback');
-      localPlayback.play(currentTrack.local_audio_url).catch(err => {
-        console.error('[DAC Mode] Failed to play new track:', err);
+      console.log("[DAC Mode] Track changed, restarting playback");
+      localPlayback.play(currentTrack.local_audio_url).catch((err) => {
+        console.error("[DAC Mode] Failed to play new track:", err);
       });
     }
     // Playback paused - pause DAC (preserves position)
     else if (wasPlaying && !isPlaying) {
-      console.log('[DAC Mode] Playback paused, pausing DAC');
-      localPlayback.pause().catch(err => {
-        console.error('[DAC Mode] Failed to pause DAC:', err);
+      console.log("[DAC Mode] Playback paused, pausing DAC");
+      localPlayback.pause().catch((err) => {
+        console.error("[DAC Mode] Failed to pause DAC:", err);
       });
     }
     // Playback started - resume if paused, otherwise play from beginning
     else if (!wasPlaying && isPlaying && currentTrack?.local_audio_url) {
-      if (mpdStatus.state === 'paused') {
-        console.log('[DAC Mode] Resuming paused DAC playback');
-        localPlayback.resume().catch(err => {
-          console.error('[DAC Mode] Failed to resume DAC:', err);
+      if (mpdStatus.state === "paused") {
+        console.log("[DAC Mode] Resuming paused DAC playback");
+        localPlayback.resume().catch((err) => {
+          console.error("[DAC Mode] Failed to resume DAC:", err);
         });
       } else {
-        console.log('[DAC Mode] Starting DAC playback');
-        localPlayback.play(currentTrack.local_audio_url).catch(err => {
-          console.error('[DAC Mode] Failed to start DAC:', err);
+        console.log("[DAC Mode] Starting DAC playback");
+        localPlayback.play(currentTrack.local_audio_url).catch((err) => {
+          console.error("[DAC Mode] Failed to start DAC:", err);
         });
       }
     }
 
     prevTrackIdRef.current = currentTrackId;
     prevPlayingRef.current = isPlaying;
-  }, [mode, isPlaying, currentTrack?.track_id, currentTrack?.local_audio_url, mpdStatus.state, localPlayback.play, localPlayback.pause, localPlayback.resume]); // Stable function references
+  }, [
+    mode,
+    isPlaying,
+    currentTrack?.track_id,
+    currentTrack?.local_audio_url,
+    mpdStatus.state,
+    localPlayback.play,
+    localPlayback.pause,
+    localPlayback.resume,
+    localPlayback,
+  ]); // Stable function references
 
   // Keep browser audio at minimum audible volume in DAC mode
   // The "ghost" HTML5 audio keeps playing at barely audible level to:
@@ -151,14 +169,18 @@ export default function PlayerControls({
   // 2. Enable media controls (requires non-zero, non-muted audio)
   // 3. Prevent browser from stopping playback on inactive tab
   React.useEffect(() => {
-    const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
+    const audioElement = document.querySelector(
+      "#playlist-audio"
+    ) as HTMLAudioElement;
     if (!audioElement) return;
 
-    if (mode === 'local-dac') {
+    if (mode === "local-dac") {
       // Set to 0.2% volume (0.002) - barely audible but enables media controls
       audioElement.muted = false;
       audioElement.volume = 0.002;
-      console.log('[DAC Mode] Ghost audio set to 0.2% volume for media controls');
+      console.log(
+        "[DAC Mode] Ghost audio set to 0.2% volume for media controls"
+      );
     } else {
       // Restore browser playback in browser mode
       audioElement.muted = false;
@@ -168,9 +190,11 @@ export default function PlayerControls({
 
   // Ensure ghost audio stays at low volume and playing for media controls
   React.useEffect(() => {
-    if (mode !== 'local-dac') return;
+    if (mode !== "local-dac") return;
 
-    const audioElement = document.querySelector('#playlist-audio') as HTMLAudioElement;
+    const audioElement = document.querySelector(
+      "#playlist-audio"
+    ) as HTMLAudioElement;
     if (!audioElement) return;
 
     const ensureGhostAudioState = () => {
@@ -187,62 +211,71 @@ export default function PlayerControls({
         readyState: audioElement.readyState,
         volume: audioElement.volume,
         muted: audioElement.muted,
-        src: audioElement.src ? 'loaded' : 'none',
+        src: audioElement.src ? "loaded" : "none",
         currentTime: audioElement.currentTime,
         isPlaying: isPlaying,
         duration: audioElement.duration,
       };
-      console.log('[DAC Mode] Ghost audio state:', state);
+      console.log("[DAC Mode] Ghost audio state:", state);
 
       // CRITICAL: Keep it playing for media controls to work
       // Media controls only work if audio is actively playing
       if (isPlaying && audioElement.paused && audioElement.readyState >= 2) {
-        console.log('[DAC Mode] Starting ghost audio for media controls');
-        audioElement.play().then(() => {
-          console.log('[DAC Mode] Ghost audio play() succeeded');
-          // Safari requires explicit MediaSession state update after play
-          if ('mediaSession' in navigator) {
-            navigator.mediaSession.playbackState = 'playing';
-            console.log('[DAC Mode] Forced MediaSession to playing (Safari fix)');
-          }
-        }).catch(err => {
-          console.error('[DAC Mode] Failed to play ghost audio:', err);
-        });
+        console.log("[DAC Mode] Starting ghost audio for media controls");
+        audioElement
+          .play()
+          .then(() => {
+            console.log("[DAC Mode] Ghost audio play() succeeded");
+            // Safari requires explicit MediaSession state update after play
+            if ("mediaSession" in navigator) {
+              navigator.mediaSession.playbackState = "playing";
+              console.log(
+                "[DAC Mode] Forced MediaSession to playing (Safari fix)"
+              );
+            }
+          })
+          .catch((err) => {
+            console.error("[DAC Mode] Failed to play ghost audio:", err);
+          });
       } else if (!isPlaying && !audioElement.paused) {
         // When paused, pause the ghost audio too
-        console.log('[DAC Mode] Pausing ghost audio');
+        console.log("[DAC Mode] Pausing ghost audio");
         audioElement.pause();
         // Safari requires explicit MediaSession state update after pause
-        if ('mediaSession' in navigator) {
-          navigator.mediaSession.playbackState = 'paused';
-          console.log('[DAC Mode] Forced MediaSession to paused (Safari fix)');
+        if ("mediaSession" in navigator) {
+          navigator.mediaSession.playbackState = "paused";
+          console.log("[DAC Mode] Forced MediaSession to paused (Safari fix)");
         }
       }
     };
 
     // Safari-specific: Update MediaSession when audio element state changes
     const onAudioPlaying = () => {
-      if ('mediaSession' in navigator && mode === 'local-dac') {
-        navigator.mediaSession.playbackState = 'playing';
-        console.log('[DAC Mode] Audio playing event - MediaSession set to playing');
+      if ("mediaSession" in navigator && mode === "local-dac") {
+        navigator.mediaSession.playbackState = "playing";
+        console.log(
+          "[DAC Mode] Audio playing event - MediaSession set to playing"
+        );
       }
     };
 
     const onAudioPause = () => {
-      if ('mediaSession' in navigator && mode === 'local-dac') {
-        navigator.mediaSession.playbackState = 'paused';
-        console.log('[DAC Mode] Audio pause event - MediaSession set to paused');
+      if ("mediaSession" in navigator && mode === "local-dac") {
+        navigator.mediaSession.playbackState = "paused";
+        console.log(
+          "[DAC Mode] Audio pause event - MediaSession set to paused"
+        );
       }
     };
 
     // Listen for volume changes and pause events
-    audioElement.addEventListener('volumechange', ensureGhostAudioState);
-    audioElement.addEventListener('pause', ensureGhostAudioState);
-    audioElement.addEventListener('play', ensureGhostAudioState);
+    audioElement.addEventListener("volumechange", ensureGhostAudioState);
+    audioElement.addEventListener("pause", ensureGhostAudioState);
+    audioElement.addEventListener("play", ensureGhostAudioState);
 
     // Safari fix: Listen to actual playing/pause events
-    audioElement.addEventListener('playing', onAudioPlaying);
-    audioElement.addEventListener('pause', onAudioPause);
+    audioElement.addEventListener("playing", onAudioPlaying);
+    audioElement.addEventListener("pause", onAudioPause);
 
     // Initial setup
     ensureGhostAudioState();
@@ -251,11 +284,11 @@ export default function PlayerControls({
     const interval = setInterval(ensureGhostAudioState, 500);
 
     return () => {
-      audioElement.removeEventListener('volumechange', ensureGhostAudioState);
-      audioElement.removeEventListener('pause', ensureGhostAudioState);
-      audioElement.removeEventListener('play', ensureGhostAudioState);
-      audioElement.removeEventListener('playing', onAudioPlaying);
-      audioElement.removeEventListener('pause', onAudioPause);
+      audioElement.removeEventListener("volumechange", ensureGhostAudioState);
+      audioElement.removeEventListener("pause", ensureGhostAudioState);
+      audioElement.removeEventListener("play", ensureGhostAudioState);
+      audioElement.removeEventListener("playing", onAudioPlaying);
+      audioElement.removeEventListener("pause", onAudioPause);
       clearInterval(interval);
     };
   }, [mode, isPlaying]);
@@ -272,67 +305,83 @@ export default function PlayerControls({
   const canNext = safeIndex !== null && safeIndex < safeLen - 1;
 
   // Handle play/pause - just update UI state, sync effect handles DAC
-  const handlePlay = () => {
+  const handlePlay = useCallback(() => {
     browserPlay();
-  };
+  }, [browserPlay]);
 
-  const handlePause = () => {
+  const handlePause = useCallback(() => {
     browserPause();
-  };
+  }, [browserPause]);
 
   // Handle seek - call MPD in DAC mode, otherwise use browser seek
-  const handleSeek = async (time: number) => {
-    if (mode === 'local-dac') {
+  const handleSeek = useCallback(async (time: number) => {
+    if (mode === "local-dac") {
       try {
         await localPlayback.seek(time);
-        console.log('[DAC Mode] Seeked to', time);
+        console.log("[DAC Mode] Seeked to", time);
       } catch (error) {
-        console.error('[DAC Mode] Seek failed:', error);
+        console.error("[DAC Mode] Seek failed:", error);
       }
     } else {
       seek(time);
     }
-  };
+  }, [mode, localPlayback, seek]);
 
   // Update MediaSession API for media controls (lock screen, keyboard shortcuts)
   React.useEffect(() => {
-    console.log('[MediaSession] Effect triggered - mode:', mode, 'currentTrack:', currentTrack?.title);
+    console.log(
+      "[MediaSession] Effect triggered - mode:",
+      mode,
+      "currentTrack:",
+      currentTrack?.title
+    );
 
-    if (mode !== 'local-dac') {
+    if (mode !== "local-dac") {
       // Clear MediaSession when not in DAC mode
-      if ('mediaSession' in navigator) {
-        console.log('[MediaSession] Clearing (not in DAC mode)');
+      if ("mediaSession" in navigator) {
+        console.log("[MediaSession] Clearing (not in DAC mode)");
         navigator.mediaSession.metadata = null;
-        navigator.mediaSession.playbackState = 'none';
+        navigator.mediaSession.playbackState = "none";
       }
       return;
     }
 
     if (!currentTrack) {
-      console.log('[MediaSession] No current track');
+      console.log("[MediaSession] No current track");
       return;
     }
 
-    if (!('mediaSession' in navigator)) {
-      console.error('[MediaSession] MediaSession API not available in this browser');
+    if (!("mediaSession" in navigator)) {
+      console.error(
+        "[MediaSession] MediaSession API not available in this browser"
+      );
       return;
     }
 
-    console.log('[MediaSession] Setting up controls...');
+    console.log("[MediaSession] Setting up controls...");
 
     // Update metadata
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentTrack.title,
       artist: currentTrack.artist,
       album: currentTrack.album || undefined,
-      artwork: currentTrack.album_thumbnail ? [
-        { src: currentTrack.album_thumbnail, sizes: '512x512', type: 'image/jpeg' }
-      ] : undefined,
+      artwork: currentTrack.album_thumbnail
+        ? [
+            {
+              src: currentTrack.album_thumbnail,
+              sizes: "512x512",
+              type: "image/jpeg",
+            },
+          ]
+        : undefined,
     });
 
     // Update playback state - CRITICAL for media controls to work
-    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-    console.log('[MediaSession] Playback state set to:', isPlaying ? 'playing' : 'paused');
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+    console.log(
+      "[MediaSession] Playback state set to:",
+      isPlaying ? "playing" : "paused"
+    );
 
     // Update position state - helps browser understand media is active
     if (mpdStatus.duration > 0) {
@@ -341,48 +390,69 @@ export default function PlayerControls({
         playbackRate: 1,
         position: mpdStatus.position,
       });
-      console.log('[MediaSession] Position state set:', mpdStatus.position, '/', mpdStatus.duration);
+      console.log(
+        "[MediaSession] Position state set:",
+        mpdStatus.position,
+        "/",
+        mpdStatus.duration
+      );
     }
 
     // Set up action handlers
-    console.log('[MediaSession] Setting up action handlers...');
+    console.log("[MediaSession] Setting up action handlers...");
 
-    navigator.mediaSession.setActionHandler('play', () => {
-      console.log('[MediaSession] ✓ Play button pressed');
+    navigator.mediaSession.setActionHandler("play", () => {
+      console.log("[MediaSession] ✓ Play button pressed");
       handlePlay();
     });
 
-    navigator.mediaSession.setActionHandler('pause', () => {
-      console.log('[MediaSession] ✓ Pause button pressed');
+    navigator.mediaSession.setActionHandler("pause", () => {
+      console.log("[MediaSession] ✓ Pause button pressed");
       handlePause();
     });
 
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
-      console.log('[MediaSession] ✓ Previous button pressed');
+    navigator.mediaSession.setActionHandler("previoustrack", () => {
+      console.log("[MediaSession] ✓ Previous button pressed");
       if (canPrev) playPrev();
     });
 
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      console.log('[MediaSession] ✓ Next button pressed');
+    navigator.mediaSession.setActionHandler("nexttrack", () => {
+      console.log("[MediaSession] ✓ Next button pressed");
       if (canNext) playNext();
     });
 
-    navigator.mediaSession.setActionHandler('seekto', (details) => {
+    navigator.mediaSession.setActionHandler("seekto", (details) => {
       if (details.seekTime !== undefined) {
-        console.log('[MediaSession] ✓ Seek to', details.seekTime);
+        console.log("[MediaSession] ✓ Seek to", details.seekTime);
         handleSeek(details.seekTime);
       }
     });
 
-    console.log('[MediaSession] ✓ All handlers registered - Track:', currentTrack.title);
+    console.log(
+      "[MediaSession] ✓ All handlers registered - Track:",
+      currentTrack.title
+    );
 
     return () => {
-      if ('mediaSession' in navigator) {
+      if ("mediaSession" in navigator) {
         navigator.mediaSession.metadata = null;
-        navigator.mediaSession.playbackState = 'none';
+        navigator.mediaSession.playbackState = "none";
       }
     };
-  }, [mode, currentTrack, isPlaying, canPrev, canNext, playPrev, playNext, mpdStatus.duration, mpdStatus.position]);
+  }, [
+    mode,
+    currentTrack,
+    isPlaying,
+    canPrev,
+    canNext,
+    playPrev,
+    playNext,
+    mpdStatus.duration,
+    mpdStatus.position,
+    handlePlay,
+    handlePause,
+    handleSeek,
+  ]);
 
   return (
     <Box>
@@ -526,7 +596,7 @@ export default function PlayerControls({
             />
           </Box>
 
-          {showVolumeControls && mode === 'browser' && (
+          {showVolumeControls && mode === "browser" && (
             <Box display={{ base: "none", md: "block" }}>
               <HStack align="center" gap={3}>
                 <Icon

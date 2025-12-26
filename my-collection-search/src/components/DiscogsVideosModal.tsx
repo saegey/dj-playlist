@@ -55,7 +55,7 @@ export default function DiscogsVideosModal({
                 </Flex>
               ) : videos === null ? (
                 <Box py={4}>
-                  <Text color="gray.500">Click "Search Discogs" to load videos</Text>
+                  <Text color="gray.500">Click &quot;Search Discogs&quot; to load videos</Text>
                 </Box>
               ) : videos.length === 0 ? (
                 <Box py={4}>
@@ -73,7 +73,7 @@ export default function DiscogsVideosModal({
                         id: String(i),
                         title: video.title || trackTitle,
                         artist: trackArtist,
-                        album: trackAlbum,
+                        album: trackAlbum || "",
                         url: video.uri ?? "#",
                         artwork: undefined,
                         duration: video.duration ? video.duration * 1000 : undefined, // Convert seconds to ms
