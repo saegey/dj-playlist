@@ -34,8 +34,8 @@ function parseAppleMetadata(mediainfoOutput) {
     metadata.trackId = catalogMatch[1];
   }
 
-  // Extract AlbumTitleID (album ID)
-  const albumMatch = mediainfoOutput.match(/AlbumTitleID\s*:\s*(\d+)/);
+  // Extract PlayListID (album ID - this is what Apple Music uses in URLs)
+  const albumMatch = mediainfoOutput.match(/PlayListID\s*:\s*(\d+)/);
   if (albumMatch) {
     metadata.albumId = albumMatch[1];
   }
