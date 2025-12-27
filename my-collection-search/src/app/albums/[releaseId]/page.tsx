@@ -20,7 +20,7 @@ import {
 } from "@chakra-ui/react";
 import { SiDiscogs } from "react-icons/si";
 import { IoArrowBack } from "react-icons/io5";
-import { FiPlay } from "react-icons/fi";
+import { FiPlay, FiDownload } from "react-icons/fi";
 import NextLink from "next/link";
 
 import { useAlbumDetailQuery, useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
@@ -52,6 +52,7 @@ function AlbumDetailContent() {
   const [notes, setNotes] = React.useState("");
   const [purchasePrice, setPurchasePrice] = React.useState("");
   const [condition, setCondition] = React.useState("");
+  const [isDownloading, setIsDownloading] = React.useState(false);
 
   React.useEffect(() => {
     if (data?.album) {
@@ -96,6 +97,47 @@ function AlbumDetailContent() {
       description: `Playing ${data.album.title} by ${data.album.artist}`,
       type: "success",
     });
+  };
+
+  const handleDownloadAlbum = async () => {
+    if (!data?.album) return;
+
+    setIsDownloading(true);
+    try {
+      const response = await fetch(
+        `/api/albums/${releaseId}/download?friend_id=${friendId}`,
+        { method: "POST" }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to enqueue downloads");
+      }
+
+      if (result.tracksQueued === 0) {
+        toaster.create({
+          title: "No Downloads Needed",
+          description: "All tracks already have audio files or no URLs available",
+          type: "info",
+        });
+      } else {
+        toaster.create({
+          title: "Downloads Queued",
+          description: `${result.tracksQueued} track${result.tracksQueued === 1 ? "" : "s"} queued for download`,
+          type: "success",
+        });
+      }
+    } catch (error) {
+      console.error("Error downloading album:", error);
+      toaster.create({
+        title: "Download Failed",
+        description: error instanceof Error ? error.message : "Unknown error",
+        type: "error",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   if (!friendId) {
@@ -320,6 +362,18 @@ function AlbumDetailContent() {
                 onClick={handleEnqueueAlbum}
               >
                 <FiPlay />Play Album
+              </Button>
+            )}
+
+            {tracks.length > 0 && (
+              <Button
+                colorScheme="green"
+                onClick={handleDownloadAlbum}
+                loading={isDownloading}
+                disabled={isDownloading}
+              >
+                <FiDownload />
+                {isDownloading ? "Downloading..." : "Download Missing"}
               </Button>
             )}
 
