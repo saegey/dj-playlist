@@ -11,7 +11,6 @@
 
 import pg from 'pg';
 import { MeiliSearch } from 'meilisearch';
-import 'dotenv/config';
 
 const { Pool } = pg;
 
