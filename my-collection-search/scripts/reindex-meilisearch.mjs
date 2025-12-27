@@ -103,7 +103,8 @@ async function reindexMeiliSearch() {
     let failedTasks = 0;
 
     for (const taskUid of taskUids) {
-      const task = await index.waitForTask(taskUid);
+      // Use meiliClient.waitForTask instead of index.waitForTask
+      const task = await meiliClient.waitForTask(taskUid);
       if (task.status === 'succeeded') {
         completedTasks++;
       } else if (task.status === 'failed') {
