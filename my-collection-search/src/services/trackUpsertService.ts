@@ -86,10 +86,11 @@ export async function upsertTracks(pool: Pool, tracks: DiscogsTrack[]): Promise<
         position        = EXCLUDED.position,
         discogs_url     = EXCLUDED.discogs_url,
         album_thumbnail = EXCLUDED.album_thumbnail,
-        apple_music_url = EXCLUDED.apple_music_url,
         duration_seconds = EXCLUDED.duration_seconds,
         friend_id       = EXCLUDED.friend_id,
         release_id      = EXCLUDED.release_id
+        -- Note: URL fields (apple_music_url, youtube_url, spotify_url, soundcloud_url, local_audio_url)
+        -- are intentionally excluded from updates to preserve manually-added URLs
       RETURNING *;
       `,
       [
