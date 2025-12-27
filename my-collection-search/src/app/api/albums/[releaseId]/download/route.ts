@@ -4,10 +4,10 @@ import { redisJobService } from "@/services/redisJobService";
 
 export async function POST(
   request: Request,
-  { params }: { params: { releaseId: string } }
+  { params }: { params: Promise<{ releaseId: string }> }
 ) {
   try {
-    const { releaseId } = params;
+    const { releaseId } = await params;
     const { searchParams } = new URL(request.url);
     const friendId = parseInt(searchParams.get("friend_id") || "0");
 
