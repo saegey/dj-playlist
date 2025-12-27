@@ -16,9 +16,10 @@ export function useTrack(trackId: string, friendId: number): Track | undefined {
 
 /**
  * Hook to get multiple tracks from the store
+ * Returns tracks in the same order as trackIds
  */
 export function useTracks(trackIds: string[], friendId: number): Track[] {
-  return useTrackStore((state) => 
+  return useTrackStore((state) =>
     trackIds
       .map(id => {
         const key = `${id}:${friendId}`;

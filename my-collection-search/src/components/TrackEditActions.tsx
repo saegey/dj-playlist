@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button, FileUpload, SimpleGrid, Spinner } from "@chakra-ui/react";
-import { SiApplemusic, SiChatbot, SiSpotify, SiYoutube } from "react-icons/si";
+import { SiApplemusic, SiChatbot, SiSpotify, SiYoutube, SiDiscogs } from "react-icons/si";
 import { FiDownload } from "react-icons/fi";
 import { HiUpload } from "react-icons/hi";
 
@@ -18,6 +18,9 @@ export interface TrackEditActionsProps {
 
   spotifyLoading: boolean;
   onSearchSpotify: () => void;
+
+  discogsLoading?: boolean;
+  onSearchDiscogs?: () => void;
 
   analyzeLoading: boolean;
   analyzeDisabled: boolean;
@@ -39,6 +42,8 @@ export default function TrackEditActions(props: TrackEditActionsProps) {
     youtubeLoading,
     onSearchYouTube,
     onSearchSpotify,
+    discogsLoading,
+    onSearchDiscogs,
     analyzeLoading,
     analyzeDisabled,
     onAnalyzeAudio,
@@ -88,6 +93,18 @@ export default function TrackEditActions(props: TrackEditActionsProps) {
       >
         <SiSpotify /> Search Spotify
       </Button>
+
+      {onSearchDiscogs && (
+        <Button
+          variant="outline"
+          size="sm"
+          loading={discogsLoading}
+          disabled={discogsLoading}
+          onClick={onSearchDiscogs}
+        >
+          <SiDiscogs /> Search Discogs
+        </Button>
+      )}
 
       {hasAudio ? (
         <Button

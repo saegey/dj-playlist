@@ -31,6 +31,9 @@ import { buildTrackMetadataPrompt } from "@/lib/prompts";
 import { useTrackMetadataMutation } from "@/hooks/useTrackMetadataMutation";
 import { useYouTubeMusicSearchMutation } from "@/hooks/useYouTubeMusicSearchMutation";
 import { toaster } from "@/components/ui/toaster";
+import DiscogsVideosModal from "@/components/DiscogsVideosModal";
+import { lookupDiscogsVideos, extractDiscogsVideos } from "@/services/discogsService";
+import { DiscogsVideo } from "@/services/discogsApiClient";
 
 export interface TrackEditFormProps {
   track_id: string; // Optional for new tracks
@@ -117,6 +120,11 @@ export default function TrackEditForm({
   const [showYoutubeModal, setShowYoutubeModal] = useState(false);
   const [showRemoveAudioConfirm, setShowRemoveAudioConfirm] = useState(false);
   const [removeAudioLoading, setRemoveAudioLoading] = useState(false);
+
+  // Discogs state
+  const [discogsVideos, setDiscogsVideos] = useState<DiscogsVideo[] | null>(null);
+  const [showDiscogsModal, setShowDiscogsModal] = useState(false);
+  const [discogsLoading, setDiscogsLoading] = useState(false);
 
   const spotifyPicker = useSpotifyPicker({
     onSelect: (track) => {
@@ -236,13 +244,22 @@ export default function TrackEditForm({
     }
   };
 
-  const searchYouTube = async () => {
+  const searchYouTube = async (title?: string, artist?: string) => {
     setShowYoutubeModal(true);
     setYoutubeResults([]);
+
+    const searchTitle = title || form.title;
+    const searchArtist = artist || form.artist;
+
+    // Only search if both title and artist are non-empty
+    if (!searchTitle || !searchArtist || searchTitle.trim() === '' || searchArtist.trim() === '') {
+      return;
+    }
+
     try {
       const data = await searchYouTubeMusic({
-        title: form.title,
-        artist: form.artist,
+        title: searchTitle,
+        artist: searchArtist,
       });
       setYoutubeResults(data.results || []);
     } catch (err) {
@@ -251,8 +268,60 @@ export default function TrackEditForm({
     }
   };
 
+  const handleYouTubeSearch = (title: string, artist: string) => {
+    searchYouTube(title, artist);
+  };
+
   const searchSpotify = async () => {
     await spotifyPicker.search({ title: form.title, artist: form.artist });
+  };
+
+  const searchDiscogs = async () => {
+    if (!track?.track_id) {
+      toaster.create({
+        title: "Cannot search Discogs",
+        description: "Track ID is missing",
+        type: "error",
+      });
+      return;
+    }
+
+    setShowDiscogsModal(true);
+    setDiscogsLoading(true);
+    try {
+      const result = await lookupDiscogsVideos(track.track_id);
+      const videos = extractDiscogsVideos(result);
+      setDiscogsVideos(videos);
+
+      if (videos.length === 0) {
+        toaster.create({
+          title: "No videos found",
+          description: "No Discogs videos found for this release",
+          type: "warning",
+        });
+      }
+    } catch (err) {
+      console.error("Discogs search error:", err);
+      toaster.create({
+        title: "Discogs search error",
+        description: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
+      setDiscogsVideos([]);
+    } finally {
+      setDiscogsLoading(false);
+    }
+  };
+
+  const handleDiscogsVideoSelect = (url: string) => {
+    // Discogs videos are YouTube URLs, save to youtube_url field
+    setForm((prev) => ({ ...prev, youtube_url: url }));
+    setShowDiscogsModal(false);
+    toaster.create({
+      title: "YouTube URL Added",
+      description: "Discogs video URL saved to YouTube field",
+      type: "success",
+    });
   };
 
   const handleYoutubeSelect = (video: YoutubeVideo) => {
@@ -348,6 +417,8 @@ export default function TrackEditForm({
     onSearchYouTube: searchYouTube,
     spotifyLoading: spotifyPicker.loading,
     onSearchSpotify: searchSpotify,
+    discogsLoading: discogsLoading,
+    onSearchDiscogs: searchDiscogs,
     analyzeLoading: analyzeLoading,
     onAnalyzeAudio: handleAnalyzeAudio,
     uploadLoading: uploadLoading,
@@ -522,6 +593,9 @@ export default function TrackEditForm({
                     results={youtubeResults}
                     onOpenChange={(open) => setShowYoutubeModal(open)}
                     onSelect={(video) => handleYoutubeSelect(video)}
+                    initialTitle={form.title}
+                    initialArtist={form.artist}
+                    onSearch={handleYouTubeSearch}
                   />
 
                   {/* --- Spotify Dialog --- */}
@@ -543,6 +617,18 @@ export default function TrackEditForm({
                     }
                     track={track}
                     onSelect={(song) => applePicker.select(song)}
+                  />
+
+                  {/* --- Discogs Videos Dialog --- */}
+                  <DiscogsVideosModal
+                    open={showDiscogsModal}
+                    onClose={() => setShowDiscogsModal(false)}
+                    videos={discogsVideos}
+                    loading={discogsLoading}
+                    trackTitle={form.title}
+                    trackArtist={form.artist}
+                    trackAlbum={form.album}
+                    onVideoSelect={handleDiscogsVideoSelect}
                   />
 
                   {/* --- Remove Audio Confirmation Dialog --- */}

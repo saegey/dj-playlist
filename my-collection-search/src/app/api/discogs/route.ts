@@ -259,20 +259,35 @@ export async function GET(request: NextRequest) {
             await new Promise((r) => setTimeout(r, 1200));
           }
 
-          // Step 4: Update and save manifest (exclude removed IDs, add new IDs)
+          // Step 4: Update and save manifest (exclude removed IDs, add ONLY successfully downloaded new releases)
           const updatedManifestIds = [
             ...manifestIds.filter(id => !removedIds.includes(id)),
-            ...newIds
+            ...newReleases  // Only add successfully downloaded releases, not all newIds
           ];
           saveManifest(getManifestPath(username), updatedManifestIds);
           console.log(
-            `[Discogs Sync] Manifest updated for ${username}. Total IDs: ${updatedManifestIds.length} (removed: ${removedIds.length}, added: ${newIds.length})`
+            `[Discogs Sync] Manifest updated for ${username}. Total IDs: ${updatedManifestIds.length} (removed: ${removedIds.length}, added: ${newReleases.length})`
           );
           controller.enqueue(
             encoder.encode(
-              `Manifest updated for ${username}. Total IDs: ${updatedManifestIds.length}\n\n`
+              `Manifest updated for ${username}. Total IDs: ${updatedManifestIds.length} (added: ${newReleases.length}, failed: ${errors.length})\n\n`
             )
           );
+
+          // Report failed downloads
+          if (errors.length > 0) {
+            controller.enqueue(
+              encoder.encode(
+                `\n⚠️  ${errors.length} releases failed to download and were NOT added to manifest:\n`
+              )
+            );
+            for (const error of errors) {
+              controller.enqueue(
+                encoder.encode(`  - Release ${error.releaseId}: ${error.error}\n`)
+              );
+            }
+            controller.enqueue(encoder.encode('\n'));
+          }
 
           controller.enqueue(
             encoder.encode(

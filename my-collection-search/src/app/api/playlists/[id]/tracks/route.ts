@@ -35,10 +35,10 @@ export async function GET(
       [id]
     );
     const trackIds = tracksRes.rows.map(
-      (r: { track_id: string; friend_id: string; position: number }) => {
+      (r: { track_id: string; friend_id: number; position: number }) => {
         return {
           track_id: r.track_id,
-          friend_id: r.friend_id,
+          friend_id: Number(r.friend_id), // Ensure it's a number
           position: r.position,
         };
       }
