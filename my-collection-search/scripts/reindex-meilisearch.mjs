@@ -96,32 +96,62 @@ async function reindexMeiliSearch() {
     }
 
     console.log(`\n✅ Enqueued ${processedCount} tracks for indexing`);
+    console.log(`Task UIDs: ${taskUids.join(', ')}\n`);
     console.log('Waiting for MeiliSearch to process tasks...\n');
 
-    // Wait for all tasks to complete
-    let completedTasks = 0;
-    let failedTasks = 0;
+    // Poll tasks until all are complete (manual polling since waitForTask isn't available)
+    const totalTasks = taskUids.length;
+    const completedTaskUids = new Set();
+    const failedTaskUids = new Set();
+    const maxAttempts = 60; // 60 attempts x 2 seconds = 2 minutes max
+    let attempts = 0;
 
-    for (const taskUid of taskUids) {
-      // Use meiliClient.waitForTask instead of index.waitForTask
-      const task = await meiliClient.waitForTask(taskUid);
-      if (task.status === 'succeeded') {
-        completedTasks++;
-      } else if (task.status === 'failed') {
-        failedTasks++;
-        console.error(`❌ Task ${taskUid} failed:`, task.error);
+    while (completedTaskUids.size + failedTaskUids.size < totalTasks && attempts < maxAttempts) {
+      attempts++;
+
+      // Check each task status
+      for (const taskUid of taskUids) {
+        // Skip if already processed
+        if (completedTaskUids.has(taskUid) || failedTaskUids.has(taskUid)) {
+          continue;
+        }
+
+        try {
+          const task = await meiliClient.getTask(taskUid);
+
+          if (task.status === 'succeeded') {
+            completedTaskUids.add(taskUid);
+            console.log(`✅ Task ${taskUid} completed`);
+          } else if (task.status === 'failed') {
+            failedTaskUids.add(taskUid);
+            console.error(`❌ Task ${taskUid} failed:`, task.error);
+          }
+        } catch (error) {
+          console.error(`Error checking task ${taskUid}:`, error.message);
+        }
+      }
+
+      // If there are still pending tasks, wait before checking again
+      if (completedTaskUids.size + failedTaskUids.size < totalTasks) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
       }
     }
 
-    console.log(`\n📊 Indexing complete:`);
-    console.log(`   ✅ Succeeded: ${completedTasks} batches`);
-    if (failedTasks > 0) {
-      console.log(`   ❌ Failed: ${failedTasks} batches`);
+    const pendingTasks = totalTasks - completedTaskUids.size - failedTaskUids.size;
+    if (attempts >= maxAttempts && pendingTasks > 0) {
+      console.log(`\n⚠️  Timeout: ${pendingTasks} tasks still pending after ${maxAttempts * 2} seconds`);
+    }
+
+    console.log(`\n📊 Indexing results:`);
+    console.log(`   ✅ Succeeded: ${completedTaskUids.size} batches`);
+    if (failedTaskUids.size > 0) {
+      console.log(`   ❌ Failed: ${failedTaskUids.size} batches`);
     }
 
     // Get final count from index
+    console.log('\nFetching final index stats...');
     const stats = await index.getStats();
-    console.log(`   📈 Total documents in index: ${stats.numberOfDocuments}\n`);
+    console.log(`📈 Total documents in index: ${stats.numberOfDocuments}\n`);
 
   } catch (error) {
     console.error('❌ Error during re-indexing:', error);
