@@ -48,6 +48,7 @@ services:
     # Optional: Add specific DAC device if you want to limit to one device
     #   - /dev/snd/controlC1:/dev/snd/controlC1  # Control interface for card 1
     #   - /dev/snd/pcmC1D0p:/dev/snd/pcmC1D0p    # Playback device for card 1
+    restart: unless-stopped
   db:
     image: pgvector/pgvector:pg15
     restart: always
