@@ -14,6 +14,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   apt-get install -y \
   git \
   ffmpeg \
+  mediainfo \
   postgresql-client-15 \
   && rm -rf /var/lib/apt/lists/*
 
