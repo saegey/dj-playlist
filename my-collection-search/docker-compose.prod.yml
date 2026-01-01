@@ -28,6 +28,7 @@ services:
       AUDIO_DEVICE: ${AUDIO_DEVICE:-default}
       MPD_HOST: ${MPD_HOST:-mpd}
       MPD_PORT: ${MPD_PORT:-6600}
+      AIRPLAY_AUTO_PAUSE: ${AIRPLAY_AUTO_PAUSE:-true}
 
     depends_on:
       - db
@@ -39,6 +40,7 @@ services:
       - discogs_exports:/app/discogs_exports
       - spotify_exports:/app/spotify_exports
       - cookie_data:/app/cookies
+      - /var/run/docker.sock:/var/run/docker.sock  # Required for AirPlay interruption control
       # Optional: Mount ALSA config for dmix (software mixing with AirPlay)
       # - ./config/asound.conf:/etc/asound.conf:ro
     # USB DAC audio device passthrough (optional)
@@ -130,22 +132,26 @@ services:
     environment:
       - AUDIO_DEVICE=${AUDIO_DEVICE:-hw:1,0}
 
-  # AirPlay Receiver (optional)
-  # Uncomment to enable AirPlay streaming to your USB DAC
-  # shairport-sync:
-  #   image: mikebrady/shairport-sync:latest
-  #   container_name: shairport-sync
-  #   network_mode: host  # Required for AirPlay discovery (mDNS/Bonjour)
-  #   restart: unless-stopped
-  #   environment:
-  #     # AirPlay device name (shows up in iOS/Mac AirPlay menu)
-  #     - AIRPLAY_NAME=${AIRPLAY_NAME:-GrooveNET Audio}
-  #   devices:
-  #     - /dev/snd:/dev/snd  # Share audio device with app
-  #   volumes:
-  #     - ./config/shairport-sync.conf:/etc/shairport-sync.conf:ro
-  #   # If using dmix for audio mixing, no special config needed
-  #   # If not using dmix, only one service can use the DAC at a time
+  # AirPlay Receiver
+  # Provides AirPlay streaming to your USB DAC
+  # Uses exclusive hardware access - interrupts app playback when active
+  shairport-sync:
+    image: mikebrady/shairport-sync:latest
+    container_name: shairport-sync
+    network_mode: host  # Required for AirPlay discovery (mDNS/Bonjour)
+    restart: unless-stopped
+    environment:
+      # AirPlay device name (shows up in iOS/Mac AirPlay menu)
+      - AIRPLAY_NAME=${AIRPLAY_NAME:-GrooveNET Audio}
+      # Enable auto-pause of app when AirPlay starts
+      - AIRPLAY_AUTO_PAUSE=${AIRPLAY_AUTO_PAUSE:-true}
+    devices:
+      - /dev/snd:/dev/snd  # Share audio device with app
+    volumes:
+      - ./config/shairport-sync.conf:/etc/shairport-sync.conf:ro
+      - ./scripts/airplay-session-start.sh:/usr/local/bin/airplay-session-start.sh:ro
+      - ./scripts/airplay-session-end.sh:/usr/local/bin/airplay-session-end.sh:ro
+    # Exclusive hardware access mode - only one service can use DAC at a time
 
 
 volumes:

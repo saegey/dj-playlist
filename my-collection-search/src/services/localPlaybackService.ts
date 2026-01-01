@@ -1,5 +1,6 @@
 import { Socket } from 'net';
 import path from 'path';
+import { airplayControlService } from './airplayControlService';
 
 type PlaybackState = 'idle' | 'playing' | 'paused' | 'stopped';
 
@@ -164,6 +165,13 @@ class LocalPlaybackService {
     }
 
     try {
+      // CRITICAL: Stop AirPlay before taking over the DAC
+      // This ensures the app gets exclusive hardware access
+      if (airplayControlService.isAirPlayControlEnabled()) {
+        console.log('[MPD] Interrupting AirPlay to take over DAC...');
+        await airplayControlService.stopAirPlay();
+      }
+
       console.log('[MPD] Playing:', filename);
 
       // Use command list for atomic execution (reduces stuttering)
