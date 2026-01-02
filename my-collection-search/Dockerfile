@@ -7,15 +7,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
   rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock && \
   apt-get update && \
-  apt-get install -y wget gnupg2 && \
+  apt-get install -y wget gnupg2 ca-certificates curl && \
   echo "deb http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" > /etc/apt/sources.list.d/pgdg.list && \
   wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - && \
+  install -m 0755 -d /etc/apt/keyrings && \
+  curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc && \
+  chmod a+r /etc/apt/keyrings/docker.asc && \
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" > /etc/apt/sources.list.d/docker.list && \
   apt-get update && \
   apt-get install -y \
   git \
   ffmpeg \
   mediainfo \
   postgresql-client-15 \
+  docker-ce-cli \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
