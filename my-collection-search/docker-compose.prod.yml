@@ -131,7 +131,7 @@ services:
       - ./config/mpd.conf:/etc/mpd.conf.template:ro
     environment:
       - AUDIO_DEVICE=${AUDIO_DEVICE:-hw:0,0}
-    command: sh -c "envsubst < /etc/mpd.conf.template > /etc/mpd.conf && mpd --no-daemon /etc/mpd.conf"
+    command: sh -c "sed 's|\$${AUDIO_DEVICE}|'\"$$AUDIO_DEVICE\"'|g' /etc/mpd.conf.template > /etc/mpd.conf && mpd --no-daemon /etc/mpd.conf"
 
   # AirPlay Receiver
   # Provides AirPlay streaming to your USB DAC
