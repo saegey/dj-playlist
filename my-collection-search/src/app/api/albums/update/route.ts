@@ -31,7 +31,7 @@ export async function PATCH(request: NextRequest) {
 
     // Build dynamic SET clause based on provided fields
     const updates: string[] = [];
-    const values = [release_id, friend_id];
+    const values: (string | number | null)[] = [release_id, friend_id];
     let paramIndex = 3;
 
     if (album_rating !== undefined) {

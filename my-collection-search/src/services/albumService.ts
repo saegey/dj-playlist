@@ -25,6 +25,7 @@ export interface AlbumUpdateParams {
   album_notes?: string;
   purchase_price?: number;
   condition?: string;
+  library_identifier?: string | null;
 }
 
 /**
