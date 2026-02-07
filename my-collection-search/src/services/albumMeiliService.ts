@@ -28,6 +28,7 @@ export async function configureAlbumsIndex(index: Index) {
     "genres",
     "styles",
     "album_notes",
+    "library_identifier",
   ]);
 
   // Filterable attributes (for filtering results)
@@ -42,10 +43,12 @@ export async function configureAlbumsIndex(index: Index) {
     "date_added",
     "label",
     "format",
+    "library_identifier",
   ]);
 
   // Sortable attributes (for sorting results)
   await index.updateSortableAttributes([
+    "library_identifier",
     "date_added",
     "year",
     "title",

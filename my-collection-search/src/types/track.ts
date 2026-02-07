@@ -32,6 +32,7 @@ export type Track = {
   _semanticScore?: number; // Optional semantic score for AI recommendations
   friend_id: number;
   release_id?: string;
+  library_identifier?: string | null; // Alphanumeric library ID (e.g., LP001) for physical organization
 };
 
 // Spotify track type based on API response
@@ -217,4 +218,5 @@ export interface Album {
   format?: string;
   created_at?: string;
   updated_at?: string;
+  library_identifier?: string | null; // Alphanumeric library ID (e.g., LP001) for physical organization
 }

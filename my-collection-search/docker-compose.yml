@@ -55,6 +55,8 @@ services:
       context: .
     image: node:20
     working_dir: /app
+    volumes:
+      - .:/app
     environment:
       DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
     entrypoint: ["sh", "-c", "npx wait-port db:5432 && npx node-pg-migrate up"]

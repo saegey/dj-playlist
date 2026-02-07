@@ -207,7 +207,8 @@ export async function POST() {
               label,
               catalog_number,
               country,
-              format
+              format,
+              library_identifier
             FROM albums
           `);
 
@@ -233,6 +234,8 @@ export async function POST() {
             "catalog_number",
             "genres",
             "styles",
+            "album_notes",
+            "library_identifier",
           ]);
 
           await index.updateFilterableAttributes([
@@ -244,9 +247,18 @@ export async function POST() {
             "album_rating",
             "condition",
             "date_added",
+            "label",
+            "format",
+            "library_identifier",
           ]);
 
-          await index.updateSortableAttributes(["date_added", "year", "title"]);
+          await index.updateSortableAttributes([
+            "library_identifier",
+            "date_added",
+            "year",
+            "title",
+            "album_rating",
+          ]);
 
           // Add albums to index
           await index.addDocuments(albums);

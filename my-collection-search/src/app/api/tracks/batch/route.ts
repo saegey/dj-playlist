@@ -23,10 +23,12 @@ export async function POST(req: Request) {
       params.push(t.track_id, t.friend_id, i);
     }
     const query = `
-      SELECT t.*, v.ord
+      SELECT t.*, a.library_identifier, v.ord
       FROM (VALUES ${values.join(",")}) AS v(track_id, friend_id, ord)
       JOIN tracks t
         ON t.track_id = v.track_id AND t.friend_id = v.friend_id
+      LEFT JOIN albums a
+        ON t.release_id = a.release_id AND t.friend_id = a.friend_id
       ORDER BY v.ord
     `;
     const { rows } = await pool.query(query, params);

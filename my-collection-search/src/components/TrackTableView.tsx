@@ -35,6 +35,7 @@ export default function TrackTableView({
         <Table.Header>
           <Table.Row>
             <Table.ColumnHeader width="40px"></Table.ColumnHeader>
+            <Table.ColumnHeader width="80px">Library ID</Table.ColumnHeader>
             <Table.ColumnHeader>Title</Table.ColumnHeader>
             <Table.ColumnHeader>Artist</Table.ColumnHeader>
             <Table.ColumnHeader>Album</Table.ColumnHeader>
@@ -69,6 +70,17 @@ export default function TrackTableView({
                         replacePlaylist([track], { autoplay: true, startIndex: 0 })
                       }
                     />
+                  )}
+                </Table.Cell>
+
+                {/* Library Identifier */}
+                <Table.Cell>
+                  {track.library_identifier ? (
+                    <Badge colorPalette="blue" size="sm">
+                      {track.library_identifier}
+                    </Badge>
+                  ) : (
+                    "-"
                   )}
                 </Table.Cell>
 

@@ -43,6 +43,9 @@ export default function AlbumResult({
     album.purchase_price?.toString() || ""
   );
   const [condition, setCondition] = useState(album.condition || "");
+  const [libraryIdentifier, setLibraryIdentifier] = useState(
+    album.library_identifier || ""
+  );
   const mutedText = useColorModeValue("gray.600", "gray.300");
   const subtleText = useColorModeValue("gray.500", "gray.400");
   const panelBg = useColorModeValue("gray.50", "gray.900");
@@ -59,6 +62,7 @@ export default function AlbumResult({
       album_notes: notes,
       purchase_price: purchasePrice ? parseFloat(purchasePrice) : undefined,
       condition: condition || undefined,
+      library_identifier: libraryIdentifier || null,
     });
     setIsEditing(false);
   };
@@ -83,15 +87,22 @@ export default function AlbumResult({
         <Flex flex="1" direction="column" gap={2}>
           {/* Title and Artist */}
           <Flex direction="column" gap={1}>
-            <Link
-              as={NextLink}
-              href={`/albums/${album.release_id}?friend_id=${album.friend_id}`}
-              _hover={{ textDecoration: "underline" }}
-            >
-              <Text fontWeight="bold" fontSize="lg" color={titleColor}>
-                {album.title}
-              </Text>
-            </Link>
+            <Flex alignItems="center" gap={2} flexWrap="wrap">
+              {album.library_identifier && (
+                <Badge colorPalette="blue" size="md" variant="solid" fontWeight="bold">
+                  {album.library_identifier}
+                </Badge>
+              )}
+              <Link
+                as={NextLink}
+                href={`/albums/${album.release_id}?friend_id=${album.friend_id}`}
+                _hover={{ textDecoration: "underline" }}
+              >
+                <Text fontWeight="bold" fontSize="lg" color={titleColor}>
+                  {album.title}
+                </Text>
+              </Link>
+            </Flex>
             <Link
               as={NextLink}
               href={`/albums?q=${encodeURIComponent(album.artist)}&friend_id=${album.friend_id}`}
@@ -218,6 +229,19 @@ export default function AlbumResult({
                   </Box>
                 </Flex>
 
+                <Box>
+                  <Text fontSize="sm" fontWeight="bold" mb={1}>
+                    Library Identifier (e.g., LP001)
+                  </Text>
+                  <Input
+                    value={libraryIdentifier}
+                    onChange={(e) => setLibraryIdentifier(e.target.value)}
+                    placeholder="LP001"
+                    size="sm"
+                    maxLength={50}
+                  />
+                </Box>
+
                 <Flex gap={2} mt={2}>
                   <Button size="sm" colorScheme="blue" onClick={handleSave}>
                     Save
@@ -230,6 +254,7 @@ export default function AlbumResult({
                       setNotes(album.album_notes || "");
                       setPurchasePrice(album.purchase_price?.toString() || "");
                       setCondition(album.condition || "");
+                      setLibraryIdentifier(album.library_identifier || "");
                     }}
                   >
                     Cancel
