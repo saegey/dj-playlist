@@ -11,7 +11,7 @@ endif
 
 # Timestamped release tag like v20250112T153045Z
 TAG_PREFIX ?= v
-TAG_TIME ?= $(shell date -u +%Y%m%dT%H%M%SZ)
+TAG_TIME := $(shell date -u +%Y%m%dT%H%M%SZ)
 TAG ?= $(TAG_PREFIX)$(TAG_TIME)
 
 .PHONY: tag tag-push compose-dev compose-prod compose-down compose-logs compose-dev-mac
