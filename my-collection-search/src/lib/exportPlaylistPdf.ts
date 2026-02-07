@@ -47,6 +47,10 @@ export function exportPlaylistToPDF({
       doc.text(`   Album: ${track.album}`, 12, y);
       y += 3;
     }
+    if (track.library_identifier) {
+      doc.text(`   ID: ${track.library_identifier}`, 12, y);
+      y += 3;
+    }
     if (track.bpm || track.key) {
       doc.text(
         `   BPM: ${track.bpm || "-"}   Key: ${track.key || "-"}`,
