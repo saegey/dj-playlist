@@ -91,7 +91,7 @@ export async function exportPlaylistToPDF({
   filename?: string;
 }) {
   if (!playlist.length) return;
-  const doc = new jsPDF();
+  const doc = new jsPDF({ orientation: "landscape" });
   await ensureMonoFont(doc);
 
   const marginLeft = 10;
@@ -103,6 +103,8 @@ export async function exportPlaylistToPDF({
   const headerY = marginTop + 10;
   const tableTopY = headerY + headerGap;
   const maxY = pageHeight - 12;
+  const footerText = "Exported via GrooveNET. The future of vinyl.";
+  const footerY = pageHeight - 6;
 
   doc.setFontSize(8);
   doc.setLineHeightFactor(1);
@@ -111,13 +113,15 @@ export async function exportPlaylistToPDF({
 
   const columns = [
     { key: "#", label: "#", width: 6 },
-    { key: "artist", label: "Artist", width: 38 },
-    { key: "title", label: "Title", width: 50 },
-    { key: "album", label: "Album", width: 45 },
-    { key: "id", label: "ID", width: 18 },
-    { key: "bpm", label: "BPM", width: 8 },
-    { key: "key", label: "Key", width: 8 },
-    { key: "dur", label: "Dur", width: 12 },
+    { key: "pos", label: "Pos", width: 8 },
+    { key: "artist", label: "Artist", width: 50 },
+    { key: "title", label: "Title", width: 60 },
+    { key: "album", label: "Album", width: 60 },
+    { key: "id", label: "ID", width: 20 },
+    { key: "bpm", label: "BPM", width: 10 },
+    { key: "key", label: "Key", width: 16 },
+    { key: "dur", label: "Dur", width: 10 },
+    { key: "genre", label: "Genre", width: 30 },
   ];
 
   const totalWidth = columns.reduce((sum, col) => sum + col.width, 0);
@@ -145,6 +149,9 @@ export async function exportPlaylistToPDF({
     });
     doc.line(marginLeft, y + 1, marginLeft + availableWidth, y + 1);
   };
+  const renderFooter = () => {
+    doc.text(footerText, marginLeft, footerY);
+  };
 
   let y = tableTopY;
   renderHeader(y);
@@ -152,6 +159,7 @@ export async function exportPlaylistToPDF({
 
   playlist.forEach((track, idx) => {
     if (y > maxY) {
+      renderFooter();
       doc.addPage();
       y = marginTop;
       doc.text(`Total Tracks: ${playlist.length}`, marginLeft, y);
@@ -166,6 +174,11 @@ export async function exportPlaylistToPDF({
     }
 
     const indexStr = sanitizeForPdf(`${idx + 1}`);
+    const position = sanitizeForPdf(
+      track.position !== undefined && track.position !== null
+        ? String(track.position)
+        : "-"
+    );
     const artist = sanitizeForPdf(track.artist || "Unknown Artist");
     const title = sanitizeForPdf(track.title || "Untitled");
     const album = sanitizeForPdf(track.album || "");
@@ -177,9 +190,13 @@ export async function exportPlaylistToPDF({
       ? formatSeconds(track.duration_seconds)
       : "-"
     );
+    const genre = sanitizeForPdf(
+      Array.isArray(track.genres) ? track.genres.join(", ") : ""
+    );
 
     const rowValues = [
       indexStr,
+      position,
       artist,
       title,
       album,
@@ -187,6 +204,7 @@ export async function exportPlaylistToPDF({
       bpm,
       key,
       dur,
+      genre,
     ];
 
     rowValues.forEach((value, colIdx) => {
@@ -197,5 +215,6 @@ export async function exportPlaylistToPDF({
 
     y += rowHeight;
   });
+  renderFooter();
   doc.save(filename);
 }
