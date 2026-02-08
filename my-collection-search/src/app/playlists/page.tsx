@@ -16,15 +16,13 @@ const PlaylistsPage = () => {
 
   return (
     <>
-      <Box maxW="700px" mx="auto" p={["12px", 8]}>
-        <PlaylistManager
-          xmlImportModalOpen={false}
-          setXmlImportModalOpen={function (): void {
-            throw new Error("Function not implemented.");
-          }}
-          client={meiliClient}
-        />
-      </Box>
+      <PlaylistManager
+        xmlImportModalOpen={false}
+        setXmlImportModalOpen={function (): void {
+          throw new Error("Function not implemented.");
+        }}
+        client={meiliClient}
+      />
     </>
   );
 };

@@ -34,6 +34,13 @@ export type TrackResultCompactProps = {
   buttons?: React.ReactNode;
   footer?: React.ReactNode;
   playlistCount?: number;
+  showUsername?: boolean;
+  showRating?: boolean;
+  showDetails?: boolean;
+  showGenres?: boolean;
+  showLinks?: boolean;
+  showNotes?: boolean;
+  showPlaylistCount?: boolean;
 };
 
 export default function TrackResultCompact({
@@ -41,6 +48,13 @@ export default function TrackResultCompact({
   buttons,
   footer,
   playlistCount,
+  showUsername = true,
+  showRating = true,
+  showDetails = true,
+  showGenres = true,
+  showLinks = true,
+  showNotes = true,
+  showPlaylistCount = true,
 }: TrackResultCompactProps) {
   const { replacePlaylist } = usePlaylistPlayer();
 
@@ -169,13 +183,15 @@ export default function TrackResultCompact({
             )}
           </Text>
 
-          <RatingGroup.Root value={track.star_rating ?? 0} readOnly size="xs">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <RatingGroup.Item key={index} index={index + 1}>
-                <RatingGroup.ItemIndicator />
-              </RatingGroup.Item>
-            ))}
-          </RatingGroup.Root>
+          {showRating && (
+            <RatingGroup.Root value={track.star_rating ?? 0} readOnly size="xs">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <RatingGroup.Item key={index} index={index + 1}>
+                  <RatingGroup.ItemIndicator />
+                </RatingGroup.Item>
+              ))}
+            </RatingGroup.Root>
+          )}
         </Flex>
 
         {/* Row 2: Artist, Album, Year */}
@@ -185,7 +201,7 @@ export default function TrackResultCompact({
           <Text>
             {track.album} {track.year && `(${track.year})`}
           </Text>
-          {track.username && (
+          {showUsername && track.username && (
             <>
               <Text color="gray.400">•</Text>
               <Text fontSize="xs" color="gray.500">
@@ -193,7 +209,7 @@ export default function TrackResultCompact({
               </Text>
             </>
           )}
-          {typeof playlistCount === "number" && playlistCount > 0 && (
+          {showPlaylistCount && typeof playlistCount === "number" && playlistCount > 0 && (
             <>
               <Text color="gray.400">•</Text>
               <Text fontSize="xs" color="gray.500">
@@ -204,7 +220,7 @@ export default function TrackResultCompact({
         </Flex>
 
         {/* Row 3: Technical Details (inline) */}
-        {details.length > 0 && (
+        {showDetails && details.length > 0 && (
           <Flex gap={3} fontSize="xs" color="gray.600" flexWrap="wrap">
             {details.map((detail, idx) => (
               <Text key={idx}>
@@ -215,70 +231,78 @@ export default function TrackResultCompact({
         )}
 
         {/* Row 4: Genres/Styles + Links (combined) */}
-        <Flex gap={2} alignItems="center" flexWrap="wrap">
-          {allGenres.slice(0, 4).map((genre, idx) => (
-            <Badge key={idx} size="xs" variant={idx < genres.length ? "surface" : "outline"}>
-              {genre}
-            </Badge>
-          ))}
-          {allGenres.length > 4 && (
-            <Badge size="xs" variant="subtle">
-              +{allGenres.length - 4}
-            </Badge>
-          )}
+        {(showGenres || showLinks) && (
+          <Flex gap={2} alignItems="center" flexWrap="wrap">
+            {showGenres &&
+              allGenres.slice(0, 4).map((genre, idx) => (
+                <Badge key={idx} size="xs" variant={idx < genres.length ? "surface" : "outline"}>
+                  {genre}
+                </Badge>
+              ))}
+            {showGenres && allGenres.length > 4 && (
+              <Badge size="xs" variant="subtle">
+                +{allGenres.length - 4}
+              </Badge>
+            )}
 
-          {((typeof track.local_tags === "string" &&
-            track.local_tags !== "{}" &&
-            track.local_tags !== "") ||
-            (Array.isArray(track.local_tags) &&
-              track.local_tags.length > 0)) && (
-            <Badge
-              size="xs"
-              variant="solid"
-              colorPalette="blue"
-            >
-              {Array.isArray(track.local_tags)
-                ? track.local_tags.join(", ")
-                : track.local_tags}
-            </Badge>
-          )}
+            {showGenres &&
+              ((typeof track.local_tags === "string" &&
+                track.local_tags !== "{}" &&
+                track.local_tags !== "") ||
+                (Array.isArray(track.local_tags) &&
+                  track.local_tags.length > 0)) && (
+                <Badge
+                  size="xs"
+                  variant="solid"
+                  colorPalette="blue"
+                >
+                  {Array.isArray(track.local_tags)
+                    ? track.local_tags.join(", ")
+                    : track.local_tags}
+                </Badge>
+              )}
 
-          {/* Service Links (inline with badges) */}
-          <Flex gap={1.5} ml="auto">
-            {track.discogs_url && (
-              <Link href={track.discogs_url} target="_blank" aria-label="Discogs">
-                <SiDiscogs size={16} style={{ opacity: 0.7 }} />
-              </Link>
-            )}
-            {track.spotify_url && (
-              <Link href={track.spotify_url} target="_blank" aria-label="Spotify">
-                <SiSpotify size={16} style={{ opacity: 0.7 }} />
-              </Link>
-            )}
-            {track.apple_music_url && (
-              <Link href={track.apple_music_url} target="_blank" aria-label="Apple Music">
-                <SiApplemusic size={16} style={{ opacity: 0.7 }} />
-              </Link>
-            )}
-            {track.youtube_url && (
-              <Link href={track.youtube_url} target="_blank" aria-label="YouTube">
-                <SiYoutube size={16} style={{ opacity: 0.7 }} />
-              </Link>
-            )}
-            {track.soundcloud_url && (
-              <Link href={track.soundcloud_url} target="_blank" aria-label="SoundCloud">
-                <SiSoundcloud size={16} style={{ opacity: 0.7 }} />
-              </Link>
+            {showLinks && (
+              <Flex gap={1.5} ml="auto">
+                {track.discogs_url && (
+                  <Link href={track.discogs_url} target="_blank" aria-label="Discogs">
+                    <SiDiscogs size={16} style={{ opacity: 0.7 }} />
+                  </Link>
+                )}
+                {track.spotify_url && (
+                  <Link href={track.spotify_url} target="_blank" aria-label="Spotify">
+                    <SiSpotify size={16} style={{ opacity: 0.7 }} />
+                  </Link>
+                )}
+                {track.apple_music_url && (
+                  <Link href={track.apple_music_url} target="_blank" aria-label="Apple Music">
+                    <SiApplemusic size={16} style={{ opacity: 0.7 }} />
+                  </Link>
+                )}
+                {track.youtube_url && (
+                  <Link href={track.youtube_url} target="_blank" aria-label="YouTube">
+                    <SiYoutube size={16} style={{ opacity: 0.7 }} />
+                  </Link>
+                )}
+                {track.soundcloud_url && (
+                  <Link href={track.soundcloud_url} target="_blank" aria-label="SoundCloud">
+                    <SiSoundcloud size={16} style={{ opacity: 0.7 }} />
+                  </Link>
+                )}
+              </Flex>
             )}
           </Flex>
-        </Flex>
+        )}
 
         {/* Row 5: Notes (if present) */}
-        {track.notes && (
+        {showNotes && track.notes && (
           <Box mt={1}>
             <ExpandableMarkdown text={track.notes} maxLength={80} />
           </Box>
         )}
+
+        {/* Footer */}
+        {footer && <Box mt={2}>{footer}</Box>}
       </Flex>
 
       {/* Action Menu - Absolute positioned top-right */}
@@ -292,8 +316,6 @@ export default function TrackResultCompact({
         {buttons}
       </Box>
 
-      {/* Footer */}
-      {footer && <Box mt={2} width="100%">{footer}</Box>}
     </Flex>
   );
 }

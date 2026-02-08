@@ -11,6 +11,7 @@ import {
   Input,
   Button,
   Skeleton,
+  Dialog,
 } from "@chakra-ui/react";
 import { FiRefreshCcw, FiTrash } from "react-icons/fi";
 
@@ -38,6 +39,8 @@ export default function FriendsDiscogsSection() {
   const [removedReleasesOpen, setRemovedReleasesOpen] = useState(false);
   const [removedReleases, setRemovedReleases] = useState<string[]>([]);
   const [removedUsername, setRemovedUsername] = useState<string>("");
+  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
+  const [friendToRemove, setFriendToRemove] = useState<string>("");
 
   // Friends list + add/remove (React Query)
   const {
@@ -148,6 +151,18 @@ export default function FriendsDiscogsSection() {
     });
   };
 
+  const handleRemoveFriendClick = (username: string) => {
+    setFriendToRemove(username);
+    setConfirmRemoveOpen(true);
+  };
+
+  const handleConfirmRemove = () => {
+    setConfirmRemoveOpen(false);
+    if (friendToRemove) {
+      handleRemoveFriend(friendToRemove);
+    }
+  };
+
   const disableAdd = addFriendPending;
 
   return (
@@ -222,7 +237,7 @@ export default function FriendsDiscogsSection() {
                 <Button
                   size="xs"
                   colorPalette="red"
-                  onClick={() => handleRemoveFriend(friend.username)} // opens dialog + streams
+                  onClick={() => handleRemoveFriendClick(friend.username)}
                   title="Remove friend"
                   disabled={removeFriendPending}
                 >
@@ -252,6 +267,45 @@ export default function FriendsDiscogsSection() {
         onSkip={handleSkipDeleteRemovedReleases}
         deletePending={deleteReleases.isPending}
       />
+
+      {/* Confirmation Dialog for Friend Removal */}
+      <Dialog.Root
+        open={confirmRemoveOpen}
+        onOpenChange={(e) => setConfirmRemoveOpen(e.open)}
+      >
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>Remove Friend</Dialog.Title>
+              <Dialog.CloseTrigger />
+            </Dialog.Header>
+            <Dialog.Body>
+              <Text>
+                Are you sure you want to remove <strong>{friendToRemove}</strong>?
+              </Text>
+              <Text mt={2} color="gray.600" fontSize="sm">
+                This will delete all tracks and albums associated with this friend from your library.
+              </Text>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button
+                variant="outline"
+                onClick={() => setConfirmRemoveOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                colorScheme="red"
+                onClick={handleConfirmRemove}
+                ml={3}
+              >
+                Remove Friend
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </Box>
   );
 }

@@ -15,7 +15,7 @@ import {
  * Hook for playlist mutation operations (sort, clear, reorder)
  * Works with query-based playlist data
  */
-export function usePlaylistMutations(playlistId?: number) {
+export function usePlaylistMutations(playlistId?: number, onModified?: () => void) {
   const queryClient = useQueryClient();
   const { getTrack } = useTrackStore();
 
@@ -96,6 +96,7 @@ export function usePlaylistMutations(playlistId?: number) {
     newRefs.splice(toIdx, 0, moved);
 
     updateTrackRefs(newRefs);
+    onModified?.(); // Mark as modified
   };
 
   // Mutation for removing track from playlist
@@ -110,6 +111,7 @@ export function usePlaylistMutations(playlistId?: number) {
     },
     onSuccess: (newRefs) => {
       updateTrackRefs(newRefs);
+      onModified?.(); // Mark as modified
       toaster.create({ title: "Track removed from playlist", type: "success" });
     },
     onError: (error) => {
@@ -133,6 +135,7 @@ export function usePlaylistMutations(playlistId?: number) {
     },
     onSuccess: (newRefs, track) => {
       updateTrackRefs(newRefs);
+      onModified?.(); // Mark as modified
       toaster.create({ title: `"${track.title}" added to playlist`, type: "success" });
     },
     onError: (error) => {
@@ -206,6 +209,7 @@ export function usePlaylistMutations(playlistId?: number) {
     console.log("Greedy sorted track refs:", sortedTrackRefs);
 
     updateTrackRefs(sortedTrackRefs);
+    onModified?.(); // Mark as modified
   };
 
   // Genetic sort mutation
@@ -238,6 +242,7 @@ export function usePlaylistMutations(playlistId?: number) {
           friend_id: track.friend_id!
         }));
         updateTrackRefs(sortedTrackRefs);
+        onModified?.(); // Mark as modified
       }
     },
   });

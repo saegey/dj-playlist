@@ -185,18 +185,17 @@ const SearchResults: React.FC = () => {
 
   return (
     <Box mb={'100px'}>
-      <Box display="flex" flexDirection={["column", "row"]} gap={3} mb={3}>
-        <InputGroup startElement={<LuSearch size={16} />}>
+      {/* Desktop layout - single row */}
+      <Box display={{ base: "none", md: "flex" }} gap={3} mb={3}>
+        <InputGroup startElement={<LuSearch size={16} />} flex="1">
           <Input
-            placeholder="Search"
             value={debouncedValue}
             onChange={(e) => setDebouncedValue(e.target.value)}
-            flex="1"
             variant={"subtle"}
             fontSize="16px"
           />
         </InputGroup>
-        <UsernameSelect usernames={friends} />
+        <UsernameSelect usernames={friends} width="200px" />
         <Flex gap={1} alignItems="center">
           <Box position="relative">
             <IconButton
@@ -221,6 +220,75 @@ const SearchResults: React.FC = () => {
               </Badge>
             )}
           </Box>
+          <IconButton
+            aria-label="Card view"
+            size="sm"
+            variant={viewMode === "card" ? "solid" : "ghost"}
+            onClick={() => handleViewModeChange("card")}
+          >
+            <LuLayoutGrid />
+          </IconButton>
+          <IconButton
+            aria-label="Table view"
+            size="sm"
+            variant={viewMode === "table" ? "solid" : "ghost"}
+            onClick={() => handleViewModeChange("table")}
+          >
+            <LuTable />
+          </IconButton>
+          {viewMode === "card" && (
+            <IconButton
+              aria-label={compactMode ? "Expand cards" : "Compact cards"}
+              size="sm"
+              variant={compactMode ? "solid" : "ghost"}
+              onClick={handleCompactModeToggle}
+            >
+              {compactMode ? <LuMaximize2 /> : <LuMinimize2 />}
+            </IconButton>
+          )}
+        </Flex>
+      </Box>
+
+      {/* Mobile layout - 2 rows */}
+      <Box display={{ base: "flex", md: "none" }} flexDirection="column" gap={2} mb={3}>
+        {/* Row 1: Search + User + Filter */}
+        <Flex gap={2}>
+          <InputGroup startElement={<LuSearch size={16} />} flex="1">
+            <Input
+              value={debouncedValue}
+              onChange={(e) => setDebouncedValue(e.target.value)}
+              variant={"subtle"}
+              fontSize="16px"
+            />
+          </InputGroup>
+          <UsernameSelect usernames={friends} iconOnlyMobile={true} width="auto" size="sm" />
+          <Box position="relative">
+            <IconButton
+              aria-label="Filter tracks"
+              size="sm"
+              variant={activeFilterCount > 0 ? "solid" : "ghost"}
+              colorPalette={activeFilterCount > 0 ? "blue" : undefined}
+              onClick={() => setFilterModalOpen(true)}
+            >
+              <LuFilter />
+            </IconButton>
+            {activeFilterCount > 0 && (
+              <Badge
+                position="absolute"
+                top="-1"
+                right="-1"
+                size="sm"
+                colorPalette="blue"
+                variant="solid"
+              >
+                {activeFilterCount}
+              </Badge>
+            )}
+          </Box>
+        </Flex>
+
+        {/* Row 2: View controls */}
+        <Flex gap={1} justifyContent="flex-start">
           <IconButton
             aria-label="Card view"
             size="sm"

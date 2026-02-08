@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button, Menu, Flex, Box } from "@chakra-ui/react";
-import { FiMoreVertical, FiPlay, FiSave, FiEdit, FiCopy, FiDownload } from "react-icons/fi";
+import { FiMoreVertical, FiPlay, FiSave, FiEdit, FiCopy, FiDownload, FiZap } from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
 // import { MdOutlineClearAll } from "react-icons/md";
@@ -19,6 +19,7 @@ export interface PlaylistActionsMenuProps {
   onDuplicate?: () => void;
   onRename?: () => void;
   onEnqueueMissingDownloads?: () => void;
+  onOpenRecommendations?: () => void;
   isGeneticSorting?: boolean;
   enqueuePlaylist: () => void;
 }
@@ -38,6 +39,7 @@ export default function PlaylistActionsMenu({
   onDuplicate,
   onRename,
   onEnqueueMissingDownloads,
+  onOpenRecommendations,
   enqueuePlaylist,
   isGeneticSorting,
 }: PlaylistActionsMenuProps) {
@@ -76,6 +78,11 @@ export default function PlaylistActionsMenu({
           >
             <PiDna /> {isGeneticSorting ? "Sorting..." : "Genetic Order"}
           </Menu.Item>
+          {onOpenRecommendations && (
+            <Menu.Item value="recommendations" onSelect={onOpenRecommendations}>
+              <FiZap /> AI Recommendations
+            </Menu.Item>
+          )}
           <Box
             as="hr"
             my={1}

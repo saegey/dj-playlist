@@ -34,7 +34,6 @@ export default function BackfillFilters({
       <InputGroup startElement={<LuSearch size={16} />}>
         <Input
           type="text"
-          placeholder="Search"
           value={artistSearch}
           onChange={(e) => setArtistSearch(e.target.value)}
           disabled={analyzing}

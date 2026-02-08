@@ -17,7 +17,7 @@ export default function SettingsPage() {
   return (
     <SettingsDialogsProvider>
       <SyncStreamsProvider>
-        <Box maxW="700px" mx="auto" p={["12px", 8]} mb={"120px"}>
+        <Box mb="120px">
           <ActionsGrid />
           <GamdlSettingsSection />
           <FriendsDiscogsSection />

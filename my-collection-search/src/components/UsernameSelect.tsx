@@ -33,6 +33,8 @@ export type UsernameSelectProps = {
    */
   value?: Friend | null;
   onChange?: (friend_id: number) => void;
+  /** Show icon only on mobile (hide text label) */
+  iconOnlyMobile?: boolean;
 };
 
 export default function UsernameSelect({
@@ -45,6 +47,7 @@ export default function UsernameSelect({
   disableWhileLoading = true,
   value,
   onChange,
+  iconOnlyMobile = false,
 }: UsernameSelectProps) {
   // Context holds Friend | null; external value can override
   const { friend: ctxValue, setFriend: setCtxValue } = useUsername();
@@ -95,7 +98,9 @@ export default function UsernameSelect({
             <HStack>
               <Icon as={FiUser} />
               {isLoading && <Spinner size="xs" />}
-              <Box>{buttonLabel}</Box>
+              <Box display={iconOnlyMobile ? { base: "none", md: "block" } : "block"}>
+                {buttonLabel}
+              </Box>
             </HStack>
             {selectedFriend && (
               <Icon
@@ -108,6 +113,7 @@ export default function UsernameSelect({
                 }}
                 cursor="pointer"
                 color="fg.muted"
+                display={iconOnlyMobile ? { base: "none", md: "block" } : "block"}
               />
             )}
           </HStack>

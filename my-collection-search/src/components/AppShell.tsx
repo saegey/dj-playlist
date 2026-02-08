@@ -27,6 +27,7 @@ import {
   IoAddCircle,
 } from "react-icons/io5";
 import { usePathname } from "next/navigation";
+import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 const menuItems = [
   { href: "/", label: "Tracks" },
@@ -56,6 +57,7 @@ function getItemIcon(href: string) {
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { playlistLength } = usePlaylistPlayer();
   const current = useMemo(() => {
     if (!pathname) return "";
     if (pathname === "/") return "/";
@@ -63,7 +65,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Load sidebar state from localStorage
+  const [isExpanded, setIsExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebar-expanded');
+      return saved ? JSON.parse(saved) : false;
+    }
+    return false;
+  });
+
+  // Save sidebar state to localStorage when it changes
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sidebar-expanded', JSON.stringify(isExpanded));
+    }
+  }, [isExpanded]);
 
   return (
     <Flex minH="100vh" bg="bg">
@@ -82,12 +99,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <Flex direction="column" h="100%" py={3} gap={2}>
           <Flex
             px={isExpanded ? 3 : 2}
-            align="center"
-            justify="space-between"
+            // justify="space-between"
             gap={2}
           >
-            <HStack gap={2} align="center">
-              <Box w="8px" h="8px" bg="blue.500" borderRadius="full" />
+            <HStack>
               {isExpanded && (
                 <Text fontWeight="semibold" letterSpacing="0.02em">
                   GrooveNet
@@ -106,7 +121,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 variant="outline"
                 minW="auto"
                 px={1}
-                onClick={() => setIsExpanded((v) => !v)}
+                onClick={() => setIsExpanded((v: boolean) => !v)}
               >
                 {isExpanded ? <FiChevronLeft /> : <FiChevronRight />}
               </IconButton>
@@ -133,15 +148,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     borderRadius="md"
                     bg={active ? "bg.subtle" : undefined}
                     title={item.label}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent={isExpanded ? "flex-start" : "center"}
                   >
-                    <HStack gap={3} align="center">
+                    <HStack
+                      gap={isExpanded ? 3 : 0}
+                      align="center"
+                      w="100%"
+                      justify={isExpanded ? "flex-start" : "center"}
+                    >
                       <Icon
                         as={ItemIcon}
                         boxSize={5}
                         color={active ? "blue.500" : "fg.muted"}
                       />
                       {isExpanded && (
-                        <Text fontWeight={active ? "bold" : "normal"}>
+                        <Text fontWeight={active ? "bold" : "normal"} fontSize={'0.9rem'}>
                           {item.label}
                         </Text>
                       )}
@@ -163,7 +186,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         colorPalette="gray"
         display={{ base: "inline-flex", md: "none" }}
         position="fixed"
-        bottom={{ base: "128px" }}
+        bottom={{ base: playlistLength > 0 ? "128px" : "16px" }}
         right={4}
         zIndex={90}
         borderRadius="full"

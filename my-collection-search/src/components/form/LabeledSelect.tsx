@@ -27,7 +27,7 @@ export default function LabeledSelect({ label, value, onChange, children }: Prop
           borderColor: 'var(--chakra-colors-border)',
           backgroundColor: 'var(--chakra-colors-bg)',
           color: 'inherit',
-          fontSize: 'inherit',
+          fontSize: '16px',
         }}
       >
         {children}

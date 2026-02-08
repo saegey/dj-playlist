@@ -4,6 +4,7 @@ import React from "react";
 import { Box } from "@chakra-ui/react";
 
 import PlaylistViewer from "@/components/PlaylistViewer";
+import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 interface PlaylistPageProps {
   params: Promise<{ id: string }>;
@@ -13,9 +14,10 @@ interface PlaylistPageProps {
 // This is a server component by default. Add 'use client' at the top if you need client-side interactivity.
 const PlaylistPage = ({ params }: PlaylistPageProps) => {
   const { id } = React.use(params);
+  const { playlistLength } = usePlaylistPlayer();
 
   return (
-    <Box maxW="700px" mx="auto" p={["12px", 8]}>
+    <Box mb={playlistLength > 0 ? "120px" : "0"}>
       <PlaylistViewer playlistId={Number(id)} />
       {/* Future ideas:
           - Show playlist name, track count, total duration

@@ -10,7 +10,7 @@ import { queryKeys } from "@/lib/queryKeys";
 /**
  * Hook for save playlist dialog using query-based approach
  */
-export function usePlaylistSaveDialog(playlistId?: number) {
+export function usePlaylistSaveDialog(playlistId?: number, onSaved?: () => void) {
   const queryClient = useQueryClient();
   const [open, setOpen] = React.useState(false);
   const [playlistName, setPlaylistName] = React.useState("");
@@ -96,12 +96,13 @@ export function usePlaylistSaveDialog(playlistId?: number) {
 
         setOpen(false);
         setPlaylistName("");
+        onSaved?.(); // Clear modified state
       } catch (error) {
         console.error("Failed to save playlist:", error);
         toaster.create({ title: "Failed to save playlist", type: "error" });
       }
     },
-    [playlistId, getTracksWithFriendId]
+    [playlistId, getTracksWithFriendId, onSaved]
   );
 
   // For existing playlists, save directly without dialog

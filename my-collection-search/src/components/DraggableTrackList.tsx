@@ -32,6 +32,7 @@ interface DraggableTrackListProps {
   trackResultProps?: {
     minimized?: boolean;
     playlistCount?: Record<string, number>;
+    playlistMode?: boolean;
   };
   /** Current playing track index (for highlighting) */
   currentTrackIndex?: number | null;
@@ -95,6 +96,7 @@ export default function DraggableTrackList({
                         playlistCount={
                           trackResultProps?.playlistCount?.[trackPlay.track_id]
                         }
+                        playlistMode={trackResultProps?.playlistMode}
                       />
                     </Box>
                   )}

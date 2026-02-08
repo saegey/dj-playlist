@@ -1,8 +1,8 @@
 // components/settings/ActionsGrid.tsx
 "use client";
 import { useState } from "react";
-import { Button, SimpleGrid } from "@chakra-ui/react";
-import { FiDatabase, FiBriefcase, FiTrash2 } from "react-icons/fi";
+import { Button, Flex, Menu, Text, Box } from "@chakra-ui/react";
+import { FiDatabase, FiBriefcase, FiTrash2, FiMoreVertical } from "react-icons/fi";
 import { SiDiscogs, SiSpotify } from "react-icons/si";
 import { toaster } from "@/components/ui/toaster";
 import {
@@ -163,135 +163,162 @@ export default function ActionsGrid() {
   };
 
   return (
-    <SimpleGrid gap={4} columns={{ base: 1, md: 3 }}>
-      <Button
-        onClick={() =>
-          spotifyIndex.mutate(undefined, {
-            onSuccess: (data) =>
-              toaster.create({
-                title: "Spotify Index Updated",
-                type: "success",
-                description: data?.message || "Done",
-              }),
-            onError: (e) =>
-              toaster.create({
-                title: "Spotify Index Update Failed",
-                type: "error",
-                description: e.message,
-              }),
-          })
-        }
-        loading={spotifyIndex.isPending}
-        disabled={disableAll}
-      >
-        <FiDatabase /> Ingest Spotify Data
-      </Button>
+    <Box mb={4}>
+      <Flex align="center" justify="space-between" mb={4}>
+        <Text fontWeight="bold" fontSize="lg">
+          Settings
+        </Text>
+        <Menu.Root>
+          <Menu.Trigger asChild>
+            <Button size="sm" variant="outline" disabled={disableAll}>
+              <FiMoreVertical />
+              <Box ml={2}>Actions</Box>
+            </Button>
+          </Menu.Trigger>
+          <Menu.Positioner>
+            <Menu.Content>
+              <Menu.Item
+                value="sync-discogs"
+                onClick={handleSyncClick}
+                disabled={disableAll || discogsSync.isPending || verifyManifests.isPending}
+              >
+                <SiDiscogs /> Sync Discogs
+              </Menu.Item>
 
-      <Button
-        onClick={() =>
-          discogsIndex.mutate(undefined, {
-            onSuccess: (data) =>
-              toaster.create({
-                title: "Discogs Ingest Complete",
-                type: "success",
-                description: data?.message || "Done",
-              }),
-            onError: (e) =>
-              toaster.create({
-                title: "Discogs Ingest Failed",
-                type: "error",
-                description: e.message,
-              }),
-          })
-        }
-        loading={discogsIndex.isPending}
-        disabled={disableAll}
-      >
-        <FiDatabase /> Ingest Discogs Data
-      </Button>
+              <Menu.Item
+                value="sync-spotify"
+                onClick={() => setSpotifySyncOpen(true)}
+                disabled={disableAll}
+              >
+                <SiSpotify /> Sync Spotify
+              </Menu.Item>
 
-      <Button
-        onClick={handleSyncClick}
-        loading={discogsSync.isPending || verifyManifests.isPending}
-        disabled={disableAll}
-      >
-        <SiDiscogs /> Sync Discogs
-      </Button>
+              <Menu.Separator />
 
-      <Button
-        onClick={() =>
-          addBackup.mutate(undefined, {
-            onSuccess: (res) =>
-              toaster.create({
-                title: "Backup Complete",
-                type: "success",
-                description: res.message,
-              }),
-            onError: (e) =>
-              toaster.create({
-                title: "Backup Failed",
-                type: "error",
-                description: e.message,
-              }),
-          })
-        }
-        loading={addBackup.isPending}
-        disabled={disableAll}
-      >
-        <FiBriefcase /> Backup Database
-      </Button>
+              <Menu.Item
+                value="ingest-discogs"
+                onClick={() =>
+                  discogsIndex.mutate(undefined, {
+                    onSuccess: (data) =>
+                      toaster.create({
+                        title: "Discogs Ingest Complete",
+                        type: "success",
+                        description: data?.message || "Done",
+                      }),
+                    onError: (e) =>
+                      toaster.create({
+                        title: "Discogs Ingest Failed",
+                        type: "error",
+                        description: e.message,
+                      }),
+                  })
+                }
+                disabled={disableAll || discogsIndex.isPending}
+              >
+                <FiDatabase /> Ingest Discogs Data
+              </Menu.Item>
 
-      <Button onClick={() => setSpotifySyncOpen(true)} disabled={disableAll}>
-        <SiSpotify /> Sync Spotify
-      </Button>
+              <Menu.Item
+                value="ingest-spotify"
+                onClick={() =>
+                  spotifyIndex.mutate(undefined, {
+                    onSuccess: (data) =>
+                      toaster.create({
+                        title: "Spotify Index Updated",
+                        type: "success",
+                        description: data?.message || "Done",
+                      }),
+                    onError: (e) =>
+                      toaster.create({
+                        title: "Spotify Index Update Failed",
+                        type: "error",
+                        description: e.message,
+                      }),
+                  })
+                }
+                disabled={disableAll || spotifyIndex.isPending}
+              >
+                <FiDatabase /> Ingest Spotify Data
+              </Menu.Item>
 
-      <Button
-        onClick={() =>
-          backfillReleaseId.mutate(undefined, {
-            onSuccess: () => {
-              toaster.create({
-                title: "Backfill Complete",
-                type: "success",
-                description: "Fixed tracks missing release_id",
-              });
-            },
-            onError: (e: Error) =>
-              toaster.create({
-                title: "Backfill Failed",
-                type: "error",
-                description: e.message,
-              }),
-          })
-        }
-        loading={backfillReleaseId.isPending}
-        disabled={disableAll}
-      >
-        <FiDatabase /> Fix Track Links
-      </Button>
+              <Menu.Separator />
 
-      <Button
-        onClick={() =>
-          cleanupAlbums.mutate(undefined, {
-            onSuccess: () => {
-              toaster.create({
-                title: "Album Cleanup Complete",
-                type: "success",
-                description: "Removed albums with no tracks",
-              });
-            },
-            onError: (e: Error) =>
-              toaster.create({
-                title: "Album Cleanup Failed",
-                type: "error",
-                description: e.message,
-              }),
-          })
-        }
-        loading={cleanupAlbums.isPending}
-        disabled={disableAll}
-      >
-        <FiTrash2 /> Cleanup Empty Albums
-      </Button>
+              <Menu.Item
+                value="backup"
+                onClick={() =>
+                  addBackup.mutate(undefined, {
+                    onSuccess: (res) =>
+                      toaster.create({
+                        title: "Backup Complete",
+                        type: "success",
+                        description: res.message,
+                      }),
+                    onError: (e) =>
+                      toaster.create({
+                        title: "Backup Failed",
+                        type: "error",
+                        description: e.message,
+                      }),
+                  })
+                }
+                disabled={disableAll || addBackup.isPending}
+              >
+                <FiBriefcase /> Backup Database
+              </Menu.Item>
+
+              <Menu.Separator />
+
+              <Menu.Item
+                value="fix-links"
+                onClick={() =>
+                  backfillReleaseId.mutate(undefined, {
+                    onSuccess: () => {
+                      toaster.create({
+                        title: "Backfill Complete",
+                        type: "success",
+                        description: "Fixed tracks missing release_id",
+                      });
+                    },
+                    onError: (e: Error) =>
+                      toaster.create({
+                        title: "Backfill Failed",
+                        type: "error",
+                        description: e.message,
+                      }),
+                  })
+                }
+                disabled={disableAll || backfillReleaseId.isPending}
+              >
+                <FiDatabase /> Fix Track Links
+              </Menu.Item>
+
+              <Menu.Item
+                value="cleanup-albums"
+                onClick={() =>
+                  cleanupAlbums.mutate(undefined, {
+                    onSuccess: () => {
+                      toaster.create({
+                        title: "Album Cleanup Complete",
+                        type: "success",
+                        description: "Removed albums with no tracks",
+                      });
+                    },
+                    onError: (e: Error) =>
+                      toaster.create({
+                        title: "Album Cleanup Failed",
+                        type: "error",
+                        description: e.message,
+                      }),
+                  })
+                }
+                disabled={disableAll || cleanupAlbums.isPending}
+              >
+                <FiTrash2 /> Cleanup Empty Albums
+              </Menu.Item>
+            </Menu.Content>
+          </Menu.Positioner>
+        </Menu.Root>
+      </Flex>
 
       <ManifestVerificationDialog
         open={verificationOpen}
@@ -311,6 +338,6 @@ export default function ActionsGrid() {
         onSkip={handleSkipDeleteRemovedReleases}
         deletePending={deleteReleases.isPending}
       />
-    </SimpleGrid>
+    </Box>
   );
 }

@@ -9,7 +9,7 @@ export default function LabeledTextarea({ label, ...props }: Props) {
       <Text mb={1} fontSize="sm">
         {label}
       </Text>
-      <Textarea {...props} />
+      <Textarea {...props} fontSize="16px" />
     </Box>
   );
 }

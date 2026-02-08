@@ -318,22 +318,25 @@ export default function PlaylistManager({
                     }}
                   >
                     <Box
-                      boxSize="7"
-                      rounded="sm"
+                      boxSize="10"
+                      rounded="md"
                       bg="blue.500"
                       display="flex"
                       alignItems="center"
                       justifyContent="center"
-                      color="fg.muted"
+                      color="white"
                       flexShrink={0}
-                    />
+                      fontWeight="bold"
+                      fontSize="sm"
+                    >
+                      {pl.tracks.length}
+                    </Box>
                     <VStack align="start" gap={0} minW={0}>
                       <Text fontWeight="semibold" fontSize="sm" lineClamp={1}>
                         {pl.name}
                       </Text>
                       <HStack gap={2} color="fg.muted" fontSize="xs">
                         <Text>{formatDateWithRelative(pl.created_at)}</Text>
-                        <Text>• {pl.tracks.length} tracks</Text>
                       </HStack>
                     </VStack>
                   </Box>

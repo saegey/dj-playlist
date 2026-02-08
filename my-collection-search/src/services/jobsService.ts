@@ -14,6 +14,13 @@ export interface JobInfo {
     soundcloud_url?: string;
     title?: string | null;
     artist?: string | null;
+    album?: string | null;
+    year?: string | number | null;
+    album_thumbnail?: string | null;
+    discogs_url?: string | null;
+    local_audio_url?: string | null;
+    library_identifier?: string | null;
+    username?: string | null;
   };
   returnvalue?: AnalysisResult;
   finishedOn?: number;

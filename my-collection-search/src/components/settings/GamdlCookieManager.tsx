@@ -15,8 +15,11 @@ import {
   List,
   Icon,
   Spinner,
+  Menu,
+  Flex,
 } from "@chakra-ui/react";
 import { LuUpload, LuTrash2, LuCheck, LuX, LuRefreshCw, LuInfo } from "react-icons/lu";
+import { FiMoreVertical } from "react-icons/fi";
 import { toaster } from "@/components/ui/toaster";
 import { useCookieStatus, useUploadCookie, useDeleteCookie } from "@/hooks/useCookieManagement";
 
@@ -101,10 +104,58 @@ export default function GamdlCookieManager() {
   return (
     <Card.Root>
       <Card.Header>
-        <Heading size="md">Apple Music Cookie File</Heading>
-        <Text color="gray.500" fontSize="sm">
-          Upload your Apple Music cookies to enable gamdl downloads
-        </Text>
+        <Flex justify="space-between" align="flex-start">
+          <Box>
+            <Heading size="md">Apple Music Cookie File</Heading>
+            <Text color="gray.500" fontSize="sm">
+              Upload your Apple Music cookies to enable gamdl downloads
+            </Text>
+          </Box>
+          <Menu.Root>
+            <Menu.Trigger asChild>
+              <Button size="sm" variant="outline">
+                <FiMoreVertical />
+                <Box ml={2}>Actions</Box>
+              </Button>
+            </Menu.Trigger>
+            <Menu.Positioner>
+              <Menu.Content>
+                <Menu.Item
+                  value="upload"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadMutation.isPending}
+                >
+                  <LuUpload />
+                  {cookieInfo?.exists ? "Replace" : "Upload"} Cookie File
+                </Menu.Item>
+
+                {cookieInfo?.exists && (
+                  <Menu.Item
+                    value="delete"
+                    onClick={handleDelete}
+                    disabled={deleteMutation.isPending}
+                    color="fg.error"
+                    _hover={{ bg: "bg.error", color: "fg.error" }}
+                  >
+                    <LuTrash2 />
+                    Delete Cookie File
+                  </Menu.Item>
+                )}
+
+                <Menu.Separator />
+
+                <Menu.Item
+                  value="refresh"
+                  onClick={() => refetch()}
+                  disabled={isLoading}
+                >
+                  <LuRefreshCw />
+                  Refresh Status
+                </Menu.Item>
+              </Menu.Content>
+            </Menu.Positioner>
+          </Menu.Root>
+        </Flex>
       </Card.Header>
 
       <Card.Body>
@@ -186,40 +237,6 @@ export default function GamdlCookieManager() {
               </List.Root>
             </VStack>
           </Alert.Root>
-
-          {/* Action Buttons */}
-          <HStack gap={2}>
-            <Button
-              onClick={() => fileInputRef.current?.click()}
-              loading={uploadMutation.isPending}
-              colorScheme="blue"
-              variant="solid"
-            >
-              <LuUpload />
-              {cookieInfo?.exists ? "Replace" : "Upload"} Cookie File
-            </Button>
-
-            {cookieInfo?.exists && (
-              <Button
-                onClick={handleDelete}
-                loading={deleteMutation.isPending}
-                colorScheme="red"
-                variant="outline"
-              >
-                <LuTrash2 />
-                Delete
-              </Button>
-            )}
-
-            <Button
-              onClick={() => refetch()}
-              loading={isLoading}
-              variant="outline"
-            >
-              <LuRefreshCw />
-              Refresh
-            </Button>
-          </HStack>
 
           {/* Hidden File Input */}
           <input
