@@ -40,6 +40,7 @@ services:
       - discogs_exports:/app/discogs_exports
       - spotify_exports:/app/spotify_exports
       - cookie_data:/app/cookies
+      - album_covers:/app/public/uploads/album-covers
       # Optional: Mount ALSA config for dmix (software mixing with AirPlay)
       # - ./config/asound.conf:/etc/asound.conf:ro
     # USB DAC audio device passthrough (optional)
@@ -177,3 +178,4 @@ volumes:
   redis_data:
   cookie_data:
   mpd_data:
+  album_covers:

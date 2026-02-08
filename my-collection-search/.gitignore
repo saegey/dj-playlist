@@ -43,3 +43,7 @@ next-env.d.ts
 # Cookie files - keep these local and out of repo
 /cookies/
 *.cookies.txt
+
+# Album cover uploads
+/public/uploads/album-covers/*
+!/public/uploads/album-covers/.gitkeep

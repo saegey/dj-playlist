@@ -100,12 +100,12 @@ export async function POST() {
                 date_added: album.date_added,
                 date_changed: album.date_changed,
                 track_count: album.tracklist?.length || 0,
-                label: album.labels ? album.labels[0]?.name : [],
+                label: album.labels?.[0]?.name ?? undefined,
                 catalog_number: album.labels?.[0]?.catno,
                 country: album.country,
                 format: Array.isArray(album.formats)
-                  ? album.formats?.[0]?.name
-                  : [],
+                  ? album.formats?.[0]?.name ?? undefined
+                  : undefined,
               };
 
               // Upsert album to database
