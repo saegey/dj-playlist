@@ -74,10 +74,13 @@ export async function updateTrack(data: UpdateTrackInput) {
   // Keep everything except `undefined`. Allow null and "" to pass through.
   const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
 
-  // Nothing to update? Return current row.
+  // Nothing to update? Return current row with library_identifier from albums
   if (entries.length === 0) {
     const currentRes = await pool.query(
-      "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2",
+      `SELECT t.*, a.library_identifier
+       FROM tracks t
+       LEFT JOIN albums a ON t.release_id = a.release_id AND t.friend_id = a.friend_id
+       WHERE t.track_id = $1 AND t.friend_id = $2`,
       [track_id, friend_id]
     );
     return currentRes.rows[0] ?? null;
@@ -108,10 +111,13 @@ export async function updateTrack(data: UpdateTrackInput) {
   // WHERE params
   values.push(track_id, friend_id);
 
-  // If after whitelisting there’s still nothing to set, just return current.
+  // If after whitelisting there's still nothing to set, just return current.
   if (setClauses.length === 0) {
     const currentRes = await pool.query(
-      "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2",
+      `SELECT t.*, a.library_identifier
+       FROM tracks t
+       LEFT JOIN albums a ON t.release_id = a.release_id AND t.friend_id = a.friend_id
+       WHERE t.track_id = $1 AND t.friend_id = $2`,
       [track_id, friend_id]
     );
     return currentRes.rows[0] ?? null;
@@ -125,11 +131,24 @@ export async function updateTrack(data: UpdateTrackInput) {
   `;
 
   const { rows } = await pool.query(sql, values);
-  return rows[0] ?? null;
+  // After update, fetch with library_identifier from albums
+  const updatedRes = await pool.query(
+    `SELECT t.*, a.library_identifier
+     FROM tracks t
+     LEFT JOIN albums a ON t.release_id = a.release_id AND t.friend_id = a.friend_id
+     WHERE t.track_id = $1 AND t.friend_id = $2`,
+    [track_id, friend_id]
+  );
+  return updatedRes.rows[0] ?? rows[0] ?? null;
 }
 
 export async function getAllTracks() {
-  const { rows } = await pool.query("SELECT * FROM tracks ORDER BY id DESC");
+  const { rows } = await pool.query(`
+    SELECT t.*, a.library_identifier
+    FROM tracks t
+    LEFT JOIN albums a ON t.release_id = a.release_id AND t.friend_id = a.friend_id
+    ORDER BY t.id DESC
+  `);
   return rows;
 }
 

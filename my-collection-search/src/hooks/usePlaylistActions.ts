@@ -104,11 +104,11 @@ export function usePlaylistActions(playlistId?: number) {
   };
 
   // Export playlist as PDF
-  const exportToPDF = (filename?: string) => {
+  const exportToPDF = async (filename?: string) => {
     const tracks = getTracks();
     const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
 
-    exportPlaylistToPDF({
+    await exportPlaylistToPDF({
       playlist: tracks,
       totalPlaytimeFormatted,
       filename:

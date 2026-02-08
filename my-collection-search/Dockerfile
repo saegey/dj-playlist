@@ -31,7 +31,7 @@ RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
 
 # Copy app code
 COPY . .
-RUN rm -rf public tmp dumps
+RUN rm -rf tmp dumps
 
 ENV NODE_ENV=production
 

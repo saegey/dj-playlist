@@ -86,7 +86,12 @@ export default function TrackResult({
                 {track.artist}
               </ArtistLink>
             </Text>
-            <Flex fontSize="sm" color="gray.600" gap={2}>
+            <Flex fontSize="sm" color="gray.600" gap={2} flexWrap="wrap" alignItems="center">
+              {track.library_identifier && (
+                <Badge colorPalette="blue" size="sm">
+                  {track.library_identifier}
+                </Badge>
+              )}
               <Text>{formatSeconds(track.duration_seconds || 0)}</Text>
               <Text>{track.position}</Text>
               {track.bpm && <Text>{track.bpm} bpm</Text>}
@@ -260,7 +265,12 @@ export default function TrackResult({
         {/* Row 2: Technical details and links on same line */}
         <Flex gap={4} fontSize={["xs", "sm", "sm"]} flexWrap="wrap" alignItems="center">
           {/* Technical Details */}
-          <Flex gap={3} color="gray.600" flexWrap="wrap">
+          <Flex gap={3} color="gray.600" flexWrap="wrap" alignItems="center">
+            {track.library_identifier && (
+              <Badge colorPalette="blue" size="sm" fontWeight="bold">
+                {track.library_identifier}
+              </Badge>
+            )}
             {track.position && <Text>Pos: {track.position}</Text>}
             {track.duration_seconds && track.duration_seconds > 0 && (
               <Text>{formatSeconds(track.duration_seconds)}</Text>

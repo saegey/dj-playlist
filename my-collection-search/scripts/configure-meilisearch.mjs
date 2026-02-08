@@ -51,6 +51,7 @@ async function configureMeiliSearch() {
       'title',
       'notes',
       'genres',
+      'library_identifier',
     ]);
     console.log('✅ Searchable attributes configured\n');
 
@@ -71,8 +72,19 @@ async function configureMeiliSearch() {
       'spotify_url',
       'soundcloud_url',
       'friend_id',
+      'library_identifier',
     ]);
     console.log('✅ Filterable attributes configured\n');
+
+    // Configure sortable attributes
+    console.log('Configuring sortable attributes...');
+    await index.updateSortableAttributes([
+      'library_identifier',
+      'year',
+      'bpm',
+      'star_rating',
+    ]);
+    console.log('✅ Sortable attributes configured\n');
 
     // Configure ranking rules
     console.log('Configuring ranking rules...');
@@ -86,7 +98,54 @@ async function configureMeiliSearch() {
     ]);
     console.log('✅ Ranking rules configured\n');
 
-    console.log('🎉 MeiliSearch configuration complete!');
+    // Configure albums index
+    console.log('\nConfiguring MeiliSearch albums index...\n');
+
+    const albumsIndex = meiliClient.index('albums');
+
+    // Configure searchable attributes for albums
+    console.log('Configuring albums searchable attributes...');
+    await albumsIndex.updateSearchableAttributes([
+      'title',
+      'artist',
+      'label',
+      'catalog_number',
+      'genres',
+      'styles',
+      'album_notes',
+      'library_identifier',
+    ]);
+    console.log('✅ Albums searchable attributes configured\n');
+
+    // Configure filterable attributes for albums
+    console.log('Configuring albums filterable attributes...');
+    await albumsIndex.updateFilterableAttributes([
+      'friend_id',
+      'release_id',
+      'year',
+      'genres',
+      'styles',
+      'album_rating',
+      'condition',
+      'date_added',
+      'label',
+      'format',
+      'library_identifier',
+    ]);
+    console.log('✅ Albums filterable attributes configured\n');
+
+    // Configure sortable attributes for albums
+    console.log('Configuring albums sortable attributes...');
+    await albumsIndex.updateSortableAttributes([
+      'library_identifier',
+      'date_added',
+      'year',
+      'title',
+      'album_rating',
+    ]);
+    console.log('✅ Albums sortable attributes configured\n');
+
+    console.log('🎉 MeiliSearch configuration complete for both tracks and albums!');
     console.log('\nNote: These settings will be applied asynchronously.');
     console.log('You can check the status at http://localhost:7700');
 

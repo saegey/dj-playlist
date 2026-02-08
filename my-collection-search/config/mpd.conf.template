@@ -22,7 +22,7 @@ log_level           "default"
 audio_output {
     type            "alsa"
     name            "USB DAC"
-    device          "${AUDIO_DEVICE}"
+    device          "plughw:0,0"
     mixer_type      "software"
     # Enable auto-conversion - ALSA does this efficiently in hardware
     auto_resample   "yes"

@@ -28,6 +28,7 @@ import TrackResult from "@/components/TrackResult";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { toaster } from "@/components/ui/toaster";
+import { useColorModeValue } from "@/components/ui/color-mode";
 
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
@@ -52,7 +53,12 @@ function AlbumDetailContent() {
   const [notes, setNotes] = React.useState("");
   const [purchasePrice, setPurchasePrice] = React.useState("");
   const [condition, setCondition] = React.useState("");
+  const [libraryIdentifier, setLibraryIdentifier] = React.useState("");
   const [isDownloading, setIsDownloading] = React.useState(false);
+
+  const panelBg = useColorModeValue("gray.50", "gray.800");
+  const mutedText = useColorModeValue("gray.600", "gray.400");
+  const subtleText = useColorModeValue("gray.500", "gray.500");
 
   React.useEffect(() => {
     if (data?.album) {
@@ -60,6 +66,7 @@ function AlbumDetailContent() {
       setNotes(data.album.album_notes || "");
       setPurchasePrice(data.album.purchase_price?.toString() || "");
       setCondition(data.album.condition || "");
+      setLibraryIdentifier(data.album.library_identifier || "");
     }
   }, [data]);
 
@@ -73,6 +80,7 @@ function AlbumDetailContent() {
       album_notes: notes,
       purchase_price: purchasePrice ? parseFloat(purchasePrice) : undefined,
       condition: condition || undefined,
+      library_identifier: libraryIdentifier || null,
     });
     setIsEditing(false);
   };
@@ -200,15 +208,22 @@ function AlbumDetailContent() {
         {/* Album info */}
         <Flex flex="1" direction="column" gap={3}>
           <Box>
-            <Heading size="2xl" mb={2}>
-              {album.title}
-            </Heading>
+            <Flex alignItems="center" gap={3} mb={2} flexWrap="wrap">
+              {album.library_identifier && (
+                <Badge colorPalette="blue" size="lg" variant="solid" fontWeight="bold">
+                  {album.library_identifier}
+                </Badge>
+              )}
+              <Heading size="2xl">
+                {album.title}
+              </Heading>
+            </Flex>
             <Link
               as={NextLink}
               href={`/albums?q=${encodeURIComponent(album.artist)}`}
               _hover={{ textDecoration: "underline" }}
             >
-              <Heading size="lg" color="gray.600" fontWeight="normal">
+              <Heading size="lg" color={mutedText} fontWeight="normal">
                 {album.artist}
               </Heading>
             </Link>
@@ -238,13 +253,13 @@ function AlbumDetailContent() {
                 </RatingGroup.Item>
               ))}
             </RatingGroup.Root>
-            <Text fontSize="md" color="gray.500">
+            <Text fontSize="md" color={subtleText}>
               ({rating}/5)
             </Text>
           </Flex>
 
           {/* Metadata */}
-          <Flex gap={4} flexWrap="wrap" fontSize="md" color="gray.600">
+          <Flex gap={4} flexWrap="wrap" fontSize="md" color={mutedText}>
             {album.year && <Text fontWeight="semibold">{album.year}</Text>}
             {album.format && <Text>{album.format}</Text>}
             {album.label && <Text>{album.label}</Text>}
@@ -269,21 +284,21 @@ function AlbumDetailContent() {
           )}
 
           {/* Track count and date added */}
-          <Flex gap={4} fontSize="sm" color="gray.500">
+          <Flex gap={4} fontSize="sm" color={subtleText}>
             {album.track_count && <Text>{album.track_count} tracks</Text>}
             {album.date_added && <Text>Added: {formatDate(album.date_added)}</Text>}
           </Flex>
 
           {/* Notes display (when not editing) */}
           {!isEditing && album.album_notes && (
-            <Box p={3} bg="gray.50" borderRadius="md">
+            <Box p={3} bg={panelBg} borderRadius="md" borderWidth="1px">
               <Text fontSize="md">{album.album_notes}</Text>
             </Box>
           )}
 
           {/* Purchase info display */}
           {!isEditing && (album.purchase_price || album.condition) && (
-            <Flex gap={4} fontSize="md" color="gray.600">
+            <Flex gap={4} fontSize="md" color={mutedText}>
               {album.purchase_price && <Text>Price: ${album.purchase_price}</Text>}
               {album.condition && <Text>Condition: {album.condition}</Text>}
             </Flex>
@@ -291,7 +306,7 @@ function AlbumDetailContent() {
 
           {/* Edit form */}
           {isEditing && (
-            <Box mt={2} p={4} borderWidth="1px" borderRadius="md" bg="gray.50">
+            <Box mt={2} p={4} borderWidth="1px" borderRadius="md" bg={panelBg}>
               <Flex direction="column" gap={3}>
                 <Box>
                   <Text fontSize="sm" fontWeight="bold" mb={1}>
@@ -333,6 +348,19 @@ function AlbumDetailContent() {
                   </Box>
                 </Flex>
 
+                <Box>
+                  <Text fontSize="sm" fontWeight="bold" mb={1}>
+                    Library Identifier (e.g., LP001)
+                  </Text>
+                  <Input
+                    value={libraryIdentifier}
+                    onChange={(e) => setLibraryIdentifier(e.target.value)}
+                    placeholder="LP001"
+                    size="sm"
+                    maxLength={50}
+                  />
+                </Box>
+
                 <Flex gap={2} mt={2}>
                   <Button size="sm" colorScheme="blue" onClick={handleSave}>
                     Save
@@ -345,6 +373,7 @@ function AlbumDetailContent() {
                       setNotes(album.album_notes || "");
                       setPurchasePrice(album.purchase_price?.toString() || "");
                       setCondition(album.condition || "");
+                      setLibraryIdentifier(album.library_identifier || "");
                     }}
                   >
                     Cancel
@@ -402,7 +431,7 @@ function AlbumDetailContent() {
         </Heading>
 
         {tracks.length === 0 ? (
-          <Text color="gray.500">No tracks found for this album.</Text>
+          <Text color={subtleText}>No tracks found for this album.</Text>
         ) : (
           <Flex direction="column" gap={3}>
             {tracks.map((track) => (

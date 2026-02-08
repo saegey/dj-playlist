@@ -2,6 +2,78 @@ import jsPDF from "jspdf";
 import type { Track } from "@/types/track";
 import { formatSeconds } from "@/lib/trackUtils";
 
+const MONO_TTF_PATH = "/NotoSansMono-Regular.ttf";
+const MONO_TTF_VFS = "NotoSansMono-Regular.ttf";
+const MONO_FONT_NAME = "NotoSansMono";
+let monoLoadPromise: Promise<void> | null = null;
+let monoBase64: string | null = null;
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function ensureMonoFont(doc: jsPDF): Promise<void> {
+  if (!monoLoadPromise) {
+    monoLoadPromise = (async () => {
+      try {
+        const res = await fetch(MONO_TTF_PATH);
+        if (!res.ok) {
+          throw new Error(`Failed to load ${MONO_TTF_PATH}`);
+        }
+        const buffer = await res.arrayBuffer();
+        monoBase64 = arrayBufferToBase64(buffer);
+      } catch {
+        // Fall back to built-in font if PT Mono isn't available
+      }
+    })();
+  }
+  await monoLoadPromise;
+  if (monoBase64) {
+    try {
+      doc.addFileToVFS(MONO_TTF_VFS, monoBase64);
+      doc.addFont(MONO_TTF_VFS, MONO_FONT_NAME, "normal");
+    } catch {
+      // Ignore and fall back
+    }
+  }
+  try {
+    doc.setFont(MONO_FONT_NAME, "normal");
+  } catch {
+    doc.setFont("courier", "normal");
+  }
+}
+
+function truncateToWidth(doc: jsPDF, text: string, maxWidth: number): string {
+  if (doc.getTextWidth(text) <= maxWidth) return text;
+  const ellipsis = "...";
+  if (doc.getTextWidth(ellipsis) > maxWidth) return "";
+
+  let low = 0;
+  let high = text.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    const candidate = text.slice(0, mid) + ellipsis;
+    if (doc.getTextWidth(candidate) <= maxWidth) {
+      low = mid;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return text.slice(0, low) + ellipsis;
+}
+
+function sanitizeForPdf(value: unknown): string {
+  const text = String(value ?? "");
+  // Normalize whitespace; keep full Unicode for supported fonts.
+  return text.replace(/\s+/g, " ").trim();
+}
+
 /**
  * Exports a playlist to PDF using jsPDF.
  * @param playlist The playlist array (all tracks)
@@ -9,7 +81,7 @@ import { formatSeconds } from "@/lib/trackUtils";
  * @param totalPlaytimeFormatted The formatted total playtime string
  * @param filename The filename for the PDF (default: "playlist.pdf")
  */
-export function exportPlaylistToPDF({
+export async function exportPlaylistToPDF({
   playlist,
   totalPlaytimeFormatted,
   filename = "playlist.pdf",
@@ -19,66 +91,130 @@ export function exportPlaylistToPDF({
   filename?: string;
 }) {
   if (!playlist.length) return;
-  const currentPlaylist = playlist;
-  const doc = new jsPDF();
-  doc.setFont("courier", "normal");
-  doc.setFontSize(8);
-  doc.text(`Total Tracks: ${playlist.length}`, 10, 15);
-  doc.text(`Total Playtime: ${totalPlaytimeFormatted}`, 10, 18);
-  let y = 25;
-  doc.setFontSize(8);
-  doc.setLineHeightFactor(0.8);
+  const doc = new jsPDF({ orientation: "landscape" });
+  await ensureMonoFont(doc);
 
-  currentPlaylist.forEach((track, idx) => {
-    if (y > 270) {
+  const marginLeft = 10;
+  const marginTop = 12;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const rowHeight = 4;
+  const headerGap = 6;
+  const headerY = marginTop + 10;
+  const tableTopY = headerY + headerGap;
+  const maxY = pageHeight - 12;
+  const footerText = "Exported via GrooveNET. The future of vinyl.";
+  const footerY = pageHeight - 6;
+
+  doc.setFontSize(8);
+  doc.setLineHeightFactor(1);
+  doc.text(`Total Tracks: ${playlist.length}`, marginLeft, marginTop);
+  doc.text(`Total Playtime: ${totalPlaytimeFormatted}`, marginLeft, marginTop + 3);
+
+  const columns = [
+    { key: "#", label: "#", width: 6 },
+    { key: "pos", label: "Pos", width: 8 },
+    { key: "artist", label: "Artist", width: 50 },
+    { key: "title", label: "Title", width: 60 },
+    { key: "album", label: "Album", width: 60 },
+    { key: "id", label: "ID", width: 20 },
+    { key: "bpm", label: "BPM", width: 10 },
+    { key: "key", label: "Key", width: 16 },
+    { key: "dur", label: "Dur", width: 10 },
+    { key: "genre", label: "Genre", width: 30 },
+  ];
+
+  const totalWidth = columns.reduce((sum, col) => sum + col.width, 0);
+  const availableWidth = pageWidth - marginLeft * 2;
+  if (totalWidth > availableWidth) {
+    const scale = availableWidth / totalWidth;
+    columns.forEach((col) => {
+      col.width = Math.floor(col.width * scale);
+    });
+  }
+
+  const getXPositions = (): number[] => {
+    const xs: number[] = [marginLeft];
+    for (let i = 0; i < columns.length - 1; i += 1) {
+      xs.push(xs[i] + columns[i].width);
+    }
+    return xs;
+  };
+
+  const xPositions = getXPositions();
+
+  const renderHeader = (y: number) => {
+    columns.forEach((col, idx) => {
+      doc.text(col.label, xPositions[idx], y);
+    });
+    doc.line(marginLeft, y + 1, marginLeft + availableWidth, y + 1);
+  };
+  const renderFooter = () => {
+    doc.text(footerText, marginLeft, footerY);
+  };
+
+  let y = tableTopY;
+  renderHeader(y);
+  y += rowHeight;
+
+  playlist.forEach((track, idx) => {
+    if (y > maxY) {
+      renderFooter();
       doc.addPage();
-      y = 20;
+      y = marginTop;
+      doc.text(`Total Tracks: ${playlist.length}`, marginLeft, y);
+      doc.text(
+        `Total Playtime: ${totalPlaytimeFormatted}`,
+        marginLeft,
+        y + 3
+      );
+      y = tableTopY;
+      renderHeader(y);
+      y += rowHeight;
     }
-    const indexStr = idx + 1 < 10 ? ` ${idx + 1}` : `${idx + 1}`;
-    doc.text(
-      `${indexStr}. ${track.artist || "Unknown Artist"} - ${
-        track.title || "Untitled"
-      }`,
-      10,
-      y
+
+    const indexStr = sanitizeForPdf(`${idx + 1}`);
+    const position = sanitizeForPdf(
+      track.position !== undefined && track.position !== null
+        ? String(track.position)
+        : "-"
     );
-    y += 3;
-    if (track.album) {
-      doc.text(`   Album: ${track.album}`, 12, y);
-      y += 3;
-    }
-    if (track.bpm || track.key) {
-      doc.text(
-        `   BPM: ${track.bpm || "-"}   Key: ${track.key || "-"}`,
-        12,
-        y
-      );
-      y += 3;
-    }
-    // if (track.danceability) {
-    //   doc.text(`   Danceability: ${track.danceability}`, 12, y);
-    //   y += 5;
-    // }
-    if (track.duration_seconds) {
-      doc.text(
-        `   Duration: ${formatSeconds(track.duration_seconds)} / Position: ${
-          track.position
-        }`,
-        12,
-        y
-      );
-      y += 3;
-    }
-    if (track.local_tags) {
-      // Remove problematic characters (newlines, tabs, excessive spaces, non-printable, and non-ASCII)
-      const cleanTags = String(track.local_tags)
-        .replace(/[^\x20-\x7E]+/g, " ") // keep only printable ASCII
-        .replace(/\s+/g, " ") // collapse all whitespace
-        .trim();
-      doc.text(`   Tags: ${cleanTags}`, 12, y);
-      y += 3;
-    }
-    y += 2;
+    const artist = sanitizeForPdf(track.artist || "Unknown Artist");
+    const title = sanitizeForPdf(track.title || "Untitled");
+    const album = sanitizeForPdf(track.album || "");
+    const id = sanitizeForPdf(track.library_identifier || "");
+    const bpm = sanitizeForPdf(track.bpm || "-");
+    const key = sanitizeForPdf(track.key || "-");
+    const dur = sanitizeForPdf(
+      track.duration_seconds
+      ? formatSeconds(track.duration_seconds)
+      : "-"
+    );
+    const genre = sanitizeForPdf(
+      Array.isArray(track.genres) ? track.genres.join(", ") : ""
+    );
+
+    const rowValues = [
+      indexStr,
+      position,
+      artist,
+      title,
+      album,
+      id,
+      bpm,
+      key,
+      dur,
+      genre,
+    ];
+
+    rowValues.forEach((value, colIdx) => {
+      const maxWidth = columns[colIdx].width - 1;
+      const displayValue = truncateToWidth(doc, String(value), maxWidth);
+      doc.text(displayValue, xPositions[colIdx], y);
+    });
+
+    y += rowHeight;
   });
+  renderFooter();
   doc.save(filename);
 }

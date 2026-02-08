@@ -11,11 +11,12 @@ endif
 
 # Timestamped release tag like v20250112T153045Z
 TAG_PREFIX ?= v
-TAG_TIME ?= $(shell date -u +%Y%m%dT%H%M%SZ)
+TAG_TIME := $(shell date -u +%Y%m%dT%H%M%SZ)
 TAG ?= $(TAG_PREFIX)$(TAG_TIME)
 
 .PHONY: tag tag-push compose-dev compose-prod compose-down compose-logs compose-dev-mac
 .PHONY: build-app build-essentia build-ga-service build-download-worker build-all
+.PHONY: migrate-up migrate-down migrate-create configure-meili reindex-meili
 
 tag:
 	@# Refuse to tag if the working tree is dirty
@@ -56,3 +57,21 @@ build-download-worker:
 	docker buildx build -t ghcr.io/saegey/download-worker:$(TAG) -f $(COMPOSE_DIR)/Dockerfile.download-worker $(COMPOSE_DIR)
 
 build-all: build-app build-essentia build-ga-service build-download-worker
+
+# Database migrations
+migrate-up:
+	$(COMPOSE) -f $(COMPOSE_DIR)/docker-compose.yml run --rm migrate
+
+migrate-down:
+	$(COMPOSE) -f $(COMPOSE_DIR)/docker-compose.yml run --rm migrate npx node-pg-migrate down
+
+migrate-create:
+	@if [ -z "$(NAME)" ]; then echo "Usage: make migrate-create NAME=my-migration-name"; exit 1; fi
+	cd $(COMPOSE_DIR) && npm run migrate create $(NAME)
+
+# MeiliSearch configuration
+configure-meili:
+	$(COMPOSE) -f $(COMPOSE_DIR)/docker-compose.yml exec app node scripts/configure-meilisearch.mjs
+
+reindex-meili:
+	$(COMPOSE) -f $(COMPOSE_DIR)/docker-compose.yml exec app node scripts/reindex-meilisearch.mjs

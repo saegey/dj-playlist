@@ -37,6 +37,7 @@ export async function configureMeiliIndex(index: Index, meiliClient: MeiliSearch
     "title",
     "notes",
     "genres",
+    "library_identifier",
   ]);
   await index.updateFilterableAttributes([
     "track_id",
@@ -53,6 +54,13 @@ export async function configureMeiliIndex(index: Index, meiliClient: MeiliSearch
     "spotify_url",
     "soundcloud_url",
     "friend_id",
+    "library_identifier",
+  ]);
+  await index.updateSortableAttributes([
+    "library_identifier",
+    "year",
+    "bpm",
+    "star_rating",
   ]);
   await index.updateRankingRules([
     "words",

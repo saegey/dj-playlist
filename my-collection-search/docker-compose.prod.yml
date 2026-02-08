@@ -128,9 +128,10 @@ services:
     volumes:
       - music_data:/var/lib/mpd/music:ro  # Read-only music files
       - mpd_data:/var/lib/mpd  # MPD state/database
-      - ./config/mpd.conf:/etc/mpd.conf:ro
+      - ./config/mpd.conf:/etc/mpd.conf.template:ro
     environment:
-      - AUDIO_DEVICE=${AUDIO_DEVICE:-hw:1,0}
+      - AUDIO_DEVICE=${AUDIO_DEVICE:-hw:0,0}
+    command: sh -c "sed 's|\$${AUDIO_DEVICE}|'\"$$AUDIO_DEVICE\"'|g' /etc/mpd.conf.template > /etc/mpd.conf && mpd --no-daemon /etc/mpd.conf"
 
   # AirPlay Receiver
   # Provides AirPlay streaming to your USB DAC
@@ -147,12 +148,16 @@ services:
       - AIRPLAY_AUTO_PAUSE=${AIRPLAY_AUTO_PAUSE:-true}
       # App URL for sending pause commands (since using host network mode)
       - APP_URL=${APP_URL:-http://localhost:3000}
+      # Audio device configuration
+      - AUDIO_DEVICE=${AUDIO_DEVICE:-plughw:1,0}
     devices:
       - /dev/snd:/dev/snd  # Share audio device with app
     volumes:
-      - ./config/shairport-sync.conf:/etc/shairport-sync.conf:ro
+      - ./config/shairport-sync.conf:/etc/shairport-sync.conf.template:ro
       - ./scripts/airplay-session-start.sh:/usr/local/bin/airplay-session-start.sh:ro
       - ./scripts/airplay-session-end.sh:/usr/local/bin/airplay-session-end.sh:ro
+      - ./scripts/shairport-entrypoint.sh:/usr/local/bin/shairport-entrypoint.sh:ro
+    entrypoint: ["/usr/local/bin/shairport-entrypoint.sh"]
     # Exclusive hardware access mode - only one service can use DAC at a time
 
 
