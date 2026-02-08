@@ -58,9 +58,12 @@ export async function GET() {
     const jobs = await redisJobService.getAllJobs();
     const summary = await redisJobService.getJobSummary();
 
+    const validJobs = jobs.filter(
+      (job) => job.track_id && Number.isFinite(job.friend_id)
+    );
     const pairKeys = Array.from(
       new Map(
-        jobs.map((job) => [`${job.track_id}:${job.friend_id}`, job])
+        validJobs.map((job) => [`${job.track_id}:${job.friend_id}`, job])
       ).values()
     );
     const trackMap = new Map<string, Record<string, unknown>>();
@@ -92,6 +95,7 @@ export async function GET() {
 
     // Convert Redis JobStatus to our JobInfo format
     const formattedJobs: JobInfo[] = jobs.map((job) => {
+      const safeFriendId = Number.isFinite(job.friend_id) ? job.friend_id : 0;
       const track = trackMap.get(`${job.track_id}:${job.friend_id}`);
       return {
       id: job.job_id,
@@ -105,7 +109,7 @@ export async function GET() {
       progress: job.progress,
       data: {
         track_id: job.track_id,
-        friend_id: job.friend_id,
+        friend_id: safeFriendId,
         title:
           typeof job.result?.title === "string"
             ? job.result.title
