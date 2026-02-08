@@ -103,7 +103,7 @@ export default function AlbumResult({
                   fontWeight="bold"
                   fontSize={{ base: "sm", md: "lg" }}
                   color={titleColor}
-                  noOfLines={{ base: 2, md: 3 }}
+                  lineClamp={{ base: 2, md: 3 }}
                   lineHeight={{ base: "1.3", md: "1.4" }}
                 >
                   {album.title}
@@ -118,7 +118,7 @@ export default function AlbumResult({
               <Text
                 fontSize={{ base: "xs", md: "md" }}
                 color={mutedText}
-                noOfLines={1}
+                lineClamp={1}
               >
                 {album.artist}
               </Text>

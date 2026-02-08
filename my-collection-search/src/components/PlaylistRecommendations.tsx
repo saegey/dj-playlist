@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Box, Text, Button, Menu } from "@chakra-ui/react";
+import { Box, Button, Menu } from "@chakra-ui/react";
 import TrackResultStore from "@/components/TrackResultStore";
 import type { Track } from "@/types/track";
 import { FiEdit, FiMoreVertical, FiPlus, FiPlusSquare } from "react-icons/fi";

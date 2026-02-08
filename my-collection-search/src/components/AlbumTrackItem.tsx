@@ -86,7 +86,7 @@ export default function AlbumTrackItem({
             <Text
               fontWeight="bold"
               fontSize={{ base: "sm", md: "md" }}
-              noOfLines={1}
+              lineClamp={1}
             >
               {track.title}
             </Text>
@@ -97,7 +97,7 @@ export default function AlbumTrackItem({
             <Text
               fontSize={{ base: "xs", md: "sm" }}
               color="gray.600"
-              noOfLines={1}
+              lineClamp={1}
             >
               {track.artist}
             </Text>
