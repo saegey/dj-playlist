@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 import { NextRequest, NextResponse } from "next/server";
 import { TextEncoder } from "util";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -83,6 +84,22 @@ export async function POST(request: Request) {
       "INSERT INTO friends (username) VALUES ($1) ON CONFLICT DO NOTHING",
       [username]
     );
+
+    // PostHog: Track friend added (server-side)
+    try {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: "server",
+        event: "friend_added",
+        properties: {
+          friend_username: username,
+          source: "api",
+        },
+      });
+    } catch (posthogError) {
+      console.error("PostHog capture error:", posthogError);
+    }
+
     return NextResponse.json({ message: `Friend '${username}' added.` });
   } catch (e) {
     return NextResponse.json(
@@ -209,6 +226,21 @@ export async function DELETE(request: Request) {
         // Remove from friends table
         await pool.query("DELETE FROM friends WHERE username = $1", [username]);
         controller.enqueue(encoder.encode(`Deleted friend: ${username}\n`));
+
+        // PostHog: Track friend removed (server-side)
+        try {
+          const posthog = getPostHogClient();
+          posthog.capture({
+            distinctId: "server",
+            event: "friend_removed",
+            properties: {
+              friend_username: username,
+              source: "api",
+            },
+          });
+        } catch (posthogError) {
+          console.error("PostHog capture error:", posthogError);
+        }
 
         controller.enqueue(encoder.encode(`DONE\n`));
         controller.close();

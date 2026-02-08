@@ -13,6 +13,7 @@ import PlaylistRecommendations from "./PlaylistRecommendations";
 import { analyzeTrackAsync } from "@/services/trackService";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
+import posthog from "posthog-js";
 
 type Props = {
   track: Track;
@@ -51,6 +52,14 @@ export default function TrackActionsMenu({ track }: Props) {
         title: "Audio Fetch Queued",
         description: `Job ID: ${response.jobId}`,
         type: "success",
+      });
+
+      // PostHog: Track audio fetch queued
+      posthog.capture("audio_fetch_queued", {
+        track_id: track.track_id,
+        has_apple_music: !!track.apple_music_url,
+        has_youtube: !!track.youtube_url,
+        has_soundcloud: !!track.soundcloud_url,
       });
     } catch (err) {
       toaster.create({
@@ -97,6 +106,14 @@ export default function TrackActionsMenu({ track }: Props) {
                 onSelect={() => {
                   setRecommendationsTrackSnapshot([track]);
                   setRecommendationsModalOpen(true);
+
+                  // PostHog: Track AI recommendations requested
+                  posthog.capture("ai_recommendations_requested", {
+                    track_id: track.track_id,
+                    track_title: track.title,
+                    track_artist: track.artist,
+                    source: "track_menu",
+                  });
                 }}
                 value="recommendations"
               >

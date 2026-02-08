@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -32,6 +33,21 @@ export async function GET(request: Request) {
     path: "/",
     maxAge: tokenData.expires_in,
   });
+
+  // PostHog: Track Spotify connected (server-side)
+  try {
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: "server",
+      event: "spotify_connected",
+      properties: {
+        source: "api",
+      },
+    });
+  } catch (posthogError) {
+    console.error("PostHog capture error:", posthogError);
+  }
+
   // Redirect to original page if state param is present, else fallback to /settings
   const state = url.searchParams.get("state");
   const redirectTo = state || "/settings";

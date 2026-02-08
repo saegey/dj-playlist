@@ -1,0 +1,87 @@
+[
+  {
+    "event_name": "search_query_executed",
+    "description": "User performs a search query in the track search",
+    "file_path": "src/components/SearchResults.tsx"
+  },
+  {
+    "event_name": "search_filter_applied",
+    "description": "User applies filters to search results",
+    "file_path": "src/components/SearchResults.tsx"
+  },
+  {
+    "event_name": "playlist_created",
+    "description": "User creates a new playlist (server-side)",
+    "file_path": "src/app/api/playlists/route.ts"
+  },
+  {
+    "event_name": "playlist_deleted",
+    "description": "User deletes a playlist (server-side)",
+    "file_path": "src/app/api/playlists/route.ts"
+  },
+  {
+    "event_name": "playlist_imported",
+    "description": "User imports a playlist from JSON or Apple Music XML",
+    "file_path": "src/components/PlaylistManager.tsx"
+  },
+  {
+    "event_name": "playlist_exported",
+    "description": "User exports a playlist to JSON or PDF",
+    "file_path": "src/components/PlaylistViewer.tsx"
+  },
+  {
+    "event_name": "playlist_sorted",
+    "description": "User sorts playlist using genetic algorithm or greedy sort",
+    "file_path": "src/components/PlaylistViewer.tsx"
+  },
+  {
+    "event_name": "track_added_to_playlist",
+    "description": "User adds a track to a playlist",
+    "file_path": "src/components/TrackActionsMenu.tsx"
+  },
+  {
+    "event_name": "track_edited",
+    "description": "User edits track metadata (rating, notes, tags, etc.)",
+    "file_path": "src/app/api/tracks/update/route.ts"
+  },
+  {
+    "event_name": "audio_fetch_queued",
+    "description": "User queues audio download for a track",
+    "file_path": "src/components/TrackActionsMenu.tsx"
+  },
+  {
+    "event_name": "album_download_queued",
+    "description": "User queues audio download for all tracks in an album (server-side)",
+    "file_path": "src/app/api/albums/[releaseId]/download/route.ts"
+  },
+  {
+    "event_name": "discogs_sync_started",
+    "description": "User starts Discogs collection sync (server-side)",
+    "file_path": "src/app/api/discogs/route.ts"
+  },
+  {
+    "event_name": "friend_added",
+    "description": "User adds a friend/collection to track (server-side)",
+    "file_path": "src/app/api/friends/route.ts"
+  },
+  {
+    "event_name": "friend_removed",
+    "description": "User removes a friend/collection (server-side)",
+    "file_path": "src/app/api/friends/route.ts"
+  },
+  {
+    "event_name": "spotify_connected",
+    "description": "User successfully authenticates with Spotify (server-side)",
+    "file_path": "src/app/api/spotify/callback/route.ts"
+  },
+  {
+    "event_name": "ai_recommendations_requested",
+    "description": "User requests AI track recommendations",
+    "file_path": "src/components/TrackActionsMenu.tsx"
+  },
+  {
+    "event_name": "playback_started",
+    "description": "User starts playing a track or playlist",
+    "file_path": "src/components/PlaylistManager.tsx"
+  }
+]

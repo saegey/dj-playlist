@@ -1,5 +1,6 @@
 import { Playlist } from "@/types/track";
 import { NextResponse } from "next/server";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 import { Pool } from "pg";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -356,6 +357,24 @@ export async function DELETE(req: Request) {
         { status: 404 }
       );
     }
+
+    // PostHog: Track playlist deletion (server-side)
+    try {
+      const posthog = getPostHogClient();
+      const deletedPlaylist = result.rows[0];
+      posthog.capture({
+        distinctId: "server",
+        event: "playlist_deleted",
+        properties: {
+          playlist_id: id,
+          playlist_name: deletedPlaylist?.name,
+          source: "api",
+        },
+      });
+    } catch (posthogError) {
+      console.error("PostHog capture error:", posthogError);
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting playlist:", error);
@@ -383,6 +402,24 @@ export async function POST(req: Request) {
   try {
     const data = await req.json();
     const playlist = await createPlaylistWithTracks(data);
+
+    // PostHog: Track playlist creation (server-side)
+    try {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: "server",
+        event: "playlist_created",
+        properties: {
+          playlist_id: playlist.id,
+          playlist_name: playlist.name,
+          track_count: playlist.tracks?.length ?? 0,
+          source: "api",
+        },
+      });
+    } catch (posthogError) {
+      console.error("PostHog capture error:", posthogError);
+    }
+
     return NextResponse.json(playlist, { status: 201 });
   } catch (error) {
     console.error("Error creating playlist:", error);

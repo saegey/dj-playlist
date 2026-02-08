@@ -8,6 +8,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import type { Track, Playlist } from "@/types/track";
 import PlaylistSelectionDialog from "@/components/PlaylistSelectionDialog";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
+import posthog from "posthog-js";
 
 /**
  * Hook for managing add-to-playlist dialog workflow
@@ -53,6 +54,14 @@ export function useAddToPlaylistDialog() {
       // Invalidate playlist queries to refresh data
       queryClient.invalidateQueries({ queryKey: queryKeys.playlists() });
       queryClient.invalidateQueries({ queryKey: queryKeys.playlistTrackIds(playlist.id) });
+
+      // PostHog: Track track added to playlist
+      posthog.capture("track_added_to_playlist", {
+        track_id: track.track_id,
+        playlist_id: playlist.id,
+        playlist_name: playlist.name,
+        is_new_playlist: false,
+      });
     },
     onError: (error) => {
       toaster.create({
@@ -80,6 +89,13 @@ export function useAddToPlaylistDialog() {
       });
       // Invalidate playlist queries to refresh data
       queryClient.invalidateQueries({ queryKey: queryKeys.playlists() });
+
+      // PostHog: Track track added to playlist
+      posthog.capture("track_added_to_playlist", {
+        track_id: track.track_id,
+        playlist_name: name,
+        is_new_playlist: true,
+      });
     },
     onError: (error) => {
       toaster.create({

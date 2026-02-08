@@ -39,6 +39,7 @@ import {
 import { analyzeTrackAsync } from "@/services/trackService";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { queryKeys } from "@/lib/queryKeys";
+import posthog from "posthog-js";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});

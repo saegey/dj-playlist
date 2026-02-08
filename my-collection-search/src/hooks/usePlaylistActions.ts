@@ -3,6 +3,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import type { Track } from "@/types/track";
 import { useTrackStore } from "@/stores/trackStore";
 import { exportPlaylistToPDF } from "@/lib/exportPlaylistPdf";
+import posthog from "posthog-js";
 
 /**
  * Hook for playlist export and utility actions
@@ -101,6 +102,13 @@ export function usePlaylistActions(playlistId?: number) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
+    // PostHog: Track playlist export
+    posthog.capture("playlist_exported", {
+      playlist_id: playlistId,
+      track_count: tracks.length,
+      export_format: "json",
+    });
   };
 
   // Export playlist as PDF
@@ -113,6 +121,13 @@ export function usePlaylistActions(playlistId?: number) {
       totalPlaytimeFormatted,
       filename:
         filename || `playlist-${new Date().toISOString().split("T")[0]}.pdf`,
+    });
+
+    // PostHog: Track playlist export
+    posthog.capture("playlist_exported", {
+      playlist_id: playlistId,
+      track_count: tracks.length,
+      export_format: "pdf",
     });
   };
 

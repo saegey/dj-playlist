@@ -14,6 +14,7 @@ import {
   getCollectionPage,
   getReleaseDetails,
 } from "@/services/discogsApiClient";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 const DISCOGS_USER_TOKEN = process.env.DISCOGS_USER_TOKEN;
 // Username can be passed as a param or defaults to env
@@ -55,6 +56,22 @@ export async function GET(request: NextRequest) {
             `Loaded manifest IDs for ${username}: ${manifestIds.length}\n\n`
           )
         );
+
+        // PostHog: Track Discogs sync started (server-side)
+        try {
+          const posthog = getPostHogClient();
+          posthog.capture({
+            distinctId: "server",
+            event: "discogs_sync_started",
+            properties: {
+              username,
+              manifest_ids_count: manifestIds.length,
+              source: "api",
+            },
+          });
+        } catch (posthogError) {
+          console.error("PostHog capture error:", posthogError);
+        }
 
         try {
           // Step 1: Collect all collection release IDs

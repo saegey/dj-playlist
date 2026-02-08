@@ -31,6 +31,7 @@ import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { FaPlay } from "react-icons/fa";
 import { fetchTracksByIds } from "@/services/trackService";
 import { formatDateWithRelative } from "@/lib/date";
+import posthog from "posthog-js";
 
 type Props = {
   xmlImportModalOpen: boolean;
@@ -141,6 +142,13 @@ export default function PlaylistManager({
       if (res.ok) {
         notify({ title: `Imported '${name}'`, type: "success" });
         fetchPlaylists();
+
+        // PostHog: Track playlist import
+        posthog.capture("playlist_imported", {
+          playlist_name: name,
+          track_count: tracks.length,
+          import_format: "json",
+        });
       } else {
         notify({ title: "Failed to import playlist", type: "error" });
       }
@@ -186,6 +194,13 @@ export default function PlaylistManager({
       if (res.ok) {
         notify({ title: `Imported '${pendingImport.name}'`, type: "success" });
         fetchPlaylists();
+
+        // PostHog: Track playlist import
+        posthog.capture("playlist_imported", {
+          playlist_name: pendingImport.name,
+          track_count: tracks.length,
+          import_format: "json",
+        });
       } else {
         notify({ title: "Failed to import playlist", type: "error" });
       }
@@ -361,6 +376,14 @@ export default function PlaylistManager({
                             onClick={async () => {
                               const tracks = await fetchTracksByIds(pl.tracks);
                               replacePlaylist(tracks, { autoplay: true, startIndex: 0 });
+
+                              // PostHog: Track playback started
+                              posthog.capture("playback_started", {
+                                playlist_id: pl.id,
+                                playlist_name: pl.name,
+                                track_count: pl.tracks.length,
+                                source: "playlist_manager",
+                              });
                             }}
                           >
                             <FaPlay /> Play now

@@ -4,6 +4,7 @@ import React from "react";
 import { Box, Input, Text, InputGroup, IconButton, Flex, Spinner, Badge } from "@chakra-ui/react";
 import { LuSearch, LuLayoutGrid, LuTable, LuMaximize2, LuMinimize2, LuFilter } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import posthog from "posthog-js";
 
 import TrackResultStore from "@/components/TrackResultStore";
 import TrackTableViewWithLoader from "@/components/TrackTableViewWithLoader";
@@ -48,6 +49,10 @@ const SearchResults: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const searchParamsString = React.useMemo(
+    () => searchParams?.toString() ?? "",
+    [searchParams]
+  );
   const { friend: currentUserFriend } = useUsername();
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
@@ -117,6 +122,18 @@ const SearchResults: React.FC = () => {
   const handleApplyFilters = () => {
     setAppliedFilters(filters);
     setFilterModalOpen(false);
+
+    // PostHog: Track filter application
+    posthog.capture("search_filter_applied", {
+      filter_count: getActiveFilterCount(filters),
+      has_missing_audio: !!filters.missingAudio,
+      has_missing_metadata: !!filters.missingMetadata,
+      has_missing_any_streaming: !!filters.missingAnyStreamingUrl,
+      has_missing_apple_music: !!filters.missingAppleMusic,
+      has_missing_youtube: !!filters.missingYouTube,
+      has_missing_spotify: !!filters.missingSpotify,
+      has_missing_soundcloud: !!filters.missingSoundCloud,
+    });
   };
 
   const handleClearFilters = () => {
@@ -156,10 +173,19 @@ const SearchResults: React.FC = () => {
         onQueryChange({
           target: { value: debouncedValue },
         } as React.ChangeEvent<HTMLInputElement>);
+
+        // PostHog: Track search query execution
+        if (debouncedValue.length > 0) {
+          posthog.capture("search_query_executed", {
+            query_length: debouncedValue.length,
+            has_filters: activeFilterCount > 0,
+            filter_count: activeFilterCount,
+          });
+        }
       }
     }, 300);
     return () => clearTimeout(handler);
-  }, [debouncedValue, onQueryChange, query]);
+  }, [debouncedValue, onQueryChange, query, activeFilterCount]);
 
   // Hydrate query from URL (?q=...) on first mount
   React.useEffect(() => {
@@ -173,15 +199,17 @@ const SearchResults: React.FC = () => {
   // Keep URL in sync when effective query changes
   React.useEffect(() => {
     if (!pathname) return;
-    const params = new URLSearchParams(searchParams?.toString());
+    const params = new URLSearchParams(searchParamsString);
     if (query && query.length > 0) {
       params.set("q", query);
     } else {
       params.delete("q");
     }
-    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+    const nextQueryString = params.toString();
+    if (nextQueryString === searchParamsString) return;
+    const newUrl = nextQueryString ? `${pathname}?${nextQueryString}` : pathname;
     router.replace(newUrl);
-  }, [query, pathname, router, searchParams]);
+  }, [query, pathname, router, searchParamsString]);
 
   return (
     <Box mb={'100px'}>
