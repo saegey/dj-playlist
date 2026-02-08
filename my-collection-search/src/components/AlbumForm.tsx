@@ -4,6 +4,7 @@ import React from "react";
 import { Box, Stack, Grid, Text, RatingGroup } from "@chakra-ui/react";
 import LabeledInput from "@/components/form/LabeledInput";
 import LabeledTextarea from "@/components/form/LabeledTextarea";
+import LabeledSelect from "@/components/form/LabeledSelect";
 
 export interface AlbumFormData {
   title: string;
@@ -113,29 +114,17 @@ export default function AlbumForm({ value, onChange }: AlbumFormProps) {
             placeholder="29.99"
             type="number"
           />
-          <Box flex="1">
-            <Text mb={1} fontSize="sm">
-              Condition
-            </Text>
-            <Box
-              as="select"
-              value={value.condition}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange('condition', e.target.value)}
-              width="100%"
-              px={3}
-              py={2}
-              borderRadius="md"
-              borderWidth="1px"
-              borderColor="border.subtle"
-              bg="bg"
-            >
-              {CONDITIONS.map((condition) => (
-                <option key={condition} value={condition}>
-                  {condition || 'Select condition'}
-                </option>
-              ))}
-            </Box>
-          </Box>
+          <LabeledSelect
+            label="Condition"
+            value={value.condition}
+            onChange={(e) => handleChange('condition', e.target.value)}
+          >
+            {CONDITIONS.map((condition) => (
+              <option key={condition} value={condition}>
+                {condition || 'Select condition'}
+              </option>
+            ))}
+          </LabeledSelect>
         </Grid>
       </Box>
 
@@ -162,29 +151,17 @@ export default function AlbumForm({ value, onChange }: AlbumFormProps) {
             onChange={(e) => handleChange('country', e.target.value)}
             placeholder="USA"
           />
-          <Box flex="1">
-            <Text mb={1} fontSize="sm">
-              Format
-            </Text>
-            <Box
-              as="select"
-              value={value.format}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange('format', e.target.value)}
-              width="100%"
-              px={3}
-              py={2}
-              borderRadius="md"
-              borderWidth="1px"
-              borderColor="border.subtle"
-              bg="bg"
-            >
-              {FORMATS.map((format) => (
-                <option key={format} value={format}>
-                  {format || 'Select format'}
-                </option>
-              ))}
-            </Box>
-          </Box>
+          <LabeledSelect
+            label="Format"
+            value={value.format}
+            onChange={(e) => handleChange('format', e.target.value)}
+          >
+            {FORMATS.map((format) => (
+              <option key={format} value={format}>
+                {format || 'Select format'}
+              </option>
+            ))}
+          </LabeledSelect>
         </Grid>
       </Box>
 
