@@ -7,6 +7,7 @@ interface TrackStore {
   setTrack: (track: Track) => void;
   setTracks: (tracks: Track[]) => void;
   updateTrack: (trackId: string, friendId: number, updates: Partial<Track>) => void;
+  updateTracksByRelease: (releaseId: string, friendId: number, updates: Partial<Track>) => void;
   getTrack: (trackId: string, friendId?: number) => Track | undefined;
   hasTrack: (trackId: string, friendId?: number) => boolean;
   clearTracks: () => void;
@@ -146,6 +147,46 @@ export const useTrackStore = create<TrackStore>((set, get) => ({
           ['updates', updates],
           ['next', updatedTrack],
           ['diff', diffObjectKeys(existingTrack as unknown as Record<string, unknown>, updatedTrack as unknown as Record<string, unknown>)],
+        ]);
+      }
+      return { tracks: newTracks };
+    });
+  },
+
+  updateTracksByRelease: (releaseId: string, friendId: number, updates: Partial<Track>) => {
+    set((state) => {
+      let hasChanges = false;
+      const newTracks = new Map(state.tracks);
+
+      for (const [key, track] of state.tracks.entries()) {
+        if (track.release_id !== releaseId || track.friend_id !== friendId) continue;
+
+        const updatedTrack = { ...track, ...updates };
+        const diff = diffObjectKeys(
+          track as unknown as Record<string, unknown>,
+          updatedTrack as unknown as Record<string, unknown>
+        );
+        if (Object.keys(diff).length === 0) continue;
+
+        newTracks.set(key, updatedTrack);
+        hasChanges = true;
+
+        if (isStoreDebugEnabled()) {
+          storeLog('updateTracksByRelease:item', [
+            ['key', key],
+            ['release_id', releaseId],
+            ['friend_id', friendId],
+            ['updates', updates],
+            ['diff', diff],
+          ]);
+        }
+      }
+
+      if (!hasChanges) return state;
+      if (isStoreDebugEnabled()) {
+        storeLog('updateTracksByRelease:commit', [
+          ['release_id', releaseId],
+          ['friend_id', friendId],
         ]);
       }
       return { tracks: newTracks };

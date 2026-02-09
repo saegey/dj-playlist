@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
 import { redisJobService } from "@/services/redisJobService";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 export async function POST(
   request: Request,
@@ -72,6 +73,23 @@ export async function POST(
       console.log(
         `Queued ${jobIds.length} download jobs for album ${releaseId}`
       );
+
+      // PostHog: Track album download queued (server-side)
+      try {
+        const posthog = getPostHogClient();
+        posthog.capture({
+          distinctId: "server",
+          event: "album_download_queued",
+          properties: {
+            release_id: releaseId,
+            friend_id: friendId,
+            track_count: jobIds.length,
+            source: "api",
+          },
+        });
+      } catch (posthogError) {
+        console.error("PostHog capture error:", posthogError);
+      }
 
       return NextResponse.json({
         success: true,

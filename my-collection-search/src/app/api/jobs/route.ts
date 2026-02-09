@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { redisJobService } from "@/services/redisJobService";
+import { Pool } from "pg";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export type JobData = {
   track_id: string;
@@ -10,6 +13,13 @@ export type JobData = {
   soundcloud_url?: string;
   title?: string | null;
   artist?: string | null;
+  album?: string | null;
+  year?: string | number | null;
+  album_thumbnail?: string | null;
+  discogs_url?: string | null;
+  local_audio_url?: string | null;
+  library_identifier?: string | null;
+  username?: string | null;
 };
 
 export interface JobInfo {
@@ -48,8 +58,46 @@ export async function GET() {
     const jobs = await redisJobService.getAllJobs();
     const summary = await redisJobService.getJobSummary();
 
+    const validJobs = jobs.filter(
+      (job) => job.track_id && Number.isFinite(job.friend_id)
+    );
+    const pairKeys = Array.from(
+      new Map(
+        validJobs.map((job) => [`${job.track_id}:${job.friend_id}`, job])
+      ).values()
+    );
+    const trackMap = new Map<string, Record<string, unknown>>();
+
+    if (pairKeys.length > 0) {
+      const values: string[] = [];
+      const params: Array<string | number> = [];
+      pairKeys.forEach((job, idx) => {
+        const offset = idx * 2;
+        values.push(`($${offset + 1}, $${offset + 2})`);
+        params.push(job.track_id, job.friend_id);
+      });
+
+      const { rows } = await pool.query(
+        `
+          SELECT track_id, friend_id, title, artist, album, year, album_thumbnail,
+                 discogs_url, apple_music_url, spotify_url, youtube_url, soundcloud_url,
+                 local_audio_url, library_identifier, username
+          FROM tracks
+          WHERE (track_id, friend_id) IN (${values.join(", ")})
+        `,
+        params
+      );
+
+      rows.forEach((row) => {
+        trackMap.set(`${row.track_id}:${row.friend_id}`, row);
+      });
+    }
+
     // Convert Redis JobStatus to our JobInfo format
-    const formattedJobs: JobInfo[] = jobs.map((job) => ({
+    const formattedJobs: JobInfo[] = jobs.map((job) => {
+      const safeFriendId = Number.isFinite(job.friend_id) ? job.friend_id : 0;
+      const track = trackMap.get(`${job.track_id}:${job.friend_id}`);
+      return {
       id: job.job_id,
       name: "download-audio",
       state:
@@ -61,15 +109,26 @@ export async function GET() {
       progress: job.progress,
       data: {
         track_id: job.track_id,
-        friend_id: job.friend_id,
+        friend_id: safeFriendId,
         title:
           typeof job.result?.title === "string"
             ? job.result.title
-            : job.track_id,
+            : (track?.title as string | undefined) || job.track_id,
         artist:
           typeof job.result?.artist === "string"
             ? job.result.artist
-            : undefined,
+            : (track?.artist as string | undefined),
+        album: (track?.album as string | undefined),
+        year: (track?.year as string | number | undefined),
+        album_thumbnail: (track?.album_thumbnail as string | undefined),
+        discogs_url: (track?.discogs_url as string | undefined),
+        apple_music_url: (track?.apple_music_url as string | undefined),
+        spotify_url: (track?.spotify_url as string | undefined),
+        youtube_url: (track?.youtube_url as string | undefined),
+        soundcloud_url: (track?.soundcloud_url as string | undefined),
+        local_audio_url: (track?.local_audio_url as string | undefined),
+        library_identifier: (track?.library_identifier as string | undefined),
+        username: (track?.username as string | undefined),
       },
       returnvalue: job.result,
       finishedOn:
@@ -85,7 +144,8 @@ export async function GET() {
           ? job.updated_at
           : undefined,
       queue: "download",
-    }));
+    };
+    });
 
     return NextResponse.json({
       jobs: formattedJobs,

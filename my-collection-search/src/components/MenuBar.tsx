@@ -18,7 +18,7 @@ import {
 import { TbPlaylist } from "react-icons/tb";
 import { SiApplemusic } from "react-icons/si";
 import { LuAudioLines, LuCloudDownload } from "react-icons/lu";
-import { IoBookSharp, IoMusicalNotes, IoSettings, IoAlbums } from "react-icons/io5";
+import { IoBookSharp, IoMusicalNotes, IoSettings, IoAlbums, IoAddCircle } from "react-icons/io5";
 import { FiMenu } from "react-icons/fi";
 // import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 
@@ -29,6 +29,7 @@ interface TopMenuBarProps {
 const menuItems = [
   { href: "/", label: "Tracks" },
   { href: "/albums", label: "Albums" },
+  { href: "/albums/add", label: "Add Album" },
   { href: "/playlists", label: "Playlists" },
   { href: "/missing-apple-music", label: "Match" },
   { href: "/backfill-audio", label: "Audio" },
@@ -111,6 +112,10 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
                     const icon =
                       item.href === "/"
                         ? IoMusicalNotes
+                        : item.href === "/albums/add"
+                        ? IoAddCircle
+                        : item.href === "/albums"
+                        ? IoAlbums
                         : item.href === "/tracks"
                         ? IoAlbums
                         : item.href === "/missing-apple-music"

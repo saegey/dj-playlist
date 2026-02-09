@@ -61,10 +61,12 @@ export function discogsReleaseToAlbum(
     date_added: release.date_added,
     date_changed: release.date_changed,
     track_count: release.tracklist?.length || 0,
-    label: release.labels?.[0]?.name,
+    label: release.labels?.[0]?.name ?? undefined,
     catalog_number: release.labels?.[0]?.catno,
     country: release.country,
-    format: Array.isArray(release.formats) ? release.formats?.[0]?.name : [],
+    format: Array.isArray(release.formats)
+      ? release.formats?.[0]?.name ?? undefined
+      : undefined,
   };
 }
 

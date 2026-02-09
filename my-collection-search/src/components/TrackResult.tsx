@@ -6,14 +6,12 @@ import {
   Box,
   Flex,
   Text,
-  Link,
   Image,
   Button,
   Icon,
   RatingGroup,
   Badge,
 } from "@chakra-ui/react";
-import { SiDiscogs, SiApplemusic, SiYoutube, SiSpotify } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
 import { FaPlay } from "react-icons/fa";
@@ -40,6 +38,12 @@ export type TrackResultProps = {
   footer?: React.ReactNode;
   playlistCount?: number;
   showUsername?: boolean; // Whether to show friend/username badge
+  showRating?: boolean;
+  showDetails?: boolean;
+  showGenres?: boolean;
+  showLinks?: boolean;
+  showNotes?: boolean;
+  showPlaylistCount?: boolean;
 };
 
 export default function TrackResult({
@@ -50,6 +54,11 @@ export default function TrackResult({
   footer,
   playlistCount,
   showUsername = true,
+  showRating = true,
+  showDetails = true,
+  showGenres = true,
+  showNotes = true,
+  showPlaylistCount = true,
 }: TrackResultProps) {
   const [expanded, setExpanded] = useState(false);
   const [hasMounted, setHasMounted] = React.useState(false);
@@ -95,9 +104,11 @@ export default function TrackResult({
               <Text>{formatSeconds(track.duration_seconds || 0)}</Text>
               <Text>{track.position}</Text>
               {track.bpm && <Text>{track.bpm} bpm</Text>}
-              <Text>
-                {track.key} - {keyToCamelot(track.key)}
-              </Text>
+              {track.key && (
+                <Text>
+                  {track.key} - {keyToCamelot(track.key)}
+                </Text>
+              )}
               {showUsername && track.username && (
                 <Text fontSize="sm">User: {track.username}</Text>
               )}
@@ -236,13 +247,17 @@ export default function TrackResult({
                 )}
               </AlbumLink>
             </Box>
-            <RatingGroup.Root value={track.star_rating ?? 0} readOnly size="xs">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <RatingGroup.Item key={index} index={index + 1}>
-                  <RatingGroup.ItemIndicator />
-                </RatingGroup.Item>
-              ))}
-            </RatingGroup.Root>
+            {showRating && (
+              <Box display={{ base: "none", md: "block" }}>
+                <RatingGroup.Root value={track.star_rating ?? 0} readOnly size="xs">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <RatingGroup.Item key={index} index={index + 1}>
+                      <RatingGroup.ItemIndicator />
+                    </RatingGroup.Item>
+                  ))}
+                </RatingGroup.Root>
+              </Box>
+            )}
             {showUsername && track.username && (
               <>
                 <Text color="gray.400">•</Text>
@@ -251,7 +266,7 @@ export default function TrackResult({
                 </Text>
               </>
             )}
-            {typeof playlistCount === "number" && playlistCount > 0 && (
+            {showPlaylistCount && typeof playlistCount === "number" && playlistCount > 0 && (
               <>
                 <Text color="gray.400">•</Text>
                 <Text fontSize="sm" color="gray.500">
@@ -262,99 +277,79 @@ export default function TrackResult({
           </Flex>
         </Box>
 
-        {/* Row 2: Technical details and links on same line */}
-        <Flex gap={4} fontSize={["xs", "sm", "sm"]} flexWrap="wrap" alignItems="center">
-          {/* Technical Details */}
-          <Flex gap={3} color="gray.600" flexWrap="wrap" alignItems="center">
+        {/* Row 2: Technical details */}
+        {showDetails && (
+          <Flex gap={3} fontSize={["xs", "sm", "sm"]} flexWrap="wrap" alignItems="center" color="gray.600">
             {track.library_identifier && (
               <Badge colorPalette="blue" size="sm" fontWeight="bold">
                 {track.library_identifier}
               </Badge>
             )}
-            {track.position && <Text>Pos: {track.position}</Text>}
+            {track.position && <Text display={{ base: "none", md: "block" }}>Pos: {track.position}</Text>}
             {track.duration_seconds && track.duration_seconds > 0 && (
               <Text>{formatSeconds(track.duration_seconds)}</Text>
             )}
             {track.bpm && <Text>{track.bpm} BPM</Text>}
             {track.key && (
-              <Text>
+              <Text display={{ base: "none", md: "block" }}>
                 {track.key} ({keyToCamelot(track.key)})
               </Text>
             )}
-            {track.danceability && <Text>Dance: {track.danceability}</Text>}
-            {track.mood_happy && <Text>Happy: {track.mood_happy}</Text>}
-            {track.mood_aggressive && <Text>Agg: {track.mood_aggressive}</Text>}
+            {track.danceability && <Text display={{ base: "none", md: "block" }}>Dance: {track.danceability}</Text>}
+            {track.mood_happy && <Text display={{ base: "none", md: "block" }}>Happy: {track.mood_happy}</Text>}
+            {track.mood_aggressive && <Text display={{ base: "none", md: "block" }}>Agg: {track.mood_aggressive}</Text>}
           </Flex>
+        )}
 
-          {/* Service Links - inline */}
-          <Flex gap={2} ml="auto">
-            {track.discogs_url && (
-              <Link href={track.discogs_url} target="_blank" aria-label="Discogs">
-                <SiDiscogs size={18} />
-              </Link>
-            )}
-            {track.spotify_url && (
-              <Link href={track.spotify_url} target="_blank" aria-label="Spotify">
-                <SiSpotify size={18} />
-              </Link>
-            )}
-            {track.apple_music_url && (
-              <Link href={track.apple_music_url} target="_blank" aria-label="Apple Music">
-                <SiApplemusic size={18} />
-              </Link>
-            )}
-            {track.youtube_url && (
-              <Link href={track.youtube_url} target="_blank" aria-label="YouTube">
-                <SiYoutube size={18} />
-              </Link>
-            )}
-          </Flex>
-        </Flex>
-
-        {/* Row 3: Genres/Styles */}
-        {(Array.isArray(track.genres) && track.genres.length > 0) ||
-        (Array.isArray(track.styles) && track.styles.length > 0) ||
-        ((typeof track.local_tags === "string" &&
-          track.local_tags !== "{}" &&
-          track.local_tags !== "") ||
-          (Array.isArray(track.local_tags) && track.local_tags.length > 0)) ? (
-          <Flex gap={2} flexWrap="wrap">
-            {Array.isArray(track.genres) &&
-              track.genres.map((genre) => (
-                <Badge key={genre} size={["xs", "sm", "sm"]} variant="surface">
-                  {genre}
+        {/* Row 3: Genres/Styles (desktop only) */}
+        {showGenres &&
+        ((Array.isArray(track.genres) && track.genres.length > 0) ||
+          (Array.isArray(track.styles) && track.styles.length > 0) ||
+          ((typeof track.local_tags === "string" &&
+            track.local_tags !== "{}" &&
+            track.local_tags !== "") ||
+            (Array.isArray(track.local_tags) && track.local_tags.length > 0))) ? (
+            <Flex gap={2} flexWrap="wrap" display={{ base: "none", md: "flex" }}>
+              {Array.isArray(track.genres) &&
+                track.genres.map((genre) => (
+                  <Badge key={genre} size={["xs", "sm", "sm"]} variant="surface">
+                    {genre}
+                  </Badge>
+                ))}
+              {Array.isArray(track.styles) &&
+                track.styles.map((style) => (
+                  <Badge key={style} size={["xs", "sm", "sm"]} variant="outline">
+                    {style}
+                  </Badge>
+                ))}
+              {((typeof track.local_tags === "string" &&
+                track.local_tags !== "{}" &&
+                track.local_tags !== "") ||
+                (Array.isArray(track.local_tags) &&
+                  track.local_tags.length > 0)) && (
+                <Badge
+                  key={
+                    Array.isArray(track.local_tags)
+                      ? track.local_tags.join(",")
+                      : track.local_tags
+                  }
+                  size={["xs", "sm", "sm"]}
+                  variant="solid"
+                >
+                  {Array.isArray(track.local_tags)
+                    ? track.local_tags.join(", ")
+                    : track.local_tags}
                 </Badge>
-              ))}
-            {Array.isArray(track.styles) &&
-              track.styles.map((style) => (
-                <Badge key={style} size={["xs", "sm", "sm"]} variant="outline">
-                  {style}
-                </Badge>
-              ))}
-            {((typeof track.local_tags === "string" &&
-              track.local_tags !== "{}" &&
-              track.local_tags !== "") ||
-              (Array.isArray(track.local_tags) &&
-                track.local_tags.length > 0)) && (
-              <Badge
-                key={
-                  Array.isArray(track.local_tags)
-                    ? track.local_tags.join(",")
-                    : track.local_tags
-                }
-                size={["xs", "sm", "sm"]}
-                variant="solid"
-              >
-                {Array.isArray(track.local_tags)
-                  ? track.local_tags.join(", ")
-                  : track.local_tags}
-              </Badge>
-            )}
-          </Flex>
-        ) : null}
+              )}
+            </Flex>
+          ) : null}
 
-        {/* Row 4: Notes (if present) */}
-        {track.notes && <ExpandableMarkdown text={track.notes} maxLength={100} />}
+        {/* Row 4: Notes (desktop only) */}
+        {showNotes && track.notes && (
+          <Box display={{ base: "none", md: "block" }}>
+            <ExpandableMarkdown text={track.notes} maxLength={100} />
+          </Box>
+        )}
 
         {/* Hide button - only if minimizable */}
         {allowMinimize && (

@@ -31,9 +31,18 @@ export const queryKeys = {
         arr = maybeTracks;
       }
     }
+
+    // Sort the array to make the query key order-independent
+    // This prevents refetches when tracks are reordered
+    const sortedArr = [...arr].sort((a, b) => {
+      const keyA = `${a.track_id}-${a.friend_id}`;
+      const keyB = `${b.track_id}-${b.friend_id}`;
+      return keyA.localeCompare(keyB);
+    });
+
     return [
       "playlist-tracks",
-      ...arr.map((t, i) => `${t.track_id}-${t.friend_id ?? 0}-${t.position ?? i}`),
+      ...sortedArr.map((t) => `${t.track_id}-${t.friend_id ?? 0}`),
     ] as const;
   },
   tracks: (args: {

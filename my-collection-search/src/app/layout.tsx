@@ -1,7 +1,7 @@
 // app/layout.tsx
 import type { ReactNode } from "react";
 import ClientProviders from "./providers"; // <- client wrapper
-import TopNav from "@/components/TopNav";
+import AppShell from "@/components/AppShell";
 import { Toaster } from "@/components/ui/toaster";
 
 // Let Next.js inject viewport meta into <head>
@@ -15,9 +15,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <body>
         <ClientProviders>
-          <TopNav />
           <Toaster />
-          {children}
+          <AppShell>{children}</AppShell>
         </ClientProviders>
       </body>
     </html>

@@ -10,7 +10,7 @@ const SearchPage = () => {
     <>
       <Flex gap={4} direction="row">
         {/* Search Results */}
-        <Container pt={3}>
+        <Container p={[0, 6, 6]}>
           <Suspense
             fallback={
               <Flex justify="center" pt={6}>

@@ -88,43 +88,55 @@ function AlbumsPageContent() {
   };
 
   return (
-    <Container maxW="container.xl">
+    <Container maxW="container.xl" px={0}>
       <Flex gap={4} direction="column">
         {/* Search Controls */}
         <Box pt={4}>
-          <Flex gap={2} direction={{ base: "column", md: "row" }} mb={2}>
-            {/* Search Input - First */}
-            <InputGroup
-              startElement={<LuSearch size={16} />}
-              flex={{ base: "1", md: "1" }}
-              maxW={{ base: "full", md: "400px" }}
-            >
-              <Input
-                placeholder="Search albums..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                variant={"subtle"}
-                fontSize="16px"
-              />
-            </InputGroup>
-
-            {/* Friends/Username Selector - Second */}
-            <Box width={{ base: "full", md: "200px" }} flexShrink={0}>
+          <Flex gap={2} direction="column" mb={2}>
+            {/* Row 1: Search Input + User + Search Button (Mobile) */}
+            <Flex gap={2} display={{ base: "flex", md: "none" }}>
+              <InputGroup
+                startElement={<LuSearch size={16} />}
+                flex="1"
+              >
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  variant={"subtle"}
+                  fontSize="16px"
+                  size="sm"
+                />
+              </InputGroup>
               <UsernameSelect
                 usernames={friends}
                 includeAllOption={true}
                 onChange={handleFriendChange}
                 value={selectedFriend}
-                size={["sm", "md", "md"]}
+                size="sm"
+                iconOnlyMobile={true}
+                width="auto"
               />
-            </Box>
+              <Button
+                colorScheme="blue"
+                onClick={handleSearch}
+                flexShrink={0}
+                size="sm"
+                px={3}
+              >
+                Go
+              </Button>
+            </Flex>
 
-            {/* Sort Dropdown */}
-            <NativeSelectRoot width={{ base: "full", md: "220px" }} flexShrink={0}>
+            {/* Row 2: Sort Dropdown (Mobile) */}
+            <NativeSelectRoot
+              display={{ base: "block", md: "none" }}
+              size="sm"
+            >
               <NativeSelectField
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
+                fontSize="sm"
               >
                 <option value="date_added:desc">Recently Added</option>
                 <option value="date_added:asc">Oldest First</option>
@@ -135,10 +147,54 @@ function AlbumsPageContent() {
               </NativeSelectField>
             </NativeSelectRoot>
 
-            {/* Search Button */}
-            <Button colorScheme="blue" onClick={handleSearch} flexShrink={0}>
-              Search
-            </Button>
+            {/* Desktop Layout */}
+            <Flex gap={2} display={{ base: "none", md: "flex" }}>
+              <InputGroup
+                startElement={<LuSearch size={16} />}
+                flex="1"
+                maxW="400px"
+              >
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  variant={"subtle"}
+                  fontSize="16px"
+                />
+              </InputGroup>
+
+              <Box width="200px" flexShrink={0}>
+                <UsernameSelect
+                  usernames={friends}
+                  includeAllOption={true}
+                  onChange={handleFriendChange}
+                  value={selectedFriend}
+                  size="md"
+                />
+              </Box>
+
+              <NativeSelectRoot width="220px" flexShrink={0}>
+                <NativeSelectField
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                >
+                  <option value="date_added:desc">Recently Added</option>
+                  <option value="date_added:asc">Oldest First</option>
+                  <option value="year:desc">Newest Releases</option>
+                  <option value="year:asc">Oldest Releases</option>
+                  <option value="title:asc">Title (A-Z)</option>
+                  <option value="album_rating:desc">Highest Rated</option>
+                </NativeSelectField>
+              </NativeSelectRoot>
+
+              <Button
+                colorScheme="blue"
+                onClick={handleSearch}
+                flexShrink={0}
+              >
+                Search
+              </Button>
+            </Flex>
           </Flex>
         </Box>
 

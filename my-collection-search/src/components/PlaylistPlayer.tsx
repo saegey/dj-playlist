@@ -6,6 +6,7 @@ import { Box } from "@chakra-ui/react";
 import PlayerControls from "@/components/PlayerControls";
 import QueueDrawer from "@/components/QueueDrawer";
 import { useQueueDrawer } from "@/hooks/useQueueDrawer";
+import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 export const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -37,6 +38,12 @@ export const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
 
 const PlaylistPlayer: React.FC = () => {
   const { isOpen, toggle } = useQueueDrawer();
+  const { playlistLength } = usePlaylistPlayer();
+
+  // Hide player if queue is empty
+  if (playlistLength === 0) {
+    return null;
+  }
 
   return (
     <>
@@ -57,9 +64,9 @@ const PlaylistPlayer: React.FC = () => {
       )}
 
       {/* Queue Drawer with embedded player */}
-      <QueueDrawer 
-        isOpen={isOpen} 
-        onClose={() => toggle()} 
+      <QueueDrawer
+        isOpen={isOpen}
+        onClose={() => toggle()}
         onQueueToggle={toggle}
         isQueueOpen={isOpen}
       />

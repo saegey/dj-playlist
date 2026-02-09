@@ -8,6 +8,10 @@ import {
   Text,
   VStack,
   Skeleton,
+  Dialog,
+  Portal,
+  Button,
+  Badge,
 } from "@chakra-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FiHeadphones } from "react-icons/fi";
@@ -35,6 +39,7 @@ import {
 import { analyzeTrackAsync } from "@/services/trackService";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { queryKeys } from "@/lib/queryKeys";
+import posthog from "posthog-js";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
@@ -69,7 +74,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     sortGreedy,
     sortGenetic,
     isGeneticSorting,
-  } = usePlaylistMutations(playlistId);
+  } = usePlaylistMutations(playlistId, () => setHasUnsavedChanges(true));
 
   const { replacePlaylist } = usePlaylistPlayer();
 
@@ -81,12 +86,15 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     Dialog: SaveDialog,
     open: openSaveDialog,
     saveExisting,
-  } = usePlaylistSaveDialog(playlistId);
+  } = usePlaylistSaveDialog(playlistId, () => setHasUnsavedChanges(false));
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [duplicateName, setDuplicateName] = useState("");
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameName, setRenameName] = useState("");
   const [isEnqueuingDownloads, setIsEnqueuingDownloads] = useState(false);
+  const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false);
+  const [recommendationsPlaylistSnapshot, setRecommendationsPlaylistSnapshot] = useState<Track[]>([]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     if (playlistName) {
@@ -97,6 +105,19 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
       setDuplicateName(`Playlist ${playlistId} (Copy)`);
     }
   }, [playlistId, playlistName]);
+
+  // Warn before leaving page with unsaved changes
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Get total playtime for display
   const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
@@ -443,16 +464,32 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   return (
     <>
       <Flex align="flex-start" w="100%" pt={3}>
-        <Box>
-          <Text fontWeight="semibold">
-            {playlistName || `Playlist ${playlistId ?? ""}`.trim()}
-          </Text>
+        <Box flex="1">
+          <Flex align="center" gap={2} flexWrap="wrap">
+            <Text fontWeight="semibold">
+              {playlistName || `Playlist ${playlistId ?? ""}`.trim()}
+            </Text>
+            {hasUnsavedChanges && (
+              <Badge colorPalette="orange" variant="solid" size="sm">
+                Unsaved changes
+              </Badge>
+            )}
+          </Flex>
           <Text fontSize="sm" color="gray.500" mb={2}>
             Total Playtime: {totalPlaytimeFormatted}
             {/* Playlist Recommendations */}
           </Text>
         </Box>
-        <Flex flexGrow={1} justify="flex-end" align="flex-start">
+        <Flex gap={2} align="flex-start">
+          {hasUnsavedChanges && playlistId && (
+            <Button
+              size="sm"
+              colorScheme="blue"
+              onClick={saveExisting}
+            >
+              Save Changes
+            </Button>
+          )}
           <PlaylistActionsMenu
             disabled={tracksPlaylist.length === 0}
             onSortGreedy={() => {
@@ -470,6 +507,10 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           onEnqueueMissingDownloads={
             isEnqueuingDownloads ? undefined : handleEnqueueMissingDownloads
           }
+          onOpenRecommendations={() => {
+            setRecommendationsPlaylistSnapshot([...tracks]);
+            setRecommendationsModalOpen(true);
+          }}
           enqueuePlaylist={() =>
             replacePlaylist(tracks, {
               autoplay: true,
@@ -487,15 +528,15 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           droppableId="playlist-droppable"
           renderTrackButtons={renderPlaylistButtons}
           trackResultProps={{
-            minimized: true,
+            playlistMode: true,
             playlistCount: playlistCounts,
           }}
         />
-        <PlaylistRecommendations
+        {/* <PlaylistRecommendations
           playlist={tracks}
           onAddToPlaylist={addToPlaylist}
           onEditTrack={openTrackEditor}
-        />
+        /> */}
         <SaveDialog />
         <NamePlaylistDialog
           open={duplicateDialogOpen}
@@ -529,6 +570,45 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           onConfirm={handleFriendSelectConfirm}
           onCancel={handleFriendSelectCancel}
         />
+
+        {/* AI Recommendations Modal */}
+        <Dialog.Root
+          open={recommendationsModalOpen}
+          onOpenChange={(e) => setRecommendationsModalOpen(e.open)}
+          size="xl"
+        >
+          <Portal>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+              <Dialog.Content>
+                <Dialog.Header>
+                  <Flex justify="space-between" align="center" width="100%">
+                    <Dialog.Title>AI Recommendations</Dialog.Title>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setRecommendationsPlaylistSnapshot([...tracks])}
+                      mr={8}
+                    >
+                      Refresh
+                    </Button>
+                  </Flex>
+                </Dialog.Header>
+                <Dialog.Body maxH="70vh" overflowY="auto">
+                  {recommendationsModalOpen && (
+                    <PlaylistRecommendations
+                      playlist={recommendationsPlaylistSnapshot}
+                      limit={50}
+                      onAddToPlaylist={addToPlaylist}
+                      onEditTrack={openTrackEditor}
+                    />
+                  )}
+                </Dialog.Body>
+                <Dialog.CloseTrigger />
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Portal>
+        </Dialog.Root>
       </Box>
     </>
   );

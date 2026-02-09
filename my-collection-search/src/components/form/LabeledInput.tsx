@@ -9,7 +9,7 @@ export default function LabeledInput({ label, ...props }: Props) {
       <Text mb={1} fontSize="sm">
         {label}
       </Text>
-      <Input {...props} />
+      <Input {...props} fontSize="16px" />
     </Box>
   );
 }

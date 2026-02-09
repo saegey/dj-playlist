@@ -9,6 +9,9 @@ import {
 } from "@/services/albumService";
 import { Album } from "@/types/track";
 import { AlbumSearchResponse } from "@/services/albumService";
+import { useTrackStore } from "@/stores/trackStore";
+import { useTracksCacheUpdater } from "@/hooks/useTracksCacheUpdater";
+import type { Track } from "@/types/track";
 
 /**
  * Hook for infinite scroll album search
@@ -69,12 +72,14 @@ export function useAlbumDetailQuery(releaseId: string, friendId: number) {
  */
 export function useUpdateAlbumMutation() {
   const queryClient = useQueryClient();
+  const { updateTracksByRelease } = useTrackStore();
+  const { updateTracksInCache } = useTracksCacheUpdater();
 
   return useMutation({
     mutationFn: async (params: AlbumUpdateParams) => {
       return await updateAlbum(params);
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       // Invalidate all album queries to refetch with updated data
       queryClient.invalidateQueries({ queryKey: ["albums"] });
 
@@ -103,6 +108,36 @@ export function useUpdateAlbumMutation() {
           };
         }
       );
+
+      // If library_identifier was part of the update, sync tracks in store + cache
+      if (variables?.library_identifier !== undefined) {
+        const libraryIdentifier = data.album.library_identifier ?? null;
+
+        updateTracksByRelease(
+          data.album.release_id,
+          data.album.friend_id,
+          { library_identifier: libraryIdentifier }
+        );
+
+        // Also patch any track caches with the new library_identifier
+        const storeTracks = useTrackStore.getState().tracks;
+        const patches: Array<{ track_id: string } & Partial<Track>> = [];
+        for (const track of storeTracks.values()) {
+          if (
+            track.release_id === data.album.release_id &&
+            track.friend_id === data.album.friend_id
+          ) {
+            patches.push({
+              track_id: track.track_id,
+              friend_id: track.friend_id,
+              library_identifier: libraryIdentifier,
+            });
+          }
+        }
+        if (patches.length > 0) {
+          updateTracksInCache(patches);
+        }
+      }
     },
   });
 }

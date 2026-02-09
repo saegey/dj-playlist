@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { updateTrack } from "@/lib/db";
 import { getTrackEmbedding } from "@/lib/track-embedding";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 export async function PATCH(req: Request) {
   const { getMeiliClient } = await import("@/lib/meili");
@@ -74,6 +75,28 @@ export async function PATCH(req: Request) {
       ]);
     } catch (meiliError) {
       console.error("Failed to update MeiliSearch:", meiliError);
+    }
+
+    // PostHog: Track track edit (server-side)
+    try {
+      const posthog = getPostHogClient();
+      const changedFields = Object.keys(data).filter(
+        (key) => key !== "track_id" && key !== "friend_id"
+      );
+      posthog.capture({
+        distinctId: "server",
+        event: "track_edited",
+        properties: {
+          track_id: updated.track_id,
+          changed_fields: changedFields,
+          has_rating_change: "star_rating" in data,
+          has_notes_change: "notes" in data,
+          has_tags_change: "local_tags" in data,
+          source: "api",
+        },
+      });
+    } catch (posthogError) {
+      console.error("PostHog capture error:", posthogError);
     }
 
     return NextResponse.json(updated);

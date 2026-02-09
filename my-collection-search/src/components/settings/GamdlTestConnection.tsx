@@ -13,8 +13,11 @@ import {
   HStack,
   List,
   Badge,
+  Menu,
+  Flex,
 } from "@chakra-ui/react";
 import { LuPlay, LuCheck, LuX, LuClock } from "react-icons/lu";
+import { FiMoreVertical } from "react-icons/fi";
 import { toaster } from "@/components/ui/toaster";
 import { useMutation } from "@tanstack/react-query";
 
@@ -95,23 +98,34 @@ export default function GamdlTestConnection() {
   return (
     <Card.Root>
       <Card.Header>
-        <HStack justify="space-between">
+        <Flex justify="space-between" align="flex-start">
           <Box>
             <Heading size="md">Test Gamdl Connection</Heading>
             <Text color="gray.500" fontSize="sm">
               Verify that gamdl is properly configured and working
             </Text>
           </Box>
-          <Button
-            onClick={handleTest}
-            loading={testMutation.isPending}
-            colorScheme="blue"
-            variant="outline"
-          >
-            <LuPlay />
-            Test Connection
-          </Button>
-        </HStack>
+          <Menu.Root>
+            <Menu.Trigger asChild>
+              <Button size="sm" variant="outline">
+                <FiMoreVertical />
+                <Box ml={2}>Actions</Box>
+              </Button>
+            </Menu.Trigger>
+            <Menu.Positioner>
+              <Menu.Content>
+                <Menu.Item
+                  value="test"
+                  onClick={handleTest}
+                  disabled={testMutation.isPending}
+                >
+                  <LuPlay />
+                  Test Connection
+                </Menu.Item>
+              </Menu.Content>
+            </Menu.Positioner>
+          </Menu.Root>
+        </Flex>
       </Card.Header>
 
       <Card.Body>
@@ -126,7 +140,7 @@ export default function GamdlTestConnection() {
                 {lastResult.details && (
                   <Box>
                     <Text fontSize="sm" fontWeight="medium" mb={2}>Test Details:</Text>
-                    <List.Root>
+                    <List.Root listStyleType="none">
                       <List.Item>
                         <HStack>
                           {getStatusIcon(lastResult.details.gamdl_available)}
@@ -187,7 +201,7 @@ export default function GamdlTestConnection() {
           <Alert.Root status="info">
             <VStack align="start" gap={1}>
               <Text fontWeight="medium">What this test checks:</Text>
-              <List.Root>
+              <List.Root listStyleType="none">
                 <List.Item>• Gamdl is installed and accessible</List.Item>
                 <List.Item>• Cookie file exists and contains Apple Music cookies</List.Item>
                 <List.Item>• Cookie file is properly formatted</List.Item>

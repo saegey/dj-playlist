@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { Box, Text, Button, Menu } from "@chakra-ui/react";
-import TrackResult from "@/components/TrackResult";
+import { Box, Button, Menu } from "@chakra-ui/react";
+import TrackResultStore from "@/components/TrackResultStore";
 import type { Track } from "@/types/track";
 import { FiEdit, FiMoreVertical, FiPlus, FiPlusSquare } from "react-icons/fi";
 import { useRecommendationsQuery } from "@/hooks/useRecommendations";
@@ -27,16 +27,15 @@ export default function PlaylistRecommendations({
   if (recs.length === 0) return null;
 
   return (
-    <Box mt={6}>
-      <Text fontWeight="bold" fontSize="sm" color="blue.500" mb={2}>
-        Recommended Tracks:
-      </Text>
+    <Box mt={0}>
       <Box display="flex" flexDirection="column" gap={2}>
         {recs.map((rec: Track, i: number) => (
-          <TrackResult
+          <TrackResultStore
             allowMinimize={false}
             key={`recommendation-${rec.track_id}-${i}`}
-            track={rec}
+            trackId={rec.track_id}
+            friendId={rec.friend_id}
+            fallbackTrack={rec}
             buttons={[
               <Menu.Root key="menu">
                 <Menu.Trigger asChild>

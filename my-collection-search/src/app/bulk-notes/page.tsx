@@ -168,7 +168,6 @@ export default function BulkNotesPage() {
         <SimpleGrid gap={2} columns={[1, 1, 4]} mt={3} mb={8}>
           <InputGroup startElement={<LuSearch size={16} />}>
             <Input
-              placeholder="Search"
               value={artistSearch}
               onChange={(e) => setArtistSearch(e.target.value)}
               size="sm"

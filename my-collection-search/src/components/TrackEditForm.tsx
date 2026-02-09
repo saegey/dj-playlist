@@ -444,39 +444,38 @@ export default function TrackEditForm({
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>Edit Track</Dialog.Title>
-              <Dialog.CloseTrigger asChild>
-                <CloseButton ref={initialFocusRef} size="sm" />
-              </Dialog.CloseTrigger>
+            <Dialog.Header p={[4, 6, 6]}>
+              <Flex justify="space-between" align="center" width="100%">
+                <Flex align="center" gap={3}>
+                  <Dialog.Title>Edit Track</Dialog.Title>
+                  {track && (
+                    <TrackEditActionsWrapper
+                      analyzeDisabled={
+                        analyzeLoading ||
+                        (!form.apple_music_url &&
+                          !form.youtube_url &&
+                          !form.soundcloud_url &&
+                          !form.spotify_url)
+                      }
+                    />
+                  )}
+                </Flex>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton ref={initialFocusRef} size="sm" />
+                </Dialog.CloseTrigger>
+              </Flex>
             </Dialog.Header>
-            <Dialog.Body>
+            <Dialog.Body px={{ base: 2, md: 6 }} py={{ base: 2, md: 6 }}>
               {!track ? (
                 <TrackEditFormSkeleton />
               ) : (
                 <Box as="form" onSubmit={handleSubmit}>
-                  <Flex gap={4} direction="row">
-                    <Stack flex={1}>
-                      <Box as={"nav"}>
-                        <TrackEditActionsWrapper
-                          analyzeDisabled={
-                            analyzeLoading ||
-                            (!form.apple_music_url &&
-                              !form.youtube_url &&
-                              !form.soundcloud_url &&
-                              !form.spotify_url)
-                          }
-                        />
-                      </Box>
-                    </Stack>
-                  </Flex>
-
                   <Stack
-                    borderWidth="1px"
+                    borderWidth={{ base: "0", md: "1px" }}
                     borderRadius="md"
-                    padding={4}
-                    marginBottom={4}
-                    marginTop={4}
+                    padding={{ base: 2, md: 4 }}
+                    marginBottom={{ base: 2, md: 4 }}
+                    marginTop={{ base: 2, md: 4 }}
                   >
                     <LabeledInput
                       label="Title"
@@ -496,34 +495,42 @@ export default function TrackEditForm({
                       value={form.album}
                       onChange={handleChange}
                     />
-                    <Flex gap={2}>
-                      <LabeledInput
-                        label="BPM"
-                        name="bpm"
-                        value={form.bpm}
-                        onChange={handleChange}
-                        type="number"
-                      />
-                      <LabeledInput
-                        label="Key"
-                        name="key"
-                        value={form.key}
-                        onChange={handleChange}
-                      />
-                      <LabeledInput
-                        label="Danceability"
-                        name="danceability"
-                        value={form.danceability ?? ""}
-                        onChange={handleChange}
-                        type="number"
-                      />
-                      <LabeledInput
-                        label="Duration (seconds)"
-                        name="duration_seconds"
-                        value={form.duration_seconds ?? ""}
-                        onChange={handleChange}
-                        type="number"
-                      />
+                    <Flex gap={2} flexWrap="wrap">
+                      <Box flex={{ base: "1 1 calc(50% - 4px)", md: "1" }}>
+                        <LabeledInput
+                          label="BPM"
+                          name="bpm"
+                          value={form.bpm}
+                          onChange={handleChange}
+                          type="number"
+                        />
+                      </Box>
+                      <Box flex={{ base: "1 1 calc(50% - 4px)", md: "1" }}>
+                        <LabeledInput
+                          label="Key"
+                          name="key"
+                          value={form.key}
+                          onChange={handleChange}
+                        />
+                      </Box>
+                      <Box flex={{ base: "1 1 calc(50% - 4px)", md: "1" }}>
+                        <LabeledInput
+                          label="Danceability"
+                          name="danceability"
+                          value={form.danceability ?? ""}
+                          onChange={handleChange}
+                          type="number"
+                        />
+                      </Box>
+                      <Box flex={{ base: "1 1 calc(50% - 4px)", md: "1" }}>
+                        <LabeledInput
+                          label="Duration (seconds)"
+                          name="duration_seconds"
+                          value={form.duration_seconds ?? ""}
+                          onChange={handleChange}
+                          type="number"
+                        />
+                      </Box>
                     </Flex>
                     <LabeledInput
                       label="Genre (comma separated)"
