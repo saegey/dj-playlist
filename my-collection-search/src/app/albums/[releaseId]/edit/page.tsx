@@ -74,9 +74,12 @@ function EditAlbumContent() {
           track_id: track.track_id,
           title: track.title || '',
           artist: track.artist || '',
-          position: track.position || '',
+          position: track.position != null ? String(track.position) : '',
           duration_seconds: track.duration_seconds || undefined,
-          bpm: track.bpm || undefined,
+          bpm:
+            track.bpm != null && track.bpm !== ""
+              ? Number(track.bpm)
+              : undefined,
           key: track.key || undefined,
           notes: track.notes || '',
           local_tags: track.local_tags || '',

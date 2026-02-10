@@ -19,6 +19,11 @@ export interface AlbumToUpsert {
   catalog_number?: string;
   country?: string;
   format?: string;
+  album_notes?: string;
+  album_rating?: number;
+  purchase_price?: number;
+  condition?: string;
+  library_identifier?: string;
 }
 
 /**
@@ -82,9 +87,10 @@ export async function upsertAlbum(
     INSERT INTO albums (
       release_id, friend_id, title, artist, year, genres, styles,
       album_thumbnail, discogs_url, date_added, date_changed,
-      track_count, label, catalog_number, country, format
+      track_count, label, catalog_number, country, format,
+      album_notes, album_rating, purchase_price, condition, library_identifier
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
     ON CONFLICT (release_id, friend_id)
     DO UPDATE SET
       title = EXCLUDED.title,
@@ -101,6 +107,11 @@ export async function upsertAlbum(
       catalog_number = EXCLUDED.catalog_number,
       country = EXCLUDED.country,
       format = EXCLUDED.format,
+      album_notes = EXCLUDED.album_notes,
+      album_rating = EXCLUDED.album_rating,
+      purchase_price = EXCLUDED.purchase_price,
+      condition = EXCLUDED.condition,
+      library_identifier = EXCLUDED.library_identifier,
       updated_at = current_timestamp
     RETURNING *
     `,
@@ -121,6 +132,11 @@ export async function upsertAlbum(
       album.catalog_number,
       album.country,
       album.format,
+      album.album_notes ?? "",
+      album.album_rating ?? 0,
+      album.purchase_price ?? null,
+      album.condition ?? null,
+      album.library_identifier ?? null,
     ]
   );
 
