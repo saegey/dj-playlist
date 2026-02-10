@@ -187,3 +187,25 @@ export async function getAllAlbumsFromManifests(
 
   return albums;
 }
+
+export async function getAlbumsFromManifestReleases(
+  pool: Pool,
+  username: string,
+  releaseIds: string[]
+): Promise<AlbumToUpsert[]> {
+  const { getReleasePath, loadAlbum } = await import(
+    "@/services/discogsManifestService"
+  );
+  const friendId = await getFriendId(pool, username);
+  const albums: AlbumToUpsert[] = [];
+
+  for (const releaseId of releaseIds) {
+    const releasePath = getReleasePath(username, String(releaseId));
+    if (!releasePath) continue;
+    const release = loadAlbum(releasePath);
+    if (!release) continue;
+    albums.push(discogsReleaseToAlbum(release, friendId));
+  }
+
+  return albums;
+}

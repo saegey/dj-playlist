@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTrackStore } from "@/stores/trackStore";
+import { useTracksCacheUpdater } from "@/hooks/useTracksCacheUpdater";
+import type { Track } from "@/types/track";
 
 interface JobCompletedEvent {
   type: "job_completed";
@@ -11,6 +13,12 @@ interface JobCompletedEvent {
   friend_id: number;
   result?: {
     local_audio_url?: string;
+    duration_seconds?: number;
+    analysis?: {
+      rhythm?: { bpm?: number; danceability?: number };
+      tonal?: { key_edma?: { key?: string; scale?: string } };
+      metadata?: { audio_properties?: { length?: number } };
+    };
   };
   timestamp: number;
 }
@@ -26,6 +34,7 @@ type JobEvent = JobCompletedEvent | JobErrorEvent;
 export function useJobEventsSSE() {
   const queryClient = useQueryClient();
   const { updateTrack } = useTrackStore();
+  const { updateTracksInCache } = useTracksCacheUpdater();
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -47,61 +56,34 @@ export function useJobEventsSSE() {
         if (jobEvent.type === "job_completed") {
           console.log(`Job ${jobEvent.job_id} completed for track ${jobEvent.track_id}`);
 
-          // Update Zustand track store if audio file was downloaded
-          if (jobEvent.result?.local_audio_url) {
-            updateTrack(jobEvent.track_id, jobEvent.friend_id, {
-              local_audio_url: jobEvent.result.local_audio_url,
-            });
-            console.log(`Updated track store: ${jobEvent.track_id} -> ${jobEvent.result.local_audio_url}`);
+          const updates: Partial<Track> = {};
+          const result = jobEvent.result;
+
+          if (result?.local_audio_url) {
+            updates.local_audio_url = result.local_audio_url;
+          }
+          if (typeof result?.duration_seconds === "number") {
+            updates.duration_seconds = result.duration_seconds;
           }
 
-          // Update React Query caches
-          queryClient.setQueriesData(
-            {
-              predicate: (query) => query.queryKey[0] === "tracks",
-            },
-            (oldData: unknown) => {
-              if (!oldData) return oldData;
+          const analysis = result?.analysis;
+          if (analysis?.metadata?.audio_properties?.length && typeof analysis.metadata.audio_properties.length === "number") {
+            updates.duration_seconds = Math.round(analysis.metadata.audio_properties.length);
+          }
+          if (analysis?.rhythm?.bpm && typeof analysis.rhythm.bpm === "number") {
+            updates.bpm = String(Math.round(analysis.rhythm.bpm));
+          }
+          if (analysis?.rhythm?.danceability && typeof analysis.rhythm.danceability === "number") {
+            updates.danceability = analysis.rhythm.danceability.toFixed(3);
+          }
+          if (analysis?.tonal?.key_edma?.key && analysis?.tonal?.key_edma?.scale) {
+            updates.key = `${analysis.tonal.key_edma.key} ${analysis.tonal.key_edma.scale}`;
+          }
 
-              const updateTrack = (track: Record<string, unknown>) => {
-                if (track.track_id === jobEvent.track_id && track.friend_id === jobEvent.friend_id) {
-                  return {
-                    ...track,
-                    local_audio_url: jobEvent.result?.local_audio_url,
-                  };
-                }
-                return track;
-              };
-
-              const data = oldData as Record<string, unknown>;
-
-              // Handle infinite query format
-              if (data.pages && Array.isArray(data.pages)) {
-                return {
-                  ...data,
-                  pages: data.pages.map((page: Record<string, unknown>) => ({
-                    ...page,
-                    hits: Array.isArray(page.hits) ? page.hits.map(updateTrack) : page.hits,
-                  })),
-                };
-              }
-
-              // Handle single page format
-              if (data.hits && Array.isArray(data.hits)) {
-                return {
-                  ...data,
-                  hits: data.hits.map(updateTrack),
-                };
-              }
-
-              // Handle array format (playlist tracks)
-              if (Array.isArray(data)) {
-                return data.map(updateTrack);
-              }
-
-              return oldData;
-            }
-          );
+          if (Object.keys(updates).length > 0) {
+            updateTrack(jobEvent.track_id, jobEvent.friend_id, updates);
+            updateTracksInCache({ track_id: jobEvent.track_id, friend_id: jobEvent.friend_id, ...updates });
+          }
 
           // Invalidate tracks queries
           queryClient.invalidateQueries({
@@ -129,7 +111,7 @@ export function useJobEventsSSE() {
         eventSourceRef.current = null;
       }
     };
-  }, [queryClient, updateTrack]);
+  }, [queryClient, updateTrack, updateTracksInCache]);
 
   return typeof window !== "undefined" && eventSourceRef.current?.readyState === EventSource.OPEN;
 }

@@ -260,6 +260,37 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
         });
       }
     },
+    onError: (error) => {
+      console.error("Error during genetic sort:", error);
+      let details = "";
+      if (error instanceof Error) {
+        try {
+          const parsed = JSON.parse(error.message) as {
+            error?: string;
+            invalid?: Array<{ track_id?: string; reason?: string }>;
+          };
+          if (parsed?.invalid?.length) {
+            const ids = parsed.invalid
+              .map((i) => i.track_id)
+              .filter(Boolean)
+              .slice(0, 5)
+              .join(", ");
+            details = `Missing data for ${parsed.invalid.length} tracks${
+              ids ? ` (e.g. ${ids})` : ""
+            }.`;
+          } else if (parsed?.error) {
+            details = parsed.error;
+          }
+        } catch {
+          // ignore parsing failures
+        }
+      }
+      toaster.create({
+        title: "Genetic sort failed",
+        description: details || (error instanceof Error ? error.message : String(error)),
+        type: "error",
+      });
+    },
   });
 
   const sortGenetic = () => {

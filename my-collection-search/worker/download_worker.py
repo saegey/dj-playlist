@@ -203,6 +203,113 @@ def update_track_analysis(track_id: str, friend_id: int, analysis_data: Dict[str
         logger.error(f"Failed to update track analysis: {e}")
         # Don't raise - this is not critical enough to fail the whole job
 
+def get_duration_seconds(file_path: str) -> int:
+    """Get duration in seconds using ffprobe."""
+    cmd = [
+        "ffprobe",
+        "-v", "error",
+        "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1",
+        file_path,
+    ]
+    result = run_subprocess(cmd, timeout=30)
+    if result.returncode != 0:
+        raise Exception(f"ffprobe failed: {result.stderr}")
+    try:
+        duration = float(result.stdout.strip())
+    except Exception as e:
+        raise Exception(f"ffprobe duration parse failed: {e}")
+    if duration <= 0:
+        raise Exception("ffprobe returned non-positive duration")
+    return int(round(duration))
+
+def ensure_local_audio_file(job_data: Dict[str, Any]) -> str:
+    """Resolve or download the local audio file for duration analysis."""
+    local_audio_url = job_data.get("local_audio_url")
+    if not local_audio_url:
+        raise Exception("Job missing local_audio_url")
+
+    audio_dir = "/app/audio"
+    # If local_audio_url is a full path, use it if it exists
+    if os.path.exists(local_audio_url):
+        return local_audio_url
+
+    filename = os.path.basename(local_audio_url)
+    candidate = os.path.join(audio_dir, filename)
+    if os.path.exists(candidate):
+        return candidate
+
+    # Fallback: download from app API
+    app_url = os.getenv("APP_URL", "http://app:3000")
+    audio_url = f"{app_url}/api/audio?filename={filename}"
+    tmp_path = f"/tmp/{filename}"
+    logger.info(f"Downloading audio for duration check: {audio_url}")
+    with requests.get(audio_url, stream=True, timeout=60) as response:
+        if not response.ok:
+            raise Exception(f"Failed to fetch audio: {response.status_code} {response.text}")
+        with open(tmp_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+    return tmp_path
+
+def update_track_duration(track_id: str, friend_id: int, duration_seconds: int):
+    """Update track duration via app API."""
+    app_url = os.getenv('APP_URL', 'http://app:3000')
+    update_url = f"{app_url}/api/tracks/update"
+    update_data = {
+        'track_id': track_id,
+        'friend_id': friend_id,
+        'duration_seconds': duration_seconds,
+    }
+    logger.info(f"Updating track duration via API: {update_url}")
+    response = requests.patch(
+        update_url,
+        json=update_data,
+        headers={'Content-Type': 'application/json'},
+        timeout=30
+    )
+    if not response.ok:
+        raise Exception(f"Failed to update duration: {response.status_code} {response.text}")
+
+def fix_duration(job_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Fix missing duration using existing local audio."""
+    track_id = job_data['track_id']
+    friend_id = job_data['friend_id']
+    job_id = job_data.get('job_id', f"{track_id}_{int(time.time())}")
+
+    logger.info(f"Starting duration fix job {job_id} for track {track_id}")
+    update_job_status(job_id, 'processing', 10)
+
+    try:
+        audio_path = ensure_local_audio_file(job_data)
+        update_job_status(job_id, 'processing', 50)
+        duration_seconds = get_duration_seconds(audio_path)
+        update_job_status(job_id, 'processing', 80)
+        update_track_duration(track_id, friend_id, duration_seconds)
+
+        result = {
+            'success': True,
+            'track_id': track_id,
+            'friend_id': friend_id,
+            'duration_seconds': duration_seconds,
+        }
+        update_job_status(job_id, 'completed', 100, result=result)
+        logger.info(f"Duration job {job_id} completed successfully")
+        return result
+
+    except Exception as e:
+        error_msg = f"Duration fix failed: {str(e)}"
+        logger.error(f"Job {job_id} failed: {error_msg}")
+        logger.error(traceback.format_exc())
+        update_job_status(job_id, 'failed', 0, error=error_msg)
+        return {
+            'success': False,
+            'error': error_msg,
+            'track_id': track_id,
+            'friend_id': friend_id
+        }
+
 def download_audio(job_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Download audio from various sources
@@ -784,8 +891,12 @@ def main():
                     # Parse job data
                     job = json.loads(job_json)
 
-                    # Process the download
-                    result = download_audio(job)
+                    job_type = job.get("job_type", "download")
+                    if job_type == "fix-duration":
+                        result = fix_duration(job)
+                    else:
+                        # Process the download
+                        result = download_audio(job)
                     logger.info(f"Job {job.get('job_id')} completed with result: {result}")
 
                 except json.JSONDecodeError as e:

@@ -9,9 +9,9 @@ type VectorizeArgs = {
 };
 
 export function useVectorizeTrackMutation() {
-  return useMutation<void, Error, VectorizeArgs>({
+  return useMutation<{ embedding: number[] }, Error, VectorizeArgs>({
     mutationFn: async (args: VectorizeArgs) => {
-      await vectorizeTrack(args);
+      return await vectorizeTrack(args);
     },
   });
 }

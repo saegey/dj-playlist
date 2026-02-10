@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react";
 import {
   Toaster as ChakraToaster,
   Portal,
@@ -15,6 +16,13 @@ export const toaster = createToaster({
 })
 
 export const Toaster = () => {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
   return (
     <Portal>
       <ChakraToaster toaster={toaster} insetInline={{ mdDown: "4" }}>

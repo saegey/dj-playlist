@@ -6,6 +6,7 @@ export interface DownloadJobData {
   job_id: string;
   track_id: string;
   friend_id: number;
+  job_type?: "download" | "fix-duration";
   apple_music_url?: string;
   spotify_url?: string;
   youtube_url?: string;
@@ -13,6 +14,7 @@ export interface DownloadJobData {
   title?: string | null;
   artist?: string | null;
   preferred_downloader?: "freyr" | "spotdl" | "yt-dlp" | "scdl";
+  local_audio_url?: string | null;
   // Gamdl-specific settings
   quality?: "best" | "high" | "standard" | "lossless";
   format?: "m4a" | "mp3" | "aac" | "flac";
@@ -109,6 +111,7 @@ export class RedisJobService {
     const jobData: DownloadJobData = {
       ...gamdlSettings,
       ...data,
+      job_type: "download",
       job_id,
     };
 
@@ -123,12 +126,45 @@ export class RedisJobService {
       updated_at: now,
       track_id: data.track_id,
       friend_id: data.friend_id,
+      name: "download-audio",
     });
 
     // Add job to simple Redis queue (will be picked up by Python worker)
     await this.redis.lpush("download_queue", JSON.stringify(jobData));
 
     console.log(`Created download job ${job_id} for track ${data.track_id}`);
+    return job_id;
+  }
+
+  async createDurationJob(data: {
+    track_id: string;
+    friend_id: number;
+    local_audio_url?: string | null;
+  }): Promise<string> {
+    const job_id = uuidv4();
+    const now = Date.now();
+
+    await this.redis.hset(`job:${job_id}`, {
+      job_id,
+      status: "queued",
+      progress: 0,
+      created_at: now,
+      updated_at: now,
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      name: "fix-duration",
+    });
+
+    const jobData: DownloadJobData = {
+      job_id,
+      job_type: "fix-duration",
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      ...(data.local_audio_url ? { local_audio_url: data.local_audio_url } : {}),
+    };
+
+    await this.redis.lpush("download_queue", JSON.stringify(jobData));
+    console.log(`Created duration job ${job_id} for track ${data.track_id}`);
     return job_id;
   }
 

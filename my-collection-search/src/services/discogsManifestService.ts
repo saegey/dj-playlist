@@ -219,3 +219,18 @@ export function getAllTracksFromManifests(): DiscogsTrack[] {
   }
   return allTracks;
 }
+
+export function getTracksFromManifestReleases(
+  username: string,
+  releaseIds: string[]
+): DiscogsTrack[] {
+  const tracks: DiscogsTrack[] = [];
+  for (const releaseId of releaseIds) {
+    const releasePath = getReleasePath(username, String(releaseId));
+    if (!releasePath) continue;
+    const album = loadAlbum(releasePath);
+    if (!album) continue;
+    tracks.push(...extractTracksFromAlbum(album, username));
+  }
+  return tracks;
+}

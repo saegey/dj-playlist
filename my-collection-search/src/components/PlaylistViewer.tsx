@@ -499,7 +499,9 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
             onSortGenetic={sortGenetic}
             onExportJson={exportPlaylist}
           onImportJson={() => fileInputRef.current?.click()}
-          onExportPdf={() => exportToPDF("playlist.pdf")}
+          onExportPdf={() =>
+            exportToPDF(playlistName || `Playlist ${playlistId ?? ""}`.trim())
+          }
           onOpenSaveDialog={playlistId ? saveExisting : openSaveDialog}
           isGeneticSorting={isGeneticSorting}
           onDuplicate={playlistId ? () => setDuplicateDialogOpen(true) : undefined}

@@ -320,7 +320,7 @@ export async function GET(request: NextRequest) {
 
             try {
               const { Pool } = await import("pg");
-              const { getAllTracksFromManifests } = await import(
+              const { getTracksFromManifestReleases } = await import(
                 "@/services/discogsManifestService"
               );
               const {
@@ -341,9 +341,12 @@ export async function GET(request: NextRequest) {
               const meiliClient = getMeiliClient();
 
               controller.enqueue(
-                encoder.encode(`Loading tracks from manifests...\n\n`)
+                encoder.encode(`Loading tracks from new releases...\n\n`)
               );
-              const allTracks = getAllTracksFromManifests();
+              const allTracks = getTracksFromManifestReleases(
+                username,
+                newReleases
+              );
               controller.enqueue(
                 encoder.encode(`Loaded ${allTracks.length} tracks\n\n`)
               );
@@ -378,7 +381,10 @@ export async function GET(request: NextRequest) {
               );
 
               try {
-                const { getAllAlbumsFromManifests, upsertAlbums } = await import(
+                const {
+                  getAlbumsFromManifestReleases,
+                  upsertAlbums,
+                } = await import(
                   "@/services/albumUpsertService"
                 );
                 const {
@@ -388,9 +394,13 @@ export async function GET(request: NextRequest) {
                 } = await import("@/services/albumMeiliService");
 
                 controller.enqueue(
-                  encoder.encode(`Loading albums from manifests...\n`)
+                  encoder.encode(`Loading albums from new releases...\n`)
                 );
-                const allAlbums = await getAllAlbumsFromManifests(pool);
+                const allAlbums = await getAlbumsFromManifestReleases(
+                  pool,
+                  username,
+                  newReleases
+                );
                 controller.enqueue(
                   encoder.encode(`Loaded ${allAlbums.length} albums\n\n`)
                 );

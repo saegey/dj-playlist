@@ -81,13 +81,28 @@ export async function generateGeneticPlaylist(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ playlist }),
   });
-  if (!res.ok) throw new Error("Failed to generate genetic playlist");
-
   const data = await res.json();
-  console.log("Genetic playlist response data:", data);
-  if (data.detail) {
-    throw new Error(data.detail);
+  if (!res.ok) {
+    if (data?.invalid && Array.isArray(data.invalid)) {
+      throw new Error(
+        JSON.stringify({
+          error:
+            typeof data?.error === "string"
+              ? data.error
+              : "Invalid tracks for genetic playlist",
+          invalid: data.invalid,
+        })
+      );
+    }
+    const msg =
+      typeof data?.error === "string"
+        ? data.error
+        : typeof data?.detail === "string"
+        ? data.detail
+        : "Failed to generate genetic playlist";
+    throw new Error(msg);
   }
+  console.log("Genetic playlist response data:", data);
   const result = Array.isArray(data.result)
     ? (data.result as Track[])
     : (Object.values(data.result || {}) as Track[]);

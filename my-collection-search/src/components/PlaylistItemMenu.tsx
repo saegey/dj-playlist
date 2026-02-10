@@ -5,6 +5,7 @@ import { Button, Menu, Dialog, Portal, Flex } from "@chakra-ui/react";
 import {
   FiArrowDown,
   FiArrowUp,
+  FiClock,
   FiDownload,
   FiEdit,
   FiMoreVertical,
@@ -15,9 +16,11 @@ import {
 import type { Track } from "@/types/track";
 import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
 import PlaylistRecommendations from "./PlaylistRecommendations";
-import { analyzeTrackAsync } from "@/services/trackService";
+import { analyzeTrackAsync, recalcTrackDuration, vectorizeTrack } from "@/services/trackService";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
+import { useTrackStore } from "@/stores/trackStore";
+import { useTracksCacheUpdater } from "@/hooks/useTracksCacheUpdater";
 
 export interface PlaylistItemMenuProps {
   idx: number;
@@ -45,10 +48,33 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
   const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false);
   const [recommendationsTrackSnapshot, setRecommendationsTrackSnapshot] = useState<Track[]>([]);
   const [fetchAudioLoading, setFetchAudioLoading] = useState(false);
+  const [vectorizeLoading, setVectorizeLoading] = useState(false);
+  const [durationLoading, setDurationLoading] = useState(false);
+  const { updateTrack } = useTrackStore();
+  const { updateTracksInCache } = useTracksCacheUpdater();
 
   const canFetchAudio =
     !track.local_audio_url &&
     Boolean(track.apple_music_url || track.youtube_url || track.soundcloud_url);
+  const canRecalcDuration =
+    !!track.local_audio_url && (!track.duration_seconds || track.duration_seconds <= 0);
+  const t = track as Track & {
+    _vectors?: { default?: number[] };
+    embedding?: string | number[] | null;
+  };
+  let hasEmbedding = false;
+  const embeddingRaw = t._vectors?.default ?? t.embedding;
+  if (Array.isArray(embeddingRaw)) {
+    hasEmbedding = embeddingRaw.length > 0;
+  } else if (typeof embeddingRaw === "string") {
+    try {
+      const parsed = JSON.parse(embeddingRaw) as unknown;
+      hasEmbedding = Array.isArray(parsed) && parsed.length > 0;
+    } catch {
+      hasEmbedding = embeddingRaw.length > 0;
+    }
+  }
+  const canVectorize = !hasEmbedding;
 
   const handleFetchAudio = async () => {
     if (!track.friend_id) {
@@ -79,6 +105,64 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
       });
     } finally {
       setFetchAudioLoading(false);
+    }
+  };
+  const handleVectorize = async () => {
+    if (!track.friend_id) {
+      toaster.create({ title: "Track missing friend_id", type: "error" });
+      return;
+    }
+    setVectorizeLoading(true);
+    try {
+      const res = await vectorizeTrack({ track_id: track.track_id, friend_id: track.friend_id });
+      const patch = {
+        track_id: track.track_id,
+        friend_id: track.friend_id,
+        embedding: res.embedding,
+        _vectors: { default: res.embedding },
+        hasVectors: true,
+      };
+      updateTrack(track.track_id, track.friend_id, patch);
+      updateTracksInCache(patch);
+      toaster.create({
+        title: "Track vectorized",
+        type: "success",
+      });
+    } catch (err) {
+      toaster.create({
+        title: "Failed to vectorize",
+        description: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
+    } finally {
+      setVectorizeLoading(false);
+    }
+  };
+
+  const handleRecalcDuration = async () => {
+    if (!track.friend_id) {
+      toaster.create({ title: "Track missing friend_id", type: "error" });
+      return;
+    }
+    setDurationLoading(true);
+    try {
+      const res = await recalcTrackDuration({
+        track_id: track.track_id,
+        friend_id: track.friend_id,
+      });
+      toaster.create({
+        title: "Duration recalculation queued",
+        description: `Job ID: ${res.jobId}`,
+        type: "success",
+      });
+    } catch (err) {
+      toaster.create({
+        title: "Failed to recalculate duration",
+        description: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
+    } finally {
+      setDurationLoading(false);
     }
   };
   return (
@@ -122,6 +206,26 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
               >
                 <FiDownload />
                 {fetchAudioLoading ? "Fetching Audio..." : "Fetch Audio"}
+              </Menu.Item>
+            )}
+            {canRecalcDuration && (
+                <Menu.Item
+                  onSelect={handleRecalcDuration}
+                  value="recalc-duration"
+                  disabled={durationLoading}
+                >
+                  <FiClock />
+                  {durationLoading ? "Queueing..." : "Recalculate Duration"}
+                </Menu.Item>
+              )}
+            {canVectorize && (
+              <Menu.Item
+                onSelect={handleVectorize}
+                value="vectorize"
+                disabled={vectorizeLoading}
+              >
+                <FiZap />
+                {vectorizeLoading ? "Vectorizing..." : "Vectorize Track"}
               </Menu.Item>
             )}
             <Menu.Item

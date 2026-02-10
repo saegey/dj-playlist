@@ -112,15 +112,30 @@ export function usePlaylistActions(playlistId?: number) {
   };
 
   // Export playlist as PDF
-  const exportToPDF = async (filename?: string) => {
+  const exportToPDF = async (playlistName?: string) => {
     const tracks = getTracks();
     const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
+    const exportedAt = new Date();
+    const exportedAtLabel = exportedAt.toLocaleString();
+    const safeName = (playlistName || "playlist")
+      .toString()
+      .trim()
+      .replace(/[^a-zA-Z0-9-_]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+    const timestamp = exportedAt
+      .toISOString()
+      .replace(/[:]/g, "-")
+      .replace(/\..+/, "")
+      .replace("T", "_");
 
     await exportPlaylistToPDF({
       playlist: tracks,
       totalPlaytimeFormatted,
-      filename:
-        filename || `playlist-${new Date().toISOString().split("T")[0]}.pdf`,
+      playlistName,
+      exportedAt: exportedAtLabel,
+      filename: `${safeName || "playlist"}-${timestamp}.pdf`,
     });
 
     // PostHog: Track playlist export
