@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
             if (releases.length === 0) break;
 
             for (const release of releases) {
-              const releaseId = release.basic_information.id;
+              const releaseId = String(release.basic_information.id);
               allIds.push(releaseId);
 
               // Capture date_added from collection response
@@ -408,7 +408,9 @@ export async function GET(request: NextRequest) {
                 controller.enqueue(
                   encoder.encode(`Upserting albums to Postgres...\n`)
                 );
-                const upsertedAlbums = await upsertAlbums(pool, allAlbums);
+                const upsertedAlbums = await upsertAlbums(pool, allAlbums, {
+                  preserveManualFields: true,
+                });
                 controller.enqueue(
                   encoder.encode(`Upserted ${upsertedAlbums.length} albums to Postgres\n\n`)
                 );

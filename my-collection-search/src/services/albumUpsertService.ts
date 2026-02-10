@@ -80,8 +80,26 @@ export function discogsReleaseToAlbum(
  */
 export async function upsertAlbum(
   pool: Pool,
-  album: AlbumToUpsert
+  album: AlbumToUpsert,
+  options?: { preserveManualFields?: boolean }
 ): Promise<Album> {
+  const preserveManualFields = options?.preserveManualFields ?? false;
+  const manualUpdateSql = preserveManualFields
+    ? `
+      album_notes = albums.album_notes,
+      album_rating = albums.album_rating,
+      purchase_price = albums.purchase_price,
+      condition = albums.condition,
+      library_identifier = albums.library_identifier,
+    `
+    : `
+      album_notes = COALESCE(EXCLUDED.album_notes, albums.album_notes),
+      album_rating = COALESCE(EXCLUDED.album_rating, albums.album_rating),
+      purchase_price = COALESCE(EXCLUDED.purchase_price, albums.purchase_price),
+      condition = COALESCE(EXCLUDED.condition, albums.condition),
+      library_identifier = COALESCE(EXCLUDED.library_identifier, albums.library_identifier),
+    `;
+
   const result = await pool.query(
     `
     INSERT INTO albums (
@@ -107,11 +125,7 @@ export async function upsertAlbum(
       catalog_number = EXCLUDED.catalog_number,
       country = EXCLUDED.country,
       format = EXCLUDED.format,
-      album_notes = EXCLUDED.album_notes,
-      album_rating = EXCLUDED.album_rating,
-      purchase_price = EXCLUDED.purchase_price,
-      condition = EXCLUDED.condition,
-      library_identifier = EXCLUDED.library_identifier,
+      ${manualUpdateSql}
       updated_at = current_timestamp
     RETURNING *
     `,
@@ -132,8 +146,8 @@ export async function upsertAlbum(
       album.catalog_number,
       album.country,
       album.format,
-      album.album_notes ?? "",
-      album.album_rating ?? 0,
+      album.album_notes ?? null,
+      album.album_rating ?? null,
       album.purchase_price ?? null,
       album.condition ?? null,
       album.library_identifier ?? null,
@@ -148,13 +162,14 @@ export async function upsertAlbum(
  */
 export async function upsertAlbums(
   pool: Pool,
-  albums: AlbumToUpsert[]
+  albums: AlbumToUpsert[],
+  options?: { preserveManualFields?: boolean }
 ): Promise<Album[]> {
   const upsertedAlbums: Album[] = [];
 
   for (const album of albums) {
     try {
-      const upserted = await upsertAlbum(pool, album);
+      const upserted = await upsertAlbum(pool, album, options);
       upsertedAlbums.push(upserted);
     } catch (error) {
       console.error(
