@@ -188,11 +188,14 @@ export class RedisJobService {
     };
   }
 
-  async getAllJobs(limit: number = 100): Promise<JobStatus[]> {
+  async getAllJobs(limit?: number): Promise<JobStatus[]> {
     const keys = await this.redis.keys("job:*");
     const jobs: JobStatus[] = [];
 
-    for (const key of keys.slice(0, limit)) {
+    // Apply limit if specified, otherwise fetch all
+    const keysToProcess = limit ? keys.slice(0, limit) : keys;
+
+    for (const key of keysToProcess) {
       const jobData = await this.redis.hgetall(key);
       if (jobData && Object.keys(jobData).length > 0) {
         jobs.push({

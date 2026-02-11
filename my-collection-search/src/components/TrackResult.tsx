@@ -16,6 +16,7 @@ import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
 import { FaPlay } from "react-icons/fa";
 import { keyToCamelot } from "@/lib/playlistOrder";
+import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 function formatSeconds(seconds: number): string {
@@ -101,7 +102,9 @@ export default function TrackResult({
                   {track.library_identifier}
                 </Badge>
               )}
-              <Text>{formatSeconds(track.duration_seconds || 0)}</Text>
+              {getTrackDurationSeconds(track) && (
+                <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
+              )}
               <Text>{track.position}</Text>
               {track.bpm && <Text>{track.bpm} bpm</Text>}
               {track.key && (
@@ -286,8 +289,8 @@ export default function TrackResult({
               </Badge>
             )}
             {track.position && <Text display={{ base: "none", md: "block" }}>Pos: {track.position}</Text>}
-            {track.duration_seconds && track.duration_seconds > 0 && (
-              <Text>{formatSeconds(track.duration_seconds)}</Text>
+            {getTrackDurationSeconds(track) && (
+              <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
             )}
             {track.bpm && <Text>{track.bpm} BPM</Text>}
             {track.key && (

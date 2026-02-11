@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
-import { MeiliSearch } from 'meilisearch';
 import { generateLocalTrackId } from '@/lib/localTrackHelpers';
 import { saveAlbumCover } from '@/lib/fileUpload';
 import { AlbumToUpsert, upsertAlbum } from '@/services/albumUpsertService';
 import { addTracksToMeili } from '@/services/meiliDocumentService';
 import { addAlbumsToMeili, getOrCreateAlbumsIndex } from '@/services/albumMeiliService';
 import { Track } from '@/types/track';
+import { getMeiliClient } from '@/lib/meili';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-const meiliClient = new MeiliSearch({
-  host: process.env.MEILISEARCH_HOST || 'http://localhost:7700',
-  apiKey: process.env.MEILISEARCH_API_KEY,
-});
+const meiliClient = getMeiliClient();
 
 interface AlbumMetadata {
   title: string;

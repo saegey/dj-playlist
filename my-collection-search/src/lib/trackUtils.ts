@@ -23,3 +23,14 @@ export function formatSeconds(seconds: number): string {
     return `${m}:${s.toString().padStart(2, "0")}`;
   }
 }
+
+export function getTrackDurationSeconds(track: { duration_seconds?: number | null; duration?: string | null }): number | null {
+  if (typeof track.duration_seconds === "number" && track.duration_seconds > 0) {
+    return track.duration_seconds;
+  }
+  if (track.duration) {
+    const parsed = parseDurationToSeconds(track.duration);
+    return parsed > 0 ? parsed : null;
+  }
+  return null;
+}

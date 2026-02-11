@@ -17,6 +17,7 @@ import { Track } from "@/types/track";
 import { keyToCamelot } from "@/lib/playlistOrder";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import ExpandableMarkdown from "./ExpandableMarkdown";
+import { getTrackDurationSeconds } from "@/lib/trackUtils";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -116,8 +117,8 @@ export default function AlbumTrackItem({
                 {track.library_identifier}
               </Badge>
             )}
-            {track.duration_seconds && track.duration_seconds > 0 && (
-              <Text>{formatSeconds(track.duration_seconds)}</Text>
+            {getTrackDurationSeconds(track) && (
+              <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
             )}
             {track.bpm && <Text>{track.bpm} BPM</Text>}
             {track.key && (

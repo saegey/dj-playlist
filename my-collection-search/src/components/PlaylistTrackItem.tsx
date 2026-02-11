@@ -15,6 +15,7 @@ import {
 } from "@chakra-ui/react";
 import { FaPlay } from "react-icons/fa";
 import { keyToCamelot } from "@/lib/playlistOrder";
+import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { Track } from "@/types/track";
 import ExpandableMarkdown from "./ExpandableMarkdown";
@@ -204,8 +205,8 @@ export default function PlaylistTrackItem({
                 {track.library_identifier}
               </Badge>
             )}
-            {track.duration_seconds && track.duration_seconds > 0 && (
-              <Text>{formatSeconds(track.duration_seconds)}</Text>
+            {getTrackDurationSeconds(track) && (
+              <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
             )}
             {track.bpm && (
               <>

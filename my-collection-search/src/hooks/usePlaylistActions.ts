@@ -3,6 +3,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import type { Track } from "@/types/track";
 import { useTrackStore } from "@/stores/trackStore";
 import { exportPlaylistToPDF } from "@/lib/exportPlaylistPdf";
+import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import posthog from "posthog-js";
 
 /**
@@ -45,7 +46,7 @@ export function usePlaylistActions(playlistId?: number) {
   const getTotalPlaytime = (): { seconds: number; formatted: string } => {
     const tracks = getTracks();
     const totalSeconds = tracks.reduce((sum, track) => {
-      return sum + (track.duration_seconds || 0);
+      return sum + (getTrackDurationSeconds(track) || 0);
     }, 0);
 
     const hours = Math.floor(totalSeconds / 3600);

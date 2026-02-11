@@ -1,5 +1,5 @@
 import type { Track } from "@/types/track";
-import { parseDurationToSeconds, formatSeconds } from "@/lib/trackUtils";
+import { formatSeconds, getTrackDurationSeconds } from "@/lib/trackUtils";
 
 export function usePlaylistViewer({
   playlist,
@@ -18,15 +18,7 @@ export function usePlaylistViewer({
 }) {
   // Compute total playtime
   const totalPlaytimeSeconds = playlist.reduce((sum, track) => {
-    if (!track.duration) {
-      return (
-        sum +
-        (typeof track.duration_seconds === "number"
-          ? track.duration_seconds
-          : 0)
-      );
-    }
-    return sum + parseDurationToSeconds(track.duration);
+    return sum + (getTrackDurationSeconds(track) || 0);
   }, 0);
 
   const totalPlaytimeFormatted = formatSeconds(totalPlaytimeSeconds);

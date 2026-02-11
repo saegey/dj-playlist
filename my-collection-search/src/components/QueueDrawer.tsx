@@ -19,6 +19,7 @@ import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useQueueSaveDialog } from "@/hooks/useQueueSaveDialog";
 import type { Track } from "@/types/track";
 import { PlayerContainer } from "./PlaylistPlayer";
+import { formatSeconds, getTrackDurationSeconds } from "@/lib/trackUtils";
 
 interface QueueDrawerProps {
   isOpen: boolean;
@@ -88,20 +89,9 @@ export default function QueueDrawer({
   // Calculate total duration
   const totalDuration = React.useMemo(() => {
     const totalSeconds = playlist.reduce((sum, track) => {
-      return sum + (track.duration_seconds || 0);
+      return sum + (getTrackDurationSeconds(track) || 0);
     }, 0);
-
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds
-        .toString()
-        .padStart(2, "0")}`;
-    } else {
-      return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-    }
+    return formatSeconds(totalSeconds);
   }, [playlist]);
 
   return (

@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import type { Track } from "@/types/track";
-import { formatSeconds } from "@/lib/trackUtils";
+import { formatSeconds, getTrackDurationSeconds } from "@/lib/trackUtils";
 
 const MONO_TTF_PATH = "/NotoSansMono-Regular.ttf";
 const MONO_TTF_VFS = "NotoSansMono-Regular.ttf";
@@ -205,10 +205,9 @@ export async function exportPlaylistToPDF({
     const id = sanitizeForPdf(track.library_identifier || "");
     const bpm = sanitizeForPdf(track.bpm || "-");
     const key = sanitizeForPdf(track.key || "-");
+    const durSeconds = getTrackDurationSeconds(track);
     const dur = sanitizeForPdf(
-      track.duration_seconds
-      ? formatSeconds(track.duration_seconds)
-      : "-"
+      durSeconds ? formatSeconds(durSeconds) : "-"
     );
     const genre = sanitizeForPdf(
       Array.isArray(track.genres) ? track.genres.join(", ") : ""
