@@ -73,14 +73,17 @@ export function usePlaylistActions(playlistId?: number) {
     if (tracks.length === 0) return;
 
     // Get playlist name
-    const cached = queryClient.getQueryData(
-      queryKeys.playlistTrackIds(playlistId)
-    ) as
-      | { track_id: string; friend_id: number; playlist_name?: string }[]
-      | { tracks?: { track_id: string; friend_id: number }[]; playlist_name?: string }
-      | undefined;
+    let playlistName: string | undefined;
+    if (playlistId) {
+      const cached = queryClient.getQueryData(
+        queryKeys.playlistTrackIds(playlistId)
+      ) as
+        | { track_id: string; friend_id: number; playlist_name?: string }[]
+        | { tracks?: { track_id: string; friend_id: number }[]; playlist_name?: string }
+        | undefined;
 
-    const playlistName = !Array.isArray(cached) ? cached?.playlist_name : undefined;
+      playlistName = !Array.isArray(cached) ? cached?.playlist_name : undefined;
+    }
 
     // Export tracks with username for cross-installation compatibility
     // Exclude vector/embedding fields and computed fields from export
