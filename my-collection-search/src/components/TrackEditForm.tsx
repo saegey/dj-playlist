@@ -151,6 +151,26 @@ export default function TrackEditForm({
     useUploadTrackAudioMutation();
   const { mutateAsync: fetchMetadata, isPending: aiLoading } =
     useTrackMetadataMutation();
+  const [aiPrompt, setAiPrompt] = useState<string>("");
+
+  React.useEffect(() => {
+    const friendId = form.friend_id;
+    if (!friendId) return;
+    const run = async () => {
+      try {
+        const res = await fetch(
+          `/api/settings/ai-prompt?friend_id=${encodeURIComponent(friendId)}`
+        );
+        const data = await res.json();
+        if (res.ok && typeof data.prompt === "string") {
+          setAiPrompt(data.prompt);
+        }
+      } catch (err) {
+        console.error("Failed to load AI prompt settings", err);
+      }
+    };
+    run();
+  }, [form.friend_id]);
 
   const handleFileUpload = async (selectedFile: File) => {
     try {
@@ -228,12 +248,18 @@ export default function TrackEditForm({
 
   const fetchFromChatGPT = async () => {
     try {
-      const prompt = buildTrackMetadataPrompt({
-        title: form.title,
-        artist: form.artist,
-        album: form.album,
+      const prompt = buildTrackMetadataPrompt(
+        {
+          title: form.title,
+          artist: form.artist,
+          album: form.album,
+        },
+        aiPrompt
+      );
+      const data = await fetchMetadata({
+        prompt,
+        friend_id: form.friend_id,
       });
-      const data = await fetchMetadata({ prompt });
       setForm((prev) => ({
         ...prev,
         local_tags: (data.genre as string) || prev.local_tags,

@@ -117,7 +117,7 @@ export async function uploadTrackAudio(
   });
 }
 
-export type TrackMetadataArgs = { prompt: string };
+export type TrackMetadataArgs = { prompt: string; friend_id?: number };
 export type TrackMetadataResponse = { genre?: string; notes?: string } & Record<
   string,
   unknown

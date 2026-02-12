@@ -72,10 +72,20 @@ export function usePlaylistActions(playlistId?: number) {
     console.log(`Playlist has ${tracks.length} tracks`);
     if (tracks.length === 0) return;
 
+    // Get playlist name
+    const cached = queryClient.getQueryData(
+      queryKeys.playlistTrackIds(playlistId)
+    ) as
+      | { track_id: string; friend_id: number; playlist_name?: string }[]
+      | { tracks?: { track_id: string; friend_id: number }[]; playlist_name?: string }
+      | undefined;
+
+    const playlistName = !Array.isArray(cached) ? cached?.playlist_name : undefined;
+
     // Export tracks with username for cross-installation compatibility
-    // Exclude vector/embedding fields from export
+    // Exclude vector/embedding fields and computed fields from export
     const exportTracks = tracks.map((t) => {
-      const {  ...trackData } = t as Track;
+      const { embedding, _vectors, _semanticScore, hasVectors, ...trackData } = t as Track;
       return {
         ...trackData,
         // Ensure track_id and username are present for cross-installation compatibility
@@ -85,6 +95,7 @@ export function usePlaylistActions(playlistId?: number) {
     });
 
     const playlistData = {
+      name: playlistName,
       tracks: exportTracks,
       exportDate: new Date().toISOString(),
       totalTracks: tracks.length,
@@ -95,10 +106,25 @@ export function usePlaylistActions(playlistId?: number) {
       type: "application/json",
     });
 
+    // Create sanitized filename with playlist name and timestamp
+    const exportedAt = new Date();
+    const safeName = (playlistName || "playlist")
+      .toString()
+      .trim()
+      .replace(/[^a-zA-Z0-9-_]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+    const timestamp = exportedAt
+      .toISOString()
+      .replace(/[:]/g, "-")
+      .replace(/\..+/, "")
+      .replace("T", "_");
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `playlist-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `${safeName}-${timestamp}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

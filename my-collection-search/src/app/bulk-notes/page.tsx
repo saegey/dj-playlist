@@ -27,6 +27,7 @@ import { buildBulkTrackMetadataPrompt } from "@/lib/prompts";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [aiPrompt, setAiPrompt] = useState<string>("");
   const { friends, friendsLoading } = useFriendsQuery({
     showCurrentUser: true,
     showSpotifyUsernames: true,
@@ -37,6 +38,25 @@ export default function BulkNotesPage() {
   const [artistSearch, setArtistSearch] = useState("");
   const [isDataUploading, setIsDataUploading] = useState(false);
   const { mutateAsync: bulkUpdateNotes } = useBulkUpdateTrackNotesMutation();
+
+  React.useEffect(() => {
+    const run = async () => {
+      try {
+        const friendId = friend?.id;
+        const url = friendId
+          ? `/api/settings/ai-prompt?friend_id=${encodeURIComponent(friendId)}`
+          : "/api/settings/ai-prompt";
+        const res = await fetch(url);
+        const data = await res.json();
+        if (res.ok && typeof data.prompt === "string") {
+          setAiPrompt(data.prompt);
+        }
+      } catch (err) {
+        console.error("Failed to load AI prompt settings", err);
+      }
+    };
+    run();
+  }, [friend?.id]);
 
   // Build filter string for MeiliSearch
   let filter = undefined;
@@ -108,7 +128,7 @@ export default function BulkNotesPage() {
             ? t.discogs_url
             : t.spotify_url,
       }));
-    const fullPrompt = buildBulkTrackMetadataPrompt(selectedTracks);
+    const fullPrompt = buildBulkTrackMetadataPrompt(selectedTracks, aiPrompt);
     // Robust clipboard copy with fallback
     const copyToClipboard = async (text: string) => {
       try {

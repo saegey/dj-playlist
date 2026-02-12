@@ -1,20 +1,15 @@
-function commonMetadataPreamble(): string {
-  return (
-    "You are a DJ music metadata assistant. For each track, suggest concise, accurate genre/style tags and write DJ-focused notes. " +
-    "In notes, include vibe, energy, suggested set placement, transition tips, and any emotional or cultural context. " +
-    "Do not repeat the track name; refer to it as 'This track'."
-  );
-}
-
-export function buildTrackMetadataPrompt(args: {
+export function buildTrackMetadataPrompt(
+  args: {
   title?: string;
   artist?: string;
   album?: string;
-}): string {
+  },
+  basePrompt: string
+): string {
   const title = args.title ?? "";
   const artist = args.artist ?? "";
   const album = args.album ?? "";
-  const preamble = commonMetadataPreamble();
+  const preamble = basePrompt || "";
   return (
     `${preamble}\n` +
     `Return a JSON object with the fields: genre, notes.\n` +
@@ -22,14 +17,17 @@ export function buildTrackMetadataPrompt(args: {
   );
 }
 
-export function buildBulkTrackMetadataPrompt(tracks: Array<{
-  track_id: string;
-  title: string;
-  artist: string;
-  album?: string;
-  url?: string | null | undefined;
-}>): string {
-  const preamble = commonMetadataPreamble();
+export function buildBulkTrackMetadataPrompt(
+  tracks: Array<{
+    track_id: string;
+    title: string;
+    artist: string;
+    album?: string;
+    url?: string | null | undefined;
+  }>,
+  basePrompt: string
+): string {
+  const preamble = basePrompt || "";
   const header =
     `${preamble}\n` +
     `For each track below, return a JSON object with the fields: track_id, local_tags (string), notes.\n` +
