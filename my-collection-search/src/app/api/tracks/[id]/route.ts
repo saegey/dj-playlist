@@ -21,7 +21,16 @@ export async function GET(
     }
 
     const { rows } = await pool.query(
-      "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2 LIMIT 1",
+      `
+      SELECT
+        t.*,
+        COALESCE(a.library_identifier, t.library_identifier) AS library_identifier
+      FROM tracks t
+      LEFT JOIN albums a
+        ON t.release_id = a.release_id AND t.friend_id = a.friend_id
+      WHERE t.track_id = $1 AND t.friend_id = $2
+      LIMIT 1
+      `,
       [track_id, friend_id]
     );
     const track = rows[0] || null;
