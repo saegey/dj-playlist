@@ -492,19 +492,28 @@ export async function PATCH(req: Request) {
           [id]
         );
         if (tracks.length > 0) {
-          // Resolve friend_id for each track based on username (not friend_id from import)
+          // Resolve friend_id for each track (prefer explicit friend_id)
           const resolvedTracks = await Promise.all(
             tracks.map(async (track, i) => {
               const trackId =
                 typeof track === "string" ? track : track.track_id;
-              const username = typeof track === "object" ? track.username ?? undefined : undefined;
+              const username =
+                typeof track === "object" ? track.username ?? undefined : undefined;
 
-              // Always resolve friend_id from username for cross-installation compatibility
-              let friendId: number;
-              if (default_friend_id) {
+              // Prefer explicit friend_id if provided by client
+              const rawFriendId =
+                typeof track === "object" ? track.friend_id : undefined;
+              let friendId =
+                typeof rawFriendId === "number" && Number.isFinite(rawFriendId)
+                  ? rawFriendId
+                  : undefined;
+
+              if (!friendId && default_friend_id) {
                 friendId = default_friend_id;
-              } else {
-                // Resolve friend_id from username, not from imported friend_id
+              }
+
+              if (!friendId) {
+                // Resolve friend_id from username or track ownership as fallback
                 friendId = await resolveFriendIdForTrack(trackId, username);
               }
 
