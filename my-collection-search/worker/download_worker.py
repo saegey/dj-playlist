@@ -310,6 +310,14 @@ def fix_duration(job_data: Dict[str, Any]) -> Dict[str, Any]:
             'friend_id': friend_id
         }
 
+def has_download_urls(job_data: Dict[str, Any]) -> bool:
+    """Return True if at least one remote source URL is present."""
+    for key in ['apple_music_url', 'spotify_url', 'youtube_url', 'soundcloud_url']:
+        value = job_data.get(key)
+        if isinstance(value, str) and value.strip():
+            return True
+    return False
+
 def download_audio(job_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Download audio from various sources
@@ -893,6 +901,12 @@ def main():
 
                     job_type = job.get("job_type", "download")
                     if job_type == "fix-duration":
+                        result = fix_duration(job)
+                    elif job.get("local_audio_url") and not has_download_urls(job):
+                        logger.info(
+                            "No remote URLs present for job %s; using local audio for duration fix",
+                            job.get("job_id"),
+                        )
                         result = fix_duration(job)
                     else:
                         # Process the download
