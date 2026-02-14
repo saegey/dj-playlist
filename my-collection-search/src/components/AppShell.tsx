@@ -28,6 +28,7 @@ import {
 } from "react-icons/io5";
 import { usePathname } from "next/navigation";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import CommandPalette from "@/components/CommandPalette";
 
 const menuItems = [
   { href: "/", label: "Tracks" },
@@ -84,6 +85,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <Flex minH="100vh" bg="bg">
+      <CommandPalette />
       {/* Desktop sidebar */}
       <Box
         display={{ base: "none", md: "block" }}

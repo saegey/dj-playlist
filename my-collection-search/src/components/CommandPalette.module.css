@@ -1,0 +1,103 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 12, 14, 0.45);
+  backdrop-filter: blur(6px);
+  z-index: 1200;
+}
+
+.dialog {
+  position: fixed;
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(720px, 92vw);
+  max-height: 72vh;
+  background: var(--chakra-colors-bg, #ffffff);
+  border: 1px solid var(--chakra-colors-border, rgba(0, 0, 0, 0.08));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+  border-radius: 16px;
+  padding: 10px;
+  z-index: 1201;
+}
+
+.command {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 10px 12px;
+  font-size: 16px;
+  color: var(--chakra-colors-fg, #111111);
+}
+
+.list {
+  max-height: 52vh;
+  overflow: auto;
+  padding: 4px;
+}
+
+.empty {
+  padding: 12px;
+  color: var(--chakra-colors-fg-muted, #6b7280);
+  font-size: 14px;
+}
+
+.group {
+  padding: 6px 4px 2px;
+}
+
+.groupHeading {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--chakra-colors-fg-muted, #6b7280);
+  padding: 6px 8px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--chakra-colors-fg, #111111);
+}
+
+.item[data-selected="true"] {
+  background: var(--chakra-colors-bg-subtle, rgba(0, 0, 0, 0.04));
+}
+
+.itemLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.itemTitle {
+  font-size: 14px;
+}
+
+.itemMeta {
+  font-size: 12px;
+  color: var(--chakra-colors-fg-muted, #6b7280);
+}
+
+.shortcut {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--chakra-colors-fg-muted, #6b7280);
+}
+
+.separator {
+  height: 1px;
+  margin: 6px 6px;
+  background: var(--chakra-colors-border, rgba(0, 0, 0, 0.08));
+}

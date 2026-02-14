@@ -19,8 +19,16 @@ export async function GET() {
     const manifestFiles = getManifestFiles();
     if (!manifestFiles.length) {
       return NextResponse.json(
-        { error: "No manifest JSON files found" },
-        { status: 404 }
+        {
+          message: "No manifest files found yet. Run Discogs sync to create them.",
+          results: [],
+          summary: {
+            totalManifests: 0,
+            totalMissingFiles: 0,
+            totalValidFiles: 0,
+          },
+        },
+        { status: 200 }
       );
     }
 
@@ -69,8 +77,16 @@ export async function POST() {
     const manifestFiles = getManifestFiles();
     if (!manifestFiles.length) {
       return NextResponse.json(
-        { error: "No manifest JSON files found" },
-        { status: 404 }
+        {
+          message: "No manifest files to clean yet.",
+          results: [],
+          summary: {
+            totalManifests: 0,
+            totalRemoved: 0,
+            totalKept: 0,
+          },
+        },
+        { status: 200 }
       );
     }
 

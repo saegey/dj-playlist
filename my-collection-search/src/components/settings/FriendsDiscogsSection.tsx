@@ -79,6 +79,10 @@ export default function FriendsDiscogsSection() {
     setPendingUsername(username);
     try {
       const result = await verifyManifests.mutateAsync();
+      if (result.summary.totalManifests === 0) {
+        discogsSync.mutate({ username });
+        return;
+      }
       setVerificationResults(result.results);
       setVerificationOpen(true);
     } catch (err) {

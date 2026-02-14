@@ -16,8 +16,8 @@ export async function POST() {
     const manifestFiles = getManifestFiles();
     if (!manifestFiles.length) {
       return NextResponse.json(
-        { error: "No manifest JSON files found" },
-        { status: 404 }
+        { message: "No manifest files found yet. Run Discogs sync first." },
+        { status: 200 }
       );
     }
     const allTracks = getAllTracksFromManifests();
