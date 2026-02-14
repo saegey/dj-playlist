@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import NextLink from "next/link";
 import {
   Box,
   Flex,
@@ -58,6 +59,7 @@ export default function TrackResultCompact({
   showPlaylistCount = true,
 }: TrackResultCompactProps) {
   const { replacePlaylist } = usePlaylistPlayer();
+  const trackHref = `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`;
 
   const score =
     track._semanticScore !== undefined ? track._semanticScore * 100 : undefined;
@@ -173,7 +175,13 @@ export default function TrackResultCompact({
             flex="1"
             minW="150px"
           >
-            {track.title}
+            <Link
+              as={NextLink}
+              href={trackHref}
+              _hover={{ textDecoration: "underline" }}
+            >
+              {track.title}
+            </Link>
             {score && (
               <Badge
                 ml={2}

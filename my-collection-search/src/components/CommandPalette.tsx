@@ -47,7 +47,6 @@ export default function CommandPalette() {
     playNext,
     playPrev,
     clearQueue,
-    replacePlaylist,
   } = usePlaylistPlayer();
 
   const [open, setOpen] = React.useState(false);
@@ -171,8 +170,10 @@ export default function CommandPalette() {
     close();
   };
 
-  const onPlayTrack = (track: TrackHit) => {
-    replacePlaylist([track], { autoplay: true, startIndex: 0 });
+  const onOpenTrack = (track: TrackHit) => {
+    router.push(
+      `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`
+    );
     close();
   };
 
@@ -312,7 +313,7 @@ export default function CommandPalette() {
               <Command.Item
                 key={`tr-${track.track_id}-${track.friend_id}`}
                 value={`${track.title} ${track.artist} ${track.album}`}
-                onSelect={() => onPlayTrack(track)}
+                onSelect={() => onOpenTrack(track)}
                 className={styles.item}
               >
                 <div className={styles.itemLabel}>

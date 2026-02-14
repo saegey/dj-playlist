@@ -1,11 +1,13 @@
 "use client";
 import React, { useState } from "react";
+import NextLink from "next/link";
 import ArtistLink from "./ArtistLink";
 import AlbumLink from "./AlbumLink";
 import {
   Box,
   Flex,
   Text,
+  Link,
   Image,
   Button,
   Icon,
@@ -67,6 +69,7 @@ export default function TrackResult({
     setHasMounted(true);
   }, []);
   const { replacePlaylist } = usePlaylistPlayer();
+  const trackHref = `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`;
 
   // Prevent hydration mismatch: render a placeholder for minimized view until after mount
   if (minimized && !expanded && !hasMounted) {
@@ -85,7 +88,14 @@ export default function TrackResult({
             onClick={allowMinimize ? () => setExpanded(true) : undefined}
           >
             <Text fontWeight="bold" fontSize={["sm", "sm", "sm"]}>
-              {track.title}
+              <Link
+                as={NextLink}
+                href={trackHref}
+                onClick={(e) => e.stopPropagation()}
+                _hover={{ textDecoration: "underline" }}
+              >
+                {track.title}
+              </Link>
             </Text>
             <Text fontSize="sm">
               <AlbumLink releaseId={track.release_id} friendId={track.friend_id} stopPropagation>
@@ -218,7 +228,13 @@ export default function TrackResult({
               flex="1 1 auto"
               minW="200px"
             >
-              {track.title}
+              <Link
+                as={NextLink}
+                href={trackHref}
+                _hover={{ textDecoration: "underline" }}
+              >
+                {track.title}
+              </Link>
               {score && (
                 <Badge
                   ml={2}
