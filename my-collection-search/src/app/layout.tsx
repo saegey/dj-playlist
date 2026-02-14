@@ -1,6 +1,7 @@
 // app/layout.tsx
 import type { ReactNode } from "react";
 import ClientProviders from "./providers"; // <- client wrapper
+import EmotionRegistry from "@/components/EmotionRegistry";
 import AppShell from "@/components/AppShell";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -14,10 +15,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ClientProviders>
-          <Toaster />
-          <AppShell>{children}</AppShell>
-        </ClientProviders>
+        <EmotionRegistry>
+          <ClientProviders>
+            <Toaster />
+            <AppShell>{children}</AppShell>
+          </ClientProviders>
+        </EmotionRegistry>
       </body>
     </html>
   );

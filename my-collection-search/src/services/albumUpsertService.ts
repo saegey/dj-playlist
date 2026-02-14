@@ -19,6 +19,11 @@ export interface AlbumToUpsert {
   catalog_number?: string;
   country?: string;
   format?: string;
+  album_notes?: string;
+  album_rating?: number;
+  purchase_price?: number;
+  condition?: string;
+  library_identifier?: string;
 }
 
 /**
@@ -75,16 +80,35 @@ export function discogsReleaseToAlbum(
  */
 export async function upsertAlbum(
   pool: Pool,
-  album: AlbumToUpsert
+  album: AlbumToUpsert,
+  options?: { preserveManualFields?: boolean }
 ): Promise<Album> {
+  const preserveManualFields = options?.preserveManualFields ?? false;
+  const manualUpdateSql = preserveManualFields
+    ? `
+      album_notes = albums.album_notes,
+      album_rating = albums.album_rating,
+      purchase_price = albums.purchase_price,
+      condition = albums.condition,
+      library_identifier = albums.library_identifier,
+    `
+    : `
+      album_notes = COALESCE(EXCLUDED.album_notes, albums.album_notes),
+      album_rating = COALESCE(EXCLUDED.album_rating, albums.album_rating),
+      purchase_price = COALESCE(EXCLUDED.purchase_price, albums.purchase_price),
+      condition = COALESCE(EXCLUDED.condition, albums.condition),
+      library_identifier = COALESCE(EXCLUDED.library_identifier, albums.library_identifier),
+    `;
+
   const result = await pool.query(
     `
     INSERT INTO albums (
       release_id, friend_id, title, artist, year, genres, styles,
       album_thumbnail, discogs_url, date_added, date_changed,
-      track_count, label, catalog_number, country, format
+      track_count, label, catalog_number, country, format,
+      album_notes, album_rating, purchase_price, condition, library_identifier
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
     ON CONFLICT (release_id, friend_id)
     DO UPDATE SET
       title = EXCLUDED.title,
@@ -101,6 +125,7 @@ export async function upsertAlbum(
       catalog_number = EXCLUDED.catalog_number,
       country = EXCLUDED.country,
       format = EXCLUDED.format,
+      ${manualUpdateSql}
       updated_at = current_timestamp
     RETURNING *
     `,
@@ -121,6 +146,11 @@ export async function upsertAlbum(
       album.catalog_number,
       album.country,
       album.format,
+      album.album_notes ?? null,
+      album.album_rating ?? null,
+      album.purchase_price ?? null,
+      album.condition ?? null,
+      album.library_identifier ?? null,
     ]
   );
 
@@ -132,13 +162,14 @@ export async function upsertAlbum(
  */
 export async function upsertAlbums(
   pool: Pool,
-  albums: AlbumToUpsert[]
+  albums: AlbumToUpsert[],
+  options?: { preserveManualFields?: boolean }
 ): Promise<Album[]> {
   const upsertedAlbums: Album[] = [];
 
   for (const album of albums) {
     try {
-      const upserted = await upsertAlbum(pool, album);
+      const upserted = await upsertAlbum(pool, album, options);
       upsertedAlbums.push(upserted);
     } catch (error) {
       console.error(
@@ -183,6 +214,28 @@ export async function getAllAlbumsFromManifests(
       const album = discogsReleaseToAlbum(release, friendId);
       albums.push(album);
     }
+  }
+
+  return albums;
+}
+
+export async function getAlbumsFromManifestReleases(
+  pool: Pool,
+  username: string,
+  releaseIds: string[]
+): Promise<AlbumToUpsert[]> {
+  const { getReleasePath, loadAlbum } = await import(
+    "@/services/discogsManifestService"
+  );
+  const friendId = await getFriendId(pool, username);
+  const albums: AlbumToUpsert[] = [];
+
+  for (const releaseId of releaseIds) {
+    const releasePath = getReleasePath(username, String(releaseId));
+    if (!releasePath) continue;
+    const release = loadAlbum(releasePath);
+    if (!release) continue;
+    albums.push(discogsReleaseToAlbum(release, friendId));
   }
 
   return albums;

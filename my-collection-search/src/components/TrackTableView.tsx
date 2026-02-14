@@ -6,6 +6,7 @@ import { Track } from "@/types/track";
 import { SiDiscogs, SiApplemusic, SiYoutube, SiSpotify, SiSoundcloud } from "react-icons/si";
 import { FaPlay } from "react-icons/fa";
 import { keyToCamelot } from "@/lib/playlistOrder";
+import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 function formatSeconds(seconds: number): string {
@@ -117,8 +118,8 @@ export default function TrackTableView({
 
                 {/* Duration */}
                 <Table.Cell>
-                  {track.duration_seconds && track.duration_seconds > 0
-                    ? formatSeconds(track.duration_seconds)
+                  {getTrackDurationSeconds(track)
+                    ? formatSeconds(getTrackDurationSeconds(track) || 0)
                     : "-"}
                 </Table.Cell>
 

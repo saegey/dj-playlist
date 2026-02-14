@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import type { Track } from "@/types/track";
-import { formatSeconds } from "@/lib/trackUtils";
+import { formatSeconds, getTrackDurationSeconds } from "@/lib/trackUtils";
 
 const MONO_TTF_PATH = "/NotoSansMono-Regular.ttf";
 const MONO_TTF_VFS = "NotoSansMono-Regular.ttf";
@@ -79,15 +79,21 @@ function sanitizeForPdf(value: unknown): string {
  * @param playlist The playlist array (all tracks)
  * @param displayPlaylist The display playlist (may be reordered or filtered)
  * @param totalPlaytimeFormatted The formatted total playtime string
+ * @param playlistName Optional playlist name to render in header
+ * @param exportedAt Optional timestamp string to render in header
  * @param filename The filename for the PDF (default: "playlist.pdf")
  */
 export async function exportPlaylistToPDF({
   playlist,
   totalPlaytimeFormatted,
+  playlistName,
+  exportedAt,
   filename = "playlist.pdf",
 }: {
   playlist: Track[];
   totalPlaytimeFormatted: string;
+  playlistName?: string;
+  exportedAt?: string;
   filename?: string;
 }) {
   if (!playlist.length) return;
@@ -95,21 +101,29 @@ export async function exportPlaylistToPDF({
   await ensureMonoFont(doc);
 
   const marginLeft = 10;
-  const marginTop = 12;
+  const marginTop = 10;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const rowHeight = 4;
   const headerGap = 6;
-  const headerY = marginTop + 10;
+  const headerY = marginTop + 12;
   const tableTopY = headerY + headerGap;
   const maxY = pageHeight - 12;
   const footerText = "Exported via GrooveNET. The future of vinyl.";
   const footerY = pageHeight - 6;
 
-  doc.setFontSize(8);
+  const headerTitle = playlistName ? sanitizeForPdf(playlistName) : "Playlist";
+  const headerTimestamp = exportedAt ? sanitizeForPdf(exportedAt) : null;
+
   doc.setLineHeightFactor(1);
-  doc.text(`Total Tracks: ${playlist.length}`, marginLeft, marginTop);
-  doc.text(`Total Playtime: ${totalPlaytimeFormatted}`, marginLeft, marginTop + 3);
+  doc.setFontSize(12);
+  doc.text(headerTitle, marginLeft, marginTop);
+  doc.setFontSize(8);
+  doc.text(`Total Tracks: ${playlist.length}`, marginLeft, marginTop + 4);
+  doc.text(`Total Playtime: ${totalPlaytimeFormatted}`, marginLeft, marginTop + 7);
+  if (headerTimestamp) {
+    doc.text(`Exported: ${headerTimestamp}`, marginLeft, marginTop + 10);
+  }
 
   const columns = [
     { key: "#", label: "#", width: 6 },
@@ -162,12 +176,18 @@ export async function exportPlaylistToPDF({
       renderFooter();
       doc.addPage();
       y = marginTop;
-      doc.text(`Total Tracks: ${playlist.length}`, marginLeft, y);
+      doc.setFontSize(12);
+      doc.text(headerTitle, marginLeft, y);
+      doc.setFontSize(8);
+      doc.text(`Total Tracks: ${playlist.length}`, marginLeft, y + 4);
       doc.text(
         `Total Playtime: ${totalPlaytimeFormatted}`,
         marginLeft,
-        y + 3
+        y + 7
       );
+      if (headerTimestamp) {
+        doc.text(`Exported: ${headerTimestamp}`, marginLeft, y + 10);
+      }
       y = tableTopY;
       renderHeader(y);
       y += rowHeight;
@@ -185,10 +205,9 @@ export async function exportPlaylistToPDF({
     const id = sanitizeForPdf(track.library_identifier || "");
     const bpm = sanitizeForPdf(track.bpm || "-");
     const key = sanitizeForPdf(track.key || "-");
+    const durSeconds = getTrackDurationSeconds(track);
     const dur = sanitizeForPdf(
-      track.duration_seconds
-      ? formatSeconds(track.duration_seconds)
-      : "-"
+      durSeconds ? formatSeconds(durSeconds) : "-"
     );
     const genre = sanitizeForPdf(
       Array.isArray(track.genres) ? track.genres.join(", ") : ""

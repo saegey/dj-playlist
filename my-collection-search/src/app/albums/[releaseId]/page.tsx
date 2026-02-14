@@ -432,6 +432,15 @@ function AlbumDetailContent() {
                       <FiEdit /> Edit Details
                     </Menu.Item>
                   )}
+
+                  <Menu.Item
+                    value="edit-album"
+                    asChild
+                  >
+                    <Link href={`/albums/${releaseId}/edit?friend_id=${friendId}`}>
+                      <FiEdit /> Edit Album & Tracks
+                    </Link>
+                  </Menu.Item>
                 </Menu.Content>
               </Menu.Positioner>
             </Menu.Root>

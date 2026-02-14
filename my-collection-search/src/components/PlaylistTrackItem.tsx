@@ -15,6 +15,7 @@ import {
 } from "@chakra-ui/react";
 import { FaPlay } from "react-icons/fa";
 import { keyToCamelot } from "@/lib/playlistOrder";
+import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { Track } from "@/types/track";
 import ExpandableMarkdown from "./ExpandableMarkdown";
@@ -44,16 +45,46 @@ export default function PlaylistTrackItem({
 }: PlaylistTrackItemProps) {
   const { replacePlaylist } = usePlaylistPlayer();
   const [notesModalOpen, setNotesModalOpen] = React.useState(false);
+  const t = track as Track & {
+    _vectors?: { default?: number[] };
+    embedding?: string | number[] | null;
+  };
+
+  let hasEmbedding = false;
+  const embeddingRaw =
+    t._vectors?.default ?? t.embedding;
+  if (Array.isArray(embeddingRaw)) {
+    hasEmbedding = embeddingRaw.length > 0;
+  } else if (typeof embeddingRaw === "string") {
+    try {
+      const parsed = JSON.parse(embeddingRaw) as unknown;
+      hasEmbedding = Array.isArray(parsed) && parsed.length > 0;
+    } catch {
+      hasEmbedding = embeddingRaw.length > 0;
+    }
+  }
+
+  const bpmNum =
+    typeof track.bpm === "number"
+      ? track.bpm
+      : typeof track.bpm === "string"
+      ? Number.parseFloat(track.bpm)
+      : NaN;
+  const hasBpm = Number.isFinite(bpmNum) && bpmNum > 0;
+  const hasDataIssue = !hasEmbedding || !hasBpm;
 
   return (
     <>
       <Flex
         borderBottomWidth="1px"
+        borderLeftWidth={hasDataIssue ? "3px" : "0"}
+        borderLeftColor={hasDataIssue ? "red.400" : "transparent"}
         p={{ base: 2, md: 3 }}
         gap={{ base: 2, md: 3 }}
         position="relative"
         width="100%"
-        _hover={{ bg: "bg.muted" }}
+        bg={hasDataIssue ? "red.50" : undefined}
+        _hover={{ bg: hasDataIssue ? "red.100" : "bg.muted" }}
       >
         {/* Album Art with Play Overlay */}
         <Box
@@ -159,13 +190,23 @@ export default function PlaylistTrackItem({
             alignItems="center"
             flexWrap="wrap"
           >
+            {!hasEmbedding && (
+              <Badge colorPalette="red" size={{ base: "xs", md: "sm" }}>
+                No embedding
+              </Badge>
+            )}
+            {!hasBpm && (
+              <Badge colorPalette="orange" size={{ base: "xs", md: "sm" }}>
+                No BPM
+              </Badge>
+            )}
             {track.library_identifier && (
               <Badge colorPalette="blue" size={{ base: "xs", md: "sm" }}>
                 {track.library_identifier}
               </Badge>
             )}
-            {track.duration_seconds && track.duration_seconds > 0 && (
-              <Text>{formatSeconds(track.duration_seconds)}</Text>
+            {getTrackDurationSeconds(track) && (
+              <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
             )}
             {track.bpm && (
               <>

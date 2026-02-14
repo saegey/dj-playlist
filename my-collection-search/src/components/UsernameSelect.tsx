@@ -52,6 +52,13 @@ export default function UsernameSelect({
   // Context holds Friend | null; external value can override
   const { friend: ctxValue, setFriend: setCtxValue } = useUsername();
   const selectedFriend: Friend | null = value ?? (ctxValue as Friend | null);
+  const uniqueUsernames = React.useMemo(() => {
+    const map = new Map<number, Friend>();
+    for (const u of usernames) {
+      if (!map.has(u.id)) map.set(u.id, u);
+    }
+    return Array.from(map.values());
+  }, [usernames]);
 
   const buttonLabel = React.useMemo(() => {
     if (isLoading) return loadingText;
@@ -127,7 +134,7 @@ export default function UsernameSelect({
                 All Libraries
               </Menu.Item>
             )}
-            {usernames.map((u) => (
+            {uniqueUsernames.map((u) => (
               <Menu.Item
                 key={u.id}
                 value={String(u.id)}

@@ -89,7 +89,7 @@ export default function DraggableTrackList({
                         fallbackTrack={track}
                         buttons={
                           renderTrackButtons
-                            ? [renderTrackButtons(track, idx)]
+                            ? renderTrackButtons(track, idx)
                             : undefined
                         }
                         minimized={trackResultProps?.minimized}

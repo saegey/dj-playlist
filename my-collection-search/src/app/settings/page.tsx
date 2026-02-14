@@ -9,6 +9,7 @@ import FriendsDiscogsSection from "@/components/settings/FriendsDiscogsSection";
 import DatabaseBackups from "@/components/settings/DatabaseBackups";
 import DatabaseRestore from "@/components/settings/DatabaseRestore";
 import GamdlSettingsSection from "@/components/settings/GamdlSettingsSection";
+import AiPromptSettingsSection from "@/components/settings/AiPromptSettingsSection";
 import DiscogsSyncDialog from "@/components/settings/dialogs/DiscogsSyncDialog";
 import SpotifySyncDialog from "@/components/settings/dialogs/SpotifySyncDialog";
 import RemoveFriendDialog from "@/components/settings/dialogs/RemoveFriendDialog"; // your streamed removal dialog
@@ -20,6 +21,7 @@ export default function SettingsPage() {
         <Box mb="120px">
           <ActionsGrid />
           <GamdlSettingsSection />
+          <AiPromptSettingsSection />
           <FriendsDiscogsSection />
           <DatabaseBackups />
           <DatabaseRestore />

@@ -7,7 +7,7 @@ import { useUsername } from "@/providers/UsernameProvider";
 // Local structural type to accept tracks that may contain embeddings
 export type TrackWithEmbedding = Track & {
   _vectors?: {
-    default: number[];
+    default?: number[];
   };
 };
 

@@ -380,7 +380,7 @@ const SearchResults: React.FC = () => {
             trackInfo.map((info) => {
               return (
                 <TrackResultItem
-                  key={`search-${info.trackId}`}
+                  key={`search-${info.trackId}-${info.friendId}`}
                   trackId={info.trackId}
                   friendId={info.friendId}
                   playlistCount={playlistCounts[info.trackId]}

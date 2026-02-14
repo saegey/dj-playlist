@@ -33,8 +33,19 @@ export async function saveTrack(data: TrackEditFormProps): Promise<Track> {
 export async function vectorizeTrack(args: {
   track_id: string;
   friend_id: number;
-}): Promise<void> {
-  await http<unknown>("/api/tracks/vectorize", {
+}): Promise<{ embedding: number[] }> {
+  return await http<{ embedding: number[] }>("/api/tracks/vectorize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+}
+
+export async function recalcTrackDuration(args: {
+  track_id: string;
+  friend_id: number;
+}): Promise<{ jobId: string }> {
+  return await http<{ jobId: string }>("/api/tracks/fix-duration", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(args),
@@ -106,7 +117,7 @@ export async function uploadTrackAudio(
   });
 }
 
-export type TrackMetadataArgs = { prompt: string };
+export type TrackMetadataArgs = { prompt: string; friend_id?: number };
 export type TrackMetadataResponse = { genre?: string; notes?: string } & Record<
   string,
   unknown

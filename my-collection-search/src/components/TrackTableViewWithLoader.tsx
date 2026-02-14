@@ -8,6 +8,7 @@ import { FaPlay } from "react-icons/fa";
 import { keyToCamelot } from "@/lib/playlistOrder";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useTrack } from "@/hooks/useTrack";
+import { getTrackDurationSeconds } from "@/lib/trackUtils";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -87,8 +88,8 @@ const TrackTableRow: React.FC<{
 
       {/* Duration */}
       <Table.Cell>
-        {track.duration_seconds && track.duration_seconds > 0
-          ? formatSeconds(track.duration_seconds)
+        {getTrackDurationSeconds(track)
+          ? formatSeconds(getTrackDurationSeconds(track) || 0)
           : "-"}
       </Table.Cell>
 

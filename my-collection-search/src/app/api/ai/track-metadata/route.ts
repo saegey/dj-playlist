@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 
 // Uncomment and configure if you want to use OpenAI API
 import OpenAI from "openai";
+import { getTrackMetadataPromptForFriend } from "@/lib/serverPrompts";
 
 export async function POST(req: Request) {
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const { prompt } = await req.json();
+    const { prompt, friend_id } = await req.json();
+    const systemPrompt = await getTrackMetadataPromptForFriend(
+      typeof friend_id === "number" ? friend_id : undefined
+    );
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-search-preview",
@@ -15,8 +19,7 @@ export async function POST(req: Request) {
       messages: [
         {
           role: "system",
-          content:
-            "You are a DJ music metadata assistant. Always respond ONLY with a valid JSON object, never with extra text or code fences. Never use unescaped double quotes or newlines inside string values. If you are unsure, use null or an empty string for any field.",
+          content: systemPrompt,
         },
         {
           role: "user",

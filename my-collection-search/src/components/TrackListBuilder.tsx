@@ -7,6 +7,7 @@ import LabeledInput from "@/components/form/LabeledInput";
 import LabeledTextarea from "@/components/form/LabeledTextarea";
 
 export interface TrackFormData {
+  track_id?: string; // Optional - present when editing existing tracks
   title: string;
   artist: string;
   position?: string;

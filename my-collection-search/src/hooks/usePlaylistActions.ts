@@ -3,6 +3,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import type { Track } from "@/types/track";
 import { useTrackStore } from "@/stores/trackStore";
 import { exportPlaylistToPDF } from "@/lib/exportPlaylistPdf";
+import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import posthog from "posthog-js";
 
 /**
@@ -45,7 +46,7 @@ export function usePlaylistActions(playlistId?: number) {
   const getTotalPlaytime = (): { seconds: number; formatted: string } => {
     const tracks = getTracks();
     const totalSeconds = tracks.reduce((sum, track) => {
-      return sum + (track.duration_seconds || 0);
+      return sum + (getTrackDurationSeconds(track) || 0);
     }, 0);
 
     const hours = Math.floor(totalSeconds / 3600);
@@ -71,10 +72,23 @@ export function usePlaylistActions(playlistId?: number) {
     console.log(`Playlist has ${tracks.length} tracks`);
     if (tracks.length === 0) return;
 
+    // Get playlist name
+    let playlistName: string | undefined;
+    if (playlistId) {
+      const cached = queryClient.getQueryData(
+        queryKeys.playlistTrackIds(playlistId)
+      ) as
+        | { track_id: string; friend_id: number; playlist_name?: string }[]
+        | { tracks?: { track_id: string; friend_id: number }[]; playlist_name?: string }
+        | undefined;
+
+      playlistName = !Array.isArray(cached) ? cached?.playlist_name : undefined;
+    }
+
     // Export tracks with username for cross-installation compatibility
-    // Exclude vector/embedding fields from export
+    // Exclude vector/embedding fields and computed fields from export
     const exportTracks = tracks.map((t) => {
-      const {  ...trackData } = t as Track;
+      const { embedding, _vectors, _semanticScore, hasVectors, ...trackData } = t as Track;
       return {
         ...trackData,
         // Ensure track_id and username are present for cross-installation compatibility
@@ -84,6 +98,7 @@ export function usePlaylistActions(playlistId?: number) {
     });
 
     const playlistData = {
+      name: playlistName,
       tracks: exportTracks,
       exportDate: new Date().toISOString(),
       totalTracks: tracks.length,
@@ -94,10 +109,25 @@ export function usePlaylistActions(playlistId?: number) {
       type: "application/json",
     });
 
+    // Create sanitized filename with playlist name and timestamp
+    const exportedAt = new Date();
+    const safeName = (playlistName || "playlist")
+      .toString()
+      .trim()
+      .replace(/[^a-zA-Z0-9-_]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+    const timestamp = exportedAt
+      .toISOString()
+      .replace(/[:]/g, "-")
+      .replace(/\..+/, "")
+      .replace("T", "_");
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `playlist-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `${safeName}-${timestamp}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -112,15 +142,30 @@ export function usePlaylistActions(playlistId?: number) {
   };
 
   // Export playlist as PDF
-  const exportToPDF = async (filename?: string) => {
+  const exportToPDF = async (playlistName?: string) => {
     const tracks = getTracks();
     const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
+    const exportedAt = new Date();
+    const exportedAtLabel = exportedAt.toLocaleString();
+    const safeName = (playlistName || "playlist")
+      .toString()
+      .trim()
+      .replace(/[^a-zA-Z0-9-_]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+    const timestamp = exportedAt
+      .toISOString()
+      .replace(/[:]/g, "-")
+      .replace(/\..+/, "")
+      .replace("T", "_");
 
     await exportPlaylistToPDF({
       playlist: tracks,
       totalPlaytimeFormatted,
-      filename:
-        filename || `playlist-${new Date().toISOString().split("T")[0]}.pdf`,
+      playlistName,
+      exportedAt: exportedAtLabel,
+      filename: `${safeName || "playlist"}-${timestamp}.pdf`,
     });
 
     // PostHog: Track playlist export

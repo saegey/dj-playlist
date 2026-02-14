@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button, Menu, Portal, Dialog, Flex, Box, Icon, Link } from "@chakra-ui/react";
-import { FiDownload, FiEdit, FiMoreVertical, FiPlus, FiPlusSquare, FiZap } from "react-icons/fi";
+import { FiClock, FiDownload, FiEdit, FiMoreVertical, FiPlus, FiPlusSquare, FiZap } from "react-icons/fi";
 import { SiApplemusic, SiSpotify, SiYoutube, SiSoundcloud } from "react-icons/si";
 
 import type { Track } from "@/types/track";
@@ -10,7 +10,7 @@ import { useTrackEditor } from "@/providers/TrackEditProvider";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
 import PlaylistRecommendations from "./PlaylistRecommendations";
-import { analyzeTrackAsync } from "@/services/trackService";
+import { analyzeTrackAsync, recalcTrackDuration } from "@/services/trackService";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
 import posthog from "posthog-js";
@@ -27,10 +27,13 @@ export default function TrackActionsMenu({ track }: Props) {
   const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false);
   const [recommendationsTrackSnapshot, setRecommendationsTrackSnapshot] = useState<Track[]>([]);
   const [fetchAudioLoading, setFetchAudioLoading] = useState(false);
+  const [durationLoading, setDurationLoading] = useState(false);
 
   const canFetchAudio =
     !track.local_audio_url &&
     Boolean(track.apple_music_url || track.youtube_url || track.soundcloud_url);
+  const canRecalcDuration =
+    !!track.local_audio_url && (!track.duration_seconds || track.duration_seconds <= 0);
 
   const handleFetchAudio = async () => {
     if (!track.friend_id) {
@@ -72,6 +75,33 @@ export default function TrackActionsMenu({ track }: Props) {
     }
   };
 
+  const handleRecalcDuration = async () => {
+    if (!track.friend_id) {
+      toaster.create({ title: "Track missing friend_id", type: "error" });
+      return;
+    }
+    setDurationLoading(true);
+    try {
+      const res = await recalcTrackDuration({
+        track_id: track.track_id,
+        friend_id: track.friend_id,
+      });
+      toaster.create({
+        title: "Duration recalculation queued",
+        description: `Job ID: ${res.jobId}`,
+        type: "success",
+      });
+    } catch (err) {
+      toaster.create({
+        title: "Failed to recalculate duration",
+        description: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
+    } finally {
+      setDurationLoading(false);
+    }
+  };
+
   return (
     <>
       <Menu.Root>
@@ -100,6 +130,16 @@ export default function TrackActionsMenu({ track }: Props) {
                 >
                   <FiDownload />
                   {fetchAudioLoading ? "Fetching Audio..." : "Fetch Audio"}
+                </Menu.Item>
+              )}
+              {canRecalcDuration && (
+                <Menu.Item
+                  onSelect={handleRecalcDuration}
+                  value="recalc-duration"
+                  disabled={durationLoading}
+                >
+                  <FiClock />
+                  {durationLoading ? "Queueing..." : "Recalculate Duration"}
                 </Menu.Item>
               )}
               <Menu.Item

@@ -16,6 +16,7 @@ import { Track } from "@/types/track";
 import { FaPlay } from "react-icons/fa";
 import { keyToCamelot } from "@/lib/playlistOrder";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import { getTrackDurationSeconds } from "@/lib/trackUtils";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -71,8 +72,11 @@ export default function TrackResultCompact({
   if (track.position) {
     details.push({ icon: "Pos", value: track.position });
   }
-  if (track.duration_seconds && track.duration_seconds > 0) {
-    details.push({ icon: "⏱", value: formatSeconds(track.duration_seconds) });
+  if (getTrackDurationSeconds(track)) {
+    details.push({
+      icon: "⏱",
+      value: formatSeconds(getTrackDurationSeconds(track) || 0),
+    });
   }
   if (track.bpm) {
     details.push({ icon: "♫", value: `${track.bpm}` });

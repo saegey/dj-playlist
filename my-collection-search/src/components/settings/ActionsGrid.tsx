@@ -42,6 +42,7 @@ export default function ActionsGrid() {
   const { setSpotifySyncOpen } = useSettingsDialogs();
   const cleanupAlbums = useCleanupAlbums();
   const backfillReleaseId = useBackfillReleaseId();
+  const [durationFixLoading, setDurationFixLoading] = useState(false);
 
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [verificationResults, setVerificationResults] = useState<
@@ -55,6 +56,31 @@ export default function ActionsGrid() {
     verifyManifests.isPending ||
     cleanupAlbums.isPending ||
     backfillReleaseId.isPending;
+
+  const handleFixMissingDurations = async () => {
+    setDurationFixLoading(true);
+    try {
+      const res = await fetch("/api/tracks/fix-missing-durations", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to fix durations");
+      }
+      toaster.create({
+        title: "Duration backfill queued",
+        description: `Queued ${data.queued} tracks${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,
+        type: data.errors?.length ? "warning" : "success",
+        duration: 5000,
+      });
+    } catch (err) {
+      toaster.create({
+        title: "Duration backfill failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        type: "error",
+      });
+    } finally {
+      setDurationFixLoading(false);
+    }
+  };
 
   const handleSyncClick = async () => {
     try {
@@ -314,6 +340,16 @@ export default function ActionsGrid() {
                 disabled={disableAll || cleanupAlbums.isPending}
               >
                 <FiTrash2 /> Cleanup Empty Albums
+              </Menu.Item>
+
+              <Menu.Separator />
+
+              <Menu.Item
+                value="fix-durations"
+                onClick={handleFixMissingDurations}
+                disabled={disableAll || durationFixLoading}
+              >
+                <FiDatabase /> Fix Missing Durations (Audio)
               </Menu.Item>
             </Menu.Content>
           </Menu.Positioner>

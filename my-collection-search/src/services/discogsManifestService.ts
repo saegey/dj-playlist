@@ -19,7 +19,9 @@ export function getManifestReleaseIds(username: string): string[] {
   if (!fs.existsSync(manifestPath)) return [];
   try {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
-    return Array.isArray(manifest.releaseIds) ? manifest.releaseIds : [];
+    return Array.isArray(manifest.releaseIds)
+      ? manifest.releaseIds.map((id: unknown) => String(id))
+      : [];
   } catch {
     return [];
   }
@@ -218,4 +220,19 @@ export function getAllTracksFromManifests(): DiscogsTrack[] {
     }
   }
   return allTracks;
+}
+
+export function getTracksFromManifestReleases(
+  username: string,
+  releaseIds: string[]
+): DiscogsTrack[] {
+  const tracks: DiscogsTrack[] = [];
+  for (const releaseId of releaseIds) {
+    const releasePath = getReleasePath(username, String(releaseId));
+    if (!releasePath) continue;
+    const album = loadAlbum(releasePath);
+    if (!album) continue;
+    tracks.push(...extractTracksFromAlbum(album, username));
+  }
+  return tracks;
 }

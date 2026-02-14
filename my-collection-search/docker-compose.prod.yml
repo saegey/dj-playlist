@@ -44,6 +44,7 @@ services:
       - discogs_exports:/app/discogs_exports
       - spotify_exports:/app/spotify_exports
       - cookie_data:/app/cookies
+      - album_covers:/app/public/uploads/album-covers
       - /var/run/docker.sock:/var/run/docker.sock  # Required for AirPlay interruption control
       # Optional: Mount ALSA config for dmix (software mixing with AirPlay)
       # - ./config/asound.conf:/etc/asound.conf:ro
@@ -189,6 +190,9 @@ volumes:
     external: true
   cookie_data:
     name: teststack_cookie_data
+    external: true
+  album_covers:
+    name: teststack_album_covers
     external: true
   mpd_data:
     name: teststack_mpd_data

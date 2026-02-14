@@ -33,7 +33,7 @@ export interface PlaylistInfo {
 }
 
 export interface TrackWithEmbedding extends Track {
-  _vectors?: { default: number[] };
+  _vectors?: { default?: number[] };
 }
 
 /** ---------- small utilities ---------- */
