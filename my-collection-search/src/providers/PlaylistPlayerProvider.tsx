@@ -363,7 +363,7 @@ export function PlaylistPlayerProvider({
 
     // Only swap src when the track changes
     if (lastTrackIdRef.current !== track.track_id) {
-      audio.src = `/api/audio?filename=${track.local_audio_url}`;
+      audio.src = `/api/audio?filename=${encodeURIComponent(track.local_audio_url ?? "")}`;
       lastTrackIdRef.current = track.track_id;
       // reset timing until metadata loads
       setCurrentTime(0);

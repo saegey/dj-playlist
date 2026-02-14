@@ -53,11 +53,18 @@ const SearchResults: React.FC = () => {
     () => searchParams?.toString() ?? "",
     [searchParams]
   );
-  const { friend: currentUserFriend } = useUsername();
+  const { friend: currentUserFriend, setFriend } = useUsername();
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
     showSpotifyUsernames: true,
   });
+
+  // Ensure tracks view is always scoped to a library unless user explicitly clears.
+  React.useEffect(() => {
+    if (currentUserFriend) return;
+    if (friends.length === 0) return;
+    setFriend(friends[0]);
+  }, [currentUserFriend, friends, setFriend]);
 
   // Filter state
   const [filters, setFilters] = React.useState<TracksFilter>(createEmptyFilters());
@@ -89,6 +96,7 @@ const SearchResults: React.FC = () => {
   } = useSearchResults({
     mode: "infinite",
     limit: 20,
+    friend: currentUserFriend,
     filter: meiliFilters.length > 0 ? meiliFilters : undefined,
   });
 
@@ -383,7 +391,7 @@ const SearchResults: React.FC = () => {
                   key={`search-${info.trackId}-${info.friendId}`}
                   trackId={info.trackId}
                   friendId={info.friendId}
-                  playlistCount={playlistCounts[info.trackId]}
+                  playlistCount={playlistCounts[`${info.trackId}:${info.friendId}`]}
                   compact={compactMode}
                 />
               );

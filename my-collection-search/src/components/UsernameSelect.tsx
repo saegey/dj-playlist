@@ -75,6 +75,24 @@ export default function UsernameSelect({
     setCtxValue(friend);
   };
 
+  // Heal stale persisted selections (e.g. restored DB with new friend IDs).
+  React.useEffect(() => {
+    if (isLoading) return;
+    if (!selectedFriend) return;
+
+    const exists = uniqueUsernames.some((u) => u.id === selectedFriend.id);
+    if (exists) return;
+
+    // If the stored selection no longer exists, fall back deterministically.
+    const fallback = includeAllOption ? null : uniqueUsernames[0] ?? null;
+    handleSelect(fallback);
+  }, [
+    isLoading,
+    selectedFriend,
+    uniqueUsernames,
+    includeAllOption,
+  ]);
+
   // Resolve responsive size to a concrete token for styling
   const resolvedSize = useBreakpointValue(
     Array.isArray(size) ? size : [size]

@@ -51,11 +51,28 @@ export function useSearchResults({
   const { client: ctxClient, ready } = useMeili();
   const { friend: ctxFriend } = useUsername();
   const effClient = client ?? ctxClient;
-  const friendId = friend?.id ?? ctxFriend?.id;
+  const selectedFriend = friend ?? ctxFriend;
+  const friendId = selectedFriend?.id;
+  const selectedUsername = selectedFriend?.username?.trim().toLowerCase();
+
+  const scopeHits = useCallback(
+    (hits: Track[]): Track[] => {
+      return hits.filter((hit) => {
+        if (friendId && Number((hit as { friend_id?: unknown }).friend_id) !== Number(friendId)) {
+          return false;
+        }
+        if (!selectedUsername) return true;
+        const hitUsername = typeof hit.username === "string" ? hit.username.trim().toLowerCase() : "";
+        if (!hitUsername) return true;
+        return hitUsername === selectedUsername;
+      });
+    },
+    [friendId, selectedUsername]
+  );
 
   // Stable filter shape for caching
   const searchFilter = useMemo(
-    () => filter ?? (friendId ? [`friend_id = "${friendId}"`] : undefined),
+    () => filter ?? (friendId ? [`friend_id = ${friendId}`] : undefined),
     [filter, friendId]
   );
 
@@ -78,8 +95,10 @@ export function useSearchResults({
         offset: pageParam,
         filter: searchFilter,
       });
+      // Safety net: enforce friend scoping client-side too in case index/filter drifted.
+      const scopedHits = scopeHits(res.hits ?? []);
       return {
-        hits: res.hits,
+        hits: scopedHits,
         estimatedTotalHits: res.estimatedTotalHits || 0,
         offset: pageParam,
         limit,
@@ -113,8 +132,10 @@ export function useSearchResults({
         offset,
         filter: searchFilter,
       });
+      // Safety net: enforce friend scoping client-side too in case index/filter drifted.
+      const scopedHits = scopeHits(res.hits ?? []);
       return {
-        hits: res.hits,
+        hits: scopedHits,
         estimatedTotalHits: res.estimatedTotalHits || 0,
         offset,
         limit,
@@ -129,7 +150,10 @@ export function useSearchResults({
     : singlePageQuery.data
     ? [singlePageQuery.data]
     : [];
-  const results = pages.flatMap((p) => p.hits);
+  const results = useMemo(
+    () => scopeHits(pages.flatMap((p) => p.hits)),
+    [pages, scopeHits]
+  );
   const estimatedResults = pages[0]?.estimatedTotalHits ?? 0;
 
   // Populate Zustand store when results change - but only with new tracks
@@ -160,17 +184,25 @@ export function useSearchResults({
     friendId: track.friend_id
   }));
 
-  // --- Playlist counts (dependent query on unique IDs) ---
-  const ids = useMemo(
-    () => Array.from(new Set(results.map((t) => t.track_id))),
-    [results]
-  );
+  // --- Playlist counts (dependent query on unique track_id + friend_id pairs) ---
+  const trackRefs = useMemo(() => {
+    const dedup = new Map<string, { track_id: string; friend_id: number }>();
+    for (const track of results) {
+      const key = `${track.track_id}:${track.friend_id}`;
+      if (!dedup.has(key)) {
+        dedup.set(key, { track_id: track.track_id, friend_id: track.friend_id });
+      }
+    }
+    return Array.from(dedup.values());
+  }, [results]);
 
   const countsQuery = useQuery({
-    queryKey: queryKeys.playlistCounts(ids),
-    enabled: enabled && ids.length > 0,
+    queryKey: queryKeys.playlistCounts(
+      trackRefs.map((r) => `${r.track_id}:${r.friend_id}`)
+    ),
+    enabled: enabled && trackRefs.length > 0,
     queryFn: async () => {
-  return await fetchPlaylistCounts(ids);
+      return await fetchPlaylistCounts(trackRefs);
     },
     staleTime: 60_000,
   });

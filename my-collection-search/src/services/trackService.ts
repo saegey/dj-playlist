@@ -168,15 +168,15 @@ export async function bulkUpdateTrackNotes(
   });
 }
 
-// Fetch a map of track_id -> number of playlists the track appears in
+// Fetch a map of "track_id:friend_id" -> number of playlists the track appears in
 export async function fetchPlaylistCounts(
-  track_ids: string[]
+  track_refs: { track_id: string; friend_id: number }[]
 ): Promise<Record<string, number>> {
-  if (!track_ids || track_ids.length === 0) return {};
+  if (!track_refs || track_refs.length === 0) return {};
   return await http<Record<string, number>>("/api/tracks/playlist_counts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ track_ids }),
+    body: JSON.stringify({ track_refs }),
   });
 }
 

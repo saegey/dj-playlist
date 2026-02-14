@@ -192,7 +192,7 @@ export default function TrackTableViewWithLoader({
               key={`${info.trackId}-${info.friendId}`}
               trackId={info.trackId}
               friendId={info.friendId}
-              playlistCount={playlistCounts[info.trackId]}
+              playlistCount={playlistCounts[`${info.trackId}:${info.friendId}`]}
               buttons={buttons}
             />
           ))}

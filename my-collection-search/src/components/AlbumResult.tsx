@@ -156,6 +156,11 @@ export default function AlbumResult({
 
           {/* Metadata */}
           <Flex gap={2} flexWrap="wrap" fontSize={{ base: "xs", md: "sm" }} color={mutedText}>
+            {album.username && (
+              <Badge colorPalette="purple" variant="subtle">
+                {album.username}
+              </Badge>
+            )}
             {album.year && <Text>{album.year}</Text>}
             {album.format && <Text display={{ base: "none", md: "block" }}>{album.format}</Text>}
             {album.label && <Text display={{ base: "none", md: "block" }}>{album.label}</Text>}

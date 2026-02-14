@@ -1,0 +1,9 @@
+node_modules/
+build/
+.env
+.env.production
+*.log
+.DS_Store
+
+# IMPORTANT: Never commit MCP config with API keys!
+../.mcp.json

@@ -39,7 +39,7 @@ services:
       - .:/app:delegated
       # Keep node_modules inside the container image
       - /app/node_modules
-      - music_data:/app/audio
+      - ${APP_AUDIO_MOUNT:-music_data:/app/audio}
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
       - spotify_exports:/app/spotify_exports  
@@ -126,7 +126,7 @@ services:
       - redis
       - db
     volumes:
-      - music_data:/app/audio
+      - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
       - ./cookies:/app/cookies:ro  # Mount local cookies directory as read-only
     restart: unless-stopped
     # command: sh -c "pip install -r requirements.txt && pip install watchdog && watchmedo auto-restart -d worker -p '*.py' -R -- python3 download_worker.py"

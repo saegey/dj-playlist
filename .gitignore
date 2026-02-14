@@ -14,3 +14,6 @@ my-collection-search/spotify_exports
 
 djplaylist_backup_*
 *.pyc
+
+# IMPORTANT: Never commit MCP config with production API keys!
+.mcp.json

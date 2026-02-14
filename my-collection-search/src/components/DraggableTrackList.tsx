@@ -61,7 +61,8 @@ export default function DraggableTrackList({
                   t.track_id === trackPlay.track_id &&
                   t.friend_id === trackPlay.friend_id
               );
-              const draggableKey = `${trackPlay.track_id}:${trackPlay.friend_id}`;
+              // Playlists can contain duplicate track refs; include index to ensure uniqueness.
+              const draggableKey = `${trackPlay.track_id}:${trackPlay.friend_id}:${idx}`;
               const isCurrentTrack = currentTrackIndex === idx;
 
               return (
@@ -83,7 +84,7 @@ export default function DraggableTrackList({
                       borderRadius={isCurrentTrack ? "md" : undefined}
                     >
                       <TrackResultStore
-                        key={`${droppableId}-${trackPlay.track_id}:${trackPlay.friend_id}`}
+                        key={`${droppableId}-${trackPlay.track_id}:${trackPlay.friend_id}:${idx}`}
                         trackId={trackPlay.track_id}
                         friendId={trackPlay.friend_id}
                         fallbackTrack={track}
@@ -94,7 +95,9 @@ export default function DraggableTrackList({
                         }
                         minimized={trackResultProps?.minimized}
                         playlistCount={
-                          trackResultProps?.playlistCount?.[trackPlay.track_id]
+                          trackResultProps?.playlistCount?.[
+                            `${trackPlay.track_id}:${trackPlay.friend_id}`
+                          ]
                         }
                         playlistMode={trackResultProps?.playlistMode}
                       />

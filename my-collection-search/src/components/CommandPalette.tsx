@@ -47,6 +47,7 @@ export default function CommandPalette() {
     playNext,
     playPrev,
     clearQueue,
+    replacePlaylist,
   } = usePlaylistPlayer();
 
   const [open, setOpen] = React.useState(false);
@@ -174,6 +175,11 @@ export default function CommandPalette() {
     router.push(
       `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`
     );
+    close();
+  };
+
+  const onPlayTrack = (track: TrackHit) => {
+    replacePlaylist([track], { autoplay: true, startIndex: 0 });
     close();
   };
 
@@ -310,21 +316,36 @@ export default function CommandPalette() {
 
           <Command.Group heading="Tracks" className={styles.group}>
             {trackHits.map((track) => (
-              <Command.Item
-                key={`tr-${track.track_id}-${track.friend_id}`}
-                value={`${track.title} ${track.artist} ${track.album}`}
-                onSelect={() => onOpenTrack(track)}
-                className={styles.item}
-              >
-                <div className={styles.itemLabel}>
-                  <span className={styles.itemTitle}>
-                    {track.title || track.track_id}
-                  </span>
-                  <span className={styles.itemMeta}>
-                    {track.artist} · {track.album}
-                  </span>
-                </div>
-              </Command.Item>
+              <React.Fragment key={`tr-${track.track_id}-${track.friend_id}`}>
+                <Command.Item
+                  value={`open ${track.title} ${track.artist} ${track.album}`}
+                  onSelect={() => onOpenTrack(track)}
+                  className={styles.item}
+                >
+                  <div className={styles.itemLabel}>
+                    <span className={styles.itemTitle}>
+                      {track.title || track.track_id}
+                    </span>
+                    <span className={styles.itemMeta}>
+                      Open Track · {track.artist} · {track.album}
+                    </span>
+                  </div>
+                </Command.Item>
+                <Command.Item
+                  value={`play ${track.title} ${track.artist} ${track.album}`}
+                  onSelect={() => onPlayTrack(track)}
+                  className={styles.item}
+                >
+                  <div className={styles.itemLabel}>
+                    <span className={styles.itemTitle}>
+                      Play: {track.title || track.track_id}
+                    </span>
+                    <span className={styles.itemMeta}>
+                      Play Now · {track.artist} · {track.album}
+                    </span>
+                  </div>
+                </Command.Item>
+              </React.Fragment>
             ))}
           </Command.Group>
         </Command.List>

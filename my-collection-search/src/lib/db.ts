@@ -5,27 +5,49 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-// Get the number of playlists each track appears in
-// Returns: { [track_id: string]: number }
+// Get the number of playlists each track appears in, scoped by friend_id.
+// Returns: { ["track_id:friend_id"]: number }
 export async function getPlaylistCountsForTracks(
-  trackIds: string[]
+  trackRefs: { track_id: string; friend_id: number }[]
 ): Promise<Record<string, number>> {
-  if (!trackIds || trackIds.length === 0) return {};
+  if (!trackRefs || trackRefs.length === 0) return {};
+
+  const values: string[] = [];
+  const params: Array<string | number> = [];
+  trackRefs.forEach((ref, idx) => {
+    const offset = idx * 2;
+    values.push(`($${offset + 1}::text, $${offset + 2}::integer)`);
+    params.push(ref.track_id, ref.friend_id);
+  });
+
   const { rows } = await pool.query(
-    `SELECT track_id, COUNT(DISTINCT playlist_id) as count
-     FROM playlist_tracks
-     WHERE track_id = ANY($1)
-     GROUP BY track_id`,
-    [trackIds]
+    `
+    WITH refs(track_id, friend_id) AS (
+      VALUES ${values.join(", ")}
+    )
+    SELECT
+      r.track_id,
+      r.friend_id,
+      COUNT(DISTINCT pt.playlist_id) AS count
+    FROM refs r
+    LEFT JOIN playlist_tracks pt
+      ON pt.track_id = r.track_id AND pt.friend_id = r.friend_id
+    GROUP BY r.track_id, r.friend_id
+    `,
+    params
   );
+
   const result: Record<string, number> = {};
   for (const row of rows) {
-    result[row.track_id] = Number(row.count);
+    const key = `${row.track_id}:${row.friend_id}`;
+    result[key] = Number(row.count);
   }
-  // Ensure all requested trackIds are present (default 0)
-  for (const id of trackIds) {
-    if (!(id in result)) result[id] = 0;
+
+  for (const ref of trackRefs) {
+    const key = `${ref.track_id}:${ref.friend_id}`;
+    if (!(key in result)) result[key] = 0;
   }
+
   return result;
 }
 // Update a track by track_id, allowing partial updates (e.g. tags, metadata)

@@ -201,6 +201,7 @@ export interface Friend {
 export interface Album {
   release_id: string;
   friend_id: number;
+  username?: string;
   title: string;
   artist: string;
   year?: string;

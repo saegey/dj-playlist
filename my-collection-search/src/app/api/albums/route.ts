@@ -3,6 +3,9 @@
 // Example: /api/albums?q=jazz&sort=date_added:desc&friend_id=1&limit=20&offset=0
 import { NextRequest, NextResponse } from "next/server";
 import { getMeiliClient } from "@/lib/meili";
+import { Pool } from "pg";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,8 +43,38 @@ export async function GET(request: NextRequest) {
       sort: [sort],
     });
 
+    // Attach library username for each friend_id so cards can show source library.
+    const hits = Array.isArray(searchResults.hits) ? searchResults.hits : [];
+    const friendIds = Array.from(
+      new Set(
+        hits
+          .map((h) => (h as { friend_id?: unknown }).friend_id)
+          .filter((id): id is number => typeof id === "number")
+      )
+    );
+
+    const usernameByFriendId = new Map<number, string>();
+    if (friendIds.length > 0) {
+      const { rows } = await pool.query(
+        "SELECT id, username FROM friends WHERE id = ANY($1::int[])",
+        [friendIds]
+      );
+      for (const row of rows) {
+        usernameByFriendId.set(Number(row.id), String(row.username));
+      }
+    }
+
+    const enrichedHits = hits.map((hit) => {
+      const friend_id = (hit as { friend_id?: unknown }).friend_id;
+      if (typeof friend_id !== "number") return hit;
+      return {
+        ...hit,
+        username: usernameByFriendId.get(friend_id) || undefined,
+      };
+    });
+
     return NextResponse.json({
-      hits: searchResults.hits,
+      hits: enrichedHits,
       estimatedTotalHits: searchResults.estimatedTotalHits,
       offset: searchResults.offset,
       limit: searchResults.limit,
