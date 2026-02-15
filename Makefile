@@ -24,7 +24,7 @@ TAG ?= $(TAG_PREFIX)$(TAG_TIME)
 REGISTRY ?= ghcr.io/saegey
 PLATFORM ?= linux/amd64
 PROD_HOST ?= vinyl.local
-PROD_STACK_DIR ?= /opt/stacks/dj-playlist/my-collection-search
+PROD_STACK_DIR ?= /opt/stacks/dj-playlist
 
 check-compose:
 	@if [ -z "$(COMPOSE_CMD)" ]; then \
@@ -90,14 +90,14 @@ deploy-prod-local:
 
 # Deploy remotely over SSH (tag checkout + pull + migrate + up)
 deploy-prod-remote:
-	ssh $(PROD_HOST) 'set -euo pipefail; cd $(PROD_STACK_DIR); ./scripts/deploy-prod.sh $(TAG)'
+	ssh $(PROD_HOST) 'set -euo pipefail; cd $(PROD_STACK_DIR); if [ -x ./scripts/deploy-prod.sh ]; then ./scripts/deploy-prod.sh $(TAG); elif [ -x ./my-collection-search/scripts/deploy-prod.sh ]; then ./my-collection-search/scripts/deploy-prod.sh $(TAG); else echo "deploy-prod.sh not found"; exit 127; fi'
 
 # End-to-end release from local machine: create/push tag, publish images, deploy remote
 release: tag-push push-images deploy-prod-remote
 
 # End-to-end release with server-side builds (no registry push)
 deploy-prod-remote-localbuild:
-	ssh $(PROD_HOST) 'set -euo pipefail; cd $(PROD_STACK_DIR); ./scripts/deploy-prod-localbuild.sh $(TAG)'
+	ssh $(PROD_HOST) 'set -euo pipefail; cd $(PROD_STACK_DIR); if [ -x ./scripts/deploy-prod-localbuild.sh ]; then ./scripts/deploy-prod-localbuild.sh $(TAG); elif [ -x ./my-collection-search/scripts/deploy-prod-localbuild.sh ]; then ./my-collection-search/scripts/deploy-prod-localbuild.sh $(TAG); else echo "deploy-prod-localbuild.sh not found"; exit 127; fi'
 
 release-localbuild: tag-push deploy-prod-remote-localbuild
 
