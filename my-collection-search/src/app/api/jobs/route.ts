@@ -7,6 +7,8 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export type JobData = {
   track_id: string;
   friend_id: number;
+  release_id?: string | null;
+  job_type?: string;
   apple_music_url?: string;
   spotify_url?: string;
   youtube_url?: string;
@@ -79,7 +81,7 @@ export async function GET() {
 
       const { rows } = await pool.query(
         `
-          SELECT track_id, friend_id, title, artist, album, year, album_thumbnail,
+          SELECT track_id, friend_id, release_id, title, artist, album, year, album_thumbnail,
                  discogs_url, apple_music_url, spotify_url, youtube_url, soundcloud_url,
                  local_audio_url, library_identifier, username
           FROM tracks
@@ -99,7 +101,7 @@ export async function GET() {
       const track = trackMap.get(`${job.track_id}:${job.friend_id}`);
       return {
       id: job.job_id,
-      name: "download-audio",
+      name: job.name || job.job_type || "download-audio",
       state:
         job.status === "queued"
           ? "waiting"
@@ -110,6 +112,10 @@ export async function GET() {
       data: {
         track_id: job.track_id,
         friend_id: safeFriendId,
+        release_id:
+          (track?.release_id as string | undefined) ||
+          (typeof job.release_id === "string" ? job.release_id : undefined),
+        job_type: job.job_type || job.name,
         title:
           typeof job.result?.title === "string"
             ? job.result.title

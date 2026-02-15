@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Redis connection
 redis_conn = redis.from_url(os.getenv('REDIS_URL', 'redis://localhost:6379'))
+ESSENTIA_DATA_DIR = os.getenv('ESSENTIA_DATA_DIR', '/app/essentia-data')
 
 
 def run_subprocess(cmd: list[str], *, timeout: int = 300) -> subprocess.CompletedProcess:
@@ -86,6 +87,22 @@ def cleanup_download_directory(download_dir: str, track_id: str):
         logger.error(f"Download directory cleanup failed: {e}")
         raise
 
+def save_essentia_analysis_file(track_id: str, friend_id: int, analysis_data: Dict[str, Any]) -> str:
+    """Persist raw Essentia analysis JSON per track/friend."""
+    os.makedirs(ESSENTIA_DATA_DIR, exist_ok=True)
+    safe_track_id = "".join(c if c.isalnum() or c in "._-" else "_" for c in track_id)
+    file_path = os.path.join(ESSENTIA_DATA_DIR, f"{safe_track_id}_{friend_id}.json")
+    payload = {
+        "track_id": track_id,
+        "friend_id": friend_id,
+        "saved_at": int(time.time() * 1000),
+        "analysis": analysis_data,
+    }
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    return file_path
+
 def analyze_audio_file(file_path: str, track_id: str, friend_id: int) -> Dict[str, Any]:
     """Analyze audio file using the app's analysis API"""
     try:
@@ -119,6 +136,11 @@ def analyze_audio_file(file_path: str, track_id: str, friend_id: int) -> Dict[st
 
         analysis_result = response.json()
         logger.info("Audio analysis completed successfully")
+        try:
+            saved_file = save_essentia_analysis_file(track_id, friend_id, analysis_result)
+            logger.info("Saved Essentia analysis JSON to %s", saved_file)
+        except Exception as save_err:
+            logger.warning("Failed to save Essentia analysis JSON: %s", save_err)
 
         # Clean up wav file
         if os.path.exists(wav_path):
@@ -272,6 +294,180 @@ def update_track_duration(track_id: str, friend_id: int, duration_seconds: int):
     if not response.ok:
         raise Exception(f"Failed to update duration: {response.status_code} {response.text}")
 
+def update_track_album_art_url(track_id: str, friend_id: int, album_art_url: str):
+    """Update track audio_file_album_art_url via app API."""
+    app_url = os.getenv('APP_URL', 'http://app:3000')
+    update_url = f"{app_url}/api/tracks/update"
+    update_data = {
+        'track_id': track_id,
+        'friend_id': friend_id,
+        'audio_file_album_art_url': album_art_url,
+    }
+    logger.info(f"Updating track album art via API: {update_url}")
+    response = requests.patch(
+        update_url,
+        json=update_data,
+        headers={'Content-Type': 'application/json'},
+        timeout=30
+    )
+    if not response.ok:
+        raise Exception(f"Failed to update album art url: {response.status_code} {response.text}")
+
+def get_embedded_art_stream_index(file_path: str) -> Optional[int]:
+    """Return the ffprobe stream index for embedded album art, if present."""
+    cmd = [
+        "ffprobe",
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_streams",
+        file_path,
+    ]
+    result = run_subprocess(cmd, timeout=30)
+    if result.returncode != 0:
+        raise Exception(f"ffprobe stream probe failed: {result.stderr}")
+
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except Exception as e:
+        raise Exception(f"ffprobe json parse failed: {e}")
+
+    streams = payload.get("streams", [])
+    for stream in streams:
+        disposition = stream.get("disposition") or {}
+        if disposition.get("attached_pic") == 1:
+            idx = stream.get("index")
+            if isinstance(idx, int):
+                return idx
+
+    for stream in streams:
+        if stream.get("codec_type") == "video":
+            idx = stream.get("index")
+            if isinstance(idx, int):
+                return idx
+
+    return None
+
+def extract_embedded_cover_art(job_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract embedded cover art from local audio and persist URL on the track."""
+    track_id = job_data['track_id']
+    friend_id = job_data['friend_id']
+    job_id = job_data.get('job_id', f"{track_id}_{int(time.time())}")
+
+    logger.info(f"Starting cover art extraction job {job_id} for track {track_id}")
+    update_job_status(job_id, 'processing', 10)
+
+    try:
+        audio_path = ensure_local_audio_file(job_data)
+        update_job_status(job_id, 'processing', 35)
+
+        stream_index = get_embedded_art_stream_index(audio_path)
+        if stream_index is None:
+            raise Exception("No embedded cover art stream found")
+
+        output_dir = "/app/public/uploads/album-covers"
+        os.makedirs(output_dir, exist_ok=True)
+        safe_track_id = "".join(c if c.isalnum() or c in "._-" else "_" for c in track_id)
+        output_file = f"{safe_track_id}_{friend_id}.jpg"
+        output_path = os.path.join(output_dir, output_file)
+
+        ffmpeg_cmd = [
+            "ffmpeg",
+            "-y",
+            "-i", audio_path,
+            "-map", f"0:{stream_index}",
+            "-frames:v", "1",
+            output_path,
+        ]
+        result = run_subprocess(ffmpeg_cmd, timeout=60)
+        if result.returncode != 0:
+            raise Exception(f"ffmpeg cover extraction failed: {result.stderr}")
+
+        update_job_status(job_id, 'processing', 80)
+        public_url = f"/uploads/album-covers/{output_file}"
+        update_track_album_art_url(track_id, friend_id, public_url)
+
+        payload_local_audio_url = (job_data.get("local_audio_url") or "").strip()
+        if audio_path.startswith("/tmp/") and (not payload_local_audio_url or not os.path.exists(payload_local_audio_url)):
+            try:
+                os.unlink(audio_path)
+            except Exception:
+                pass
+
+        result_payload = {
+            'success': True,
+            'track_id': track_id,
+            'friend_id': friend_id,
+            'audio_file_album_art_url': public_url,
+        }
+        update_job_status(job_id, 'completed', 100, result=result_payload)
+        logger.info(f"Cover art job {job_id} completed successfully")
+        return result_payload
+    except Exception as e:
+        error_msg = f"Cover art extraction failed: {str(e)}"
+        logger.error(f"Job {job_id} failed: {error_msg}")
+        logger.error(traceback.format_exc())
+        update_job_status(job_id, 'failed', 0, error=error_msg)
+        return {
+            'success': False,
+            'error': error_msg,
+            'track_id': track_id,
+            'friend_id': friend_id
+        }
+
+def extract_embedded_cover_art_album(job_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract one embedded cover for an album and apply it across album tracks."""
+    track_id = job_data['track_id']
+    friend_id = job_data['friend_id']
+    release_id = job_data.get('release_id')
+    job_id = job_data.get('job_id', f"{track_id}_{int(time.time())}")
+
+    logger.info(
+        "Starting album cover extraction job %s for release %s (friend %s)",
+        job_id,
+        release_id,
+        friend_id,
+    )
+    update_job_status(job_id, 'processing', 10)
+
+    try:
+        if not release_id:
+            raise Exception("Missing release_id for extract-cover-art-album job")
+
+        app_url = os.getenv('APP_URL', 'http://app:3000')
+        endpoint = f"{app_url}/api/albums/extract-cover-art-from-audio"
+        payload = {
+            "release_id": release_id,
+            "friend_id": friend_id,
+        }
+        update_job_status(job_id, 'processing', 60)
+        response = requests.post(
+            endpoint,
+            json=payload,
+            headers={'Content-Type': 'application/json'},
+            timeout=180,
+        )
+        if not response.ok:
+            raise Exception(
+                f"Album cover extraction API failed: {response.status_code} {response.text}"
+            )
+        result_payload = response.json()
+        result_payload['success'] = True
+        update_job_status(job_id, 'completed', 100, result=result_payload)
+        logger.info("Album cover extraction job %s completed", job_id)
+        return result_payload
+    except Exception as e:
+        error_msg = f"Album cover extraction failed: {str(e)}"
+        logger.error(f"Job {job_id} failed: {error_msg}")
+        logger.error(traceback.format_exc())
+        update_job_status(job_id, 'failed', 0, error=error_msg)
+        return {
+            'success': False,
+            'error': error_msg,
+            'track_id': track_id,
+            'friend_id': friend_id,
+            'release_id': release_id,
+        }
+
 def fix_duration(job_data: Dict[str, Any]) -> Dict[str, Any]:
     """Fix missing duration using existing local audio."""
     track_id = job_data['track_id']
@@ -300,6 +496,42 @@ def fix_duration(job_data: Dict[str, Any]) -> Dict[str, Any]:
 
     except Exception as e:
         error_msg = f"Duration fix failed: {str(e)}"
+        logger.error(f"Job {job_id} failed: {error_msg}")
+        logger.error(traceback.format_exc())
+        update_job_status(job_id, 'failed', 0, error=error_msg)
+        return {
+            'success': False,
+            'error': error_msg,
+            'track_id': track_id,
+            'friend_id': friend_id
+        }
+
+def analyze_local_audio(job_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Run Essentia analysis against an existing local audio file."""
+    track_id = job_data['track_id']
+    friend_id = job_data['friend_id']
+    job_id = job_data.get('job_id', f"{track_id}_{int(time.time())}")
+
+    logger.info(f"Starting local analysis job {job_id} for track {track_id}")
+    update_job_status(job_id, 'processing', 10)
+
+    try:
+        audio_path = ensure_local_audio_file(job_data)
+        update_job_status(job_id, 'processing', 35)
+        analysis_result = analyze_audio_file(audio_path, track_id, friend_id)
+        update_job_status(job_id, 'processing', 90)
+
+        result_payload = {
+            'success': True,
+            'track_id': track_id,
+            'friend_id': friend_id,
+            'analysis': analysis_result,
+        }
+        update_job_status(job_id, 'completed', 100, result=result_payload)
+        logger.info(f"Local analysis job {job_id} completed successfully")
+        return result_payload
+    except Exception as e:
+        error_msg = f"Local analysis failed: {str(e)}"
         logger.error(f"Job {job_id} failed: {error_msg}")
         logger.error(traceback.format_exc())
         update_job_status(job_id, 'failed', 0, error=error_msg)
@@ -902,12 +1134,18 @@ def main():
                     job_type = job.get("job_type", "download")
                     if job_type == "fix-duration":
                         result = fix_duration(job)
+                    elif job_type == "analyze-local":
+                        result = analyze_local_audio(job)
+                    elif job_type == "extract-cover-art-album":
+                        result = extract_embedded_cover_art_album(job)
+                    elif job_type == "extract-cover-art":
+                        result = extract_embedded_cover_art(job)
                     elif job.get("local_audio_url") and not has_download_urls(job):
                         logger.info(
-                            "No remote URLs present for job %s; using local audio for duration fix",
+                            "No remote URLs present for job %s; using local audio for full analysis",
                             job.get("job_id"),
                         )
-                        result = fix_duration(job)
+                        result = analyze_local_audio(job)
                     else:
                         # Process the download
                         result = download_audio(job)

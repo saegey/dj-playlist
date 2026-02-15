@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Spinner, Text, Container } from "@chakra-ui/react";
+import { Spinner, Text } from "@chakra-ui/react";
 
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useMeili } from "@/providers/MeiliProvider";
@@ -15,6 +15,7 @@ import { useSearchResults } from "@/hooks/useSearchResults";
 import { useBackfillStatusMutation } from "@/hooks/useBackfillStatusMutation";
 import { useVectorizeTrackMutation } from "@/hooks/useVectorizeTrackMutation";
 import { useAsyncAnalyzeTrackMutation } from "@/hooks/useAsyncAnalyzeTrackMutation";
+import PageContainer from "@/components/layout/PageContainer";
 
 // BackfillTrack moved to components/backfill/types
 
@@ -171,7 +172,7 @@ export default function BackfillAudioPage() {
 
   return (
     <>
-      <Container>
+      <PageContainer size="standard">
         {/* Job Queue Link */}
 
         <BackfillFilters
@@ -220,7 +221,7 @@ export default function BackfillAudioPage() {
           page={page}
           setPage={setPage}
         />
-      </Container>
+      </PageContainer>
     </>
   );
 }

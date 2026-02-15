@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import NextLink from "next/link";
 import ArtistLink from "./ArtistLink";
 import AlbumLink from "./AlbumLink";
 import {
@@ -8,6 +9,7 @@ import {
   Text,
   Image,
   Icon,
+  Link,
   RatingGroup,
   Badge,
   Dialog,
@@ -45,6 +47,11 @@ export default function PlaylistTrackItem({
 }: PlaylistTrackItemProps) {
   const { replacePlaylist } = usePlaylistPlayer();
   const [notesModalOpen, setNotesModalOpen] = React.useState(false);
+  const trackHref = `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`;
+  const artworkSrc =
+    track.audio_file_album_art_url ||
+    track.album_thumbnail ||
+    "/images/placeholder-artwork.png";
   const t = track as Track & {
     _vectors?: { default?: number[] };
     embedding?: string | number[] | null;
@@ -108,7 +115,7 @@ export default function PlaylistTrackItem({
               _hover={{ "& .overlay": { opacity: 1 } }}
             >
               <Image
-                src={track.album_thumbnail}
+                src={artworkSrc}
                 alt={track.title}
                 width="100%"
                 height="100%"
@@ -139,7 +146,7 @@ export default function PlaylistTrackItem({
             </Box>
           ) : (
             <Image
-              src={track.album_thumbnail}
+              src={artworkSrc}
               alt={track.title}
               width="100%"
               height="100%"
@@ -160,7 +167,15 @@ export default function PlaylistTrackItem({
             whiteSpace="nowrap"
             pr={{ base: 8, md: 10 }}
           >
-            {track.title}
+            <Link
+              as={NextLink}
+              href={trackHref}
+              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              _hover={{ textDecoration: "underline" }}
+            >
+              {track.title}
+            </Link>
           </Text>
 
           {/* Artist & Album */}

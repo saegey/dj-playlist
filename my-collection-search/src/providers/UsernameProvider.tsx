@@ -15,6 +15,7 @@ type UsernameContextValue = {
   friend: Friend | null;
   setFriend: (u: Friend | null) => void;
   clearFriend: () => void;
+  isHydrated: boolean;
 };
 
 const UsernameContext = createContext<UsernameContextValue | null>(null);
@@ -28,6 +29,7 @@ export function UsernameProvider({
 }) {
   const STORAGE_KEY = "mcs:selectedFriend";
   const [friend, _setFriend] = useState<Friend | null>(initialFriend);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const persist = useCallback((f: Friend | null) => {
     try {
@@ -53,6 +55,7 @@ export function UsernameProvider({
     if (initialFriend) {
       _setFriend(initialFriend);
       persist(initialFriend);
+      setIsHydrated(true);
       return;
     }
     try {
@@ -71,6 +74,7 @@ export function UsernameProvider({
     } catch {
       // ignore parse errors
     }
+    setIsHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -107,8 +111,9 @@ export function UsernameProvider({
       friend,
       setFriend,
       clearFriend,
+      isHydrated,
     }),
-    [friend, setFriend, clearFriend]
+    [friend, setFriend, clearFriend, isHydrated]
   );
 
   return (

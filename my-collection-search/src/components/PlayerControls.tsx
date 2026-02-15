@@ -22,7 +22,6 @@ import {
   FiVolumeX,
   FiList,
 } from "react-icons/fi";
-import { Track } from "@/types/track";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import ProgressSlider from "@/components/player/ProgressSlider";
 import CompactProgressSlider from "@/components/player/CompactProgressSlider";
@@ -75,6 +74,10 @@ export default function PlayerControls({
 
   // Poll MPD status when in DAC mode
   const mpdStatus = useMPDStatus(mode === "local-dac");
+  const currentArtwork =
+    currentTrack?.audio_file_album_art_url ||
+    currentTrack?.album_thumbnail ||
+    "/images/placeholder-artwork.png";
 
   // Sync MPD position to browser audio element for UI consistency
   React.useEffect(() => {
@@ -365,10 +368,10 @@ export default function PlayerControls({
       title: currentTrack.title,
       artist: currentTrack.artist,
       album: currentTrack.album || undefined,
-      artwork: currentTrack.album_thumbnail
+      artwork: currentArtwork
         ? [
             {
-              src: currentTrack.album_thumbnail,
+              src: currentArtwork,
               sizes: "512x512",
               type: "image/jpeg",
             },
@@ -452,6 +455,7 @@ export default function PlayerControls({
     handlePlay,
     handlePause,
     handleSeek,
+    currentArtwork,
   ]);
 
   return (
@@ -493,7 +497,7 @@ export default function PlayerControls({
             friendId={currentTrack?.friend_id}
           >
             <Artwork
-              src={(currentTrack as Track)?.album_thumbnail}
+              src={currentArtwork}
               alt={
                 currentTrack
                   ? `${currentTrack.artist} - ${currentTrack.title}`

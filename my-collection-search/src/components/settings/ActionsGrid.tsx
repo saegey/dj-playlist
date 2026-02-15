@@ -2,7 +2,7 @@
 "use client";
 import { useState } from "react";
 import { Button, Flex, Menu, Text, Box } from "@chakra-ui/react";
-import { FiDatabase, FiBriefcase, FiTrash2, FiMoreVertical } from "react-icons/fi";
+import { FiDatabase, FiBriefcase, FiTrash2, FiMoreVertical, FiImage } from "react-icons/fi";
 import { SiDiscogs, SiSpotify } from "react-icons/si";
 import { toaster } from "@/components/ui/toaster";
 import {
@@ -43,6 +43,7 @@ export default function ActionsGrid() {
   const cleanupAlbums = useCleanupAlbums();
   const backfillReleaseId = useBackfillReleaseId();
   const [durationFixLoading, setDurationFixLoading] = useState(false);
+  const [coverArtBackfillLoading, setCoverArtBackfillLoading] = useState(false);
 
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [verificationResults, setVerificationResults] = useState<
@@ -79,6 +80,31 @@ export default function ActionsGrid() {
       });
     } finally {
       setDurationFixLoading(false);
+    }
+  };
+
+  const handleExtractMissingCoverArt = async () => {
+    setCoverArtBackfillLoading(true);
+    try {
+      const res = await fetch("/api/tracks/extract-missing-cover-art", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to queue embedded cover extraction");
+      }
+      toaster.create({
+        title: "Embedded cover extraction queued",
+        description: `Queued ${data.queuedAlbums ?? data.queued} albums for ${data.tracksImpacted ?? 0} tracks${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,
+        type: data.errors?.length ? "warning" : "success",
+        duration: 5000,
+      });
+    } catch (err) {
+      toaster.create({
+        title: "Embedded cover extraction failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        type: "error",
+      });
+    } finally {
+      setCoverArtBackfillLoading(false);
     }
   };
 
@@ -350,6 +376,14 @@ export default function ActionsGrid() {
                 disabled={disableAll || durationFixLoading}
               >
                 <FiDatabase /> Fix Missing Durations (Audio)
+              </Menu.Item>
+
+              <Menu.Item
+                value="extract-cover-art"
+                onClick={handleExtractMissingCoverArt}
+                disabled={disableAll || coverArtBackfillLoading}
+              >
+                <FiImage /> Extract Missing Embedded Cover Art
               </Menu.Item>
             </Menu.Content>
           </Menu.Positioner>

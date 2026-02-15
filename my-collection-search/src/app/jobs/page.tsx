@@ -2,7 +2,6 @@
 
 import React from "react";
 import {
-  Container,
   Heading,
   Spinner,
   Text,
@@ -25,6 +24,7 @@ import { useMutation } from "@tanstack/react-query";
 import { clearAllJobs, type JobInfo } from "@/services/jobsService";
 import TrackResultStore from "@/components/TrackResultStore";
 import type { Track } from "@/types/track";
+import PageContainer from "@/components/layout/PageContainer";
 
 export default function JobsPage() {
   const { data, isLoading, refetch, dataUpdatedAt } = useJobsQuery();
@@ -65,8 +65,45 @@ export default function JobsPage() {
     );
   };
 
-  const getDownloaderInfo = (job: { data?: Record<string, unknown> }) => {
+  const getDownloaderInfo = (job: {
+    name?: string;
+    data?: Record<string, unknown>;
+  }) => {
     const data = job.data || {};
+    const jobName = job.name || String(data.job_type || "");
+
+    if (jobName === "analyze-local-audio" || data.job_type === "analyze-local") {
+      return {
+        name: "analyze-local",
+        source: "Local Audio",
+        color: "cyan" as const,
+        quality: "essentia",
+      };
+    }
+    if (jobName === "fix-duration" || data.job_type === "fix-duration") {
+      return {
+        name: "fix-duration",
+        source: "Local Audio",
+        color: "blue" as const,
+        quality: "ffprobe",
+      };
+    }
+    if (jobName === "extract-cover-art-album" || data.job_type === "extract-cover-art-album") {
+      return {
+        name: "cover-art-album",
+        source: "Embedded Art",
+        color: "pink" as const,
+        quality: "album",
+      };
+    }
+    if (jobName === "extract-cover-art" || data.job_type === "extract-cover-art") {
+      return {
+        name: "cover-art-track",
+        source: "Embedded Art",
+        color: "pink" as const,
+        quality: "track",
+      };
+    }
 
     // Determine which downloader will be used based on available URLs
     if (data.apple_music_url) {
@@ -172,7 +209,7 @@ export default function JobsPage() {
   };
 
   return (
-    <Container maxW="6xl" p={[0,6]}>
+    <PageContainer size="standard">
       <Stack gap={6}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Heading size="lg">Job Queue Status</Heading>
@@ -278,11 +315,12 @@ export default function JobsPage() {
           </Box>
         ) : (
           <VStack gap={3} align="stretch">
-            {jobs.map((job) => {
+            {jobs.map((job, idx) => {
               const downloaderInfo = getDownloaderInfo(job);
+              const jobKey = `${job.queue}:${job.id}:${job.data.track_id}:${job.data.friend_id}:${idx}`;
               return (
                 <TrackResultStore
-                  key={job.id}
+                  key={jobKey}
                   trackId={job.data.track_id}
                   friendId={job.data.friend_id}
                   fallbackTrack={buildFallbackTrack(job)}
@@ -299,6 +337,7 @@ export default function JobsPage() {
                     <Stack gap={2} pt={1}>
                       <Flex gap={2} flexWrap="wrap" alignItems="center">
                         <Badge variant="outline">{job.queue}</Badge>
+                        <Badge variant="outline">{job.name || "unknown-job"}</Badge>
                         <Badge colorScheme={downloaderInfo.color} variant="solid" size="sm">
                           {downloaderInfo.name}
                         </Badge>
@@ -386,6 +425,10 @@ export default function JobsPage() {
                         <Text>{detailsJob.queue}</Text>
                       </Box>
                       <Box>
+                        <Text fontSize="sm" color="gray.500">Job Type</Text>
+                        <Text>{detailsJob.name}</Text>
+                      </Box>
+                      <Box>
                         <Text fontSize="sm" color="gray.500">State</Text>
                         <Text>{detailsJob.state}</Text>
                       </Box>
@@ -415,6 +458,6 @@ export default function JobsPage() {
           </Portal>
         </Dialog.Root>
       </Stack>
-    </Container>
+    </PageContainer>
   );
 }

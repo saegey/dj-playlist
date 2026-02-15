@@ -1,10 +1,10 @@
 "use client";
 
 import React, { Suspense } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   Box,
-  Container,
   Flex,
   Spinner,
   Text,
@@ -30,11 +30,35 @@ import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { toaster } from "@/components/ui/toaster";
 import { useColorModeValue } from "@/components/ui/color-mode";
+import PageContainer from "@/components/layout/PageContainer";
 
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
   const date = new Date(dateString);
   return date.toLocaleDateString();
+}
+
+type DiscogsRawResponse = {
+  friend_id: number;
+  release_id: string;
+  username: string;
+  file_path: string;
+  data: unknown;
+};
+
+async function fetchDiscogsRawRelease(
+  releaseId: string,
+  friendId: number
+): Promise<DiscogsRawResponse> {
+  const res = await fetch(
+    `/api/albums/${encodeURIComponent(releaseId)}/discogs-raw?friend_id=${friendId}`,
+    { cache: "no-store" }
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error || "Failed to load Discogs raw file");
+  }
+  return data as DiscogsRawResponse;
 }
 
 function AlbumDetailContent() {
@@ -46,6 +70,11 @@ function AlbumDetailContent() {
   const friendId = parseInt(searchParams.get("friend_id") || "0");
 
   const { data, isLoading, error } = useAlbumDetailQuery(releaseId, friendId);
+  const discogsRawQuery = useQuery({
+    queryKey: ["album-discogs-raw", releaseId, friendId],
+    queryFn: () => fetchDiscogsRawRelease(releaseId, friendId),
+    enabled: !!releaseId && !!friendId,
+  });
   const updateMutation = useUpdateAlbumMutation();
   const { replacePlaylist } = usePlaylistPlayer();
 
@@ -151,54 +180,47 @@ function AlbumDetailContent() {
 
   if (!friendId) {
     return (
-      <Container maxW="container.xl" py={8}>
+      <PageContainer size="standard" py={8}>
         <Text color="red.500">Error: friend_id parameter is required</Text>
-      </Container>
+      </PageContainer>
     );
   }
 
   if (isLoading) {
     return (
-      <Container maxW="container.xl" py={8}>
+      <PageContainer size="standard" py={8}>
         <Flex justify="center" align="center" minH="400px">
           <Spinner size="xl" />
         </Flex>
-      </Container>
+      </PageContainer>
     );
   }
 
   if (error || !data) {
     return (
-      <Container maxW="container.xl" py={8}>
+      <PageContainer size="standard" py={8}>
         <Text color="red.500">
           Error loading album: {error instanceof Error ? error.message : "Unknown error"}
         </Text>
-      </Container>
+      </PageContainer>
     );
   }
 
   const { album, tracks } = data;
+  const albumArtwork =
+    tracks.find((t) => t.audio_file_album_art_url)?.audio_file_album_art_url ||
+    album.album_thumbnail;
 
   return (
-    <Container maxW="container.xl" p={0} mb={"100px"}>
-      {/* Back button */}
-      <Button
-        variant="ghost"
-        onClick={() => router.back()}
-        mb={4}
-        size={{ base: "sm", md: "md" }}
-      >
-        <Icon as={IoArrowBack} mr={2} />
-        Back
-      </Button>
+    <PageContainer size="standard" mb="100px">
 
       {/* Album header */}
       <Flex gap={{ base: 3, md: 6 }} direction={{ base: "column", md: "row" }} mb={{ base: 4, md: 8 }}>
         {/* Album artwork */}
-        {album.album_thumbnail && (
+        {albumArtwork && (
           <Box flexShrink={0}>
             <Image
-              src={album.album_thumbnail}
+              src={albumArtwork}
               alt={album.title}
               boxSize={{ base: "140px", md: "300px" }}
               objectFit="cover"
@@ -455,18 +477,58 @@ function AlbumDetailContent() {
           <Text color={subtleText}>No tracks found for this album.</Text>
         ) : (
           <Flex direction="column" gap={{ base: 1, md: 2 }}>
-            {tracks.map((track) => (
+            {tracks.map((track, idx) => (
               <AlbumTrackItem
-                key={track.track_id}
+                key={`${track.track_id}:${track.friend_id}:${idx}`}
                 track={track}
                 albumArtist={album.artist}
-                buttons={<TrackActionsMenu track={track} />}
+                buttons={
+                  <TrackActionsMenu
+                    key={`${track.track_id}:${track.friend_id}:${idx}:actions`}
+                    track={track}
+                  />
+                }
               />
             ))}
           </Flex>
         )}
       </Box>
-    </Container>
+
+      <Box mt={8} borderWidth="1px" borderRadius="md" p={4}>
+        <Heading size="sm" mb={3}>
+          Discogs Raw Release File
+        </Heading>
+        {discogsRawQuery.isLoading ? (
+          <Spinner size="sm" />
+        ) : discogsRawQuery.error ? (
+          <Text color={subtleText}>
+            {discogsRawQuery.error instanceof Error
+              ? discogsRawQuery.error.message
+              : "No Discogs raw file found"}
+          </Text>
+        ) : discogsRawQuery.data ? (
+          <Box>
+            <Badge variant="outline" mb={3}>
+              {discogsRawQuery.data.file_path}
+            </Badge>
+            <Box
+              as="pre"
+              p={3}
+              borderRadius="md"
+              borderWidth="1px"
+              overflow="auto"
+              maxH="420px"
+              fontSize="xs"
+              whiteSpace="pre-wrap"
+            >
+              {JSON.stringify(discogsRawQuery.data.data, null, 2)}
+            </Box>
+          </Box>
+        ) : (
+          <Text color={subtleText}>No Discogs raw file available.</Text>
+        )}
+      </Box>
+    </PageContainer>
   );
 }
 
@@ -474,11 +536,11 @@ export default function AlbumDetailPage() {
   return (
     <Suspense
       fallback={
-        <Container maxW="container.xl" py={8}>
+        <PageContainer size="standard" py={8}>
           <Flex justify="center" align="center" minH="400px">
             <Spinner size="xl" />
           </Flex>
-        </Container>
+        </PageContainer>
       }
     >
       <AlbumDetailContent />

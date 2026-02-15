@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Text, Spinner, HStack, Container, Box } from "@chakra-ui/react";
+import { Text, Spinner, HStack, Box } from "@chakra-ui/react";
 
 import UsernameSelect from "@/components/UsernameSelect";
 import SingleTrackUI from "@/components/SingleTrackUI";
@@ -9,13 +9,14 @@ import {
   MissingAppleProvider,
   useMissingApple,
 } from "@/providers/MissingAppleContext";
+import PageContainer from "@/components/layout/PageContainer";
 
 function MissingAudio() {
   const { usernames: friends, total, loading, tracks } = useMissingApple();
    
   return (
     <>
-      <Container maxW={["8xl", "2xl", "2xl"]} mt={3} mb={8}>
+      <PageContainer size="standard" py={3} mb={8}>
         <HStack mb={4}>
           <Box>
             <Text fontSize="xs" mb={2}>
@@ -39,7 +40,7 @@ function MissingAudio() {
         ) : (
           <SingleTrackUI />
         )}
-      </Container>
+      </PageContainer>
     </>
   );
 }

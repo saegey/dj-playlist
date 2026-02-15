@@ -100,12 +100,16 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
     onModified?.(); // Mark as modified
   };
 
-  // Mutation for removing track from playlist
+  // Mutation for removing a single track instance from playlist by index
   const removeTrackMutation = useMutation({
-    mutationFn: async (trackIdToRemove: string) => {
+    mutationFn: async (indexToRemove: number) => {
       if (!playlistId) throw new Error("No playlist ID");
       const trackRefs = getTrackIds();
-      const newRefs = trackRefs.filter((r) => r.track_id !== trackIdToRemove);
+      if (indexToRemove < 0 || indexToRemove >= trackRefs.length) {
+        return trackRefs;
+      }
+      const newRefs = [...trackRefs];
+      newRefs.splice(indexToRemove, 1);
       const res = await updatePlaylist(playlistId, { tracks: newRefs });
       if (!res.ok) throw new Error("Failed to remove track from playlist");
       return newRefs;
@@ -146,8 +150,8 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
   });
 
   // Remove track from playlist (with server persistence)
-  const removeFromPlaylist = (trackIdToRemove: string) => {
-    removeTrackMutation.mutate(trackIdToRemove);
+  const removeFromPlaylist = (indexToRemove: number) => {
+    removeTrackMutation.mutate(indexToRemove);
   };
 
   // Add track to playlist (with server persistence) 

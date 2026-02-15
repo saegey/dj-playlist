@@ -95,6 +95,18 @@ export async function analyzeTrackAsync(
   });
 }
 
+export async function analyzeLocalAudioAsync(args: {
+  track_id: string;
+  friend_id: number;
+  local_audio_url?: string | null;
+}): Promise<AsyncAnalyzeResponse> {
+  return await http<AsyncAnalyzeResponse>("/api/tracks/analyze-local-async", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+}
+
 export type UploadTrackAudioArgs = {
   file: File;
   track_id: string;

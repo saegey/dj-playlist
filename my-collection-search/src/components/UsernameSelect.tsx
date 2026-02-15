@@ -51,6 +51,7 @@ export default function UsernameSelect({
 }: UsernameSelectProps) {
   // Context holds Friend | null; external value can override
   const { friend: ctxValue, setFriend: setCtxValue } = useUsername();
+  const isControlled = value !== undefined;
   const selectedFriend: Friend | null = value ?? (ctxValue as Friend | null);
   const uniqueUsernames = React.useMemo(() => {
     const map = new Map<number, Friend>();
@@ -72,16 +73,38 @@ export default function UsernameSelect({
     if (onChange) {
       onChange(friend ? friend.id : 0);
     }
-    setCtxValue(friend);
+    // Persist global library selection in both modes when a concrete library is chosen.
+    // For "All Libraries" (null), do not clear global selection in controlled mode.
+    if (friend) {
+      setCtxValue(friend);
+      return;
+    }
+    if (!isControlled) {
+      setCtxValue(null);
+    }
   };
 
   // Heal stale persisted selections (e.g. restored DB with new friend IDs).
   React.useEffect(() => {
     if (isLoading) return;
     if (!selectedFriend) return;
+    if (uniqueUsernames.length === 0) return;
 
     const exists = uniqueUsernames.some((u) => u.id === selectedFriend.id);
     if (exists) return;
+
+    // If IDs changed after restore, try to heal by username before falling back.
+    const byUsername = uniqueUsernames.find(
+      (u) =>
+        typeof u.username === "string" &&
+        typeof selectedFriend.username === "string" &&
+        u.username.trim().toLowerCase() ===
+          selectedFriend.username.trim().toLowerCase()
+    );
+    if (byUsername) {
+      handleSelect(byUsername);
+      return;
+    }
 
     // If the stored selection no longer exists, fall back deterministically.
     const fallback = includeAllOption ? null : uniqueUsernames[0] ?? null;

@@ -37,6 +37,10 @@ export default function AlbumResult({
   buttons,
   showEditFields = false,
 }: AlbumResultProps) {
+  const artworkSrc =
+    album.audio_file_album_art_url ||
+    album.album_thumbnail ||
+    "/images/placeholder-artwork.png";
   const [isEditing, setIsEditing] = useState(false);
   const [rating, setRating] = useState(album.album_rating || 0);
   const [notes, setNotes] = useState(album.album_notes || "");
@@ -72,10 +76,10 @@ export default function AlbumResult({
     <Box borderWidth="1px" borderRadius="md" p={{ base: 2, md: 4 }} mb={{ base: 2, md: 3 }} position="relative">
       <Flex gap={{ base: 2, md: 4 }} direction={{ base: "row", md: "row" }} flexWrap={{ base: "wrap", md: "nowrap" }}>
         {/* Album artwork */}
-        {album.album_thumbnail && (
+        {artworkSrc && (
           <Box flexShrink={0}>
             <Image
-              src={album.album_thumbnail}
+              src={artworkSrc}
               alt={album.title}
               boxSize={{ base: "80px", md: "150px" }}
               objectFit="cover"

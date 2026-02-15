@@ -4,6 +4,7 @@ import React from "react";
 import PlaylistsProvider from "@/providers/PlaylistsProvider";
 import { useMeili } from "@/providers/MeiliProvider";
 import PlaylistManager from "@/components/PlaylistManager";
+import PageContainer from "@/components/layout/PageContainer";
 
 const PlaylistsPage = () => {
   const { client: meiliClient, ready } = useMeili();
@@ -13,7 +14,7 @@ const PlaylistsPage = () => {
   }, [ready, meiliClient]);
 
   return (
-    <>
+    <PageContainer size="standard">
       <PlaylistManager
         xmlImportModalOpen={false}
         setXmlImportModalOpen={function (): void {
@@ -21,7 +22,7 @@ const PlaylistsPage = () => {
         }}
         client={meiliClient}
       />
-    </>
+    </PageContainer>
   );
 };
 

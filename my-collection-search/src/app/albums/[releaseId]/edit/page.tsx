@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { Button, Container, Heading, Stack, Flex, Spinner, Text } from "@chakra-ui/react";
+import { Button, Heading, Stack, Flex, Spinner, Text } from "@chakra-ui/react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { toaster } from "@/components/ui/toaster";
 import { useUpdateAlbumWithTracksMutation } from "@/hooks/useUpdateAlbumWithTracksMutation";
@@ -11,6 +11,7 @@ import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import AlbumForm, { AlbumFormData } from "@/components/AlbumForm";
 import CoverArtUpload from "@/components/CoverArtUpload";
 import TrackListBuilder, { TrackFormData } from "@/components/TrackListBuilder";
+import PageContainer from "@/components/layout/PageContainer";
 
 function EditAlbumContent() {
   const router = useRouter();
@@ -227,34 +228,38 @@ function EditAlbumContent() {
 
   if (!friendId) {
     return (
-      <Container maxW="container.xl" py={8}>
+      <PageContainer size="standard" py={8}>
         <Text color="red.500">Error: friend_id parameter is required</Text>
-      </Container>
+      </PageContainer>
     );
   }
 
   if (isLoading) {
     return (
-      <Container maxW="container.xl" py={8}>
+      <PageContainer size="standard" py={8}>
         <Flex justify="center" align="center" minH="400px">
           <Spinner size="xl" />
         </Flex>
-      </Container>
+      </PageContainer>
     );
   }
 
   if (error || !data) {
     return (
-      <Container maxW="container.xl" py={8}>
+      <PageContainer size="standard" py={8}>
         <Text color="red.500">
           Error loading album: {error instanceof Error ? error.message : "Unknown error"}
         </Text>
-      </Container>
+      </PageContainer>
     );
   }
 
   return (
-    <Container maxW="container.xl" py={[0, 4]} px={0} mb={playlistLength > 0 ? "120px" : "0"}>
+    <PageContainer
+      size="standard"
+      py={{ base: 0, md: 4 }}
+      mb={playlistLength > 0 ? "120px" : "0"}
+    >
       <Stack gap={6}>
         <Heading size="2xl">Edit Album</Heading>
 
@@ -286,7 +291,7 @@ function EditAlbumContent() {
           </Button>
         </Flex>
       </Stack>
-    </Container>
+    </PageContainer>
   );
 }
 
@@ -294,11 +299,11 @@ export default function EditAlbumPage() {
   return (
     <Suspense
       fallback={
-        <Container maxW="container.xl" py={8}>
+        <PageContainer size="standard" py={8}>
           <Flex justify="center" align="center" minH="400px">
             <Spinner size="xl" />
           </Flex>
-        </Container>
+        </PageContainer>
       }
     >
       <EditAlbumContent />

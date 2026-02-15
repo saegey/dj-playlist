@@ -6,7 +6,13 @@ export interface DownloadJobData {
   job_id: string;
   track_id: string;
   friend_id: number;
-  job_type?: "download" | "fix-duration";
+  release_id?: string | null;
+  job_type?:
+    | "download"
+    | "fix-duration"
+    | "extract-cover-art"
+    | "extract-cover-art-album"
+    | "analyze-local";
   apple_music_url?: string;
   spotify_url?: string;
   youtube_url?: string;
@@ -33,8 +39,11 @@ export interface JobStatus {
   progress: number;
   created_at: number;
   updated_at: number;
+  name?: string;
+  job_type?: DownloadJobData["job_type"];
   track_id: string;
   friend_id: number;
+  release_id?: string | null;
   error?: string;
   result?: {
     file_path?: string;
@@ -127,6 +136,8 @@ export class RedisJobService {
       track_id: data.track_id,
       friend_id: data.friend_id,
       name: "download-audio",
+      job_type: "download",
+      release_id: data.release_id || "",
     });
 
     // Add job to simple Redis queue (will be picked up by Python worker)
@@ -153,6 +164,7 @@ export class RedisJobService {
       track_id: data.track_id,
       friend_id: data.friend_id,
       name: "fix-duration",
+      job_type: "fix-duration",
     });
 
     const jobData: DownloadJobData = {
@@ -165,6 +177,108 @@ export class RedisJobService {
 
     await this.redis.lpush("download_queue", JSON.stringify(jobData));
     console.log(`Created duration job ${job_id} for track ${data.track_id}`);
+    return job_id;
+  }
+
+  async createCoverArtJob(data: {
+    track_id: string;
+    friend_id: number;
+    local_audio_url?: string | null;
+  }): Promise<string> {
+    const job_id = uuidv4();
+    const now = Date.now();
+
+    await this.redis.hset(`job:${job_id}`, {
+      job_id,
+      status: "queued",
+      progress: 0,
+      created_at: now,
+      updated_at: now,
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      name: "extract-cover-art",
+      job_type: "extract-cover-art",
+    });
+
+    const jobData: DownloadJobData = {
+      job_id,
+      job_type: "extract-cover-art",
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      ...(data.local_audio_url ? { local_audio_url: data.local_audio_url } : {}),
+    };
+
+    await this.redis.lpush("download_queue", JSON.stringify(jobData));
+    console.log(`Created cover-art job ${job_id} for track ${data.track_id}`);
+    return job_id;
+  }
+
+  async createCoverArtAlbumJob(data: {
+    track_id: string;
+    friend_id: number;
+    release_id: string;
+  }): Promise<string> {
+    const job_id = uuidv4();
+    const now = Date.now();
+
+    await this.redis.hset(`job:${job_id}`, {
+      job_id,
+      status: "queued",
+      progress: 0,
+      created_at: now,
+      updated_at: now,
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      release_id: data.release_id,
+      name: "extract-cover-art-album",
+      job_type: "extract-cover-art-album",
+    });
+
+    const jobData: DownloadJobData = {
+      job_id,
+      job_type: "extract-cover-art-album",
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      release_id: data.release_id,
+    };
+
+    await this.redis.lpush("download_queue", JSON.stringify(jobData));
+    console.log(
+      `Created album cover-art job ${job_id} for release ${data.release_id}`
+    );
+    return job_id;
+  }
+
+  async createAnalyzeLocalJob(data: {
+    track_id: string;
+    friend_id: number;
+    local_audio_url?: string | null;
+  }): Promise<string> {
+    const job_id = uuidv4();
+    const now = Date.now();
+
+    await this.redis.hset(`job:${job_id}`, {
+      job_id,
+      status: "queued",
+      progress: 0,
+      created_at: now,
+      updated_at: now,
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      name: "analyze-local-audio",
+      job_type: "analyze-local",
+    });
+
+    const jobData: DownloadJobData = {
+      job_id,
+      job_type: "analyze-local",
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      ...(data.local_audio_url ? { local_audio_url: data.local_audio_url } : {}),
+    };
+
+    await this.redis.lpush("download_queue", JSON.stringify(jobData));
+    console.log(`Created analyze-local job ${job_id} for track ${data.track_id}`);
     return job_id;
   }
 
@@ -181,8 +295,11 @@ export class RedisJobService {
       progress: parseInt(jobData.progress || "0"),
       created_at: parseInt(jobData.created_at),
       updated_at: parseInt(jobData.updated_at),
+      name: jobData.name,
+      job_type: jobData.job_type as DownloadJobData["job_type"] | undefined,
       track_id: jobData.track_id,
       friend_id: parseInt(jobData.friend_id),
+      release_id: jobData.release_id || null,
       error: jobData.error,
       result: jobData.result ? JSON.parse(jobData.result) : undefined,
     };
@@ -204,8 +321,11 @@ export class RedisJobService {
           progress: parseInt(jobData.progress || "0"),
           created_at: parseInt(jobData.created_at),
           updated_at: parseInt(jobData.updated_at),
+          name: jobData.name,
+          job_type: jobData.job_type as DownloadJobData["job_type"] | undefined,
           track_id: jobData.track_id,
           friend_id: parseInt(jobData.friend_id),
+          release_id: jobData.release_id || null,
           error: jobData.error,
           result: jobData.result ? JSON.parse(jobData.result) : undefined,
         });

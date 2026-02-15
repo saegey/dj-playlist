@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Command } from "cmdk";
+import * as RadixDialog from "@radix-ui/react-dialog";
 import { useRouter, usePathname } from "next/navigation";
 import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
@@ -197,6 +198,9 @@ export default function CommandPalette() {
       className={styles.dialog}
       label="Command Palette"
     >
+      <RadixDialog.Title className={styles.srOnly}>
+        Command Palette
+      </RadixDialog.Title>
       <Command className={styles.command}>
         <Command.Input
           autoFocus

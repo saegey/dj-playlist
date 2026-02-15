@@ -28,6 +28,7 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       REDIS_URL: redis://redis:6379
       ESSENTIA_API_URL: http://essentia:8001/analyze
+      ESSENTIA_DATA_DIR: /app/essentia-data
       # Optional: adjust polling interval (ms)
       # WATCHPACK_POLLING_INTERVAL: "1000"
     depends_on:
@@ -40,6 +41,7 @@ services:
       # Keep node_modules inside the container image
       - /app/node_modules
       - ${APP_AUDIO_MOUNT:-music_data:/app/audio}
+      - essentia_data:/app/essentia-data
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
       - spotify_exports:/app/spotify_exports  
@@ -122,11 +124,13 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
       GAMDL_COOKIE_FILE: /app/cookies/music.apple.com_cookies.txt
+      ESSENTIA_DATA_DIR: /app/essentia-data
     depends_on:
       - redis
       - db
     volumes:
       - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
+      - essentia_data:/app/essentia-data
       - ./cookies:/app/cookies:ro  # Mount local cookies directory as read-only
     restart: unless-stopped
     # command: sh -c "pip install -r requirements.txt && pip install watchdog && watchmedo auto-restart -d worker -p '*.py' -R -- python3 download_worker.py"
@@ -140,3 +144,4 @@ volumes:
   discogs_exports:
   spotify_exports:
   redis_data:
+  essentia_data:

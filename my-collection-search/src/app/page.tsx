@@ -1,16 +1,17 @@
 "use client";
 
 import React, { Suspense } from "react";
-import { Flex, Container, Spinner } from "@chakra-ui/react";
+import { Flex, Spinner } from "@chakra-ui/react";
 
 import SearchResults from "@/components/SearchResults";
+import PageContainer from "@/components/layout/PageContainer";
 
 const SearchPage = () => {
   return (
     <>
       <Flex gap={4} direction="row">
         {/* Search Results */}
-        <Container p={[0, 6, 6]}>
+        <PageContainer size="standard">
           <Suspense
             fallback={
               <Flex justify="center" pt={6}>
@@ -20,7 +21,7 @@ const SearchPage = () => {
           >
             <SearchResults />
           </Suspense>
-        </Container>
+        </PageContainer>
       </Flex>
     </>
   );

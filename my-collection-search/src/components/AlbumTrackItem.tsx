@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import NextLink from "next/link";
 import {
   Box,
   Flex,
@@ -11,6 +12,7 @@ import {
   Badge,
   Dialog,
   Portal,
+  Link,
 } from "@chakra-ui/react";
 import { FiPlay } from "react-icons/fi";
 import { Track } from "@/types/track";
@@ -44,6 +46,7 @@ export default function AlbumTrackItem({
 }: AlbumTrackItemProps) {
   const { replacePlaylist } = usePlaylistPlayer();
   const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const trackHref = `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`;
 
   // Only show artist if different from album artist (for compilations)
   const showArtist = track.artist !== albumArtist;
@@ -89,7 +92,13 @@ export default function AlbumTrackItem({
               fontSize={{ base: "sm", md: "md" }}
               lineClamp={1}
             >
-              {track.title}
+              <Link
+                as={NextLink}
+                href={trackHref}
+                _hover={{ textDecoration: "underline" }}
+              >
+                {track.title}
+              </Link>
             </Text>
           </Flex>
 

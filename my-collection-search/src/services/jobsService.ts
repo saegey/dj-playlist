@@ -8,6 +8,8 @@ export interface JobInfo {
   data: {
     track_id: string;
     friend_id: number;
+    release_id?: string | null;
+    job_type?: string;
     apple_music_url?: string;
     spotify_url?: string;
     youtube_url?: string;

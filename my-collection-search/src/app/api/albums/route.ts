@@ -73,8 +73,75 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Attach first available audio-derived cover for each (release_id, friend_id) pair.
+    const albumRefs = enrichedHits
+      .map((h) => ({
+        release_id: (h as { release_id?: unknown }).release_id,
+        friend_id: (h as { friend_id?: unknown }).friend_id,
+      }))
+      .filter(
+        (r): r is { release_id: string; friend_id: number } =>
+          typeof r.release_id === "string" && typeof r.friend_id === "number"
+      );
+
+    const coverByAlbumKey = new Map<string, string>();
+    if (albumRefs.length > 0) {
+      const values: string[] = [];
+      const params: Array<string | number> = [];
+      albumRefs.forEach((ref, idx) => {
+        const p = idx * 2;
+        values.push(`($${p + 1}::text, $${p + 2}::integer)`);
+        params.push(ref.release_id, ref.friend_id);
+      });
+
+      const { rows: coverRows } = await pool.query(
+        `
+        WITH refs(release_id, friend_id) AS (
+          VALUES ${values.join(", ")}
+        )
+        SELECT DISTINCT ON (t.release_id, t.friend_id)
+          t.release_id,
+          t.friend_id,
+          t.audio_file_album_art_url
+        FROM tracks t
+        INNER JOIN refs r
+          ON r.release_id = t.release_id AND r.friend_id = t.friend_id
+        WHERE t.audio_file_album_art_url IS NOT NULL
+          AND t.audio_file_album_art_url <> ''
+        ORDER BY t.release_id, t.friend_id, t.id ASC
+        `,
+        params
+      );
+
+      for (const row of coverRows) {
+        if (
+          typeof row.release_id === "string" &&
+          typeof row.friend_id === "number" &&
+          typeof row.audio_file_album_art_url === "string"
+        ) {
+          coverByAlbumKey.set(
+            `${row.release_id}:${row.friend_id}`,
+            row.audio_file_album_art_url
+          );
+        }
+      }
+    }
+
+    const finalHits = enrichedHits.map((hit) => {
+      const release_id = (hit as { release_id?: unknown }).release_id;
+      const friend_id = (hit as { friend_id?: unknown }).friend_id;
+      if (typeof release_id !== "string" || typeof friend_id !== "number") {
+        return hit;
+      }
+      return {
+        ...hit,
+        audio_file_album_art_url:
+          coverByAlbumKey.get(`${release_id}:${friend_id}`) || undefined,
+      };
+    });
+
     return NextResponse.json({
-      hits: enrichedHits,
+      hits: finalHits,
       estimatedTotalHits: searchResults.estimatedTotalHits,
       offset: searchResults.offset,
       limit: searchResults.limit,

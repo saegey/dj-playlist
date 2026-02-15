@@ -57,6 +57,7 @@ function getItemIcon(href: string) {
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const CONTENT_MAX_W = "1360px";
   const pathname = usePathname();
   const { playlistLength } = usePlaylistPlayer();
   const current = useMemo(() => {
@@ -67,20 +68,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Load sidebar state from localStorage
-  const [isExpanded, setIsExpanded] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sidebar-expanded');
-      return saved ? JSON.parse(saved) : false;
+  // Keep initial render deterministic across SSR/CSR; hydrate from storage after mount.
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem("sidebar-expanded");
+    if (!saved) return;
+    try {
+      setIsExpanded(Boolean(JSON.parse(saved)));
+    } catch {
+      // ignore invalid stored value
     }
-    return false;
-  });
+  }, []);
 
   // Save sidebar state to localStorage when it changes
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sidebar-expanded', JSON.stringify(isExpanded));
-    }
+    localStorage.setItem("sidebar-expanded", JSON.stringify(isExpanded));
   }, [isExpanded]);
 
   return (
@@ -252,7 +255,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <Box flex="1" minW={0} px={{ base: 4, md: 6 }} py={{ base: 4, md: 6 }}>
-        {children}
+        <Box w="full" maxW={CONTENT_MAX_W} mx="auto">
+          {children}
+        </Box>
       </Box>
     </Flex>
   );

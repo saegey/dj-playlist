@@ -4,6 +4,7 @@ import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 import type { Pool } from "pg";
+import { writeEssentiaAnalysis } from "@/lib/essentia-storage";
 
 export const runtime = "nodejs"; // Ensure Node.js runtime for file system access
 
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get("file");
   const track_id = formData.get("track_id");
+  const friend_id = formData.get("friend_id");
 
   if (
     !file ||
@@ -118,6 +120,16 @@ export async function POST(req: NextRequest) {
       );
     }
     analysisResult = responseText;
+    if (typeof friend_id === "string" && friend_id.trim() !== "") {
+      const friendIdNum = Number(friend_id);
+      if (!Number.isNaN(friendIdNum)) {
+        try {
+          writeEssentiaAnalysis(track_id, friendIdNum, analysisResult);
+        } catch (saveErr) {
+          console.warn("Failed to persist Essentia analysis file:", saveErr);
+        }
+      }
+    }
   } catch (err) {
     return NextResponse.json(
       {

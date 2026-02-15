@@ -60,6 +60,7 @@ type UpdateTrackInput = {
   local_tags?: string | null;
   apple_music_url?: string | null;
   local_audio_url?: string | null;
+  audio_file_album_art_url?: string | null;
   youtube_url?: string | null;
   soundcloud_url?: string | null;
   spotify_url?: string | null;
@@ -81,6 +82,7 @@ const UPDATABLE_COLUMNS = {
   soundcloud_url: "soundcloud_url",
   spotify_url: "spotify_url",
   local_audio_url: "local_audio_url",
+  audio_file_album_art_url: "audio_file_album_art_url",
   duration_seconds: "duration_seconds",
   notes: "notes",
   bpm: "bpm",

@@ -2,7 +2,7 @@
 
 import NextLink from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Badge,
   Box,
@@ -10,19 +10,53 @@ import {
   Flex,
   Heading,
   HStack,
+  Image,
   Link,
   Skeleton,
   Text,
   VStack,
 } from "@chakra-ui/react";
+import { toaster } from "@/components/ui/toaster";
 import TrackResultStore from "@/components/TrackResultStore";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { useTrackByIdQuery } from "@/hooks/useTrackByIdQuery";
+import PageContainer from "@/components/layout/PageContainer";
 
 type TrackPlaylistMembership = {
   id: number;
   name: string;
   position: number;
+};
+
+type TrackAudioMetadataResponse = {
+  track_id: string;
+  friend_id: number;
+  local_audio_url: string;
+  audio_file_album_art_url?: string | null;
+  has_embedded_cover: boolean;
+  embedded_cover?: {
+    index: number;
+    codec_name?: string;
+    width?: number;
+    height?: number;
+    pix_fmt?: string;
+  } | null;
+  probe: unknown;
+};
+
+type TrackEssentiaResponse = {
+  track_id: string;
+  friend_id: number;
+  file_path: string;
+  data: unknown;
+};
+
+type TrackEmbeddingPreviewResponse = {
+  track_id: string;
+  friend_id: number;
+  isDefaultTemplate: boolean;
+  template: string;
+  prompt: string;
 };
 
 async function fetchTrackPlaylists(
@@ -42,6 +76,64 @@ async function fetchTrackPlaylists(
     : [];
 }
 
+async function fetchTrackAudioMetadata(
+  trackId: string,
+  friendId: number
+): Promise<TrackAudioMetadataResponse> {
+  const res = await fetch(
+    `/api/tracks/${encodeURIComponent(trackId)}/audio-metadata?friend_id=${friendId}`,
+    { cache: "no-store" }
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error || "Failed to fetch audio metadata");
+  }
+  return data as TrackAudioMetadataResponse;
+}
+
+async function extractEmbeddedCover(trackId: string, friendId: number): Promise<string> {
+  const res = await fetch(`/api/tracks/${encodeURIComponent(trackId)}/audio-metadata`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ friend_id: friendId }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error || "Failed to extract embedded cover");
+  }
+  return String(data?.audio_file_album_art_url || "");
+}
+
+async function fetchTrackEssentiaData(
+  trackId: string,
+  friendId: number
+): Promise<TrackEssentiaResponse> {
+  const res = await fetch(
+    `/api/tracks/${encodeURIComponent(trackId)}/essentia?friend_id=${friendId}`,
+    { cache: "no-store" }
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error || "Failed to fetch Essentia analysis data");
+  }
+  return data as TrackEssentiaResponse;
+}
+
+async function fetchTrackEmbeddingPreview(
+  trackId: string,
+  friendId: number
+): Promise<TrackEmbeddingPreviewResponse> {
+  const res = await fetch(
+    `/api/tracks/${encodeURIComponent(trackId)}/embedding-preview?friend_id=${friendId}`,
+    { cache: "no-store" }
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error || "Failed to fetch embedding preview");
+  }
+  return data as TrackEmbeddingPreviewResponse;
+}
+
 export default function TrackPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -57,9 +149,27 @@ export default function TrackPage() {
     queryFn: () => fetchTrackPlaylists(trackId, friendId),
     enabled: hasValidFriendId && !!trackId,
   });
+  const audioMetadataQuery = useQuery({
+    queryKey: ["track-audio-metadata", trackId, friendId],
+    queryFn: () => fetchTrackAudioMetadata(trackId, friendId),
+    enabled: hasValidFriendId && !!trackId,
+  });
+  const essentiaQuery = useQuery({
+    queryKey: ["track-essentia", trackId, friendId],
+    queryFn: () => fetchTrackEssentiaData(trackId, friendId),
+    enabled: hasValidFriendId && !!trackId,
+  });
+  const embeddingPreviewQuery = useQuery({
+    queryKey: ["track-embedding-preview", trackId, friendId],
+    queryFn: () => fetchTrackEmbeddingPreview(trackId, friendId),
+    enabled: hasValidFriendId && !!trackId,
+  });
+  const extractCoverMutation = useMutation({
+    mutationFn: () => extractEmbeddedCover(trackId, friendId),
+  });
 
   return (
-    <Box maxW="1100px" mx="auto" px={{ base: 4, md: 6 }} py={6}>
+    <PageContainer size="standard">
       <Flex justify="space-between" align="center" mb={4} gap={3} wrap="wrap">
         <Heading size="lg">Track Details</Heading>
         <Button asChild variant="outline" size="sm">
@@ -106,6 +216,183 @@ export default function TrackPage() {
               />
 
               <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
+                <Flex justify="space-between" align="center" mb={3} gap={3} wrap="wrap">
+                  <Heading size="sm">Audio File Metadata (ffprobe)</Heading>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    loading={extractCoverMutation.isPending}
+                    onClick={async () => {
+                      try {
+                        const savedUrl = await extractCoverMutation.mutateAsync();
+                        toaster.create({
+                          title: "Embedded cover extracted",
+                          description: savedUrl || "Saved to track",
+                          type: "success",
+                        });
+                        await Promise.all([
+                          trackQuery.refetch(),
+                          audioMetadataQuery.refetch(),
+                        ]);
+                      } catch (err) {
+                        toaster.create({
+                          title: "Cover extraction failed",
+                          description: err instanceof Error ? err.message : String(err),
+                          type: "error",
+                        });
+                      }
+                    }}
+                  >
+                    Extract Embedded Cover
+                  </Button>
+                </Flex>
+
+                {audioMetadataQuery.isLoading ? (
+                  <VStack align="stretch" gap={2}>
+                    <Skeleton height="20px" />
+                    <Skeleton height="120px" />
+                  </VStack>
+                ) : audioMetadataQuery.error ? (
+                  <Text color="red.500">
+                    {audioMetadataQuery.error instanceof Error
+                      ? audioMetadataQuery.error.message
+                      : "Failed to load audio metadata"}
+                  </Text>
+                ) : audioMetadataQuery.data ? (
+                  <VStack align="stretch" gap={3}>
+                    <HStack gap={2} flexWrap="wrap">
+                      <Badge colorPalette={audioMetadataQuery.data.has_embedded_cover ? "green" : "gray"}>
+                        {audioMetadataQuery.data.has_embedded_cover
+                          ? "Embedded Cover Found"
+                          : "No Embedded Cover"}
+                      </Badge>
+                      <Badge variant="outline">{audioMetadataQuery.data.local_audio_url}</Badge>
+                    </HStack>
+
+                    {(trackQuery.data.audio_file_album_art_url ||
+                      audioMetadataQuery.data.audio_file_album_art_url) && (
+                      <Box>
+                        <Text fontSize="sm" mb={2}>
+                          Saved Audio Cover
+                        </Text>
+                        <Image
+                          src={
+                            trackQuery.data.audio_file_album_art_url ||
+                            audioMetadataQuery.data.audio_file_album_art_url ||
+                            ""
+                          }
+                          alt="Audio embedded cover"
+                          boxSize="120px"
+                          objectFit="cover"
+                          borderRadius="md"
+                          borderWidth="1px"
+                        />
+                      </Box>
+                    )}
+
+                    <Box
+                      as="pre"
+                      p={3}
+                      borderRadius="md"
+                      borderWidth="1px"
+                      overflow="auto"
+                      maxH="420px"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                    >
+                      {JSON.stringify(audioMetadataQuery.data.probe, null, 2)}
+                    </Box>
+                  </VStack>
+                ) : (
+                  <Text color="fg.muted">No audio metadata available.</Text>
+                )}
+              </Box>
+
+              <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
+                <Heading size="sm" mb={3}>
+                  Essentia Raw Analysis
+                </Heading>
+
+                {essentiaQuery.isLoading ? (
+                  <VStack align="stretch" gap={2}>
+                    <Skeleton height="20px" />
+                    <Skeleton height="120px" />
+                  </VStack>
+                ) : essentiaQuery.error ? (
+                  <Text color="fg.muted">
+                    {essentiaQuery.error instanceof Error
+                      ? essentiaQuery.error.message
+                      : "No Essentia file available yet"}
+                  </Text>
+                ) : essentiaQuery.data ? (
+                  <VStack align="stretch" gap={3}>
+                    <Badge variant="outline">{essentiaQuery.data.file_path}</Badge>
+                    <Box
+                      as="pre"
+                      p={3}
+                      borderRadius="md"
+                      borderWidth="1px"
+                      overflow="auto"
+                      maxH="420px"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                    >
+                      {JSON.stringify(essentiaQuery.data.data, null, 2)}
+                    </Box>
+                  </VStack>
+                ) : (
+                  <Text color="fg.muted">No Essentia file available yet.</Text>
+                )}
+              </Box>
+
+              <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
+                <Heading size="sm" mb={3}>
+                  Embedding Preview
+                </Heading>
+
+                {embeddingPreviewQuery.isLoading ? (
+                  <VStack align="stretch" gap={2}>
+                    <Skeleton height="20px" />
+                    <Skeleton height="120px" />
+                  </VStack>
+                ) : embeddingPreviewQuery.error ? (
+                  <Text color="red.500">
+                    {embeddingPreviewQuery.error instanceof Error
+                      ? embeddingPreviewQuery.error.message
+                      : "Failed to load embedding preview"}
+                  </Text>
+                ) : embeddingPreviewQuery.data ? (
+                  <VStack align="stretch" gap={3}>
+                    <HStack gap={2} flexWrap="wrap">
+                      <Badge
+                        colorPalette={
+                          embeddingPreviewQuery.data.isDefaultTemplate ? "gray" : "green"
+                        }
+                      >
+                        {embeddingPreviewQuery.data.isDefaultTemplate
+                          ? "Default Template"
+                          : "Custom Template"}
+                      </Badge>
+                    </HStack>
+                    <Box
+                      as="pre"
+                      p={3}
+                      borderRadius="md"
+                      borderWidth="1px"
+                      overflow="auto"
+                      maxH="420px"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                    >
+                      {embeddingPreviewQuery.data.prompt}
+                    </Box>
+                  </VStack>
+                ) : (
+                  <Text color="fg.muted">No embedding preview available.</Text>
+                )}
+              </Box>
+
+              <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
                 <Heading size="sm" mb={3}>
                   In Playlists
                 </Heading>
@@ -142,6 +429,6 @@ export default function TrackPage() {
           )}
         </>
       )}
-    </Box>
+    </PageContainer>
   );
 }

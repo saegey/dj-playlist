@@ -69,6 +69,10 @@ export default function TrackResult({
     setHasMounted(true);
   }, []);
   const { replacePlaylist } = usePlaylistPlayer();
+  const artworkSrc =
+    track.audio_file_album_art_url ||
+    track.album_thumbnail ||
+    "/images/placeholder-artwork.png";
   const trackHref = `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`;
 
   // Prevent hydration mismatch: render a placeholder for minimized view until after mount
@@ -173,7 +177,7 @@ export default function TrackResult({
             _hover={{ "& .overlay": { opacity: 1 } }}
           >
             <Image
-              src={track.album_thumbnail}
+              src={artworkSrc}
               alt={track.title}
               width="100%"
               height="100%"
@@ -204,7 +208,7 @@ export default function TrackResult({
           </Box>
         ) : (
           <Image
-            src={track.album_thumbnail}
+            src={artworkSrc}
             alt={track.title}
             width="100%"
             height="100%"

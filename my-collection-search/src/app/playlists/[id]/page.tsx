@@ -4,6 +4,7 @@ import React from "react";
 import { Box } from "@chakra-ui/react";
 
 import PlaylistViewer from "@/components/PlaylistViewer";
+import PageContainer from "@/components/layout/PageContainer";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 interface PlaylistPageProps {
@@ -17,14 +18,16 @@ const PlaylistPage = ({ params }: PlaylistPageProps) => {
   const { playlistLength } = usePlaylistPlayer();
 
   return (
-    <Box mb={playlistLength > 0 ? "120px" : "0"}>
-      <PlaylistViewer playlistId={Number(id)} />
-      {/* Future ideas:
-          - Show playlist name, track count, total duration
-          - Actions: play all, shuffle, export, edit name
-          - Track list with drag reorder
-       */}
-    </Box>
+    <PageContainer size="standard">
+      <Box mb={playlistLength > 0 ? "120px" : "0"}>
+        <PlaylistViewer playlistId={Number(id)} />
+        {/* Future ideas:
+            - Show playlist name, track count, total duration
+            - Actions: play all, shuffle, export, edit name
+            - Track list with drag reorder
+         */}
+      </Box>
+    </PageContainer>
   );
 };
 export default PlaylistPage;
