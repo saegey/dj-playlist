@@ -65,14 +65,25 @@ export default function TrackResult({
 }: TrackResultProps) {
   const [expanded, setExpanded] = useState(false);
   const [hasMounted, setHasMounted] = React.useState(false);
+  const [imageError, setImageError] = React.useState(false);
+
   React.useEffect(() => {
     setHasMounted(true);
   }, []);
+
+  // Reset image error when track changes
+  React.useEffect(() => {
+    setImageError(false);
+  }, [track.track_id, track.audio_file_album_art_url, track.album_thumbnail]);
+
   const { replacePlaylist } = usePlaylistPlayer();
-  const artworkSrc =
-    track.audio_file_album_art_url ||
-    track.album_thumbnail ||
-    "/images/placeholder-artwork.png";
+
+  const placeholderSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23374151' width='100' height='100'/%3E%3Ctext fill='%23ffffff' font-family='Arial' font-size='14' x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle'%3E%F0%9F%8E%B5%3C/text%3E%3C/svg%3E";
+
+  const artworkSrc = imageError
+    ? placeholderSrc
+    : (track.audio_file_album_art_url || track.album_thumbnail || placeholderSrc);
+
   const trackHref = `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`;
 
   // Prevent hydration mismatch: render a placeholder for minimized view until after mount
@@ -185,6 +196,7 @@ export default function TrackResult({
               borderRadius="md"
               transition="opacity 0.2s ease"
               draggable={false}
+              onError={() => setImageError(true)}
             />
 
             <Box
@@ -214,6 +226,7 @@ export default function TrackResult({
             height="100%"
             objectFit="cover"
             borderRadius="md"
+            onError={() => setImageError(true)}
           />
         )}
       </Box>

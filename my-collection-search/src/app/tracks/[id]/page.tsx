@@ -59,6 +59,21 @@ type TrackEmbeddingPreviewResponse = {
   prompt: string;
 };
 
+type IdentityEmbeddingPreviewResponse = {
+  identityText: string;
+  identityData: {
+    title: string;
+    artist: string;
+    album: string;
+    era: string;
+    country: string;
+    labels: string[];
+    genres: string[];
+    styles: string[];
+    tags: string[];
+  };
+};
+
 async function fetchTrackPlaylists(
   trackId: string,
   friendId: number
@@ -134,6 +149,21 @@ async function fetchTrackEmbeddingPreview(
   return data as TrackEmbeddingPreviewResponse;
 }
 
+async function fetchIdentityEmbeddingPreview(
+  trackId: string,
+  friendId: number
+): Promise<IdentityEmbeddingPreviewResponse> {
+  const res = await fetch(
+    `/api/embeddings/identity-preview?track_id=${encodeURIComponent(trackId)}&friend_id=${friendId}`,
+    { cache: "no-store" }
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error || "Failed to fetch identity embedding preview");
+  }
+  return data as IdentityEmbeddingPreviewResponse;
+}
+
 export default function TrackPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -162,6 +192,11 @@ export default function TrackPage() {
   const embeddingPreviewQuery = useQuery({
     queryKey: ["track-embedding-preview", trackId, friendId],
     queryFn: () => fetchTrackEmbeddingPreview(trackId, friendId),
+    enabled: hasValidFriendId && !!trackId,
+  });
+  const identityEmbeddingPreviewQuery = useQuery({
+    queryKey: ["track-identity-embedding-preview", trackId, friendId],
+    queryFn: () => fetchIdentityEmbeddingPreview(trackId, friendId),
     enabled: hasValidFriendId && !!trackId,
   });
   const extractCoverMutation = useMutation({
@@ -347,7 +382,7 @@ export default function TrackPage() {
 
               <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
                 <Heading size="sm" mb={3}>
-                  Embedding Preview
+                  Embedding Preview (Original)
                 </Heading>
 
                 {embeddingPreviewQuery.isLoading ? (
@@ -389,6 +424,60 @@ export default function TrackPage() {
                   </VStack>
                 ) : (
                   <Text color="fg.muted">No embedding preview available.</Text>
+                )}
+              </Box>
+
+              <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
+                <Heading size="sm" mb={3}>
+                  Identity Embedding Preview
+                </Heading>
+
+                {identityEmbeddingPreviewQuery.isLoading ? (
+                  <VStack align="stretch" gap={2}>
+                    <Skeleton height="20px" />
+                    <Skeleton height="120px" />
+                  </VStack>
+                ) : identityEmbeddingPreviewQuery.error ? (
+                  <Text color="red.500">
+                    {identityEmbeddingPreviewQuery.error instanceof Error
+                      ? identityEmbeddingPreviewQuery.error.message
+                      : "Failed to load identity embedding preview"}
+                  </Text>
+                ) : identityEmbeddingPreviewQuery.data ? (
+                  <VStack align="stretch" gap={3}>
+                    <HStack gap={2} flexWrap="wrap">
+                      <Badge colorPalette="purple">Music Identity</Badge>
+                      <Badge variant="outline">
+                        {identityEmbeddingPreviewQuery.data.identityData.era}
+                      </Badge>
+                      <Badge variant="outline">
+                        {identityEmbeddingPreviewQuery.data.identityData.country}
+                      </Badge>
+                    </HStack>
+                    <Box
+                      as="pre"
+                      p={3}
+                      borderRadius="md"
+                      borderWidth="1px"
+                      overflow="auto"
+                      maxH="420px"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                      bg="gray.50"
+                      _dark={{ bg: "gray.900" }}
+                    >
+                      {identityEmbeddingPreviewQuery.data.identityText}
+                    </Box>
+                    <Box fontSize="xs" color="fg.muted">
+                      <Text fontWeight="medium" mb={1}>Normalized Data:</Text>
+                      <Text>Genres: {identityEmbeddingPreviewQuery.data.identityData.genres.join(", ") || "none"}</Text>
+                      <Text>Styles: {identityEmbeddingPreviewQuery.data.identityData.styles.join(", ") || "none"}</Text>
+                      <Text>Tags: {identityEmbeddingPreviewQuery.data.identityData.tags.join(", ") || "none"}</Text>
+                      <Text>Labels: {identityEmbeddingPreviewQuery.data.identityData.labels.join(", ") || "none"}</Text>
+                    </Box>
+                  </VStack>
+                ) : (
+                  <Text color="fg.muted">No identity embedding preview available.</Text>
                 )}
               </Box>
 

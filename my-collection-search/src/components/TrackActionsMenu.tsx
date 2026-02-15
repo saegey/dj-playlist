@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button, Menu, Portal, Dialog, Flex, Box, Icon, Link } from "@chakra-ui/react";
-import { FiClock, FiDownload, FiEdit, FiMoreVertical, FiPlus, FiPlusSquare, FiZap } from "react-icons/fi";
+import { FiClock, FiDownload, FiEdit, FiMoreVertical, FiPlus, FiPlusSquare, FiZap, FiTarget } from "react-icons/fi";
 import { SiApplemusic, SiSpotify, SiYoutube, SiSoundcloud } from "react-icons/si";
 
 import type { Track } from "@/types/track";
@@ -10,6 +10,7 @@ import { useTrackEditor } from "@/providers/TrackEditProvider";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
 import PlaylistRecommendations from "./PlaylistRecommendations";
+import SimilarTracks from "./SimilarTracks";
 import { analyzeLocalAudioAsync, analyzeTrackAsync, recalcTrackDuration } from "@/services/trackService";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
@@ -26,6 +27,7 @@ export default function TrackActionsMenu({ track }: Props) {
 
   const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false);
   const [recommendationsTrackSnapshot, setRecommendationsTrackSnapshot] = useState<Track[]>([]);
+  const [similarTracksModalOpen, setSimilarTracksModalOpen] = useState(false);
   const [fetchAudioLoading, setFetchAudioLoading] = useState(false);
   const [durationLoading, setDurationLoading] = useState(false);
   const [analyzeLoading, setAnalyzeLoading] = useState(false);
@@ -154,7 +156,6 @@ export default function TrackActionsMenu({ track }: Props) {
             <FiMoreVertical />
           </Button>
         </Menu.Trigger>
-        <Portal>
           <Menu.Positioner>
             <Menu.Content>
               <Menu.Item onSelect={() => openForTrack(track)} value="add">
@@ -214,6 +215,23 @@ export default function TrackActionsMenu({ track }: Props) {
                 <FiZap /> AI Recommendations
               </Menu.Item>
 
+              <Menu.Item
+                onSelect={() => {
+                  setSimilarTracksModalOpen(true);
+
+                  // PostHog: Track similar tracks requested
+                  posthog.capture("similar_tracks_requested", {
+                    track_id: track.track_id,
+                    track_title: track.title,
+                    track_artist: track.artist,
+                    source: "track_menu",
+                  });
+                }}
+                value="similar-tracks"
+              >
+                <FiTarget /> Similar Tracks
+              </Menu.Item>
+
               {/* Music Service Links */}
               {(track.apple_music_url || track.spotify_url || track.youtube_url || track.soundcloud_url) && (
                 <>
@@ -256,7 +274,6 @@ export default function TrackActionsMenu({ track }: Props) {
               )}
             </Menu.Content>
           </Menu.Positioner>
-        </Portal>
       </Menu.Root>
 
       {/* Dialog components */}
@@ -295,6 +312,28 @@ export default function TrackActionsMenu({ track }: Props) {
                     onEditTrack={openTrackEditor}
                   />
                 )}
+              </Dialog.Body>
+              <Dialog.CloseTrigger />
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
+
+      {/* Similar Tracks Modal */}
+      <Dialog.Root
+        open={similarTracksModalOpen}
+        onOpenChange={(e) => setSimilarTracksModalOpen(e.open)}
+        size="xl"
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Similar Tracks: {track.title}</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body maxH="70vh" overflowY="auto">
+                {similarTracksModalOpen && <SimilarTracks track={track} limit={50} />}
               </Dialog.Body>
               <Dialog.CloseTrigger />
             </Dialog.Content>

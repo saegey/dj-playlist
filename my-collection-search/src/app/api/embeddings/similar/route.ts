@@ -27,6 +27,18 @@ interface SimilarTrack {
   genres: string[];
   styles: string[];
   local_tags: string;
+  album_thumbnail?: string;
+  audio_file_album_art_url?: string;
+  bpm?: string;
+  key?: string;
+  star_rating?: number;
+  duration_seconds?: number;
+  position?: string;
+  discogs_url?: string;
+  apple_music_url?: string;
+  spotify_url?: string;
+  youtube_url?: string;
+  local_audio_url?: string;
   distance: number;
   identity_text: string;
 }
@@ -180,6 +192,18 @@ export async function GET(request: NextRequest) {
         t.genres,
         t.styles,
         t.local_tags,
+        t.album_thumbnail,
+        t.audio_file_album_art_url,
+        t.bpm,
+        t.key,
+        t.star_rating,
+        t.duration_seconds,
+        t.position,
+        t.discogs_url,
+        t.apple_music_url,
+        t.spotify_url,
+        t.youtube_url,
+        t.local_audio_url,
         te.identity_text,
         te.embedding <=> $1 AS distance
       FROM track_embeddings te
@@ -206,6 +230,18 @@ export async function GET(request: NextRequest) {
       genres: row.genres || [],
       styles: row.styles || [],
       local_tags: row.local_tags || "",
+      album_thumbnail: row.album_thumbnail,
+      audio_file_album_art_url: row.audio_file_album_art_url,
+      bpm: row.bpm,
+      key: row.key,
+      star_rating: row.star_rating,
+      duration_seconds: row.duration_seconds,
+      position: row.position,
+      discogs_url: row.discogs_url,
+      apple_music_url: row.apple_music_url,
+      spotify_url: row.spotify_url,
+      youtube_url: row.youtube_url,
+      local_audio_url: row.local_audio_url,
       distance: parseFloat(row.distance),
       identity_text: row.identity_text,
     }));

@@ -37,7 +37,7 @@ services:
       - redis
     volumes:
       # Mount source code for live reload
-      - .:/app:delegated
+      - .:/app
       # Keep node_modules inside the container image
       - /app/node_modules
       - ${APP_AUDIO_MOUNT:-music_data:/app/audio}

@@ -122,50 +122,71 @@ A **SHA256 hash** of normalized identity data is computed to detect changes. Tra
 
 ---
 
-## API Endpoints
+## CLI Commands
 
 ### 1. Backfill Identity Embeddings
 
-**Endpoint**: `POST /api/embeddings/backfill-identity`
+**Command**: `npm run backfill-identity`
 
-**Query Params**:
-- `friend_id` (optional): Limit to specific friend/user
-- `force` (optional): Force re-embedding even if hash unchanged
-- `limit` (optional): Limit number of tracks to process
-- `batch_size` (optional): Concurrency limit (default: 5)
+**Options**:
+- `--friend_id=N`: Limit to specific friend/user
+- `--force`: Force re-embedding even if hash unchanged
+- `--limit=N`: Limit number of tracks to process
+- `--batch_size=N`: Concurrency limit (default: 5)
+- `--help`, `-h`: Show help message
 
-**Example**:
+**Examples**:
 ```bash
 # Backfill all tracks without embeddings
-curl -X POST "http://localhost:3000/api/embeddings/backfill-identity"
+npm run backfill-identity
 
-# Force re-embed first 100 tracks for friend_id=1
-curl -X POST "http://localhost:3000/api/embeddings/backfill-identity?friend_id=1&force=true&limit=100"
+# Limit to specific friend
+npm run backfill-identity -- --friend_id=1
 
-# Process in larger batches (10 concurrent)
-curl -X POST "http://localhost:3000/api/embeddings/backfill-identity?batch_size=10"
+# Test with first 10 tracks
+npm run backfill-identity -- --limit=10
+
+# Force re-embed all tracks with larger batch size
+npm run backfill-identity -- --force --batch_size=10
+
+# Combine options
+npm run backfill-identity -- --friend_id=1 --limit=100 --batch_size=8
 ```
 
-**Response**:
-```json
-{
-  "message": "Backfill complete",
-  "total": 1523,
-  "success": 1520,
-  "skipped": 0,
-  "failed": [
-    {
-      "track_id": "xyz",
-      "friend_id": 1,
-      "error": "OpenAI API rate limit"
-    }
-  ]
-}
+**Output**:
 ```
+🚀 Starting identity embedding backfill
+Options: { batch_size: 5, friend_id: 1 }
+
+📊 Found 1523 tracks to process
+
+✓ Batch 1/305: 5 success, 0 skipped, 0 failed | 12s elapsed, ~3600s remaining
+✓ Batch 2/305: 5 success, 0 skipped, 0 failed | 24s elapsed, ~3576s remaining
+...
+
+============================================================
+✅ Backfill complete!
+============================================================
+📊 Total tracks:     1523
+✅ Success:          1520
+⏭️  Skipped:          0
+❌ Failed:           3
+⏱️  Total time:       3645s
+⚡ Rate:             0.42 tracks/sec
+```
+
+**Benefits of CLI over HTTP**:
+- ✅ No timeout limits
+- ✅ Real-time progress tracking
+- ✅ Can run in tmux/screen and detach
+- ✅ Easier to debug with full logs
+- ✅ No web server required
 
 ---
 
-### 2. Identity Preview (Debugging)
+## API Endpoints
+
+### 1. Identity Preview (Debugging)
 
 **Endpoint**: `GET /api/embeddings/identity-preview`
 
@@ -198,7 +219,7 @@ curl "http://localhost:3000/api/embeddings/identity-preview?track_id=12345&frien
 
 ---
 
-### 3. Find Similar Tracks
+### 2. Find Similar Tracks
 
 **Endpoint**: `GET /api/embeddings/similar`
 
@@ -295,10 +316,13 @@ npm run migrate up
 ### 2. Backfill Embeddings
 ```bash
 # Start with a small batch to test
-curl -X POST "http://localhost:3000/api/embeddings/backfill-identity?limit=10"
+npm run backfill-identity -- --limit=10
 
 # Then backfill all
-curl -X POST "http://localhost:3000/api/embeddings/backfill-identity"
+npm run backfill-identity
+
+# Or limit to specific friend
+npm run backfill-identity -- --friend_id=1
 ```
 
 ### 3. Query Similar Tracks
@@ -380,7 +404,8 @@ The new system runs **in parallel** with the legacy system:
 - [ ] **DJ Function Embeddings**: DJ notes, use-case tags, set position
 - [ ] **Incremental Updates**: Auto-embed on track create/update
 - [ ] **Hybrid Search**: Combine identity + audio vibe similarity
-- [ ] **UI Integration**: Similar tracks widget on track detail pages
+- [x] **UI Integration**: Similar tracks accessible via track menu (⋮ button)
+- [ ] **Filter UI**: Add era/country/tags filters to Similar Tracks modal
 - [ ] **Background Jobs**: Queue embeddings via existing worker system
 - [ ] **Batch Similarity**: Find similar tracks for entire playlists
 
@@ -410,3 +435,55 @@ The new system runs **in parallel** with the legacy system:
 - **pgvector**: https://github.com/pgvector/pgvector
 - **OpenAI Embeddings**: https://platform.openai.com/docs/guides/embeddings
 - **Model**: `text-embedding-3-small` (1536 dimensions)
+
+## 🎨 UI Integration
+
+The **Similar Tracks** feature is integrated into your existing UI via the track actions menu.
+
+### How to Use
+
+1. **Find a track** in search results, playlists, or track detail pages
+2. Click the **⋮** (three dots) menu button
+3. Select **"Similar Tracks"**
+4. View identity-based similar tracks with distance scores
+
+### Features
+
+- ✅ **Real-time similarity search** via pgvector cosine distance
+- ✅ **Distance badges**: Very Similar / Similar / Somewhat Similar / Distant
+- ✅ **Color-coded** by similarity (green = very similar, gray = distant)
+- ✅ **Inline actions**: Add to playlist, edit track, etc.
+- ✅ **Smart minimization**: First 5 results expanded, rest minimized
+- ✅ **Filters displayed**: Shows active era/country/tags filters
+
+### Components Added
+
+| File | Purpose |
+|------|---------|
+| `hooks/useSimilarTracks.ts` | React Query hook for API calls |
+| `components/SimilarTracks.tsx` | Modal content component |
+| `components/TrackActionsMenu.tsx` | Added menu item & modal |
+
+### Screenshots
+
+**Menu Item:**
+- Look for "Similar Tracks" in the track actions menu (⋮)
+- Icon: 🎯 (target)
+- Positioned below "AI Recommendations"
+
+**Modal:**
+- Title: "Similar Tracks: {track name}"
+- Distance badges show similarity level
+- Tracks sorted by distance (closest first)
+- Help text explains how identity embeddings work
+
+### Distance Interpretation
+
+| Distance | Badge | Meaning |
+|----------|-------|---------|
+| 0.0 - 0.2 | <span style="color:green">**Very Similar**</span> | Near-duplicates, remixes, same artist/style |
+| 0.2 - 0.4 | <span style="color:blue">**Similar**</span> | Same genre/style, compatible vibe |
+| 0.4 - 0.6 | <span style="color:orange">**Somewhat Similar**</span> | Related genres |
+| 0.6+ | <span style="color:gray">**Distant**</span> | Different genres/eras |
+
+---

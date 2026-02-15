@@ -12,7 +12,8 @@
     "search": "../meilisearch --master-key=mysupersecretkey",
     "psql": "docker-compose exec db psql -U djplaylist -d djplaylist",
     "worker": "tsx src/workers/index.ts",
-    "worker:dev": "nodemon --watch src --ext ts,js --exec 'npm run worker'"
+    "worker:dev": "nodemon --watch src --ext ts,js --exec 'npm run worker'",
+    "backfill-identity": "tsx src/scripts/backfill-identity.ts"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",
