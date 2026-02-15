@@ -18,7 +18,13 @@ TAG ?= $(TAG_PREFIX)$(TAG_TIME)
 .PHONY: tag tag-push compose-dev compose-prod compose-down compose-logs compose-dev-mac
 .PHONY: build-app build-essentia build-ga-service build-download-worker build-all
 .PHONY: migrate-up migrate-down migrate-create configure-meili reindex-meili
+.PHONY: push-images deploy-prod-local deploy-prod-remote release
 .PHONY: check-compose
+
+REGISTRY ?= ghcr.io/saegey
+PLATFORM ?= linux/amd64
+PROD_HOST ?= vinyl.local
+PROD_STACK_DIR ?= /opt/stacks/dj-playlist/my-collection-search
 
 check-compose:
 	@if [ -z "$(COMPOSE_CMD)" ]; then \
@@ -66,6 +72,24 @@ build-download-worker:
 	$(BUILDKIT_ENV) docker buildx build -t ghcr.io/saegey/download-worker:$(TAG) -f $(COMPOSE_DIR)/Dockerfile.download-worker $(COMPOSE_DIR)
 
 build-all: build-app build-essentia build-ga-service build-download-worker
+
+# Build and push all runtime images for a tag
+push-images:
+	$(BUILDKIT_ENV) docker buildx build --platform $(PLATFORM) --push -t $(REGISTRY)/myapp:$(TAG) -f $(COMPOSE_DIR)/Dockerfile $(COMPOSE_DIR)
+	$(BUILDKIT_ENV) docker buildx build --platform $(PLATFORM) --push -t $(REGISTRY)/essentia-api:$(TAG) -f essentia-api/Dockerfile essentia-api
+	$(BUILDKIT_ENV) docker buildx build --platform $(PLATFORM) --push -t $(REGISTRY)/ga-service:$(TAG) -f ga-service/Dockerfile ga-service
+	$(BUILDKIT_ENV) docker buildx build --platform $(PLATFORM) --push -t $(REGISTRY)/download-worker:$(TAG) -f $(COMPOSE_DIR)/Dockerfile.download-worker $(COMPOSE_DIR)
+
+# Run a production deployment from inside the server checkout
+deploy-prod-local:
+	cd $(COMPOSE_DIR) && ./scripts/deploy-prod.sh $(TAG)
+
+# Deploy remotely over SSH (tag checkout + pull + migrate + up)
+deploy-prod-remote:
+	ssh $(PROD_HOST) 'set -euo pipefail; cd $(PROD_STACK_DIR); ./scripts/deploy-prod.sh $(TAG)'
+
+# End-to-end release from local machine: create/push tag, publish images, deploy remote
+release: tag-push push-images deploy-prod-remote
 
 # Database migrations
 migrate-up: check-compose
