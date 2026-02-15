@@ -31,10 +31,12 @@ export async function GET(
     }
 
     const bytes = await fs.readFile(resolvedPath);
-    return new NextResponse(bytes, {
+    const body = new Blob([Uint8Array.from(bytes)], {
+      type: contentTypeFor(safeName),
+    });
+    return new NextResponse(body, {
       status: 200,
       headers: {
-        "Content-Type": contentTypeFor(safeName),
         "Cache-Control": "public, max-age=86400",
       },
     });
