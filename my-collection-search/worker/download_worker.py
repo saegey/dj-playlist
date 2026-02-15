@@ -558,6 +558,15 @@ def download_audio(job_data: Dict[str, Any]) -> Dict[str, Any]:
     friend_id = job_data['friend_id']
     job_id = job_data.get('job_id', f"{track_id}_{int(time.time())}")
 
+    # Defensive fallback: if caller routes an analyze-local style payload here,
+    # run full local analysis instead of failing on missing remote URLs.
+    if job_data.get("local_audio_url") and not has_download_urls(job_data):
+        logger.info(
+            "No remote URLs present for job %s; rerouting download handler to local analysis",
+            job_id,
+        )
+        return analyze_local_audio(job_data)
+
     logger.info(f"Starting download job {job_id} for track {track_id}")
     logger.info(f"Job data: {job_data}")
 
@@ -1131,14 +1140,14 @@ def main():
                     # Parse job data
                     job = json.loads(job_json)
 
-                    job_type = job.get("job_type", "download")
-                    if job_type == "fix-duration":
+                    job_type = str(job.get("job_type", "download")).strip().lower()
+                    if job_type in ("fix-duration", "fix_duration"):
                         result = fix_duration(job)
-                    elif job_type == "analyze-local":
+                    elif job_type in ("analyze-local", "analyze_local"):
                         result = analyze_local_audio(job)
-                    elif job_type == "extract-cover-art-album":
+                    elif job_type in ("extract-cover-art-album", "extract_cover_art_album"):
                         result = extract_embedded_cover_art_album(job)
-                    elif job_type == "extract-cover-art":
+                    elif job_type in ("extract-cover-art", "extract_cover_art"):
                         result = extract_embedded_cover_art(job)
                     elif job.get("local_audio_url") and not has_download_urls(job):
                         logger.info(

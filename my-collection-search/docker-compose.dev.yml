@@ -130,6 +130,7 @@ services:
       - db
     volumes:
       - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
+      - album_covers:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
       - ./cookies:/app/cookies:ro  # Mount local cookies directory as read-only
     restart: unless-stopped
@@ -145,3 +146,4 @@ volumes:
   spotify_exports:
   redis_data:
   essentia_data:
+  album_covers:

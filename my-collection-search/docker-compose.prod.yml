@@ -28,6 +28,7 @@ services:
       SENTRY_DSN: ${SENTRY_DSN}
       REDIS_URL: redis://redis:6379
       ESSENTIA_API_URL: http://essentia:8001/analyze
+      ESSENTIA_DATA_DIR: /app/essentia-data
       ENABLE_AUDIO_PLAYBACK: ${ENABLE_AUDIO_PLAYBACK:-false}
       AUDIO_DEVICE: ${AUDIO_DEVICE:-default}
       MPD_HOST: ${MPD_HOST:-mpd}
@@ -45,6 +46,7 @@ services:
       - spotify_exports:/app/spotify_exports
       - cookie_data:/app/cookies
       - album_covers:/app/public/uploads/album-covers
+      - essentia_data:/app/essentia-data
       - /var/run/docker.sock:/var/run/docker.sock  # Required for AirPlay interruption control
       # Optional: Mount ALSA config for dmix (software mixing with AirPlay)
       # - ./config/asound.conf:/etc/asound.conf:ro
@@ -113,12 +115,15 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
       GAMDL_COOKIE_FILE: /app/cookies/gamdl_cookies.txt
+      ESSENTIA_DATA_DIR: /app/essentia-data
     depends_on:
       - redis
       - db
     volumes:
       - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
+      - album_covers:/app/public/uploads/album-covers
       - cookie_data:/app/cookies  # Shared cookie storage with app service
+      - essentia_data:/app/essentia-data
     restart: unless-stopped
 
   # MPD (Music Player Daemon) for local DAC playback
@@ -193,6 +198,9 @@ volumes:
     external: true
   album_covers:
     name: teststack_album_covers
+    external: true
+  essentia_data:
+    name: teststack_essentia_data
     external: true
   mpd_data:
     name: teststack_mpd_data

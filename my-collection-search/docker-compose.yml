@@ -151,6 +151,7 @@ services:
       - db
     volumes:
       - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
+      - album_covers:/app/public/uploads/album-covers
       - cookie_data:/app/cookies  # Shared cookie storage with app service
       - essentia_data:/app/essentia-data
     restart: unless-stopped
