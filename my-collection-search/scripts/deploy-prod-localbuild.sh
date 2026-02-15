@@ -7,6 +7,10 @@ if [[ -z "${TAG}" ]]; then
   exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${PROJECT_DIR}"
+
 PROJECT_NAME="${PROJECT_NAME:-dj-playlist}"
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.prod.yml)
 BUILD_SERVICES=(app essentia ga-service download-worker)
