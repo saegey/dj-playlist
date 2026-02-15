@@ -15,10 +15,10 @@ TAG_PREFIX ?= v
 TAG_TIME := $(shell date -u +%Y%m%dT%H%M%SZ)
 TAG ?= $(TAG_PREFIX)$(TAG_TIME)
 
-.PHONY: tag tag-push compose-dev compose-prod compose-down compose-logs compose-dev-mac
+.PHONY: tag tag-push compose-dev compose-prod compose-down compose-logs compose-dev-mac compose-dev-reset
 .PHONY: build-app build-essentia build-ga-service build-download-worker build-all
 .PHONY: migrate-up migrate-down migrate-create configure-meili reindex-meili
-.PHONY: push-images deploy-prod-local deploy-prod-remote release
+.PHONY: push-images deploy-prod-local deploy-prod-remote deploy-prod-remote-localbuild release release-localbuild
 .PHONY: check-compose
 
 REGISTRY ?= ghcr.io/saegey
@@ -44,10 +44,14 @@ tag-push: tag
 	git push origin $(TAG)
 
 compose-dev: check-compose
-	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml $(PLATFORM_OVERRIDE) up
+	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml $(PLATFORM_OVERRIDE) up --remove-orphans
 
 compose-dev-mac: check-compose
-	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml -f $(COMPOSE_DIR)/docker-compose.mac.yml up
+	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml -f $(COMPOSE_DIR)/docker-compose.mac.yml up --remove-orphans
+
+compose-dev-reset: check-compose
+	$(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml $(PLATFORM_OVERRIDE) down --remove-orphans
+	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml $(PLATFORM_OVERRIDE) up --build --force-recreate --remove-orphans
 
 compose-prod: check-compose
 	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.prod.yml up
@@ -90,6 +94,12 @@ deploy-prod-remote:
 
 # End-to-end release from local machine: create/push tag, publish images, deploy remote
 release: tag-push push-images deploy-prod-remote
+
+# End-to-end release with server-side builds (no registry push)
+deploy-prod-remote-localbuild:
+	ssh $(PROD_HOST) 'set -euo pipefail; cd $(PROD_STACK_DIR); ./scripts/deploy-prod-localbuild.sh $(TAG)'
+
+release-localbuild: tag-push deploy-prod-remote-localbuild
 
 # Database migrations
 migrate-up: check-compose
