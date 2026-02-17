@@ -3,7 +3,7 @@
  * Composer information from audio file metadata (ID3 tags, etc.)
  */
 
-exports.up = (pgm) => {
+export const up = (pgm) => {
   pgm.addColumn('tracks', {
     composer: {
       type: 'text',
@@ -18,7 +18,7 @@ exports.up = (pgm) => {
   });
 };
 
-exports.down = (pgm) => {
+export const down = (pgm) => {
   pgm.dropIndex('tracks', 'composer', { name: 'idx_tracks_composer', ifExists: true });
   pgm.dropColumn('tracks', 'composer');
 };
