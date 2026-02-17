@@ -70,14 +70,6 @@ class LocalPlaybackService {
           this.connectionPromise = null;
           console.log('[MPD] Ready');
 
-          // Set default volume to 50% on connection
-          try {
-            await this.setVolume(50);
-            console.log('[MPD] Default volume set to 50%');
-          } catch (error) {
-            console.error('[MPD] Failed to set default volume:', error);
-          }
-
           resolve();
         }
       };
