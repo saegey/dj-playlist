@@ -11,6 +11,7 @@ import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
 import PlaylistRecommendations from "./PlaylistRecommendations";
 import SimilarTracks from "./SimilarTracks";
+import SimilarVibeTracks from "./SimilarVibeTracks";
 import { analyzeLocalAudioAsync, analyzeTrackAsync, recalcTrackDuration } from "@/services/trackService";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
@@ -28,6 +29,7 @@ export default function TrackActionsMenu({ track }: Props) {
   const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false);
   const [recommendationsTrackSnapshot, setRecommendationsTrackSnapshot] = useState<Track[]>([]);
   const [similarTracksModalOpen, setSimilarTracksModalOpen] = useState(false);
+  const [similarVibeModalOpen, setSimilarVibeModalOpen] = useState(false);
   const [fetchAudioLoading, setFetchAudioLoading] = useState(false);
   const [durationLoading, setDurationLoading] = useState(false);
   const [analyzeLoading, setAnalyzeLoading] = useState(false);
@@ -232,6 +234,23 @@ export default function TrackActionsMenu({ track }: Props) {
                 <FiTarget /> Similar Tracks
               </Menu.Item>
 
+              <Menu.Item
+                onSelect={() => {
+                  setSimilarVibeModalOpen(true);
+
+                  // PostHog: Track similar vibe requested
+                  posthog.capture("similar_vibe_requested", {
+                    track_id: track.track_id,
+                    track_title: track.title,
+                    track_artist: track.artist,
+                    source: "track_menu",
+                  });
+                }}
+                value="similar-vibe"
+              >
+                <FiTarget /> Similar Vibe
+              </Menu.Item>
+
               {/* Music Service Links */}
               {(track.apple_music_url || track.spotify_url || track.youtube_url || track.soundcloud_url) && (
                 <>
@@ -334,6 +353,28 @@ export default function TrackActionsMenu({ track }: Props) {
               </Dialog.Header>
               <Dialog.Body maxH="70vh" overflowY="auto">
                 {similarTracksModalOpen && <SimilarTracks track={track} limit={50} />}
+              </Dialog.Body>
+              <Dialog.CloseTrigger />
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
+
+      {/* Similar Vibe Modal */}
+      <Dialog.Root
+        open={similarVibeModalOpen}
+        onOpenChange={(e) => setSimilarVibeModalOpen(e.open)}
+        size="xl"
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Similar Vibe: {track.title}</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body maxH="70vh" overflowY="auto">
+                {similarVibeModalOpen && <SimilarVibeTracks track={track} limit={50} />}
               </Dialog.Body>
               <Dialog.CloseTrigger />
             </Dialog.Content>
