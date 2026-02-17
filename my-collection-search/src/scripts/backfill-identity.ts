@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * CLI script to backfill identity embeddings for tracks
+ * CLI script to backfill embeddings for tracks
  *
  * Usage:
  *   npm run backfill-identity
+ *   npm run backfill-identity -- --type=audio_vibe
  *   npm run backfill-identity -- --friend_id=1
  *   npm run backfill-identity -- --limit=100 --batch_size=10
  *   npm run backfill-identity -- --force
@@ -11,10 +12,14 @@
 
 import { Pool } from "pg";
 import { generateAndStoreIdentityEmbedding } from "../lib/identity-embedding";
+import { generateAndStoreAudioVibeEmbedding } from "../lib/audio-vibe-embedding";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+type EmbeddingType = "identity" | "audio_vibe";
+
 interface BackfillOptions {
+  type: EmbeddingType;
   friend_id?: number;
   force?: boolean;
   limit?: number;
@@ -27,11 +32,19 @@ interface BackfillOptions {
 function parseArgs(): BackfillOptions {
   const args = process.argv.slice(2);
   const options: BackfillOptions = {
+    type: "identity", // Default
     batch_size: 5, // Default
   };
 
   for (const arg of args) {
-    if (arg.startsWith("--friend_id=")) {
+    if (arg.startsWith("--type=")) {
+      const type = arg.split("=")[1] as EmbeddingType;
+      if (type !== "identity" && type !== "audio_vibe") {
+        console.error(`❌ Invalid type: ${type}. Must be 'identity' or 'audio_vibe'`);
+        process.exit(1);
+      }
+      options.type = type;
+    } else if (arg.startsWith("--friend_id=")) {
       options.friend_id = parseInt(arg.split("=")[1], 10);
     } else if (arg.startsWith("--limit=")) {
       options.limit = parseInt(arg.split("=")[1], 10);
@@ -44,6 +57,7 @@ function parseArgs(): BackfillOptions {
 Usage: npm run backfill-identity [options]
 
 Options:
+  --type=TYPE        Embedding type: 'identity' or 'audio_vibe' (default: identity)
   --friend_id=N      Only process tracks for this friend_id
   --limit=N          Limit number of tracks to process
   --batch_size=N     Number of concurrent embeddings (default: 5)
@@ -52,9 +66,10 @@ Options:
 
 Examples:
   npm run backfill-identity
+  npm run backfill-identity -- --type=audio_vibe
   npm run backfill-identity -- --friend_id=1
   npm run backfill-identity -- --limit=100 --batch_size=10
-  npm run backfill-identity -- --force
+  npm run backfill-identity -- --type=audio_vibe --force
       `);
       process.exit(0);
     }
@@ -64,40 +79,71 @@ Examples:
 }
 
 /**
- * Fetch tracks that need identity embeddings
+ * Fetch tracks that need embeddings
  */
 async function getTracksNeedingEmbeddings(
   options: BackfillOptions
 ): Promise<{ track_id: string; friend_id: number }[]> {
-  const { friend_id, force, limit } = options;
+  const { type, friend_id, force, limit } = options;
 
   let query: string;
   const params: any[] = [];
 
   if (force) {
-    // Get all tracks
-    query = `
-      SELECT track_id, friend_id
-      FROM tracks
-      ${friend_id ? "WHERE friend_id = $1" : ""}
-      ORDER BY friend_id, track_id
-      ${limit ? `LIMIT ${limit}` : ""}
-    `;
+    // Get all tracks (for audio_vibe, also filter by having audio data)
+    if (type === "audio_vibe") {
+      query = `
+        SELECT track_id, friend_id
+        FROM tracks
+        WHERE (bpm IS NOT NULL OR key IS NOT NULL OR danceability IS NOT NULL
+               OR mood_happy IS NOT NULL OR mood_sad IS NOT NULL
+               OR mood_relaxed IS NOT NULL OR mood_aggressive IS NOT NULL)
+        ${friend_id ? "AND friend_id = $1" : ""}
+        ORDER BY friend_id, track_id
+        ${limit ? `LIMIT ${limit}` : ""}
+      `;
+    } else {
+      query = `
+        SELECT track_id, friend_id
+        FROM tracks
+        ${friend_id ? "WHERE friend_id = $1" : ""}
+        ORDER BY friend_id, track_id
+        ${limit ? `LIMIT ${limit}` : ""}
+      `;
+    }
     if (friend_id) params.push(friend_id);
   } else {
     // Get tracks without embeddings
-    query = `
-      SELECT t.track_id, t.friend_id
-      FROM tracks t
-      LEFT JOIN track_embeddings te
-        ON t.track_id = te.track_id
-        AND t.friend_id = te.friend_id
-        AND te.embedding_type = 'identity'
-      WHERE te.id IS NULL
-      ${friend_id ? "AND t.friend_id = $1" : ""}
-      ORDER BY t.friend_id, t.track_id
-      ${limit ? `LIMIT ${limit}` : ""}
-    `;
+    if (type === "audio_vibe") {
+      query = `
+        SELECT t.track_id, t.friend_id
+        FROM tracks t
+        LEFT JOIN track_embeddings te
+          ON t.track_id = te.track_id
+          AND t.friend_id = te.friend_id
+          AND te.embedding_type = 'audio_vibe'
+        WHERE te.id IS NULL
+          AND (t.bpm IS NOT NULL OR t.key IS NOT NULL OR t.danceability IS NOT NULL
+               OR t.mood_happy IS NOT NULL OR t.mood_sad IS NOT NULL
+               OR t.mood_relaxed IS NOT NULL OR t.mood_aggressive IS NOT NULL)
+        ${friend_id ? "AND t.friend_id = $1" : ""}
+        ORDER BY t.friend_id, t.track_id
+        ${limit ? `LIMIT ${limit}` : ""}
+      `;
+    } else {
+      query = `
+        SELECT t.track_id, t.friend_id
+        FROM tracks t
+        LEFT JOIN track_embeddings te
+          ON t.track_id = te.track_id
+          AND t.friend_id = te.friend_id
+          AND te.embedding_type = 'identity'
+        WHERE te.id IS NULL
+        ${friend_id ? "AND t.friend_id = $1" : ""}
+        ORDER BY t.friend_id, t.track_id
+        ${limit ? `LIMIT ${limit}` : ""}
+      `;
+    }
     if (friend_id) params.push(friend_id);
   }
 
@@ -110,16 +156,19 @@ async function getTracksNeedingEmbeddings(
  */
 async function processBatch(
   tracks: { track_id: string; friend_id: number }[],
+  type: EmbeddingType,
   force: boolean
 ): Promise<{
   success: number;
   failed: { track_id: string; friend_id: number; error: string }[];
   skipped: number;
 }> {
+  const embeddingFn = type === "audio_vibe"
+    ? generateAndStoreAudioVibeEmbedding
+    : generateAndStoreIdentityEmbedding;
+
   const results = await Promise.allSettled(
-    tracks.map((t) =>
-      generateAndStoreIdentityEmbedding(t.track_id, t.friend_id, force)
-    )
+    tracks.map((t) => embeddingFn(t.track_id, t.friend_id, force))
   );
 
   let success = 0;
@@ -153,7 +202,8 @@ async function processBatch(
 async function main() {
   const options = parseArgs();
 
-  console.log("🚀 Starting identity embedding backfill");
+  const typeLabel = options.type === "audio_vibe" ? "audio vibe" : "identity";
+  console.log(`🚀 Starting ${typeLabel} embedding backfill`);
   console.log("Options:", options);
   console.log("");
 
@@ -163,7 +213,7 @@ async function main() {
     console.log(`📊 Found ${tracks.length} tracks to process\n`);
 
     if (tracks.length === 0) {
-      console.log("✅ No tracks need identity embeddings");
+      console.log(`✅ No tracks need ${typeLabel} embeddings`);
       await pool.end();
       process.exit(0);
     }
@@ -188,6 +238,7 @@ async function main() {
 
       const { success, failed, skipped } = await processBatch(
         batch,
+        options.type,
         options.force || false
       );
 

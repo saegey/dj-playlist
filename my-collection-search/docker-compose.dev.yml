@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-    container_name: myapp
+    container_name: myapp-dev
     ports:
       - "3000:3000"
     environment:
@@ -25,7 +25,9 @@ services:
       SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI}
       # Make file watching reliable in Docker on macOS/Windows
       WATCHPACK_POLLING: "true"
+      WATCHPACK_POLLING_INTERVAL: "700"
       CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "700"
       REDIS_URL: redis://redis:6379
       ESSENTIA_API_URL: http://essentia:8001/analyze
       ESSENTIA_DATA_DIR: /app/essentia-data
@@ -96,14 +98,14 @@ services:
   essentia:
     build:
       context: ../essentia-api
-    container_name: essentia-api
+    container_name: essentia-api-dev
     ports:
       - "8001:8001"
   
   ga-service:
     build:
       context: ../ga-service
-    container_name: ga-service
+    container_name: ga-service-dev
     ports:
       - "8002:8002"
 
@@ -119,7 +121,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.download-worker
-    container_name: download-worker
+    container_name: download-worker-dev
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist

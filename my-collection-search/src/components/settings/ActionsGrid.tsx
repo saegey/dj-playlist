@@ -44,6 +44,7 @@ export default function ActionsGrid() {
   const backfillReleaseId = useBackfillReleaseId();
   const [durationFixLoading, setDurationFixLoading] = useState(false);
   const [coverArtBackfillLoading, setCoverArtBackfillLoading] = useState(false);
+  const [essentiaBackfillLoading, setEssentiaBackfillLoading] = useState(false);
 
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [verificationResults, setVerificationResults] = useState<
@@ -105,6 +106,31 @@ export default function ActionsGrid() {
       });
     } finally {
       setCoverArtBackfillLoading(false);
+    }
+  };
+
+  const handleBackfillEssentia = async () => {
+    setEssentiaBackfillLoading(true);
+    try {
+      const res = await fetch("/api/tracks/backfill-essentia", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to queue Essentia backfill");
+      }
+      toaster.create({
+        title: "Essentia backfill queued",
+        description: `Queued ${data.queued} tracks, skipped ${data.skipped_existing} existing analyses${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,
+        type: data.errors?.length ? "warning" : "success",
+        duration: 5000,
+      });
+    } catch (err) {
+      toaster.create({
+        title: "Essentia backfill failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+        type: "error",
+      });
+    } finally {
+      setEssentiaBackfillLoading(false);
     }
   };
 
@@ -384,6 +410,14 @@ export default function ActionsGrid() {
                 disabled={disableAll || coverArtBackfillLoading}
               >
                 <FiImage /> Extract Missing Embedded Cover Art
+              </Menu.Item>
+
+              <Menu.Item
+                value="backfill-essentia"
+                onClick={handleBackfillEssentia}
+                disabled={disableAll || essentiaBackfillLoading}
+              >
+                <FiDatabase /> Backfill Essentia Analysis (Local Audio)
               </Menu.Item>
             </Menu.Content>
           </Menu.Positioner>
