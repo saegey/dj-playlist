@@ -31,13 +31,14 @@ interface JobErrorEvent {
 
 type JobEvent = JobCompletedEvent | JobErrorEvent;
 
-export function useJobEventsSSE() {
+export function useJobEventsSSE(enabled: boolean = true) {
   const queryClient = useQueryClient();
   const { updateTrack } = useTrackStore();
   const { updateTracksInCache } = useTracksCacheUpdater();
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
     // Only run on client side
     if (typeof window === "undefined") return;
 
@@ -111,7 +112,7 @@ export function useJobEventsSSE() {
         eventSourceRef.current = null;
       }
     };
-  }, [queryClient, updateTrack, updateTracksInCache]);
+  }, [enabled, queryClient, updateTrack, updateTracksInCache]);
 
   return typeof window !== "undefined" && eventSourceRef.current?.readyState === EventSource.OPEN;
 }

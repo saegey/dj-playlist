@@ -65,6 +65,41 @@ export interface JobSummary {
 export class RedisJobService {
   private redis = getRedisConnection();
 
+  private async listJobKeys(): Promise<string[]> {
+    const keys: string[] = [];
+    let cursor = "0";
+    do {
+      const [nextCursor, batch] = await this.redis.scan(
+        cursor,
+        "MATCH",
+        "job:*",
+        "COUNT",
+        1000
+      );
+      cursor = nextCursor;
+      if (batch.length > 0) keys.push(...batch);
+    } while (cursor !== "0");
+    return keys;
+  }
+
+  private parseJobHash(jobData: Record<string, string>): JobStatus | null {
+    if (!jobData || Object.keys(jobData).length === 0) return null;
+    return {
+      job_id: jobData.job_id,
+      status: jobData.status as JobStatus["status"],
+      progress: parseInt(jobData.progress || "0"),
+      created_at: parseInt(jobData.created_at),
+      updated_at: parseInt(jobData.updated_at),
+      name: jobData.name,
+      job_type: jobData.job_type as DownloadJobData["job_type"] | undefined,
+      track_id: jobData.track_id,
+      friend_id: parseInt(jobData.friend_id),
+      release_id: jobData.release_id || null,
+      error: jobData.error,
+      result: jobData.result ? JSON.parse(jobData.result) : undefined,
+    };
+  }
+
   /**
    * Fetch gamdl settings for a friend, creating defaults if not exists
    */
@@ -284,56 +319,32 @@ export class RedisJobService {
 
   async getJobStatus(job_id: string): Promise<JobStatus | null> {
     const jobData = await this.redis.hgetall(`job:${job_id}`);
-
-    if (!jobData || Object.keys(jobData).length === 0) {
-      return null;
-    }
-
-    return {
-      job_id: jobData.job_id,
-      status: jobData.status as JobStatus["status"],
-      progress: parseInt(jobData.progress || "0"),
-      created_at: parseInt(jobData.created_at),
-      updated_at: parseInt(jobData.updated_at),
-      name: jobData.name,
-      job_type: jobData.job_type as DownloadJobData["job_type"] | undefined,
-      track_id: jobData.track_id,
-      friend_id: parseInt(jobData.friend_id),
-      release_id: jobData.release_id || null,
-      error: jobData.error,
-      result: jobData.result ? JSON.parse(jobData.result) : undefined,
-    };
+    return this.parseJobHash(jobData);
   }
 
   async getAllJobs(limit?: number): Promise<JobStatus[]> {
-    const keys = await this.redis.keys("job:*");
+    const keys = await this.listJobKeys();
     const jobs: JobStatus[] = [];
 
-    // Apply limit if specified, otherwise fetch all
-    const keysToProcess = limit ? keys.slice(0, limit) : keys;
+    if (keys.length === 0) return jobs;
 
-    for (const key of keysToProcess) {
-      const jobData = await this.redis.hgetall(key);
-      if (jobData && Object.keys(jobData).length > 0) {
-        jobs.push({
-          job_id: jobData.job_id,
-          status: jobData.status as JobStatus["status"],
-          progress: parseInt(jobData.progress || "0"),
-          created_at: parseInt(jobData.created_at),
-          updated_at: parseInt(jobData.updated_at),
-          name: jobData.name,
-          job_type: jobData.job_type as DownloadJobData["job_type"] | undefined,
-          track_id: jobData.track_id,
-          friend_id: parseInt(jobData.friend_id),
-          release_id: jobData.release_id || null,
-          error: jobData.error,
-          result: jobData.result ? JSON.parse(jobData.result) : undefined,
-        });
-      }
+    const pipeline = this.redis.pipeline();
+    for (const key of keys) {
+      pipeline.hgetall(key);
+    }
+
+    const results = await pipeline.exec();
+    if (!results) return jobs;
+
+    for (const [err, value] of results) {
+      if (err) continue;
+      const parsed = this.parseJobHash(value as Record<string, string>);
+      if (parsed) jobs.push(parsed);
     }
 
     // Sort by updated_at desc
-    return jobs.sort((a, b) => b.updated_at - a.updated_at);
+    const sorted = jobs.sort((a, b) => b.updated_at - a.updated_at);
+    return typeof limit === "number" ? sorted.slice(0, limit) : sorted;
   }
 
   async getJobSummary(): Promise<JobSummary> {
@@ -369,7 +380,7 @@ export class RedisJobService {
 
   async clearAllJobs(): Promise<void> {
     // Clear job data
-    const jobKeys = await this.redis.keys("job:*");
+    const jobKeys = await this.listJobKeys();
     if (jobKeys.length > 0) {
       await this.redis.del(...jobKeys);
     }

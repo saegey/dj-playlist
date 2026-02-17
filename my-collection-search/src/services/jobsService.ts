@@ -41,10 +41,27 @@ export interface JobsResponse {
     completed: number;
     failed: number;
   };
+  pagination?: {
+    limit: number;
+    offset: number;
+    total_filtered: number;
+    has_more: boolean;
+  };
 }
 
-export async function fetchJobs(): Promise<JobsResponse> {
-  const response = await fetch("/api/jobs");
+export type FetchJobsOptions = {
+  limit?: number;
+  offset?: number;
+  state?: "all" | "waiting" | "active" | "completed" | "failed";
+};
+
+export async function fetchJobs(options: FetchJobsOptions = {}): Promise<JobsResponse> {
+  const params = new URLSearchParams();
+  if (typeof options.limit === "number") params.set("limit", String(options.limit));
+  if (typeof options.offset === "number") params.set("offset", String(options.offset));
+  if (options.state) params.set("state", options.state);
+  const query = params.toString();
+  const response = await fetch(`/api/jobs${query ? `?${query}` : ""}`);
 
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);

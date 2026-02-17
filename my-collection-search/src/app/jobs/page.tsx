@@ -17,6 +17,8 @@ import {
   Dialog,
   Portal,
   CloseButton,
+  NativeSelectRoot,
+  NativeSelectField,
 } from "@chakra-ui/react";
 import { LuInfo, LuRefreshCw, LuTrash2 } from "react-icons/lu";
 import { useJobsQuery } from "@/hooks/useJobsQuery";
@@ -27,7 +29,16 @@ import type { Track } from "@/types/track";
 import PageContainer from "@/components/layout/PageContainer";
 
 export default function JobsPage() {
-  const { data, isLoading, refetch, dataUpdatedAt } = useJobsQuery();
+  const [stateFilter, setStateFilter] = React.useState<
+    "all" | "waiting" | "active" | "completed" | "failed"
+  >("all");
+  const [offset, setOffset] = React.useState(0);
+  const limit = 50;
+  const { data, isLoading, refetch, dataUpdatedAt } = useJobsQuery({
+    limit,
+    offset,
+    state: stateFilter,
+  });
   const [detailsJob, setDetailsJob] = React.useState<JobInfo | null>(null);
 
   const clearJobsMutation = useMutation({
@@ -48,6 +59,11 @@ export default function JobsPage() {
     completed: 0,
     failed: 0,
   };
+  const pagination = data?.pagination;
+  const totalFiltered = pagination?.total_filtered ?? jobs.length;
+  const hasMore = pagination?.has_more ?? false;
+  const currentPage = Math.floor(offset / limit) + 1;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / limit));
 
   const getStateBadge = (state: string) => {
     const colorScheme =
@@ -213,7 +229,29 @@ export default function JobsPage() {
       <Stack gap={6}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Heading size="lg">Job Queue Status</Heading>
-          <Box display="flex" gap={2}>
+          <Box display="flex" gap={2} alignItems="center">
+            <NativeSelectRoot size="sm" width="180px">
+              <NativeSelectField
+                value={stateFilter}
+                onChange={(e) => {
+                  setStateFilter(
+                    e.target.value as
+                      | "all"
+                      | "waiting"
+                      | "active"
+                      | "completed"
+                      | "failed"
+                  );
+                  setOffset(0);
+                }}
+              >
+                <option value="all">All Jobs</option>
+                <option value="waiting">Waiting</option>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="failed">Failed</option>
+              </NativeSelectField>
+            </NativeSelectRoot>
             <Button
               onClick={() => clearJobsMutation.mutate()}
               loading={clearJobsMutation.isPending}
@@ -244,6 +282,9 @@ export default function JobsPage() {
             Last updated: {new Date(dataUpdatedAt).toLocaleTimeString()}
           </Text>
         )}
+        <Text fontSize="sm" color="gray.500">
+          Showing {jobs.length} of {totalFiltered} jobs ({stateFilter})
+        </Text>
 
         {/* Summary Cards */}
         <SimpleGrid columns={[2, 3, 5]} gap={{ base: 2, md: 4 }}>
@@ -325,7 +366,6 @@ export default function JobsPage() {
                   friendId={job.data.friend_id}
                   fallbackTrack={buildFallbackTrack(job)}
                   compact
-                  fetchIfMissing
                   showUsername={false}
                   showRating={false}
                   showDetails={false}
@@ -391,6 +431,27 @@ export default function JobsPage() {
                 />
               );
             })}
+            <Flex justify="space-between" align="center" pt={2}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setOffset(Math.max(0, offset - limit))}
+                disabled={offset === 0}
+              >
+                Previous
+              </Button>
+              <Text fontSize="sm" color="gray.600">
+                Page {currentPage} / {totalPages}
+              </Text>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setOffset(offset + limit)}
+                disabled={!hasMore}
+              >
+                Next
+              </Button>
+            </Flex>
           </VStack>
         )}
         <Dialog.Root

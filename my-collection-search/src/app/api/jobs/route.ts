@@ -55,10 +55,42 @@ export async function DELETE() {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const jobs = await redisJobService.getAllJobs();
-    const summary = await redisJobService.getJobSummary();
+    const { searchParams } = new URL(request.url);
+    const limitParam = Number(searchParams.get("limit") || 100);
+    const offsetParam = Number(searchParams.get("offset") || 0);
+    const stateParam = (searchParams.get("state") || "all").toLowerCase();
+    const limit = Number.isFinite(limitParam)
+      ? Math.min(Math.max(limitParam, 1), 500)
+      : 100;
+    const offset = Number.isFinite(offsetParam) ? Math.max(offsetParam, 0) : 0;
+
+    const allJobs = await redisJobService.getAllJobs();
+
+    const summary = {
+      total: allJobs.length,
+      waiting: 0,
+      active: 0,
+      completed: 0,
+      failed: 0,
+    };
+    for (const job of allJobs) {
+      if (job.status === "queued") summary.waiting += 1;
+      else if (job.status === "processing") summary.active += 1;
+      else if (job.status === "completed") summary.completed += 1;
+      else if (job.status === "failed") summary.failed += 1;
+    }
+
+    const filteredJobs = allJobs.filter((job) => {
+      if (stateParam === "all") return true;
+      if (stateParam === "waiting") return job.status === "queued";
+      if (stateParam === "active") return job.status === "processing";
+      if (stateParam === "completed") return job.status === "completed";
+      if (stateParam === "failed") return job.status === "failed";
+      return true;
+    });
+    const jobs = filteredJobs.slice(offset, offset + limit);
 
     const validJobs = jobs.filter(
       (job) => job.track_id && Number.isFinite(job.friend_id)
@@ -155,12 +187,12 @@ export async function GET() {
 
     return NextResponse.json({
       jobs: formattedJobs,
-      summary: {
-        total: summary.total,
-        waiting: summary.queued,
-        active: summary.processing,
-        completed: summary.completed,
-        failed: summary.failed,
+      summary,
+      pagination: {
+        limit,
+        offset,
+        total_filtered: filteredJobs.length,
+        has_more: offset + jobs.length < filteredJobs.length,
       },
     });
   } catch (error) {
