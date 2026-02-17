@@ -11,10 +11,11 @@ export async function GET(request: NextRequest) {
 
       const knownCompletedJobs = new Set<string>();
       let startedAt = Date.now();
+      const maxKnownJobs = 2000;
 
       const checkInterval = setInterval(async () => {
         try {
-          const jobs = await redisJobService.getAllJobs();
+          const jobs = await redisJobService.getJobsUpdatedSince(startedAt, 300);
 
           // Look for newly completed jobs
           for (const job of jobs) {
@@ -39,6 +40,12 @@ export async function GET(request: NextRequest) {
               controller.enqueue(encoder.encode(`data: ${eventData}\n\n`));
             }
           }
+          // Bound memory for very long-lived SSE sessions.
+          while (knownCompletedJobs.size > maxKnownJobs) {
+            const oldest = knownCompletedJobs.values().next().value;
+            if (!oldest) break;
+            knownCompletedJobs.delete(oldest);
+          }
           startedAt = Date.now();
         } catch (error) {
           console.error("Error checking jobs in SSE:", error);
@@ -50,7 +57,7 @@ export async function GET(request: NextRequest) {
           });
           controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
         }
-      }, 15000);
+      }, 10000);
 
       // Cleanup on close
       request.signal.addEventListener("abort", () => {

@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 # Redis connection
 redis_conn = redis.from_url(os.getenv('REDIS_URL', 'redis://localhost:6379'))
 ESSENTIA_DATA_DIR = os.getenv('ESSENTIA_DATA_DIR', '/app/essentia-data')
+JOBS_UPDATED_INDEX_KEY = os.getenv('JOBS_UPDATED_INDEX_KEY', 'jobs:updated')
+JOB_TTL_ACTIVE_SECONDS = int(os.getenv('JOB_TTL_ACTIVE_SECONDS', '604800'))
+JOB_TTL_TERMINAL_SECONDS = int(os.getenv('JOB_TTL_TERMINAL_SECONDS', '259200'))
 
 
 def run_subprocess(cmd: list[str], *, timeout: int = 300) -> subprocess.CompletedProcess:
@@ -48,10 +51,11 @@ def run_subprocess(cmd: list[str], *, timeout: int = 300) -> subprocess.Complete
 
 def update_job_status(job_id: str, status: str, progress: int = 0, error: str = None, result: Dict = None):
     """Update job status in Redis"""
+    now_ms = int(time.time() * 1000)
     job_data = {
         'status': status,
         'progress': progress,
-        'updated_at': int(time.time() * 1000),
+        'updated_at': now_ms,
     }
 
     if error:
@@ -59,7 +63,14 @@ def update_job_status(job_id: str, status: str, progress: int = 0, error: str = 
     if result:
         job_data['result'] = json.dumps(result)
 
-    redis_conn.hset(f"job:{job_id}", mapping=job_data)
+    job_key = f"job:{job_id}"
+    ttl_seconds = JOB_TTL_TERMINAL_SECONDS if status in {'completed', 'failed'} else JOB_TTL_ACTIVE_SECONDS
+
+    pipeline = redis_conn.pipeline()
+    pipeline.hset(job_key, mapping=job_data)
+    pipeline.zadd(JOBS_UPDATED_INDEX_KEY, {job_id: now_ms})
+    pipeline.expire(job_key, ttl_seconds)
+    pipeline.execute()
     logger.info(f"Job {job_id} status updated to {status} (progress: {progress}%)")
 
 def cleanup_download_directory(download_dir: str, track_id: str):

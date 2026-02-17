@@ -64,6 +64,12 @@ export interface JobSummary {
 
 export class RedisJobService {
   private redis = getRedisConnection();
+  private pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  private readonly updatedIndexKey = "jobs:updated";
+  private readonly activeJobTtlSeconds = parseInt(
+    process.env.JOB_TTL_ACTIVE_SECONDS || "604800",
+    10
+  );
 
   private async listJobKeys(): Promise<string[]> {
     const keys: string[] = [];
@@ -100,22 +106,31 @@ export class RedisJobService {
     };
   }
 
+  private async persistJobMetadata(
+    job_id: string,
+    payload: Record<string, string | number>
+  ): Promise<void> {
+    const pipeline = this.redis.pipeline();
+    pipeline.hset(`job:${job_id}`, payload);
+    pipeline.zadd(this.updatedIndexKey, Date.now(), job_id);
+    pipeline.expire(`job:${job_id}`, this.activeJobTtlSeconds);
+    await pipeline.exec();
+  }
+
   /**
    * Fetch gamdl settings for a friend, creating defaults if not exists
    */
   private async getGamdlSettings(friendId: number) {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
     try {
       // Ensure settings exist (create with defaults if not)
-      await pool.query(`
+      await this.pool.query(`
         INSERT INTO gamdl_settings (friend_id)
         VALUES ($1)
         ON CONFLICT (friend_id) DO NOTHING
       `, [friendId]);
 
       // Get the settings
-      const result = await pool.query(`
+      const result = await this.pool.query(`
         SELECT audio_quality as quality, audio_format as format,
                save_cover, cover_format, save_lyrics, lyrics_format,
                overwrite_existing, skip_music_videos, max_retries
@@ -138,8 +153,6 @@ export class RedisJobService {
         skip_music_videos: true,
         max_retries: 3
       };
-    } finally {
-      await pool.end();
     }
   }
 
@@ -162,7 +175,7 @@ export class RedisJobService {
     const now = Date.now();
 
     // Store job metadata
-    await this.redis.hset(`job:${job_id}`, {
+    await this.persistJobMetadata(job_id, {
       job_id,
       status: "queued",
       progress: 0,
@@ -190,7 +203,7 @@ export class RedisJobService {
     const job_id = uuidv4();
     const now = Date.now();
 
-    await this.redis.hset(`job:${job_id}`, {
+    await this.persistJobMetadata(job_id, {
       job_id,
       status: "queued",
       progress: 0,
@@ -223,7 +236,7 @@ export class RedisJobService {
     const job_id = uuidv4();
     const now = Date.now();
 
-    await this.redis.hset(`job:${job_id}`, {
+    await this.persistJobMetadata(job_id, {
       job_id,
       status: "queued",
       progress: 0,
@@ -256,7 +269,7 @@ export class RedisJobService {
     const job_id = uuidv4();
     const now = Date.now();
 
-    await this.redis.hset(`job:${job_id}`, {
+    await this.persistJobMetadata(job_id, {
       job_id,
       status: "queued",
       progress: 0,
@@ -292,7 +305,7 @@ export class RedisJobService {
     const job_id = uuidv4();
     const now = Date.now();
 
-    await this.redis.hset(`job:${job_id}`, {
+    await this.persistJobMetadata(job_id, {
       job_id,
       status: "queued",
       progress: 0,
@@ -347,6 +360,49 @@ export class RedisJobService {
     return typeof limit === "number" ? sorted.slice(0, limit) : sorted;
   }
 
+  async getJobsUpdatedSince(
+    sinceTimestampMs: number,
+    limit = 200
+  ): Promise<JobStatus[]> {
+    const end = Date.now();
+    const jobIds = await this.redis.zrangebyscore(
+      this.updatedIndexKey,
+      sinceTimestampMs,
+      end,
+      "LIMIT",
+      0,
+      Math.max(limit, 1)
+    );
+
+    if (jobIds.length === 0) return [];
+
+    const pipeline = this.redis.pipeline();
+    for (const jobId of jobIds) {
+      pipeline.hgetall(`job:${jobId}`);
+    }
+    const results = await pipeline.exec();
+    if (!results) return [];
+
+    const jobs: JobStatus[] = [];
+    const staleJobIds: string[] = [];
+    for (let i = 0; i < results.length; i += 1) {
+      const [err, value] = results[i];
+      if (err) continue;
+      const parsed = this.parseJobHash(value as Record<string, string>);
+      if (parsed) {
+        jobs.push(parsed);
+      } else {
+        const staleJobId = jobIds[i];
+        if (staleJobId) staleJobIds.push(staleJobId);
+      }
+    }
+
+    if (staleJobIds.length > 0) {
+      await this.redis.zrem(this.updatedIndexKey, ...staleJobIds);
+    }
+    return jobs.sort((a, b) => a.updated_at - b.updated_at);
+  }
+
   async getJobSummary(): Promise<JobSummary> {
     const jobs = await this.getAllJobs();
 
@@ -386,13 +442,17 @@ export class RedisJobService {
     }
 
     // Clear queues
-    await this.redis.del("download_queue");
+    await this.redis.del("download_queue", this.updatedIndexKey);
 
     console.log(`Cleared ${jobKeys.length} jobs and queues`);
   }
 
   async deleteJob(job_id: string): Promise<boolean> {
-    const deleted = await this.redis.del(`job:${job_id}`);
+    const pipeline = this.redis.pipeline();
+    pipeline.del(`job:${job_id}`);
+    pipeline.zrem(this.updatedIndexKey, job_id);
+    const results = await pipeline.exec();
+    const deleted = Number(results?.[0]?.[1] ?? 0);
     return deleted > 0;
   }
 }
