@@ -146,8 +146,10 @@ def analyze_audio_file(file_path: str, track_id: str, friend_id: int) -> Dict[st
         if os.path.exists(wav_path):
             os.unlink(wav_path)
 
-        # Update database with analysis results
-        update_track_analysis(track_id, friend_id, analysis_result)
+        # Extract year from source audio metadata when available (e.g. iTunes `date` tag).
+        audio_year = get_audio_metadata_year(file_path)
+        # Update database with analysis results (+ audio metadata year when available).
+        update_track_analysis(track_id, friend_id, analysis_result, audio_year=audio_year)
 
         return analysis_result
 
@@ -159,7 +161,69 @@ def analyze_audio_file(file_path: str, track_id: str, friend_id: int) -> Dict[st
             os.unlink(wav_path)
         raise
 
-def update_track_analysis(track_id: str, friend_id: int, analysis_data: Dict[str, Any]):
+def extract_year_from_tag(value: str) -> Optional[int]:
+    """Extract a plausible 4-digit year from a metadata tag string."""
+    if not isinstance(value, str):
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    for i in range(0, len(value) - 3):
+        part = value[i:i+4]
+        if part.isdigit():
+            year = int(part)
+            if 1800 <= year <= 2100:
+                return year
+    return None
+
+def get_audio_metadata_year(file_path: str) -> Optional[int]:
+    """Read ffprobe format tags and derive track year from date/year-like fields."""
+    cmd = [
+        "ffprobe",
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_entries", "format_tags",
+        file_path,
+    ]
+    result = run_subprocess(cmd, timeout=30)
+    if result.returncode != 0:
+        logger.warning("ffprobe metadata probe failed for year extraction: %s", result.stderr)
+        return None
+
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except Exception as e:
+        logger.warning("ffprobe metadata json parse failed: %s", e)
+        return None
+
+    tags = ((payload.get("format") or {}).get("tags") or {})
+    if not isinstance(tags, dict):
+        return None
+
+    preferred_keys = [
+        "date",
+        "year",
+        "originaldate",
+        "original_date",
+        "release_date",
+        "creation_time",
+    ]
+
+    for key in preferred_keys:
+        value = tags.get(key)
+        year = extract_year_from_tag(value) if isinstance(value, str) else None
+        if year is not None:
+            return year
+
+    # Fallback: search any tag value for a plausible year.
+    for value in tags.values():
+        year = extract_year_from_tag(value) if isinstance(value, str) else None
+        if year is not None:
+            return year
+
+    return None
+
+def update_track_analysis(track_id: str, friend_id: int, analysis_data: Dict[str, Any], audio_year: Optional[int] = None):
     """Update track with analysis results via app API"""
     try:
         # Extract relevant fields from analysis
@@ -203,6 +267,8 @@ def update_track_analysis(track_id: str, friend_id: int, analysis_data: Dict[str
             update_data['danceability'] = danceability
         if duration_seconds is not None:
             update_data['duration_seconds'] = duration_seconds
+        if audio_year is not None:
+            update_data['year'] = str(audio_year)
 
         # Call the tracks update API
         app_url = os.getenv('APP_URL', 'http://app:3000')

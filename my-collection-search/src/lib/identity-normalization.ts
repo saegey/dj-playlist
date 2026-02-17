@@ -174,3 +174,18 @@ export function normalizeLocalTags(
   const filtered = filterIdentityTags(tags);
   return filtered.slice(0, maxTags);
 }
+
+/**
+ * Normalize composer name(s)
+ */
+export function normalizeComposer(composer: string | null | undefined): string[] {
+  if (!composer) return [];
+
+  // Split by common delimiters if multiple composers
+  const composers = composer
+    .split(/[,;\/&]/)
+    .map((c) => c.trim())
+    .filter((c) => c.length > 0 && c.toLowerCase() !== "unknown" && c.toLowerCase() !== "various");
+
+  return composers;
+}

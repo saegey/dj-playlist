@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Button, Menu, Portal, Dialog, Flex, Box, Icon, Link } from "@chakra-ui/react";
-import { FiClock, FiDownload, FiEdit, FiMoreVertical, FiPlus, FiPlusSquare, FiZap, FiTarget } from "react-icons/fi";
+import { FiCalendar, FiClock, FiDownload, FiEdit, FiMoreVertical, FiPlus, FiPlusSquare, FiZap, FiTarget } from "react-icons/fi";
 import { SiApplemusic, SiSpotify, SiYoutube, SiSoundcloud } from "react-icons/si";
 
 import type { Track } from "@/types/track";
@@ -12,7 +12,7 @@ import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
 import PlaylistRecommendations from "./PlaylistRecommendations";
 import SimilarTracks from "./SimilarTracks";
 import SimilarVibeTracks from "./SimilarVibeTracks";
-import { analyzeLocalAudioAsync, analyzeTrackAsync, recalcTrackDuration } from "@/services/trackService";
+import { analyzeLocalAudioAsync, analyzeTrackAsync, recalcTrackDuration, syncTrackYearFromAudio } from "@/services/trackService";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
 import posthog from "posthog-js";
@@ -33,6 +33,7 @@ export default function TrackActionsMenu({ track }: Props) {
   const [fetchAudioLoading, setFetchAudioLoading] = useState(false);
   const [durationLoading, setDurationLoading] = useState(false);
   const [analyzeLoading, setAnalyzeLoading] = useState(false);
+  const [syncYearLoading, setSyncYearLoading] = useState(false);
 
   const canFetchAudio =
     !track.local_audio_url &&
@@ -42,6 +43,7 @@ export default function TrackActionsMenu({ track }: Props) {
     Boolean(track.apple_music_url || track.youtube_url || track.soundcloud_url || track.spotify_url);
   const canRecalcDuration =
     !!track.local_audio_url && (!track.duration_seconds || track.duration_seconds <= 0);
+  const canSyncYearFromAudio = !!track.local_audio_url;
 
   const handleFetchAudio = async () => {
     if (!track.friend_id) {
@@ -150,6 +152,36 @@ export default function TrackActionsMenu({ track }: Props) {
     }
   };
 
+  const handleSyncYearFromAudio = async () => {
+    if (!track.friend_id) {
+      toaster.create({ title: "Track missing friend_id", type: "error" });
+      return;
+    }
+    setSyncYearLoading(true);
+    try {
+      const response = await syncTrackYearFromAudio({
+        track_id: track.track_id,
+        friend_id: track.friend_id,
+      });
+      toaster.create({
+        title: "Track year synced from audio",
+        description:
+          response.previous_year && String(response.previous_year) !== response.year
+            ? `Updated ${response.previous_year} -> ${response.year}`
+            : `Year: ${response.year}`,
+        type: "success",
+      });
+    } catch (err) {
+      toaster.create({
+        title: "Failed to sync year from audio",
+        description: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
+    } finally {
+      setSyncYearLoading(false);
+    }
+  };
+
   return (
     <>
       <Menu.Root>
@@ -197,6 +229,16 @@ export default function TrackActionsMenu({ track }: Props) {
                 >
                   <FiZap />
                   {analyzeLoading ? "Queueing Analysis..." : "Analyze Track"}
+                </Menu.Item>
+              )}
+              {canSyncYearFromAudio && (
+                <Menu.Item
+                  onSelect={handleSyncYearFromAudio}
+                  value="sync-audio-year"
+                  disabled={syncYearLoading}
+                >
+                  <FiCalendar />
+                  {syncYearLoading ? "Syncing Year..." : "Sync Year from Audio Tags"}
                 </Menu.Item>
               )}
               <Menu.Item

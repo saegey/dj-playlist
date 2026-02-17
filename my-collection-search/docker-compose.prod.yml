@@ -33,6 +33,7 @@ services:
       AUDIO_DEVICE: ${AUDIO_DEVICE:-default}
       MPD_HOST: ${MPD_HOST:-mpd}
       MPD_PORT: ${MPD_PORT:-6600}
+      MPD_PATH_PREFIX: ${MPD_PATH_PREFIX:-}
       AIRPLAY_AUTO_PAUSE: ${AIRPLAY_AUTO_PAUSE:-true}
 
     depends_on:

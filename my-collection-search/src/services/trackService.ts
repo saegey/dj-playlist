@@ -107,6 +107,20 @@ export async function analyzeLocalAudioAsync(args: {
   });
 }
 
+export async function syncTrackYearFromAudio(args: {
+  track_id: string;
+  friend_id: number;
+}): Promise<{ success: boolean; year: string; previous_year?: string | number | null; message: string }> {
+  return await http<{ success: boolean; year: string; previous_year?: string | number | null; message: string }>(
+    `/api/tracks/${encodeURIComponent(args.track_id)}/sync-audio-year`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ friend_id: args.friend_id }),
+    }
+  );
+}
+
 export type UploadTrackAudioArgs = {
   file: File;
   track_id: string;

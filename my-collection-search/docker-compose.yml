@@ -30,6 +30,9 @@ services:
       ESSENTIA_DATA_DIR: /app/essentia-data
       ENABLE_AUDIO_PLAYBACK: ${ENABLE_AUDIO_PLAYBACK:-false}
       AUDIO_DEVICE: ${AUDIO_DEVICE:-default}
+      MPD_HOST: ${MPD_HOST:-mpd}
+      MPD_PORT: ${MPD_PORT:-6600}
+      MPD_PATH_PREFIX: ${MPD_PATH_PREFIX:-}
 
     depends_on:
       - db

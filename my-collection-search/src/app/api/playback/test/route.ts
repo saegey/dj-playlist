@@ -16,6 +16,9 @@ export async function GET() {
         config: {
           ENABLE_AUDIO_PLAYBACK: process.env.ENABLE_AUDIO_PLAYBACK,
           AUDIO_DEVICE: process.env.AUDIO_DEVICE,
+          MPD_HOST: process.env.MPD_HOST,
+          MPD_PORT: process.env.MPD_PORT,
+          MPD_PATH_PREFIX: process.env.MPD_PATH_PREFIX,
         },
       });
     }
@@ -30,6 +33,9 @@ export async function GET() {
       config: {
         ENABLE_AUDIO_PLAYBACK: process.env.ENABLE_AUDIO_PLAYBACK,
         AUDIO_DEVICE: process.env.AUDIO_DEVICE,
+        MPD_HOST: process.env.MPD_HOST,
+        MPD_PORT: process.env.MPD_PORT,
+        MPD_PATH_PREFIX: process.env.MPD_PATH_PREFIX,
       },
       testResult,
     });

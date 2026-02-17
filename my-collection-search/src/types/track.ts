@@ -18,6 +18,7 @@ export type Track = {
   soundcloud_url?: string;
   album_thumbnail?: string;
   local_tags?: string | undefined;
+  composer?: string | undefined | null;
   bpm?: string | undefined | null;
   key?: string | undefined | null;
   danceability?: string | null;

@@ -34,6 +34,7 @@ export async function configureMeiliIndex(index: Index, meiliClient: MeiliSearch
   await index.updateSearchableAttributes([
     "local_tags",
     "artist",
+    "composer",
     "album",
     "styles",
     "title",
@@ -47,6 +48,7 @@ export async function configureMeiliIndex(index: Index, meiliClient: MeiliSearch
     "genres",
     "key",
     "year",
+    "composer",
     "local_tags",
     "styles",
     "local_audio_url",

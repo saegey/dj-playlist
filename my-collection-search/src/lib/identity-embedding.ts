@@ -15,6 +15,7 @@ import {
   combineGenres,
   normalizeStyles,
   normalizeLocalTags,
+  normalizeComposer,
 } from "./identity-normalization";
 import { Track } from "@/types/track";
 
@@ -44,6 +45,7 @@ interface IdentityData {
   era: string;
   country: string;
   labels: string[];
+  composers: string[];
   genres: string[];
   styles: string[];
   tags: string[];
@@ -105,6 +107,9 @@ export function buildIdentityData(track: TrackWithAlbum): IdentityData {
   // Local tags: filter out DJ-function tags
   const tags = normalizeLocalTags(track.local_tags, 12);
 
+  // Composer(s): normalize if present
+  const composers = normalizeComposer(track.composer);
+
   return {
     title,
     artist,
@@ -112,6 +117,7 @@ export function buildIdentityData(track: TrackWithAlbum): IdentityData {
     era,
     country,
     labels,
+    composers,
     genres,
     styles,
     tags,
@@ -126,12 +132,13 @@ export function buildIdentityText(data: IdentityData): string {
   const lines = [
     `Track: ${data.title} — ${data.artist}`,
     `Release: ${data.album} (${data.era})`,
+    data.composers.length > 0 ? `Composer: ${formatList(data.composers)}` : null,
     `Country: ${data.country}`,
     `Labels: ${data.labels.length > 0 ? formatList(data.labels) : "none"}`,
     `Genres: ${data.genres.length > 0 ? formatList(data.genres) : "unknown"}`,
     `Styles: ${data.styles.length > 0 ? formatList(data.styles) : "unknown"}`,
     `Tags: ${data.tags.length > 0 ? formatList(data.tags) : "none"}`,
-  ];
+  ].filter(Boolean);
 
   return lines.join("\n");
 }
@@ -149,6 +156,7 @@ export function computeSourceHash(data: IdentityData): string {
       era: data.era,
       country: data.country,
       labels: data.labels.sort(),
+      composers: data.composers.sort(),
       genres: data.genres.sort(),
       styles: data.styles.sort(),
       tags: data.tags.sort(),

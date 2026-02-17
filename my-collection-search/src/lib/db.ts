@@ -57,6 +57,7 @@ type UpdateTrackInput = {
   title?: string | null;
   artist?: string | null;
   album?: string | null;
+  year?: string | number | null;
   local_tags?: string | null;
   apple_music_url?: string | null;
   local_audio_url?: string | null;
@@ -76,6 +77,7 @@ const UPDATABLE_COLUMNS = {
   title: "title",
   artist: "artist",
   album: "album",
+  year: "year",
   local_tags: "local_tags",
   apple_music_url: "apple_music_url",
   youtube_url: "youtube_url",
