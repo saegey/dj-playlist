@@ -74,6 +74,25 @@ type IdentityEmbeddingPreviewResponse = {
   };
 };
 
+type AudioVibeEmbeddingPreviewResponse = {
+  vibeText: string;
+  vibeData: {
+    bpm: string;
+    bpmRange: string;
+    key: string;
+    camelot: string;
+    danceability: string;
+    energy: string;
+    dominantMood: string;
+    moodProfile: string;
+    vibeDescriptors: string[];
+    acoustic?: string;
+    vocalPresence?: string;
+    percussiveness?: string;
+    partyMood?: string;
+  };
+};
+
 async function fetchTrackPlaylists(
   trackId: string,
   friendId: number
@@ -164,6 +183,21 @@ async function fetchIdentityEmbeddingPreview(
   return data as IdentityEmbeddingPreviewResponse;
 }
 
+async function fetchAudioVibeEmbeddingPreview(
+  trackId: string,
+  friendId: number
+): Promise<AudioVibeEmbeddingPreviewResponse> {
+  const res = await fetch(
+    `/api/embeddings/audio-vibe-preview?track_id=${encodeURIComponent(trackId)}&friend_id=${friendId}`,
+    { cache: "no-store" }
+  );
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.error || "Failed to fetch audio vibe embedding preview");
+  }
+  return data as AudioVibeEmbeddingPreviewResponse;
+}
+
 export default function TrackPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
@@ -197,6 +231,11 @@ export default function TrackPage() {
   const identityEmbeddingPreviewQuery = useQuery({
     queryKey: ["track-identity-embedding-preview", trackId, friendId],
     queryFn: () => fetchIdentityEmbeddingPreview(trackId, friendId),
+    enabled: hasValidFriendId && !!trackId,
+  });
+  const audioVibeEmbeddingPreviewQuery = useQuery({
+    queryKey: ["track-audio-vibe-embedding-preview", trackId, friendId],
+    queryFn: () => fetchAudioVibeEmbeddingPreview(trackId, friendId),
     enabled: hasValidFriendId && !!trackId,
   });
   const extractCoverMutation = useMutation({
@@ -478,6 +517,77 @@ export default function TrackPage() {
                   </VStack>
                 ) : (
                   <Text color="fg.muted">No identity embedding preview available.</Text>
+                )}
+              </Box>
+
+              <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
+                <Heading size="sm" mb={3}>
+                  Audio Vibe Embedding Preview
+                </Heading>
+
+                {audioVibeEmbeddingPreviewQuery.isLoading ? (
+                  <VStack align="stretch" gap={2}>
+                    <Skeleton height="20px" />
+                    <Skeleton height="120px" />
+                  </VStack>
+                ) : audioVibeEmbeddingPreviewQuery.error ? (
+                  <Text color="red.500">
+                    {audioVibeEmbeddingPreviewQuery.error instanceof Error
+                      ? audioVibeEmbeddingPreviewQuery.error.message
+                      : "Failed to load audio vibe embedding preview"}
+                  </Text>
+                ) : audioVibeEmbeddingPreviewQuery.data ? (
+                  <VStack align="stretch" gap={3}>
+                    <HStack gap={2} flexWrap="wrap">
+                      <Badge colorPalette="cyan">Audio Vibe</Badge>
+                      {audioVibeEmbeddingPreviewQuery.data.vibeData.bpm !== "unknown" && (
+                        <Badge variant="outline">
+                          {audioVibeEmbeddingPreviewQuery.data.vibeData.bpm} BPM
+                        </Badge>
+                      )}
+                      {audioVibeEmbeddingPreviewQuery.data.vibeData.key !== "unknown" && (
+                        <Badge variant="outline">
+                          {audioVibeEmbeddingPreviewQuery.data.vibeData.key}
+                        </Badge>
+                      )}
+                      {audioVibeEmbeddingPreviewQuery.data.vibeData.energy && (
+                        <Badge variant="outline" colorPalette="orange">
+                          {audioVibeEmbeddingPreviewQuery.data.vibeData.energy} energy
+                        </Badge>
+                      )}
+                    </HStack>
+                    <Box
+                      as="pre"
+                      p={3}
+                      borderRadius="md"
+                      borderWidth="1px"
+                      overflow="auto"
+                      maxH="420px"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                      bg="gray.50"
+                      _dark={{ bg: "gray.900" }}
+                    >
+                      {audioVibeEmbeddingPreviewQuery.data.vibeText}
+                    </Box>
+                    <Box fontSize="xs" color="fg.muted">
+                      <Text fontWeight="medium" mb={1}>Vibe Profile:</Text>
+                      <Text>Descriptors: {audioVibeEmbeddingPreviewQuery.data.vibeData.vibeDescriptors.join(", ")}</Text>
+                      <Text>Dominant Mood: {audioVibeEmbeddingPreviewQuery.data.vibeData.dominantMood}</Text>
+                      <Text>Danceability: {audioVibeEmbeddingPreviewQuery.data.vibeData.danceability}</Text>
+                      {audioVibeEmbeddingPreviewQuery.data.vibeData.acoustic && (
+                        <Text>Acoustic: {audioVibeEmbeddingPreviewQuery.data.vibeData.acoustic}</Text>
+                      )}
+                      {audioVibeEmbeddingPreviewQuery.data.vibeData.vocalPresence && (
+                        <Text>Vocals: {audioVibeEmbeddingPreviewQuery.data.vibeData.vocalPresence}</Text>
+                      )}
+                      {audioVibeEmbeddingPreviewQuery.data.vibeData.percussiveness && (
+                        <Text>Percussiveness: {audioVibeEmbeddingPreviewQuery.data.vibeData.percussiveness}</Text>
+                      )}
+                    </Box>
+                  </VStack>
+                ) : (
+                  <Text color="fg.muted">No audio vibe embedding preview available. This track may not have audio analysis data.</Text>
                 )}
               </Box>
 
