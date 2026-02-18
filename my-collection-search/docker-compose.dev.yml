@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-    container_name: myapp
+    container_name: myapp-dev
     ports:
       - "3000:3000"
     environment:
@@ -25,9 +25,17 @@ services:
       SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI}
       # Make file watching reliable in Docker on macOS/Windows
       WATCHPACK_POLLING: "true"
+      WATCHPACK_POLLING_INTERVAL: "700"
       CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "700"
       REDIS_URL: redis://redis:6379
       ESSENTIA_API_URL: http://essentia:8001/analyze
+      ESSENTIA_DATA_DIR: /app/essentia-data
+      ENABLE_AUDIO_PLAYBACK: ${ENABLE_AUDIO_PLAYBACK:-false}
+      AUDIO_DEVICE: ${AUDIO_DEVICE:-default}
+      MPD_HOST: ${MPD_HOST:-mpd}
+      MPD_PORT: ${MPD_PORT:-6600}
+      MPD_PATH_PREFIX: ${MPD_PATH_PREFIX:-}
       # Optional: adjust polling interval (ms)
       # WATCHPACK_POLLING_INTERVAL: "1000"
     depends_on:
@@ -36,10 +44,11 @@ services:
       - redis
     volumes:
       # Mount source code for live reload
-      - .:/app:delegated
+      - .:/app
       # Keep node_modules inside the container image
       - /app/node_modules
-      - music_data:/app/audio
+      - ${APP_AUDIO_MOUNT:-music_data:/app/audio}
+      - essentia_data:/app/essentia-data
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
       - spotify_exports:/app/spotify_exports  
@@ -73,7 +82,7 @@ services:
     image: getmeili/meilisearch:v1.6
     restart: always
     environment:
-      MEILI_MASTER_KEY: mysupersecretkey
+      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY:-mysupersecretkey}
       MEILI_EXPERIMENTAL_ENABLE_VECTOR_STORE: "true"
     ports:
       - "7700:7700"
@@ -94,14 +103,14 @@ services:
   essentia:
     build:
       context: ../essentia-api
-    container_name: essentia-api
+    container_name: essentia-api-dev
     ports:
       - "8001:8001"
   
   ga-service:
     build:
       context: ../ga-service
-    container_name: ga-service
+    container_name: ga-service-dev
     ports:
       - "8002:8002"
 
@@ -117,16 +126,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.download-worker
-    container_name: download-worker
+    container_name: download-worker-dev
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
       GAMDL_COOKIE_FILE: /app/cookies/music.apple.com_cookies.txt
+      ESSENTIA_DATA_DIR: /app/essentia-data
     depends_on:
       - redis
       - db
     volumes:
-      - music_data:/app/audio
+      - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
+      - album_covers:/app/public/uploads/album-covers
+      - essentia_data:/app/essentia-data
       - ./cookies:/app/cookies:ro  # Mount local cookies directory as read-only
     restart: unless-stopped
     # command: sh -c "pip install -r requirements.txt && pip install watchdog && watchmedo auto-restart -d worker -p '*.py' -R -- python3 download_worker.py"
@@ -140,3 +152,5 @@ volumes:
   discogs_exports:
   spotify_exports:
   redis_data:
+  essentia_data:
+  album_covers:

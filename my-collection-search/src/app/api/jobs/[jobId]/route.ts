@@ -26,7 +26,7 @@ export async function GET(
 
     const jobDetails = {
       id: jobStatus.job_id,
-      name: "download-audio",
+      name: jobStatus.name || jobStatus.job_type || "download-audio",
       state: jobStatus.status === 'queued' ? 'waiting' :
              jobStatus.status === 'processing' ? 'active' :
              jobStatus.status,
@@ -34,6 +34,8 @@ export async function GET(
       data: {
         track_id: jobStatus.track_id,
         friend_id: jobStatus.friend_id,
+        release_id: jobStatus.release_id,
+        job_type: jobStatus.job_type || jobStatus.name,
       },
       progress: jobStatus.progress || 0,
       returnvalue: jobStatus.result,

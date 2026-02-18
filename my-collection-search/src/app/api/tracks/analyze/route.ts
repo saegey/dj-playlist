@@ -3,6 +3,7 @@ import { promisify } from "util";
 import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
+import { writeEssentiaAnalysis } from "@/lib/essentia-storage";
 
 const execAsync = promisify(exec);
 const tmpDir = path.join(process.cwd(), "tmp");
@@ -190,6 +191,13 @@ export async function POST(request: Request) {
           throw new Error(`Essentia API error: ${res.status} $responseText}`);
         }
         analysisResult = responseText;
+        if (track_id && friend_id) {
+          try {
+            writeEssentiaAnalysis(track_id, Number(friend_id), analysisResult);
+          } catch (saveErr) {
+            console.warn("Failed to persist Essentia analysis file:", saveErr);
+          }
+        }
       } catch (err) {
         throw new Error(
           `Essentia API call failed: ${

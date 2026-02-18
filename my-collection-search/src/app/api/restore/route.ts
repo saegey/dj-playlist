@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
+import { Pool } from "pg";
+import { getMeiliClient } from "@/lib/meili";
+import { getOrCreateAlbumsIndex, configureAlbumsIndex } from "@/services/albumMeiliService";
+import { getOrCreateTracksIndex, configureMeiliIndex } from "@/services/meiliIndexService";
+import { addTracksToMeili } from "@/services/meiliDocumentService";
 
 function parsePgUrl(pgUrl: string) {
   try {
@@ -75,8 +80,95 @@ export async function POST(request: Request) {
       env: { ...process.env, PGPASSWORD: pass },
     });
 
+    let albumsIndexed = 0;
+    let tracksIndexed = 0;
+    let reindexWarning: string | null = null;
+
+    try {
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const meiliClient = getMeiliClient();
+
+      // Reindex albums from restored DB
+      const albumsIndex = await getOrCreateAlbumsIndex(meiliClient);
+      await configureAlbumsIndex(albumsIndex);
+      const albumsRes = await pool.query(`
+        SELECT
+          a.release_id,
+          a.friend_id,
+          f.username,
+          a.title,
+          a.artist,
+          a.year,
+          a.genres,
+          a.styles,
+          a.album_thumbnail,
+          a.discogs_url,
+          a.date_added,
+          a.date_changed,
+          a.track_count,
+          a.album_rating,
+          a.album_notes,
+          a.purchase_price,
+          a.condition,
+          a.label,
+          a.catalog_number,
+          a.country,
+          a.format,
+          a.library_identifier
+        FROM albums a
+        LEFT JOIN friends f ON f.id = a.friend_id
+      `);
+      const albumDocs = albumsRes.rows.map((row) => ({
+        id: `${row.release_id}_${row.friend_id}`,
+        ...row,
+      }));
+      await albumsIndex.deleteAllDocuments();
+      if (albumDocs.length > 0) {
+        await albumsIndex.addDocuments(albumDocs);
+      }
+      albumsIndexed = albumDocs.length;
+
+      // Reindex tracks from restored DB
+      const tracksIndex = await getOrCreateTracksIndex(meiliClient);
+      await configureMeiliIndex(tracksIndex, meiliClient);
+      const tracksRes = await pool.query(`
+        SELECT
+          t.*,
+          a.library_identifier,
+          COALESCE(f.username, t.username) AS username_resolved
+        FROM tracks t
+        LEFT JOIN albums a
+          ON t.release_id = a.release_id AND t.friend_id = a.friend_id
+        LEFT JOIN friends f
+          ON t.friend_id = f.id
+      `);
+      const trackDocs = tracksRes.rows.map((row) => {
+        const normalized = { ...row };
+        normalized.username = row.username_resolved;
+        delete normalized.username_resolved;
+        return normalized;
+      });
+      await tracksIndex.deleteAllDocuments();
+      if (trackDocs.length > 0) {
+        await addTracksToMeili(tracksIndex, trackDocs);
+      }
+      tracksIndexed = trackDocs.length;
+
+      await pool.end();
+    } catch (reindexError) {
+      reindexWarning =
+        reindexError instanceof Error
+          ? reindexError.message
+          : String(reindexError);
+    }
+
     return NextResponse.json({
       message: "Database cleaned and restored successfully.",
+      reindex: {
+        albumsIndexed,
+        tracksIndexed,
+        warning: reindexWarning,
+      },
     });
   } catch (e) {
     return NextResponse.json(

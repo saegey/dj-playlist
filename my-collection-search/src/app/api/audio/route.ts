@@ -2,6 +2,52 @@ import fs from "fs";
 import path from "path";
 import { NextResponse } from "next/server";
 
+function normalizeFilenameInput(raw: string): string {
+  let value = raw.trim();
+  try {
+    value = decodeURIComponent(value);
+  } catch {
+    // ignore malformed encoding and use raw value
+  }
+
+  // Support legacy values that stored the full audio URL.
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    try {
+      const parsed = new URL(value);
+      const nested = parsed.searchParams.get("filename");
+      if (nested) value = nested;
+      else value = path.basename(parsed.pathname);
+    } catch {
+      // keep original value
+    }
+  }
+
+  value = value.replace(/^\/+/, "");
+  value = value.replace(/^app\/audio\//, "");
+  value = value.replace(/^audio\//, "");
+  return value;
+}
+
+function resolveAudioPath(audioDir: string, input: string): string | null {
+  const normalized = normalizeFilenameInput(input);
+  if (!normalized) return null;
+
+  const primary = path.resolve(audioDir, normalized);
+  const audioRoot = path.resolve(audioDir);
+  if (primary.startsWith(audioRoot) && fs.existsSync(primary) && fs.statSync(primary).isFile()) {
+    return primary;
+  }
+
+  // Backward compatibility: if input contains stale prefixes/paths, try basename.
+  const base = path.basename(normalized);
+  const fallback = path.resolve(audioDir, base);
+  if (fallback.startsWith(audioRoot) && fs.existsSync(fallback) && fs.statSync(fallback).isFile()) {
+    return fallback;
+  }
+
+  return null;
+}
+
 export async function GET(request: Request) {
   const range = request.headers.get("range");
   const { searchParams } = new URL(request.url);
@@ -10,9 +56,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing filename" }, { status: 400 });
   }
 
-  const audioDir = path.resolve("audio");
-  const filePath = path.join(audioDir, filename);
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+  const audioDir = process.env.AUDIO_DIR || "/app/audio";
+  const filePath = resolveAudioPath(audioDir, filename);
+  if (!filePath) {
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 

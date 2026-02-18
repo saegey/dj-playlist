@@ -21,9 +21,10 @@ import {
   FiVolume1,
   FiVolumeX,
   FiList,
+  FiCast,
 } from "react-icons/fi";
-import { Track } from "@/types/track";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import { toaster } from "@/components/ui/toaster";
 import ProgressSlider from "@/components/player/ProgressSlider";
 import CompactProgressSlider from "@/components/player/CompactProgressSlider";
 import Artwork from "@/components/player/Artwork";
@@ -65,6 +66,9 @@ export default function PlayerControls({
     playlist,
     volume,
     setVolume,
+    isAirPlayAvailable,
+    isAirPlayActive,
+    showAirPlayPicker,
   } = usePlaylistPlayer();
 
   const { mode, setMode } = usePlaybackMode();
@@ -75,6 +79,10 @@ export default function PlayerControls({
 
   // Poll MPD status when in DAC mode
   const mpdStatus = useMPDStatus(mode === "local-dac");
+  const currentArtwork =
+    currentTrack?.audio_file_album_art_url ||
+    currentTrack?.album_thumbnail ||
+    "/images/placeholder-artwork.png";
 
   // Sync MPD position to browser audio element for UI consistency
   React.useEffect(() => {
@@ -365,10 +373,10 @@ export default function PlayerControls({
       title: currentTrack.title,
       artist: currentTrack.artist,
       album: currentTrack.album || undefined,
-      artwork: currentTrack.album_thumbnail
+      artwork: currentArtwork
         ? [
             {
-              src: currentTrack.album_thumbnail,
+              src: currentArtwork,
               sizes: "512x512",
               type: "image/jpeg",
             },
@@ -452,6 +460,7 @@ export default function PlayerControls({
     handlePlay,
     handlePause,
     handleSeek,
+    currentArtwork,
   ]);
 
   return (
@@ -493,7 +502,7 @@ export default function PlayerControls({
             friendId={currentTrack?.friend_id}
           >
             <Artwork
-              src={(currentTrack as Track)?.album_thumbnail}
+              src={currentArtwork}
               alt={
                 currentTrack
                   ? `${currentTrack.artist} - ${currentTrack.title}`
@@ -623,6 +632,29 @@ export default function PlayerControls({
                 </Slider.Root>
               </HStack>
             </Box>
+          )}
+
+          {mode === "browser" && isAirPlayAvailable && (
+            <IconButton
+              aria-label="AirPlay"
+              size="sm"
+              variant={isAirPlayActive ? "solid" : "ghost"}
+              colorPalette={isAirPlayActive ? "blue" : undefined}
+              title="AirPlay"
+              onClick={() => {
+                const opened = showAirPlayPicker();
+                if (!opened) {
+                  toaster.create({
+                    title: "AirPlay picker unavailable",
+                    description:
+                      "Safari did not expose AirPlay for this media session.",
+                    type: "warning",
+                  });
+                }
+              }}
+            >
+              <FiCast />
+            </IconButton>
           )}
 
           {showQueueButton && onQueueToggle && (

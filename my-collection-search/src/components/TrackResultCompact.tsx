@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import NextLink from "next/link";
 import {
   Box,
   Flex,
@@ -58,6 +59,11 @@ export default function TrackResultCompact({
   showPlaylistCount = true,
 }: TrackResultCompactProps) {
   const { replacePlaylist } = usePlaylistPlayer();
+  const artworkSrc =
+    track.audio_file_album_art_url ||
+    track.album_thumbnail ||
+    "/images/placeholder-artwork.png";
+  const trackHref = `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`;
 
   const score =
     track._semanticScore !== undefined ? track._semanticScore * 100 : undefined;
@@ -122,7 +128,7 @@ export default function TrackResultCompact({
             _hover={{ "& .overlay": { opacity: 1 } }}
           >
             <Image
-              src={track.album_thumbnail}
+              src={artworkSrc}
               alt={track.title}
               width="100%"
               height="100%"
@@ -150,7 +156,7 @@ export default function TrackResultCompact({
           </Box>
         ) : (
           <Image
-            src={track.album_thumbnail}
+            src={artworkSrc}
             alt={track.title}
             width="100%"
             height="100%"
@@ -173,7 +179,13 @@ export default function TrackResultCompact({
             flex="1"
             minW="150px"
           >
-            {track.title}
+            <Link
+              as={NextLink}
+              href={trackHref}
+              _hover={{ textDecoration: "underline" }}
+            >
+              {track.title}
+            </Link>
             {score && (
               <Badge
                 ml={2}

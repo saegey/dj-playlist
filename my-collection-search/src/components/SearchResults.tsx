@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { Box, Input, Text, InputGroup, IconButton, Flex, Spinner, Badge } from "@chakra-ui/react";
-import { LuSearch, LuLayoutGrid, LuTable, LuMaximize2, LuMinimize2, LuFilter } from "react-icons/lu";
+import { Box, Text, IconButton, Flex, Spinner, Badge } from "@chakra-ui/react";
+import { LuLayoutGrid, LuTable, LuMaximize2, LuMinimize2, LuFilter } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
 
 import TrackResultStore from "@/components/TrackResultStore";
 import TrackTableViewWithLoader from "@/components/TrackTableViewWithLoader";
-import UsernameSelect from "./UsernameSelect";
+import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
@@ -53,11 +53,19 @@ const SearchResults: React.FC = () => {
     () => searchParams?.toString() ?? "",
     [searchParams]
   );
-  const { friend: currentUserFriend } = useUsername();
+  const { friend: currentUserFriend, setFriend, isHydrated } = useUsername();
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
     showSpotifyUsernames: true,
   });
+
+  // Ensure tracks view is always scoped to a library unless user explicitly clears.
+  React.useEffect(() => {
+    if (!isHydrated) return;
+    if (currentUserFriend) return;
+    if (friends.length === 0) return;
+    setFriend(friends[0]);
+  }, [currentUserFriend, friends, setFriend, isHydrated]);
 
   // Filter state
   const [filters, setFilters] = React.useState<TracksFilter>(createEmptyFilters());
@@ -89,6 +97,7 @@ const SearchResults: React.FC = () => {
   } = useSearchResults({
     mode: "infinite",
     limit: 20,
+    friend: currentUserFriend,
     filter: meiliFilters.length > 0 ? meiliFilters : undefined,
   });
 
@@ -213,18 +222,69 @@ const SearchResults: React.FC = () => {
 
   return (
     <Box mb={'100px'}>
-      {/* Desktop layout - single row */}
-      <Box display={{ base: "none", md: "flex" }} gap={3} mb={3}>
-        <InputGroup startElement={<LuSearch size={16} />} flex="1">
-          <Input
-            value={debouncedValue}
-            onChange={(e) => setDebouncedValue(e.target.value)}
-            variant={"subtle"}
-            fontSize="16px"
-          />
-        </InputGroup>
-        <UsernameSelect usernames={friends} width="200px" />
-        <Flex gap={1} alignItems="center">
+      <UnifiedSearchControls
+        query={debouncedValue}
+        onQueryChange={setDebouncedValue}
+        friends={friends}
+        selectedFriend={currentUserFriend}
+        onFriendChange={(friendId) => {
+          const next = friends.find((f) => f.id === friendId) || null;
+          setFriend(next);
+        }}
+        desktopControls={
+          <>
+            <Box position="relative">
+              <IconButton
+                aria-label="Filter tracks"
+                size="sm"
+                variant={activeFilterCount > 0 ? "solid" : "ghost"}
+                colorPalette={activeFilterCount > 0 ? "blue" : undefined}
+                onClick={() => setFilterModalOpen(true)}
+              >
+                <LuFilter />
+              </IconButton>
+              {activeFilterCount > 0 && (
+                <Badge
+                  position="absolute"
+                  top="-1"
+                  right="-1"
+                  size="sm"
+                  colorPalette="blue"
+                  variant="solid"
+                >
+                  {activeFilterCount}
+                </Badge>
+              )}
+            </Box>
+            <IconButton
+              aria-label="Card view"
+              size="sm"
+              variant={viewMode === "card" ? "solid" : "ghost"}
+              onClick={() => handleViewModeChange("card")}
+            >
+              <LuLayoutGrid />
+            </IconButton>
+            <IconButton
+              aria-label="Table view"
+              size="sm"
+              variant={viewMode === "table" ? "solid" : "ghost"}
+              onClick={() => handleViewModeChange("table")}
+            >
+              <LuTable />
+            </IconButton>
+            {viewMode === "card" && (
+              <IconButton
+                aria-label={compactMode ? "Expand cards" : "Compact cards"}
+                size="sm"
+                variant={compactMode ? "solid" : "ghost"}
+                onClick={handleCompactModeToggle}
+              >
+                {compactMode ? <LuMaximize2 /> : <LuMinimize2 />}
+              </IconButton>
+            )}
+          </>
+        }
+        mobilePrimaryControl={
           <Box position="relative">
             <IconButton
               aria-label="Filter tracks"
@@ -248,103 +308,38 @@ const SearchResults: React.FC = () => {
               </Badge>
             )}
           </Box>
-          <IconButton
-            aria-label="Card view"
-            size="sm"
-            variant={viewMode === "card" ? "solid" : "ghost"}
-            onClick={() => handleViewModeChange("card")}
-          >
-            <LuLayoutGrid />
-          </IconButton>
-          <IconButton
-            aria-label="Table view"
-            size="sm"
-            variant={viewMode === "table" ? "solid" : "ghost"}
-            onClick={() => handleViewModeChange("table")}
-          >
-            <LuTable />
-          </IconButton>
-          {viewMode === "card" && (
+        }
+        mobileSecondaryControls={
+          <>
             <IconButton
-              aria-label={compactMode ? "Expand cards" : "Compact cards"}
+              aria-label="Card view"
               size="sm"
-              variant={compactMode ? "solid" : "ghost"}
-              onClick={handleCompactModeToggle}
+              variant={viewMode === "card" ? "solid" : "ghost"}
+              onClick={() => handleViewModeChange("card")}
             >
-              {compactMode ? <LuMaximize2 /> : <LuMinimize2 />}
+              <LuLayoutGrid />
             </IconButton>
-          )}
-        </Flex>
-      </Box>
-
-      {/* Mobile layout - 2 rows */}
-      <Box display={{ base: "flex", md: "none" }} flexDirection="column" gap={2} mb={3}>
-        {/* Row 1: Search + User + Filter */}
-        <Flex gap={2}>
-          <InputGroup startElement={<LuSearch size={16} />} flex="1">
-            <Input
-              value={debouncedValue}
-              onChange={(e) => setDebouncedValue(e.target.value)}
-              variant={"subtle"}
-              fontSize="16px"
-            />
-          </InputGroup>
-          <UsernameSelect usernames={friends} iconOnlyMobile={true} width="auto" size="sm" />
-          <Box position="relative">
             <IconButton
-              aria-label="Filter tracks"
+              aria-label="Table view"
               size="sm"
-              variant={activeFilterCount > 0 ? "solid" : "ghost"}
-              colorPalette={activeFilterCount > 0 ? "blue" : undefined}
-              onClick={() => setFilterModalOpen(true)}
+              variant={viewMode === "table" ? "solid" : "ghost"}
+              onClick={() => handleViewModeChange("table")}
             >
-              <LuFilter />
+              <LuTable />
             </IconButton>
-            {activeFilterCount > 0 && (
-              <Badge
-                position="absolute"
-                top="-1"
-                right="-1"
+            {viewMode === "card" && (
+              <IconButton
+                aria-label={compactMode ? "Expand cards" : "Compact cards"}
                 size="sm"
-                colorPalette="blue"
-                variant="solid"
+                variant={compactMode ? "solid" : "ghost"}
+                onClick={handleCompactModeToggle}
               >
-                {activeFilterCount}
-              </Badge>
+                {compactMode ? <LuMaximize2 /> : <LuMinimize2 />}
+              </IconButton>
             )}
-          </Box>
-        </Flex>
-
-        {/* Row 2: View controls */}
-        <Flex gap={1} justifyContent="flex-start">
-          <IconButton
-            aria-label="Card view"
-            size="sm"
-            variant={viewMode === "card" ? "solid" : "ghost"}
-            onClick={() => handleViewModeChange("card")}
-          >
-            <LuLayoutGrid />
-          </IconButton>
-          <IconButton
-            aria-label="Table view"
-            size="sm"
-            variant={viewMode === "table" ? "solid" : "ghost"}
-            onClick={() => handleViewModeChange("table")}
-          >
-            <LuTable />
-          </IconButton>
-          {viewMode === "card" && (
-            <IconButton
-              aria-label={compactMode ? "Expand cards" : "Compact cards"}
-              size="sm"
-              variant={compactMode ? "solid" : "ghost"}
-              onClick={handleCompactModeToggle}
-            >
-              {compactMode ? <LuMaximize2 /> : <LuMinimize2 />}
-            </IconButton>
-          )}
-        </Flex>
-      </Box>
+          </>
+        }
+      />
 
       {/* Filter Modal */}
       <TracksFilterModal
@@ -383,7 +378,7 @@ const SearchResults: React.FC = () => {
                   key={`search-${info.trackId}-${info.friendId}`}
                   trackId={info.trackId}
                   friendId={info.friendId}
-                  playlistCount={playlistCounts[info.trackId]}
+                  playlistCount={playlistCounts[`${info.trackId}:${info.friendId}`]}
                   compact={compactMode}
                 />
               );

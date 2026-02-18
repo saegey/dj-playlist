@@ -27,20 +27,25 @@ services:
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY}
       REDIS_URL: redis://redis:6379
       ESSENTIA_API_URL: http://essentia:8001/analyze
+      ESSENTIA_DATA_DIR: /app/essentia-data
       ENABLE_AUDIO_PLAYBACK: ${ENABLE_AUDIO_PLAYBACK:-false}
       AUDIO_DEVICE: ${AUDIO_DEVICE:-default}
+      MPD_HOST: ${MPD_HOST:-mpd}
+      MPD_PORT: ${MPD_PORT:-6600}
+      MPD_PATH_PREFIX: ${MPD_PATH_PREFIX:-}
 
     depends_on:
       - db
       - meili
       - redis
     volumes:
-      - music_data:/app/audio
+      - ${APP_AUDIO_MOUNT:-music_data:/app/audio}
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
       - spotify_exports:/app/spotify_exports
       - cookie_data:/app/cookies
       - album_covers:/app/public/uploads/album-covers
+      - essentia_data:/app/essentia-data
       # Optional: Mount ALSA config for dmix (software mixing with AirPlay)
       # - ./config/asound.conf:/etc/asound.conf:ro
     # USB DAC audio device passthrough (optional)
@@ -78,7 +83,7 @@ services:
     image: getmeili/meilisearch:v1.6
     restart: always
     environment:
-      MEILI_MASTER_KEY: mysupersecretkey
+      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY:-mysupersecretkey}
       MEILI_EXPERIMENTAL_ENABLE_VECTOR_STORE: "true"
     ports:
       - "7700:7700"
@@ -95,7 +100,7 @@ services:
     devices:
       - /dev/snd:/dev/snd  # Audio device passthrough
     volumes:
-      - music_data:/var/lib/mpd/music:ro  # Read-only music files
+      - ${MPD_AUDIO_MOUNT:-music_data:/var/lib/mpd/music:ro}  # Read-only music files
       - mpd_data:/var/lib/mpd  # MPD state/database
       - ./config/mpd.conf:/etc/mpd.conf:ro
     environment:
@@ -143,12 +148,15 @@ services:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
       GAMDL_COOKIE_FILE: /app/cookies/gamdl_cookies.txt
+      ESSENTIA_DATA_DIR: /app/essentia-data
     depends_on:
       - redis
       - db
     volumes:
-      - music_data:/app/audio
+      - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
+      - album_covers:/app/public/uploads/album-covers
       - cookie_data:/app/cookies  # Shared cookie storage with app service
+      - essentia_data:/app/essentia-data
     restart: unless-stopped
 
   # AirPlay Receiver (optional)
@@ -179,3 +187,4 @@ volumes:
   cookie_data:
   mpd_data:
   album_covers:
+  essentia_data:

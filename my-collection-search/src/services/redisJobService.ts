@@ -6,7 +6,13 @@ export interface DownloadJobData {
   job_id: string;
   track_id: string;
   friend_id: number;
-  job_type?: "download" | "fix-duration";
+  release_id?: string | null;
+  job_type?:
+    | "download"
+    | "fix-duration"
+    | "extract-cover-art"
+    | "extract-cover-art-album"
+    | "analyze-local";
   apple_music_url?: string;
   spotify_url?: string;
   youtube_url?: string;
@@ -33,8 +39,11 @@ export interface JobStatus {
   progress: number;
   created_at: number;
   updated_at: number;
+  name?: string;
+  job_type?: DownloadJobData["job_type"];
   track_id: string;
   friend_id: number;
+  release_id?: string | null;
   error?: string;
   result?: {
     file_path?: string;
@@ -55,23 +64,73 @@ export interface JobSummary {
 
 export class RedisJobService {
   private redis = getRedisConnection();
+  private pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  private readonly updatedIndexKey = "jobs:updated";
+  private readonly activeJobTtlSeconds = parseInt(
+    process.env.JOB_TTL_ACTIVE_SECONDS || "604800",
+    10
+  );
+
+  private async listJobKeys(): Promise<string[]> {
+    const keys: string[] = [];
+    let cursor = "0";
+    do {
+      const [nextCursor, batch] = await this.redis.scan(
+        cursor,
+        "MATCH",
+        "job:*",
+        "COUNT",
+        1000
+      );
+      cursor = nextCursor;
+      if (batch.length > 0) keys.push(...batch);
+    } while (cursor !== "0");
+    return keys;
+  }
+
+  private parseJobHash(jobData: Record<string, string>): JobStatus | null {
+    if (!jobData || Object.keys(jobData).length === 0) return null;
+    return {
+      job_id: jobData.job_id,
+      status: jobData.status as JobStatus["status"],
+      progress: parseInt(jobData.progress || "0"),
+      created_at: parseInt(jobData.created_at),
+      updated_at: parseInt(jobData.updated_at),
+      name: jobData.name,
+      job_type: jobData.job_type as DownloadJobData["job_type"] | undefined,
+      track_id: jobData.track_id,
+      friend_id: parseInt(jobData.friend_id),
+      release_id: jobData.release_id || null,
+      error: jobData.error,
+      result: jobData.result ? JSON.parse(jobData.result) : undefined,
+    };
+  }
+
+  private async persistJobMetadata(
+    job_id: string,
+    payload: Record<string, string | number>
+  ): Promise<void> {
+    const pipeline = this.redis.pipeline();
+    pipeline.hset(`job:${job_id}`, payload);
+    pipeline.zadd(this.updatedIndexKey, Date.now(), job_id);
+    pipeline.expire(`job:${job_id}`, this.activeJobTtlSeconds);
+    await pipeline.exec();
+  }
 
   /**
    * Fetch gamdl settings for a friend, creating defaults if not exists
    */
   private async getGamdlSettings(friendId: number) {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
     try {
       // Ensure settings exist (create with defaults if not)
-      await pool.query(`
+      await this.pool.query(`
         INSERT INTO gamdl_settings (friend_id)
         VALUES ($1)
         ON CONFLICT (friend_id) DO NOTHING
       `, [friendId]);
 
       // Get the settings
-      const result = await pool.query(`
+      const result = await this.pool.query(`
         SELECT audio_quality as quality, audio_format as format,
                save_cover, cover_format, save_lyrics, lyrics_format,
                overwrite_existing, skip_music_videos, max_retries
@@ -94,8 +153,6 @@ export class RedisJobService {
         skip_music_videos: true,
         max_retries: 3
       };
-    } finally {
-      await pool.end();
     }
   }
 
@@ -118,7 +175,7 @@ export class RedisJobService {
     const now = Date.now();
 
     // Store job metadata
-    await this.redis.hset(`job:${job_id}`, {
+    await this.persistJobMetadata(job_id, {
       job_id,
       status: "queued",
       progress: 0,
@@ -127,6 +184,8 @@ export class RedisJobService {
       track_id: data.track_id,
       friend_id: data.friend_id,
       name: "download-audio",
+      job_type: "download",
+      release_id: data.release_id || "",
     });
 
     // Add job to simple Redis queue (will be picked up by Python worker)
@@ -144,7 +203,7 @@ export class RedisJobService {
     const job_id = uuidv4();
     const now = Date.now();
 
-    await this.redis.hset(`job:${job_id}`, {
+    await this.persistJobMetadata(job_id, {
       job_id,
       status: "queued",
       progress: 0,
@@ -153,6 +212,7 @@ export class RedisJobService {
       track_id: data.track_id,
       friend_id: data.friend_id,
       name: "fix-duration",
+      job_type: "fix-duration",
     });
 
     const jobData: DownloadJobData = {
@@ -168,52 +228,179 @@ export class RedisJobService {
     return job_id;
   }
 
+  async createCoverArtJob(data: {
+    track_id: string;
+    friend_id: number;
+    local_audio_url?: string | null;
+  }): Promise<string> {
+    const job_id = uuidv4();
+    const now = Date.now();
+
+    await this.persistJobMetadata(job_id, {
+      job_id,
+      status: "queued",
+      progress: 0,
+      created_at: now,
+      updated_at: now,
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      name: "extract-cover-art",
+      job_type: "extract-cover-art",
+    });
+
+    const jobData: DownloadJobData = {
+      job_id,
+      job_type: "extract-cover-art",
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      ...(data.local_audio_url ? { local_audio_url: data.local_audio_url } : {}),
+    };
+
+    await this.redis.lpush("download_queue", JSON.stringify(jobData));
+    console.log(`Created cover-art job ${job_id} for track ${data.track_id}`);
+    return job_id;
+  }
+
+  async createCoverArtAlbumJob(data: {
+    track_id: string;
+    friend_id: number;
+    release_id: string;
+  }): Promise<string> {
+    const job_id = uuidv4();
+    const now = Date.now();
+
+    await this.persistJobMetadata(job_id, {
+      job_id,
+      status: "queued",
+      progress: 0,
+      created_at: now,
+      updated_at: now,
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      release_id: data.release_id,
+      name: "extract-cover-art-album",
+      job_type: "extract-cover-art-album",
+    });
+
+    const jobData: DownloadJobData = {
+      job_id,
+      job_type: "extract-cover-art-album",
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      release_id: data.release_id,
+    };
+
+    await this.redis.lpush("download_queue", JSON.stringify(jobData));
+    console.log(
+      `Created album cover-art job ${job_id} for release ${data.release_id}`
+    );
+    return job_id;
+  }
+
+  async createAnalyzeLocalJob(data: {
+    track_id: string;
+    friend_id: number;
+    local_audio_url?: string | null;
+  }): Promise<string> {
+    const job_id = uuidv4();
+    const now = Date.now();
+
+    await this.persistJobMetadata(job_id, {
+      job_id,
+      status: "queued",
+      progress: 0,
+      created_at: now,
+      updated_at: now,
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      name: "analyze-local-audio",
+      job_type: "analyze-local",
+    });
+
+    const jobData: DownloadJobData = {
+      job_id,
+      job_type: "analyze-local",
+      track_id: data.track_id,
+      friend_id: data.friend_id,
+      ...(data.local_audio_url ? { local_audio_url: data.local_audio_url } : {}),
+    };
+
+    await this.redis.lpush("download_queue", JSON.stringify(jobData));
+    console.log(`Created analyze-local job ${job_id} for track ${data.track_id}`);
+    return job_id;
+  }
+
   async getJobStatus(job_id: string): Promise<JobStatus | null> {
     const jobData = await this.redis.hgetall(`job:${job_id}`);
-
-    if (!jobData || Object.keys(jobData).length === 0) {
-      return null;
-    }
-
-    return {
-      job_id: jobData.job_id,
-      status: jobData.status as JobStatus["status"],
-      progress: parseInt(jobData.progress || "0"),
-      created_at: parseInt(jobData.created_at),
-      updated_at: parseInt(jobData.updated_at),
-      track_id: jobData.track_id,
-      friend_id: parseInt(jobData.friend_id),
-      error: jobData.error,
-      result: jobData.result ? JSON.parse(jobData.result) : undefined,
-    };
+    return this.parseJobHash(jobData);
   }
 
   async getAllJobs(limit?: number): Promise<JobStatus[]> {
-    const keys = await this.redis.keys("job:*");
+    const keys = await this.listJobKeys();
     const jobs: JobStatus[] = [];
 
-    // Apply limit if specified, otherwise fetch all
-    const keysToProcess = limit ? keys.slice(0, limit) : keys;
+    if (keys.length === 0) return jobs;
 
-    for (const key of keysToProcess) {
-      const jobData = await this.redis.hgetall(key);
-      if (jobData && Object.keys(jobData).length > 0) {
-        jobs.push({
-          job_id: jobData.job_id,
-          status: jobData.status as JobStatus["status"],
-          progress: parseInt(jobData.progress || "0"),
-          created_at: parseInt(jobData.created_at),
-          updated_at: parseInt(jobData.updated_at),
-          track_id: jobData.track_id,
-          friend_id: parseInt(jobData.friend_id),
-          error: jobData.error,
-          result: jobData.result ? JSON.parse(jobData.result) : undefined,
-        });
-      }
+    const pipeline = this.redis.pipeline();
+    for (const key of keys) {
+      pipeline.hgetall(key);
+    }
+
+    const results = await pipeline.exec();
+    if (!results) return jobs;
+
+    for (const [err, value] of results) {
+      if (err) continue;
+      const parsed = this.parseJobHash(value as Record<string, string>);
+      if (parsed) jobs.push(parsed);
     }
 
     // Sort by updated_at desc
-    return jobs.sort((a, b) => b.updated_at - a.updated_at);
+    const sorted = jobs.sort((a, b) => b.updated_at - a.updated_at);
+    return typeof limit === "number" ? sorted.slice(0, limit) : sorted;
+  }
+
+  async getJobsUpdatedSince(
+    sinceTimestampMs: number,
+    limit = 200
+  ): Promise<JobStatus[]> {
+    const end = Date.now();
+    const jobIds = await this.redis.zrangebyscore(
+      this.updatedIndexKey,
+      sinceTimestampMs,
+      end,
+      "LIMIT",
+      0,
+      Math.max(limit, 1)
+    );
+
+    if (jobIds.length === 0) return [];
+
+    const pipeline = this.redis.pipeline();
+    for (const jobId of jobIds) {
+      pipeline.hgetall(`job:${jobId}`);
+    }
+    const results = await pipeline.exec();
+    if (!results) return [];
+
+    const jobs: JobStatus[] = [];
+    const staleJobIds: string[] = [];
+    for (let i = 0; i < results.length; i += 1) {
+      const [err, value] = results[i];
+      if (err) continue;
+      const parsed = this.parseJobHash(value as Record<string, string>);
+      if (parsed) {
+        jobs.push(parsed);
+      } else {
+        const staleJobId = jobIds[i];
+        if (staleJobId) staleJobIds.push(staleJobId);
+      }
+    }
+
+    if (staleJobIds.length > 0) {
+      await this.redis.zrem(this.updatedIndexKey, ...staleJobIds);
+    }
+    return jobs.sort((a, b) => a.updated_at - b.updated_at);
   }
 
   async getJobSummary(): Promise<JobSummary> {
@@ -249,19 +436,23 @@ export class RedisJobService {
 
   async clearAllJobs(): Promise<void> {
     // Clear job data
-    const jobKeys = await this.redis.keys("job:*");
+    const jobKeys = await this.listJobKeys();
     if (jobKeys.length > 0) {
       await this.redis.del(...jobKeys);
     }
 
     // Clear queues
-    await this.redis.del("download_queue");
+    await this.redis.del("download_queue", this.updatedIndexKey);
 
     console.log(`Cleared ${jobKeys.length} jobs and queues`);
   }
 
   async deleteJob(job_id: string): Promise<boolean> {
-    const deleted = await this.redis.del(`job:${job_id}`);
+    const pipeline = this.redis.pipeline();
+    pipeline.del(`job:${job_id}`);
+    pipeline.zrem(this.updatedIndexKey, job_id);
+    const results = await pipeline.exec();
+    const deleted = Number(results?.[0]?.[1] ?? 0);
     return deleted > 0;
   }
 }

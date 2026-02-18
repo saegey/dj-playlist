@@ -12,7 +12,6 @@ import {
   Checkbox,
   SimpleGrid,
   Group,
-  Container,
   InputGroup,
 } from "@chakra-ui/react";
 import { toaster } from "@/components/ui/toaster";
@@ -24,6 +23,7 @@ import UsernameSelect from "@/components/UsernameSelect";
 import { useBulkUpdateTrackNotesMutation } from "@/hooks/useBulkUpdateTrackNotesMutation";
 import type { BulkNotesUpdate } from "@/services/trackService";
 import { buildBulkTrackMetadataPrompt } from "@/lib/prompts";
+import PageContainer from "@/components/layout/PageContainer";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -184,7 +184,7 @@ export default function BulkNotesPage() {
 
   return (
     <>
-      <Container>
+      <PageContainer size="standard">
         <SimpleGrid gap={2} columns={[1, 1, 4]} mt={3} mb={8}>
           <InputGroup startElement={<LuSearch size={16} />}>
             <Input
@@ -304,7 +304,7 @@ export default function BulkNotesPage() {
           boxShadow="0 -2px 8px rgba(0,0,0,0.08)"
           zIndex={100}
         >
-          <Container>
+          <PageContainer size="standard">
             <Text fontWeight="bold">Paste Bulk JSON Results</Text>
             <Textarea
               value={bulkJson}
@@ -322,9 +322,9 @@ export default function BulkNotesPage() {
               <FiUpload />
               Upload Results
             </Button>
-          </Container>
+          </PageContainer>
         </Box>
-      </Container>
+      </PageContainer>
     </>
   );
 }

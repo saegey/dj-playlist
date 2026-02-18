@@ -22,24 +22,26 @@ async function configureMeiliSearch() {
 
     // Configure embedders
     console.log('Setting up embedders...');
-    try {
-      await fetch(
-        `${meiliClient.config.host}/indexes/tracks/settings/embedders`,
-        {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${meiliClient.config.apiKey ?? ''}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            default: { source: 'userProvided', dimensions: 1536 },
-          }),
-        }
+    const embedderResp = await fetch(
+      `${meiliClient.config.host}/indexes/tracks/settings/embedders`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${meiliClient.config.apiKey ?? ''}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          default: { source: 'userProvided', dimensions: 1536 },
+        }),
+      }
+    );
+    if (!embedderResp.ok) {
+      const details = await embedderResp.text();
+      throw new Error(
+        `Failed to configure embedders (${embedderResp.status}): ${details}`
       );
-      console.log('✅ Embedders configured\n');
-    } catch (err) {
-      console.warn('⚠️  Error setting embedders:', err.message);
     }
+    console.log('✅ Embedders configured\n');
 
     // Configure searchable attributes
     console.log('Configuring searchable attributes...');

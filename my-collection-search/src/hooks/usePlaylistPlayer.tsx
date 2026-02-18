@@ -136,7 +136,7 @@ export function usePlaylistPlayer(initial: Track[] = []) {
 
     if (currentTrackIndex !== null && playlistRef.current[currentTrackIndex]) {
       const track = playlistRef.current[currentTrackIndex];
-      const newSrc = `/api/audio?filename=${track.local_audio_url}`;
+      const newSrc = `/api/audio?filename=${encodeURIComponent(track.local_audio_url ?? "")}`;
 
       if (audio.src !== newSrc) {
         audio.src = newSrc;

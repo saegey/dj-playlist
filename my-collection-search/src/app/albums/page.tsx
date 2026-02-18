@@ -3,21 +3,17 @@
 import React, { Suspense } from "react";
 import {
   Flex,
-  Container,
   Spinner,
-  Box,
-  Input,
   Button,
   NativeSelectRoot,
   NativeSelectField,
-  InputGroup,
 } from "@chakra-ui/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import AlbumSearchResults from "@/components/AlbumSearchResults";
-import UsernameSelect from "@/components/UsernameSelect";
+import PageContainer from "@/components/layout/PageContainer";
+import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
-import { LuSearch } from "react-icons/lu";
 
 function AlbumsPageContent() {
   const searchParams = useSearchParams();
@@ -81,98 +77,20 @@ function AlbumsPageContent() {
     router.push(`/albums?${params.toString()}`);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
-  };
-
   return (
-    <Container maxW="container.xl" px={0}>
+    <PageContainer size="standard">
       <Flex gap={4} direction="column">
-        {/* Search Controls */}
-        <Box pt={4}>
-          <Flex gap={2} direction="column" mb={2}>
-            {/* Row 1: Search Input + User + Search Button (Mobile) */}
-            <Flex gap={2} display={{ base: "flex", md: "none" }}>
-              <InputGroup
-                startElement={<LuSearch size={16} />}
-                flex="1"
-              >
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  variant={"subtle"}
-                  fontSize="16px"
-                  size="sm"
-                />
-              </InputGroup>
-              <UsernameSelect
-                usernames={friends}
-                includeAllOption={true}
-                onChange={handleFriendChange}
-                value={selectedFriend}
-                size="sm"
-                iconOnlyMobile={true}
-                width="auto"
-              />
-              <Button
-                colorScheme="blue"
-                onClick={handleSearch}
-                flexShrink={0}
-                size="sm"
-                px={3}
-              >
-                Go
-              </Button>
-            </Flex>
-
-            {/* Row 2: Sort Dropdown (Mobile) */}
-            <NativeSelectRoot
-              display={{ base: "block", md: "none" }}
-              size="sm"
-            >
-              <NativeSelectField
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                fontSize="sm"
-              >
-                <option value="date_added:desc">Recently Added</option>
-                <option value="date_added:asc">Oldest First</option>
-                <option value="year:desc">Newest Releases</option>
-                <option value="year:asc">Oldest Releases</option>
-                <option value="title:asc">Title (A-Z)</option>
-                <option value="album_rating:desc">Highest Rated</option>
-              </NativeSelectField>
-            </NativeSelectRoot>
-
-            {/* Desktop Layout */}
-            <Flex gap={2} display={{ base: "none", md: "flex" }}>
-              <InputGroup
-                startElement={<LuSearch size={16} />}
-                flex="1"
-                maxW="400px"
-              >
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  variant={"subtle"}
-                  fontSize="16px"
-                />
-              </InputGroup>
-
-              <Box width="200px" flexShrink={0}>
-                <UsernameSelect
-                  usernames={friends}
-                  includeAllOption={true}
-                  onChange={handleFriendChange}
-                  value={selectedFriend}
-                  size="md"
-                />
-              </Box>
-
+        <UnifiedSearchControls
+          query={query}
+          onQueryChange={setQuery}
+          onQueryEnter={handleSearch}
+          friends={friends}
+          selectedFriend={selectedFriend}
+          onFriendChange={handleFriendChange}
+          includeAllOption={true}
+          placeholder="Search albums..."
+          desktopControls={
+            <>
               <NativeSelectRoot width="220px" flexShrink={0}>
                 <NativeSelectField
                   value={sort}
@@ -186,17 +104,39 @@ function AlbumsPageContent() {
                   <option value="album_rating:desc">Highest Rated</option>
                 </NativeSelectField>
               </NativeSelectRoot>
-
-              <Button
-                colorScheme="blue"
-                onClick={handleSearch}
-                flexShrink={0}
-              >
+              <Button colorScheme="blue" onClick={handleSearch} flexShrink={0}>
                 Search
               </Button>
-            </Flex>
-          </Flex>
-        </Box>
+            </>
+          }
+          mobilePrimaryControl={
+            <Button
+              colorScheme="blue"
+              onClick={handleSearch}
+              flexShrink={0}
+              size="sm"
+              px={3}
+            >
+              Go
+            </Button>
+          }
+          mobileSecondaryControls={
+            <NativeSelectRoot size="sm" minW="100%">
+              <NativeSelectField
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                fontSize="sm"
+              >
+                <option value="date_added:desc">Recently Added</option>
+                <option value="date_added:asc">Oldest First</option>
+                <option value="year:desc">Newest Releases</option>
+                <option value="year:asc">Oldest Releases</option>
+                <option value="title:asc">Title (A-Z)</option>
+                <option value="album_rating:desc">Highest Rated</option>
+              </NativeSelectField>
+            </NativeSelectRoot>
+          }
+        />
 
         {/* Album Results */}
         <Suspense
@@ -209,7 +149,7 @@ function AlbumsPageContent() {
           <AlbumSearchResults />
         </Suspense>
       </Flex>
-    </Container>
+    </PageContainer>
   );
 }
 

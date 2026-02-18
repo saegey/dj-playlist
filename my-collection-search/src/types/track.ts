@@ -18,6 +18,7 @@ export type Track = {
   soundcloud_url?: string;
   album_thumbnail?: string;
   local_tags?: string | undefined;
+  composer?: string | undefined | null;
   bpm?: string | undefined | null;
   key?: string | undefined | null;
   danceability?: string | null;
@@ -27,6 +28,7 @@ export type Track = {
   mood_aggressive?: number | null;
   notes?: string | undefined | null;
   local_audio_url?: string;
+  audio_file_album_art_url?: string | null;
   star_rating?: number;
   username?: string; // Username of the user who added this track
   _semanticScore?: number; // Optional semantic score for AI recommendations
@@ -201,12 +203,14 @@ export interface Friend {
 export interface Album {
   release_id: string;
   friend_id: number;
+  username?: string;
   title: string;
   artist: string;
   year?: string;
   genres?: string[];
   styles?: string[];
   album_thumbnail?: string;
+  audio_file_album_art_url?: string;
   discogs_url?: string;
   date_added?: string;
   date_changed?: string;

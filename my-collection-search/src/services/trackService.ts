@@ -95,6 +95,32 @@ export async function analyzeTrackAsync(
   });
 }
 
+export async function analyzeLocalAudioAsync(args: {
+  track_id: string;
+  friend_id: number;
+  local_audio_url?: string | null;
+}): Promise<AsyncAnalyzeResponse> {
+  return await http<AsyncAnalyzeResponse>("/api/tracks/analyze-local-async", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+}
+
+export async function syncTrackYearFromAudio(args: {
+  track_id: string;
+  friend_id: number;
+}): Promise<{ success: boolean; year: string; previous_year?: string | number | null; message: string }> {
+  return await http<{ success: boolean; year: string; previous_year?: string | number | null; message: string }>(
+    `/api/tracks/${encodeURIComponent(args.track_id)}/sync-audio-year`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ friend_id: args.friend_id }),
+    }
+  );
+}
+
 export type UploadTrackAudioArgs = {
   file: File;
   track_id: string;
@@ -168,15 +194,15 @@ export async function bulkUpdateTrackNotes(
   });
 }
 
-// Fetch a map of track_id -> number of playlists the track appears in
+// Fetch a map of "track_id:friend_id" -> number of playlists the track appears in
 export async function fetchPlaylistCounts(
-  track_ids: string[]
+  track_refs: { track_id: string; friend_id: number }[]
 ): Promise<Record<string, number>> {
-  if (!track_ids || track_ids.length === 0) return {};
+  if (!track_refs || track_refs.length === 0) return {};
   return await http<Record<string, number>>("/api/tracks/playlist_counts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ track_ids }),
+    body: JSON.stringify({ track_refs }),
   });
 }
 

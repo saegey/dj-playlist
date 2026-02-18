@@ -22,12 +22,21 @@ class LocalPlaybackService {
   private isEnabled: boolean;
   private mpdHost: string;
   private mpdPort: number;
+  private mpdPathPrefix: string;
   private connectionPromise: Promise<void> | null = null;
 
   constructor() {
     this.isEnabled = process.env.ENABLE_AUDIO_PLAYBACK === 'true';
     this.mpdHost = process.env.MPD_HOST || 'mpd';
     this.mpdPort = parseInt(process.env.MPD_PORT || '6600', 10);
+    this.mpdPathPrefix = (process.env.MPD_PATH_PREFIX || '').trim();
+  }
+
+  private resolveMpdFilePath(filename: string): string {
+    const normalized = filename.replace(/\\/g, '/').replace(/^\/+/, '');
+    if (!this.mpdPathPrefix) return normalized;
+    const prefix = this.mpdPathPrefix.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    return `${prefix}/${normalized}`;
   }
 
   /**
@@ -60,14 +69,6 @@ class LocalPlaybackService {
           this.socket = socket;
           this.connectionPromise = null;
           console.log('[MPD] Ready');
-
-          // Set default volume to 50% on connection
-          try {
-            await this.setVolume(50);
-            console.log('[MPD] Default volume set to 50%');
-          } catch (error) {
-            console.error('[MPD] Failed to set default volume:', error);
-          }
 
           resolve();
         }
@@ -164,6 +165,8 @@ class LocalPlaybackService {
       throw new Error('Local playback is not enabled. Set ENABLE_AUDIO_PLAYBACK=true in .env');
     }
 
+    const mpdFilePath = this.resolveMpdFilePath(filename);
+
     try {
       // CRITICAL: Stop AirPlay before taking over the DAC
       // This ensures the app gets exclusive hardware access
@@ -172,13 +175,13 @@ class LocalPlaybackService {
         await airplayControlService.stopAirPlay();
       }
 
-      console.log('[MPD] Playing:', filename);
+      console.log('[MPD] Playing:', mpdFilePath);
 
       // Use command list for atomic execution (reduces stuttering)
       await this.sendCommand(
         `command_list_begin\n` +
         `clear\n` +
-        `add "${filename}"\n` +
+        `add "${mpdFilePath}"\n` +
         `play 0\n` +
         `command_list_end`
       );
@@ -198,7 +201,7 @@ class LocalPlaybackService {
           await this.sendCommand(
             `command_list_begin\n` +
             `clear\n` +
-            `add "${filename}"\n` +
+            `add "${mpdFilePath}"\n` +
             `play 0\n` +
             `command_list_end`
           );

@@ -43,6 +43,9 @@ type PlaylistPlayerContextValue = {
 
   volume: number;
   setVolume: (v: number) => void;
+  isAirPlayAvailable: boolean;
+  isAirPlayActive: boolean;
+  showAirPlayPicker: () => boolean;
 
   audioElement: React.ReactNode;
 };
@@ -97,6 +100,10 @@ export function PlaylistPlayerProvider({
   }, []);
   const playlistRef = useRef<Track[]>(initial);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  type WebKitAudioElement = HTMLAudioElement & {
+    webkitShowPlaybackTargetPicker?: () => void;
+    webkitCurrentPlaybackTargetIsWireless?: boolean;
+  };
 
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(
@@ -107,6 +114,8 @@ export function PlaylistPlayerProvider({
   const [volume, setVolumeState] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isAirPlayAvailable, setIsAirPlayAvailable] = useState(false);
+  const [isAirPlayActive, setIsAirPlayActive] = useState(false);
   const pendingSeekRef = useRef<number | null>(null);
   const lastSavedSecondRef = useRef<number | null>(null);
 
@@ -323,6 +332,19 @@ export function PlaylistPlayerProvider({
     }
   }, []);
 
+  const showAirPlayPicker = useCallback((): boolean => {
+    const audio = audioRef.current as WebKitAudioElement | null;
+    if (!audio || typeof audio.webkitShowPlaybackTargetPicker !== "function") {
+      return false;
+    }
+    try {
+      audio.webkitShowPlaybackTargetPicker();
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   // Keep currentTrack state in sync with index/playlist
   useEffect(() => {
     if (currentTrackIndex !== null && playlistRef.current[currentTrackIndex]) {
@@ -363,7 +385,7 @@ export function PlaylistPlayerProvider({
 
     // Only swap src when the track changes
     if (lastTrackIdRef.current !== track.track_id) {
-      audio.src = `/api/audio?filename=${track.local_audio_url}`;
+      audio.src = `/api/audio?filename=${encodeURIComponent(track.local_audio_url ?? "")}`;
       lastTrackIdRef.current = track.track_id;
       // reset timing until metadata loads
       setCurrentTime(0);
@@ -452,6 +474,55 @@ export function PlaylistPlayerProvider({
     ),
     []
   );
+
+  useEffect(() => {
+    const audio = audioRef.current as WebKitAudioElement | null;
+    if (!audio) return;
+
+    // Explicitly allow remote playback targets (Safari/AirPlay).
+    audio.disableRemotePlayback = false;
+    audio.setAttribute("x-webkit-airplay", "allow");
+    audio.setAttribute("airplay", "allow");
+
+    const hasPicker = typeof audio.webkitShowPlaybackTargetPicker === "function";
+    setIsAirPlayAvailable(hasPicker);
+    setIsAirPlayActive(Boolean(audio.webkitCurrentPlaybackTargetIsWireless));
+
+    const onAvailabilityChanged = (event: Event) => {
+      const availability = (event as Event & { availability?: string }).availability;
+      if (availability === "available") {
+        setIsAirPlayAvailable(true);
+      } else if (availability === "not-available") {
+        setIsAirPlayAvailable(false);
+      } else {
+        setIsAirPlayAvailable(hasPicker);
+      }
+      setIsAirPlayActive(Boolean(audio.webkitCurrentPlaybackTargetIsWireless));
+    };
+
+    audio.addEventListener(
+      "webkitplaybacktargetavailabilitychanged",
+      onAvailabilityChanged
+    );
+    const onWirelessChanged = () => {
+      setIsAirPlayActive(Boolean(audio.webkitCurrentPlaybackTargetIsWireless));
+    };
+    audio.addEventListener(
+      "webkitcurrentplaybacktargetiswirelesschanged",
+      onWirelessChanged
+    );
+
+    return () => {
+      audio.removeEventListener(
+        "webkitplaybacktargetavailabilitychanged",
+        onAvailabilityChanged
+      );
+      audio.removeEventListener(
+        "webkitcurrentplaybacktargetiswirelesschanged",
+        onWirelessChanged
+      );
+    };
+  }, [plVersion]);
 
   // --- Persistence: hydrate from localStorage on mount ---
   useEffect(() => {
@@ -553,6 +624,9 @@ export function PlaylistPlayerProvider({
 
       volume,
       setVolume,
+      isAirPlayAvailable,
+      isAirPlayActive,
+      showAirPlayPicker,
 
       audioElement,
     };
@@ -576,6 +650,9 @@ export function PlaylistPlayerProvider({
     removeFromQueue,
     volume,
     setVolume,
+    isAirPlayAvailable,
+    isAirPlayActive,
+    showAirPlayPicker,
     audioElement,
   ]);
 

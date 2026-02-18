@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button, Container, Heading, Stack, Flex } from "@chakra-ui/react";
+import { Button, Heading, Stack, Flex } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 import { toaster } from "@/components/ui/toaster";
 import { useCreateAlbumMutation } from "@/hooks/useCreateAlbumMutation";
@@ -10,6 +10,7 @@ import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import AlbumForm, { AlbumFormData } from "@/components/AlbumForm";
 import CoverArtUpload from "@/components/CoverArtUpload";
 import TrackListBuilder, { TrackFormData } from "@/components/TrackListBuilder";
+import PageContainer from "@/components/layout/PageContainer";
 
 export default function AddAlbumPage() {
   const router = useRouter();
@@ -170,7 +171,11 @@ export default function AddAlbumPage() {
   };
 
   return (
-    <Container maxW="container.xl" py={[0, 4]} px={0} mb={playlistLength > 0 ? "120px" : "0"}>
+    <PageContainer
+      size="standard"
+      py={{ base: 0, md: 4 }}
+      mb={playlistLength > 0 ? "120px" : "0"}
+    >
       <Stack gap={6}>
         <Heading size="2xl">Add Album</Heading>
 
@@ -202,6 +207,6 @@ export default function AddAlbumPage() {
           </Button>
         </Flex>
       </Stack>
-    </Container>
+    </PageContainer>
   );
 }

@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { Pool } from "pg";
 import { Track } from "@/types/track";
 
 const openai = new OpenAI({
@@ -7,41 +8,125 @@ const openai = new OpenAI({
     : "My API Key",
 });
 
-export function buildTrackPrompt(track: Track): string {
-  const parts = [];
-  parts.push(`Style: ${track.local_tags}`);
-  // if (track.styles?.length) {
-  //   parts.push(
-  //     `The album features ${track.styles.join(", ")} styles with ${
-  //       track.genres?.join(", ") ?? "genre-unspecified"
-  //     } genres.`
-  //   );
-  // }
-  if (track.key) {
-    parts.push(`Key: ${track.key}`);
-  }
-  if (track.bpm) {
-    parts.push(`BPM: ${track.bpm} `);
-  }
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-  if (track.danceability != null) {
-    parts.push(`Danceability score: ${track.danceability} out of 2.0`);
+const DEFAULT_TEMPLATE = [
+  "Title: {{title}}",
+  "Artist: {{artist}}",
+  "Album: {{album}}",
+  "Year: {{year}}",
+  "Style: {{local_tags}}",
+  "Genres: {{genres}}",
+  "Styles: {{styles}}",
+  "Key: {{key}}",
+  "BPM: {{bpm}}",
+  "Danceability: {{danceability}}",
+  "Mood Happy: {{mood_happy}}",
+  "Mood Sad: {{mood_sad}}",
+  "Mood Relaxed: {{mood_relaxed}}",
+  "Mood Aggressive: {{mood_aggressive}}",
+  "Notes: {{notes}}",
+].join("\n");
+
+type TemplateCacheEntry = {
+  template: string;
+  expiresAt: number;
+};
+
+const templateCache = new Map<number, TemplateCacheEntry>();
+const TEMPLATE_TTL_MS = 60_000;
+
+export function getDefaultTrackEmbeddingTemplate(): string {
+  return DEFAULT_TEMPLATE;
+}
+
+export function invalidateTrackEmbeddingTemplateCache(friendId?: number): void {
+  if (!friendId || Number.isNaN(friendId)) return;
+  templateCache.delete(friendId);
+}
+
+function cleanNotes(notes?: string | null): string {
+  if (!notes) return "";
+  return notes
+    .replace(/^["“”'].*?["“”']\s*/, "This track ")
+    .replace(/\[[^\]]+\]\([^)]+\)/g, "")
+    .trim();
+}
+
+function asList(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v)).filter(Boolean).join(", ");
   }
-  if (track.mood_happy != null) {
-    parts.push(`Moody: ${track.mood_happy > 0.5 ? "happy" : "moody"}.`);
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+async function getTemplateForFriend(friendId?: number): Promise<string> {
+  if (!friendId || Number.isNaN(friendId)) return DEFAULT_TEMPLATE;
+
+  const now = Date.now();
+  const cached = templateCache.get(friendId);
+  if (cached && cached.expiresAt > now) return cached.template;
+
+  try {
+    const { rows } = await pool.query(
+      "SELECT prompt_template FROM embedding_prompt_settings WHERE friend_id = $1",
+      [friendId]
+    );
+    const template =
+      rows.length > 0 && typeof rows[0].prompt_template === "string"
+        ? rows[0].prompt_template
+        : DEFAULT_TEMPLATE;
+    templateCache.set(friendId, {
+      template,
+      expiresAt: now + TEMPLATE_TTL_MS,
+    });
+    return template;
+  } catch {
+    return DEFAULT_TEMPLATE;
   }
-  if (track.notes) {
-    const cleanedNotes = track.notes.replace(
-      /^["“”'].*?["“”']\s*/,
-      "This track "
-    ).replace(/\[[^\]]+\]\([^)]+\)/g, "");
-    parts.push(`Notes: ${cleanedNotes}`);
-  }
-  return parts.join("\n");
+}
+
+function renderTemplate(template: string, track: Track): string {
+  const values: Record<string, string> = {
+    title: track.title || "",
+    artist: track.artist || "",
+    album: track.album || "",
+    year: track.year != null ? String(track.year) : "",
+    local_tags: asList(track.local_tags),
+    styles: asList(track.styles),
+    genres: asList(track.genres),
+    key: track.key != null ? String(track.key) : "",
+    bpm: track.bpm != null ? String(track.bpm) : "",
+    danceability:
+      track.danceability != null ? String(track.danceability) : "",
+    mood_happy: track.mood_happy != null ? String(track.mood_happy) : "",
+    mood_sad: track.mood_sad != null ? String(track.mood_sad) : "",
+    mood_relaxed:
+      track.mood_relaxed != null ? String(track.mood_relaxed) : "",
+    mood_aggressive:
+      track.mood_aggressive != null ? String(track.mood_aggressive) : "",
+    notes: cleanNotes(track.notes),
+  };
+
+  return template
+    .replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, token: string) => {
+      return values[token] ?? "";
+    })
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim() !== "")
+    .join("\n");
+}
+
+export function buildTrackPrompt(track: Track, template: string): string {
+  return renderTemplate(template || DEFAULT_TEMPLATE, track);
 }
 
 export async function getTrackEmbedding(track: Track): Promise<number[]> {
-  const prompt = buildTrackPrompt(track);
+  const template = await getTemplateForFriend(track.friend_id);
+  const prompt = buildTrackPrompt(track, template);
   console.log("Generating embedding for prompt:", prompt);
   const embeddingRes = await openai.embeddings.create({
     model: "text-embedding-3-small",

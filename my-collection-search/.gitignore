@@ -48,5 +48,9 @@ next-env.d.ts
 /public/uploads/album-covers/*
 !/public/uploads/album-covers/.gitkeep
 
+# Raw Essentia analysis files
+/essentia-data/*
+!/essentia-data/.gitkeep
+
 # Sentry Config File
 .env.sentry-build-plugin

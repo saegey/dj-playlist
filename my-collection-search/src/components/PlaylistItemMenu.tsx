@@ -27,7 +27,7 @@ export interface PlaylistItemMenuProps {
   total: number;
   track: Track;
   moveTrack: (fromIdx: number, toIdx: number) => void;
-  removeFromPlaylist: (trackId: string) => void;
+  removeFromPlaylist: (indexToRemove: number) => void;
   openTrackEditor: (track: Track) => void;
   size?: "xs" | "sm" | "md" | "lg";
 }
@@ -238,7 +238,7 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
               <FiZap /> AI Recommendations
             </Menu.Item>
             <Menu.Item
-              onSelect={() => removeFromPlaylist(track.track_id)}
+              onSelect={() => removeFromPlaylist(idx)}
               value="delete"
               color="fg.error"
               _hover={{ bg: "bg.error", color: "fg.error" }}
