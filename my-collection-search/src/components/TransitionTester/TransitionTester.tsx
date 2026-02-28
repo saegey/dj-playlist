@@ -231,7 +231,7 @@ export function TransitionTester({ trackA, trackB }: TransitionTesterProps) {
         <Box bg="blue.900" borderRadius="md" p={4}>
           <Text fontSize="sm" color="blue.200">
             💡 <strong>Tips:</strong> Use the crossfader to blend between decks.
-            Adjust pitch/tempo to match BPM, or use "Sync BPM" for automatic
+            Adjust pitch/tempo to match BPM, or use &quot;Sync BPM&quot; for automatic
             matching. Start Deck A, bring up the crossfader, then start Deck B
             to test your transition.
           </Text>

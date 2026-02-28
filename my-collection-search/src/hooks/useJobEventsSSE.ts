@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTrackStore } from "@/stores/trackStore";
 import { useTracksCacheUpdater } from "@/hooks/useTracksCacheUpdater";
@@ -36,11 +36,13 @@ export function useJobEventsSSE(enabled: boolean = true) {
   const { updateTrack } = useTrackStore();
   const { updateTracksInCache } = useTracksCacheUpdater();
   const eventSourceRef = useRef<EventSource | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (!enabled) return;
-    // Only run on client side
-    if (typeof window === "undefined") return;
+    if (!enabled) {
+      setIsConnected(false);
+      return;
+    }
 
     // Create SSE connection
     eventSourceRef.current = new EventSource("/api/jobs/events");
@@ -49,6 +51,7 @@ export function useJobEventsSSE(enabled: boolean = true) {
       try {
         if (event.data === "connected") {
           console.log("Job events SSE connected");
+          setIsConnected(true);
           return;
         }
 
@@ -103,6 +106,7 @@ export function useJobEventsSSE(enabled: boolean = true) {
 
     eventSourceRef.current.onerror = (error) => {
       console.error("Job events SSE connection error:", error);
+      setIsConnected(false);
     };
 
     // Cleanup on unmount
@@ -111,8 +115,9 @@ export function useJobEventsSSE(enabled: boolean = true) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
+      setIsConnected(false);
     };
   }, [enabled, queryClient, updateTrack, updateTracksInCache]);
 
-  return typeof window !== "undefined" && eventSourceRef.current?.readyState === EventSource.OPEN;
+  return isConnected;
 }

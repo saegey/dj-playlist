@@ -99,6 +99,7 @@ export function PlaylistPlayerProvider({
     return nav.mediaSession ?? null;
   }, []);
   const playlistRef = useRef<Track[]>(initial);
+  const [playlist, setPlaylist] = useState<Track[]>(initial);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   type WebKitAudioElement = HTMLAudioElement & {
     webkitShowPlaybackTargetPicker?: () => void;
@@ -179,6 +180,7 @@ export function PlaylistPlayerProvider({
       } = opts;
 
       playlistRef.current = Array.isArray(next) ? next.slice() : [];
+      setPlaylist(playlistRef.current);
       setPlVersion((v) => v + 1);
 
       let newIndex: number | null = null;
@@ -218,6 +220,7 @@ export function PlaylistPlayerProvider({
     const toAdd = Array.isArray(items) ? items : [items];
     if (!toAdd.length) return;
     playlistRef.current = [...playlistRef.current, ...toAdd];
+    setPlaylist(playlistRef.current);
     setPlVersion((v) => v + 1);
   }, []);
 
@@ -234,6 +237,7 @@ export function PlaylistPlayerProvider({
       const head = playlistRef.current.slice(0, idx + 1);
       const tail = playlistRef.current.slice(idx + 1);
       playlistRef.current = [...head, ...toAdd, ...tail];
+      setPlaylist(playlistRef.current);
       setPlVersion((v) => v + 1);
     },
     [currentTrackIndex, replacePlaylist]
@@ -241,6 +245,7 @@ export function PlaylistPlayerProvider({
 
   const clearQueue = useCallback(() => {
     playlistRef.current = [];
+    setPlaylist([]);
     setPlVersion((v) => v + 1);
     setCurrentTrackIndex(null);
     setIsPlaying(false);
@@ -263,6 +268,7 @@ export function PlaylistPlayerProvider({
     newPlaylist.splice(toIndex, 0, movedTrack);
 
     playlistRef.current = newPlaylist;
+    setPlaylist(newPlaylist);
     setPlVersion((v) => v + 1);
 
     // Adjust current track index if needed
@@ -294,6 +300,7 @@ export function PlaylistPlayerProvider({
     newPlaylist.splice(index, 1);
 
     playlistRef.current = newPlaylist;
+    setPlaylist(newPlaylist);
     setPlVersion((v) => v + 1);
 
     // Adjust current track index if needed
@@ -539,6 +546,7 @@ export function PlaylistPlayerProvider({
 
       if (Array.isArray(data.playlist)) {
         playlistRef.current = data.playlist as Track[];
+        setPlaylist(data.playlist as Track[]);
         setPlVersion((v) => v + 1);
       }
       if (
@@ -568,7 +576,7 @@ export function PlaylistPlayerProvider({
     (override?: Partial<{ currentTime: number }>) => {
       try {
         const payload = {
-          playlist: playlistRef.current,
+          playlist,
           currentTrackIndex,
           isPlaying,
           volume,
@@ -579,7 +587,7 @@ export function PlaylistPlayerProvider({
         // ignore storage errors
       }
     },
-    [currentTrackIndex, isPlaying, volume, currentTime]
+    [playlist, currentTrackIndex, isPlaying, volume, currentTime]
   );
 
   // Persist when structural state changes
@@ -599,13 +607,12 @@ export function PlaylistPlayerProvider({
   const value = useMemo<PlaylistPlayerContextValue>(() => {
     // Reference plVersion so dependency is meaningful and value recomputes when playlist changes
     void plVersion;
-    const pl = playlistRef.current;
     return {
       isPlaying,
       currentTrackIndex,
       currentTrack, // use state here
-      playlist: pl,
-      playlistLength: pl.length,
+      playlist,
+      playlistLength: playlist.length,
       seek,
 
       play,
@@ -634,6 +641,7 @@ export function PlaylistPlayerProvider({
     isPlaying,
     currentTrackIndex,
     currentTrack,
+    playlist,
     plVersion,
     seek,
     play,

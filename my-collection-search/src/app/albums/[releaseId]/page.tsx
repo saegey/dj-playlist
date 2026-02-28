@@ -2,7 +2,7 @@
 
 import React, { Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   Box,
   Flex,
@@ -20,7 +20,6 @@ import {
   Menu,
 } from "@chakra-ui/react";
 import { SiDiscogs } from "react-icons/si";
-import { IoArrowBack } from "react-icons/io5";
 import { FiPlay, FiDownload, FiEdit, FiMoreVertical } from "react-icons/fi";
 import NextLink from "next/link";
 
@@ -64,7 +63,6 @@ async function fetchDiscogsRawRelease(
 function AlbumDetailContent() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   const releaseId = params.releaseId as string;
   const friendId = parseInt(searchParams.get("friend_id") || "0");

@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
-import { redisJobService } from "@/services/redisJobService";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { trackOpsService } from "@/services/trackOpsService";
 
 export async function POST(req: Request) {
   try {
@@ -17,29 +14,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const { rows } = await pool.query(
-      "SELECT track_id, friend_id, local_audio_url FROM tracks WHERE track_id = $1 AND friend_id = $2 LIMIT 1",
-      [track_id, friend_id]
-    );
-    const row = rows[0];
-    if (!row?.local_audio_url) {
-      return NextResponse.json(
-        { error: "Track has no local_audio_url" },
-        { status: 400 }
-      );
+    const result = await trackOpsService.queueDurationFixForTrack({
+      track_id,
+      friend_id,
+    });
+
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: result.code });
     }
-
-    const jobId = await redisJobService.createDurationJob({
-      track_id,
-      friend_id,
-      local_audio_url: row.local_audio_url,
-    });
-
-    return NextResponse.json({
-      jobId,
-      track_id,
-      friend_id,
-    });
+    return NextResponse.json(result);
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     console.error("Error fixing duration:", err);

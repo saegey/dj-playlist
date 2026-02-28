@@ -170,7 +170,7 @@ export default function TransitionTestPage() {
               <strong>3.</strong> Copy their track_id values and paste above
             </Text>
             <Text>
-              <strong>4.</strong> Click "Load Tracks & Test Transition"
+              <strong>4.</strong> Click &quot;Load Tracks &amp; Test Transition&quot;
             </Text>
             <Text>
               <strong>5.</strong> Use the dual-deck player to test your transition!

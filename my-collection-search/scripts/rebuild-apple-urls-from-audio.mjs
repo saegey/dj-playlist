@@ -85,7 +85,7 @@ async function main() {
   // Check if mediainfo is available
   try {
     execSync('which mediainfo', { stdio: 'ignore' });
-  } catch (error) {
+  } catch {
     console.error('❌ mediainfo is not installed!');
     console.error('Install it with: apt-get update && apt-get install -y mediainfo');
     process.exit(1);

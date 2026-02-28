@@ -50,7 +50,7 @@ async function reindexMeiliSearch() {
       try {
         index = await meiliClient.getIndex('tracks');
         console.log('✅ Tracks index found\n');
-      } catch (error) {
+      } catch {
         console.log('Creating tracks index...');
         await meiliClient.createIndex('tracks', { primaryKey: 'id' });
         index = meiliClient.index('tracks');
@@ -75,7 +75,7 @@ async function reindexMeiliSearch() {
           } else if (typeof embedding === 'string') {
             try {
               vectorArr = JSON.parse(embedding);
-            } catch (e) {
+            } catch {
               // Ignore parsing errors
             }
           }

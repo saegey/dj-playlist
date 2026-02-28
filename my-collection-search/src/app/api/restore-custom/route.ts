@@ -140,7 +140,7 @@ END $$;
         stdio: "pipe",
         cwd: process.cwd(),
       });
-    } catch (migrateError) {
+    } catch {
       // Ignore errors - migrations are already applied
       console.log("[Restore] Migrations already up to date");
     }

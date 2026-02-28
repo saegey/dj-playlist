@@ -68,21 +68,24 @@ export default function UsernameSelect({
     return "Choose user library";
   }, [isLoading, loadingText, selectedFriend, includeAllOption]);
 
-  const handleSelect = (friend: Friend | null) => {
-    // Always call onChange when provided, passing the friend_id or 0 for "All"
-    if (onChange) {
-      onChange(friend ? friend.id : 0);
-    }
-    // Persist global library selection in both modes when a concrete library is chosen.
-    // For "All Libraries" (null), do not clear global selection in controlled mode.
-    if (friend) {
-      setCtxValue(friend);
-      return;
-    }
-    if (!isControlled) {
-      setCtxValue(null);
-    }
-  };
+  const handleSelect = React.useCallback(
+    (friend: Friend | null) => {
+      // Always call onChange when provided, passing the friend_id or 0 for "All"
+      if (onChange) {
+        onChange(friend ? friend.id : 0);
+      }
+      // Persist global library selection in both modes when a concrete library is chosen.
+      // For "All Libraries" (null), do not clear global selection in controlled mode.
+      if (friend) {
+        setCtxValue(friend);
+        return;
+      }
+      if (!isControlled) {
+        setCtxValue(null);
+      }
+    },
+    [isControlled, onChange, setCtxValue]
+  );
 
   // Heal stale persisted selections (e.g. restored DB with new friend IDs).
   React.useEffect(() => {
@@ -114,6 +117,7 @@ export default function UsernameSelect({
     selectedFriend,
     uniqueUsernames,
     includeAllOption,
+    handleSelect,
   ]);
 
   // Resolve responsive size to a concrete token for styling

@@ -1,11 +1,11 @@
 import { Pool } from "pg";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { TextEncoder } from "util";
 import { getPostHogClient } from "@/lib/posthog-server";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // let rows;
     // if (showCurrentUser) {

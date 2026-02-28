@@ -164,11 +164,15 @@ export function useSearchResults({
     gcTime: 5 * 60_000,
   });
 
-  const pages = isInfinite
-    ? infiniteQuery.data?.pages ?? []
-    : singlePageQuery.data
-    ? [singlePageQuery.data]
-    : [];
+  const pages = useMemo(
+    () =>
+      isInfinite
+        ? (infiniteQuery.data?.pages ?? [])
+        : singlePageQuery.data
+        ? [singlePageQuery.data]
+        : [],
+    [isInfinite, infiniteQuery.data?.pages, singlePageQuery.data]
+  );
   const results = useMemo(
     () => scopeHits(pages.flatMap((p) => p.hits)),
     [pages, scopeHits]

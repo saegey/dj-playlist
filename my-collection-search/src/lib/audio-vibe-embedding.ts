@@ -103,7 +103,7 @@ function extractEnhancedFeatures(
       percussiveness: normalizePercussiveness(onsetRate),
       partyMood: normalizePartyMood(partyScore),
     };
-  } catch (error) {
+  } catch {
     // Silently fall back to undefined if Essentia file doesn't exist
     return defaults;
   }

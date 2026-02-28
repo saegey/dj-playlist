@@ -7,7 +7,6 @@ import OpenAI from "openai";
 import { Pool } from "pg";
 import crypto from "crypto";
 import {
-  normalizeList,
   formatList,
   yearToEra,
   normalizeCountry,

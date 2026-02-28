@@ -71,7 +71,7 @@ export default function SimilarTracks({
         </Text>
         {String(error).includes("no identity embedding") && (
           <Text fontSize="sm" mt={2} color="gray.600">
-            This track doesn't have an identity embedding yet. Run the backfill
+            This track does not have an identity embedding yet. Run the backfill
             command to generate embeddings.
           </Text>
         )}
