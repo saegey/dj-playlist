@@ -13,7 +13,6 @@ import {
   Stack,
   CloseButton,
 } from "@chakra-ui/react";
-import { MeiliSearch } from "meilisearch";
 import { toaster } from "@/components/ui/toaster"; // your v3-style toaster
 import { Track } from "@/types/track";
 import { FiUpload } from "react-icons/fi";
@@ -37,14 +36,12 @@ type MatchedTrack = Track | null;
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  client: MeiliSearch | null;
   fetchPlaylists: () => void;
 }
 
 export default function AppleMusicXmlImport({
   isOpen,
   onClose,
-  client,
   fetchPlaylists,
 }: Props) {
   const [step, setStep] = useState<"idle" | "parsed" | "review">("idle");
@@ -58,6 +55,22 @@ export default function AppleMusicXmlImport({
 
   const notify = (opts: { title: string; type: "success" | "error" }) =>
     toaster.create({ title: opts.title, type: opts.type });
+
+  const searchTrack = async (q: string): Promise<Track | null> => {
+    const params = new URLSearchParams({
+      q,
+      limit: "1",
+      offset: "0",
+    });
+    const response = await fetch(`/api/tracks/search?${params.toString()}`, {
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error("Track search failed");
+    }
+    const payload = (await response.json()) as { hits?: Track[] };
+    return payload.hits?.[0] ?? null;
+  };
 
   const parseXml = async () => {
     if (!file) return;
@@ -114,17 +127,13 @@ export default function AppleMusicXmlImport({
   };
 
   const matchTracks = async () => {
-    if (!client) {
-      return;
-    }
     setLoading(true);
     const res: MatchedTrack[] = [];
     try {
-      const index = client.index<Track>("tracks");
       for (const t of tracks) {
-        let r = await index.search(`${t.name} ${t.artist}`, { limit: 1 });
-        if (!r.hits.length) r = await index.search(t.name, { limit: 1 });
-        res.push(r.hits[0] || null);
+        let hit = await searchTrack(`${t.name} ${t.artist}`.trim());
+        if (!hit) hit = await searchTrack(t.name);
+        res.push(hit);
       }
       setMatched(res);
       setStep("review");
@@ -378,19 +387,14 @@ export default function AppleMusicXmlImport({
                             size="xs"
                             placeholder="Search..."
                             onKeyDown={(e) => {
-                              if (!client) {
-                                return;
-                              }
                               if (e.key === "Enter") {
                                 const q = (e.target as HTMLInputElement).value;
                                 setLoading(true);
-                                client
-                                  .index<Track>("tracks")
-                                  .search(q, { limit: 1 })
-                                  .then((r) => {
+                                searchTrack(q)
+                                  .then((hit) => {
                                     setMatched((prev) =>
                                       prev.map((m, i) =>
-                                        i === idx ? r.hits[0] || null : m
+                                        i === idx ? hit : m
                                       )
                                     );
                                   })

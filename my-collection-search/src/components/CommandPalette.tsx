@@ -4,7 +4,6 @@ import React from "react";
 import { Command } from "cmdk";
 import * as RadixDialog from "@radix-ui/react-dialog";
 import { useRouter, usePathname } from "next/navigation";
-import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 import { usePlaylistsQuery } from "@/hooks/usePlaylistsQuery";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
@@ -36,7 +35,6 @@ const isEditableTarget = (el: EventTarget | null) => {
 export default function CommandPalette() {
   const router = useRouter();
   const pathname = usePathname();
-  const { client, ready } = useMeili();
   const { friend } = useUsername();
   const { playlists } = usePlaylistsQuery({ enabled: true });
   const {
@@ -81,7 +79,7 @@ export default function CommandPalette() {
   React.useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!open || !ready || !client) return;
+      if (!open) return;
       const q = query.trim();
       if (q.length === 0) {
         setTrackHits([]);
@@ -89,12 +87,19 @@ export default function CommandPalette() {
       }
       setLoadingTracks(true);
       try {
-        const index = client.index<TrackHit>("tracks");
-        const filter = friend?.id ? [`friend_id = ${friend.id}`] : undefined;
-        const res = await index.search(q, {
-          limit: 8,
-          filter,
+        const params = new URLSearchParams({
+          q,
+          limit: "8",
+          offset: "0",
         });
+        if (friend?.id) {
+          params.set("filter", `friend_id = ${friend.id}`);
+        }
+        const response = await fetch(`/api/tracks/search?${params.toString()}`, {
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error("Command palette search failed");
+        const res = (await response.json()) as { hits?: TrackHit[] };
         if (cancelled) return;
         setTrackHits(res.hits ?? []);
       } catch (err) {
@@ -110,7 +115,7 @@ export default function CommandPalette() {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [open, query, ready, client, friend?.id]);
+  }, [open, query, friend?.id]);
 
   const filteredPlaylists = React.useMemo(() => {
     const playlistItems = Array.isArray(playlists) ? playlists : [];

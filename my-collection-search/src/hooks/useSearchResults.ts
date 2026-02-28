@@ -1,5 +1,4 @@
 import { useMemo, useCallback, useState, useEffect, useRef } from "react";
-import type { MeiliSearch } from "meilisearch";
 import {
   useInfiniteQuery,
   useQuery,
@@ -7,14 +6,12 @@ import {
 } from "@tanstack/react-query";
 
 import type { Friend, Track } from "@/types/track";
-import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 import { queryKeys } from "@/lib/queryKeys";
 import { fetchPlaylistCounts } from "@/services/trackService";
 import { useTrackStore } from "@/stores/trackStore";
 
 interface UseSearchResultsOptions {
-  client?: MeiliSearch | null; // optional override; defaults to provider
   friend?: Friend | null; // optional override; defaults to provider
   filter?: string | string[];
   // New: choose between infinite scroll (default) or single-page pagination
@@ -35,7 +32,6 @@ type SearchPage = {
 const DEFAULT_LIMIT = 20;
 
 export function useSearchResults({
-  client,
   friend,
   filter,
   mode = "infinite",
@@ -47,10 +43,7 @@ export function useSearchResults({
   const qc = useQueryClient();
   const { setTracks } = useTrackStore();
   const populatedTrackIds = useRef(new Set<string>()); // Track which IDs we've already populated
-  // Resolve from providers by default
-  const { client: ctxClient, ready } = useMeili();
   const { friend: ctxFriend } = useUsername();
-  const effClient = client ?? ctxClient;
   const selectedFriend = friend ?? ctxFriend;
   const friendId = selectedFriend?.id;
   const selectedUsername = selectedFriend?.username?.trim().toLowerCase();
@@ -75,9 +68,15 @@ export function useSearchResults({
     () => filter ?? (friendId ? [`friend_id = ${friendId}`] : undefined),
     [filter, friendId]
   );
+  const normalizedFilter = useMemo(() => {
+    if (Array.isArray(searchFilter)) {
+      return searchFilter.length > 0 ? searchFilter.join(" AND ") : undefined;
+    }
+    return searchFilter;
+  }, [searchFilter]);
 
-  const enabled = !!effClient && (ready ?? true);
-  const bootstrapping = !effClient || ready === false;
+  const enabled = true;
+  const bootstrapping = false;
 
   // --- Tracks query (infinite or single page) ---
   const isInfinite = mode === "infinite";
@@ -89,12 +88,22 @@ export function useSearchResults({
     queryFn: async (context): Promise<SearchPage> => {
       const pageParam =
         typeof context.pageParam === "number" ? context.pageParam : 0;
-      const index = effClient!.index<Track>("tracks");
-      const res = await index.search(query || "", {
-        limit,
-        offset: pageParam,
-        filter: searchFilter,
+      const params = new URLSearchParams({
+        q: query || "",
+        limit: String(limit),
+        offset: String(pageParam),
       });
+      if (normalizedFilter) {
+        params.set("filter", normalizedFilter);
+      }
+      const response = await fetch(`/api/tracks/search?${params.toString()}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err?.error || "Track search failed");
+      }
+      const res = (await response.json()) as SearchPage;
       // Safety net: enforce friend scoping client-side too in case index/filter drifted.
       const scopedHits = scopeHits(res.hits ?? []);
       return {
@@ -121,17 +130,27 @@ export function useSearchResults({
       mode,
       page: page ?? 1,
     }),
-    enabled: enabled && !isInfinite && !!effClient,
+    enabled: enabled && !isInfinite,
     refetchOnWindowFocus: false,
     queryFn: async (): Promise<SearchPage> => {
-      const index = effClient!.index<Track>("tracks");
       const currentPage = Math.max(1, page ?? 1);
       const offset = (currentPage - 1) * limit;
-      const res = await index.search(query || "", {
-        limit,
-        offset,
-        filter: searchFilter,
+      const params = new URLSearchParams({
+        q: query || "",
+        limit: String(limit),
+        offset: String(offset),
       });
+      if (normalizedFilter) {
+        params.set("filter", normalizedFilter);
+      }
+      const response = await fetch(`/api/tracks/search?${params.toString()}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err?.error || "Track search failed");
+      }
+      const res = (await response.json()) as SearchPage;
       // Safety net: enforce friend scoping client-side too in case index/filter drifted.
       const scopedHits = scopeHits(res.hits ?? []);
       return {
@@ -225,39 +244,11 @@ export function useSearchResults({
   }, [qc]);
 
   // “Clear filter” previously loaded random docs; we emulate that by
-  // setting a random window into the cache for the current key.
+  // resetting the query and invalidating cached track searches.
   const clearFilter = useCallback(async () => {
-    if (!effClient) return;
-    const index = effClient.index<Track>("tracks");
-    const stats = await index.getStats();
-    const total = stats.numberOfDocuments || 0;
-    const sampleLimit = 10;
-    const randomOffset =
-      total > sampleLimit
-        ? Math.floor(Math.random() * (total - sampleLimit))
-        : 0;
-    const r = await index.search("", {
-      limit: sampleLimit,
-      offset: randomOffset,
-    });
-
-    // Write a single-page result into this query's cache to match infiniteQuery shape
-    const key = queryKeys.tracks({ q: "", filter: searchFilter, limit });
-    qc.setQueryData<{ pageParams: number[]; pages: SearchPage[] }>(key, {
-      pageParams: [0],
-      pages: [
-        {
-          hits: r.hits,
-          estimatedTotalHits: total,
-          offset: 0,
-          limit: sampleLimit,
-        },
-      ],
-    });
-
-    // Also update local query string so UI input reflects cleared state
     setQuery("");
-  }, [effClient, qc, searchFilter, limit]);
+    qc.invalidateQueries({ queryKey: queryKeys.tracksRoot() });
+  }, [qc]);
 
   // onChange helper kept for drop-in compatibility
   const onQueryChange = useCallback(

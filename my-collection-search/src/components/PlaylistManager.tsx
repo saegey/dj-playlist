@@ -19,7 +19,6 @@ import {
   Separator,
   Menu,
 } from "@chakra-ui/react";
-import { MeiliSearch } from "meilisearch";
 
 import { Toaster, toaster } from "@/components/ui/toaster"; // See below
 import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
@@ -38,13 +37,11 @@ import posthog from "posthog-js";
 type Props = {
   xmlImportModalOpen: boolean;
   setXmlImportModalOpen: (open: boolean) => void;
-  client: MeiliSearch | null;
 };
 
 export default function PlaylistManager({
   xmlImportModalOpen,
   setXmlImportModalOpen,
-  client,
 }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -449,7 +446,6 @@ export default function PlaylistManager({
       <AppleMusicXmlImport
         isOpen={xmlImportModalOpen}
         onClose={() => setXmlImportModalOpen(false)}
-        client={client}
         fetchPlaylists={fetchPlaylists}
       />
       <input

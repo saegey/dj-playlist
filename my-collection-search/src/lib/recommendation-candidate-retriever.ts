@@ -35,6 +35,11 @@ export interface RetrieveCandidatesOptions {
   ivfflatProbes?: number;
 }
 
+export interface SeedTrackRef {
+  trackId: string;
+  friendId: number;
+}
+
 /**
  * Candidate track with similarity scores and metadata
  */
@@ -228,6 +233,84 @@ async function queryIdentitySimilar(
   return result.rows;
 }
 
+function buildSeedValues(seedTracks: SeedTrackRef[]): {
+  valuesClause: string;
+  params: Array<string | number>;
+  limitParamIndex: number;
+} {
+  const params: Array<string | number> = [];
+  const tuples: string[] = [];
+
+  for (let i = 0; i < seedTracks.length; i += 1) {
+    const offset = i * 2;
+    tuples.push(`($${offset + 1}::text, $${offset + 2}::integer)`);
+    params.push(seedTracks[i].trackId, seedTracks[i].friendId);
+  }
+
+  return {
+    valuesClause: tuples.join(", "),
+    params,
+    limitParamIndex: seedTracks.length * 2 + 1,
+  };
+}
+
+async function queryIdentitySimilarByCentroid(
+  seedTracks: SeedTrackRef[],
+  limit: number,
+  ivfflatProbes: number
+): Promise<EmbeddingQueryResult[]> {
+  await pool.query(`SET ivfflat.probes = ${ivfflatProbes}`);
+
+  const { valuesClause, params, limitParamIndex } = buildSeedValues(seedTracks);
+  const query = `
+    WITH seeds(track_id, friend_id) AS (
+      VALUES ${valuesClause}
+    ),
+    seed_embedding AS (
+      SELECT AVG(te.embedding) AS embedding
+      FROM track_embeddings te
+      JOIN seeds s
+        ON te.track_id = s.track_id
+       AND te.friend_id = s.friend_id
+      WHERE te.embedding_type = 'identity'
+    )
+    SELECT
+      t.track_id,
+      t.friend_id,
+      t.title,
+      t.artist,
+      t.album,
+      t.year,
+      t.bpm,
+      t.key,
+      t.genres,
+      t.styles,
+      t.local_tags,
+      t.danceability,
+      t.mood_happy,
+      t.mood_sad,
+      t.mood_relaxed,
+      t.mood_aggressive,
+      t.star_rating,
+      te.embedding <=> se.embedding AS distance
+    FROM track_embeddings te
+    JOIN tracks t ON te.track_id = t.track_id AND te.friend_id = t.friend_id
+    CROSS JOIN seed_embedding se
+    WHERE te.embedding_type = 'identity'
+      AND se.embedding IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM seeds s
+        WHERE s.track_id = te.track_id AND s.friend_id = te.friend_id
+      )
+    ORDER BY te.embedding <=> se.embedding
+    LIMIT $${limitParamIndex}
+  `;
+
+  const result = await pool.query(query, [...params, limit]);
+  return result.rows;
+}
+
 /**
  * Query similar tracks by audio vibe embedding
  */
@@ -284,6 +367,63 @@ async function queryAudioSimilar(
   `;
 
   const result = await pool.query(query, [seedEmbedding, seedTrackId, seedFriendId, limit]);
+  return result.rows;
+}
+
+async function queryAudioSimilarByCentroid(
+  seedTracks: SeedTrackRef[],
+  limit: number,
+  ivfflatProbes: number
+): Promise<EmbeddingQueryResult[]> {
+  await pool.query(`SET ivfflat.probes = ${ivfflatProbes}`);
+
+  const { valuesClause, params, limitParamIndex } = buildSeedValues(seedTracks);
+  const query = `
+    WITH seeds(track_id, friend_id) AS (
+      VALUES ${valuesClause}
+    ),
+    seed_embedding AS (
+      SELECT AVG(te.embedding) AS embedding
+      FROM track_embeddings te
+      JOIN seeds s
+        ON te.track_id = s.track_id
+       AND te.friend_id = s.friend_id
+      WHERE te.embedding_type = 'audio_vibe'
+    )
+    SELECT
+      t.track_id,
+      t.friend_id,
+      t.title,
+      t.artist,
+      t.album,
+      t.year,
+      t.bpm,
+      t.key,
+      t.genres,
+      t.styles,
+      t.local_tags,
+      t.danceability,
+      t.mood_happy,
+      t.mood_sad,
+      t.mood_relaxed,
+      t.mood_aggressive,
+      t.star_rating,
+      te.embedding <=> se.embedding AS distance
+    FROM track_embeddings te
+    JOIN tracks t ON te.track_id = t.track_id AND te.friend_id = t.friend_id
+    CROSS JOIN seed_embedding se
+    WHERE te.embedding_type = 'audio_vibe'
+      AND se.embedding IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM seeds s
+        WHERE s.track_id = te.track_id AND s.friend_id = te.friend_id
+      )
+    ORDER BY te.embedding <=> se.embedding
+    LIMIT $${limitParamIndex}
+  `;
+
+  const result = await pool.query(query, [...params, limit]);
   return result.rows;
 }
 
@@ -419,6 +559,94 @@ export async function retrieveCandidates(
   };
 }
 
+export async function retrieveCandidatesForSeedTracks(
+  seedTracks: SeedTrackRef[],
+  options: RetrieveCandidatesOptions = {}
+): Promise<RetrieveCandidatesResult> {
+  if (!Array.isArray(seedTracks) || seedTracks.length === 0) {
+    throw new Error("At least one seed track is required");
+  }
+
+  const dedupedSeedTracks = Array.from(
+    new Map(
+      seedTracks
+        .filter((seed) => seed.trackId && Number.isFinite(seed.friendId))
+        .map((seed) => [`${seed.trackId}:${seed.friendId}`, seed] as const)
+    ).values()
+  );
+
+  if (dedupedSeedTracks.length === 0) {
+    throw new Error("No valid seed tracks provided");
+  }
+
+  const startTime = Date.now();
+  const { limitIdentity = 200, limitAudio = 200, ivfflatProbes = 10 } = options;
+
+  const identityStartTime = Date.now();
+  const identityResults = await queryIdentitySimilarByCentroid(
+    dedupedSeedTracks,
+    limitIdentity,
+    ivfflatProbes
+  );
+  const identityTime = Date.now() - identityStartTime;
+
+  const audioStartTime = Date.now();
+  const audioResults = await queryAudioSimilarByCentroid(
+    dedupedSeedTracks,
+    limitAudio,
+    ivfflatProbes
+  );
+  const audioTime = Date.now() - audioStartTime;
+
+  const candidateMap = new Map<string, CandidateTrack>();
+
+  for (const row of identityResults) {
+    const key = `${row.track_id}:${row.friend_id}`;
+    candidateMap.set(key, {
+      trackId: row.track_id,
+      friendId: row.friend_id,
+      simIdentity: distanceToSimilarity(row.distance),
+      simAudio: null,
+      metadata: buildCandidateMetadata(row),
+    });
+  }
+
+  for (const row of audioResults) {
+    const key = `${row.track_id}:${row.friend_id}`;
+    const existing = candidateMap.get(key);
+    if (existing) {
+      existing.simAudio = distanceToSimilarity(row.distance);
+    } else {
+      candidateMap.set(key, {
+        trackId: row.track_id,
+        friendId: row.friend_id,
+        simIdentity: null,
+        simAudio: distanceToSimilarity(row.distance),
+        metadata: buildCandidateMetadata(row),
+      });
+    }
+  }
+
+  const totalTime = Date.now() - startTime;
+  const seed0 = dedupedSeedTracks[0];
+
+  return {
+    seedTrackId: seed0.trackId,
+    seedFriendId: seed0.friendId,
+    candidates: Array.from(candidateMap.values()),
+    stats: {
+      identityCount: identityResults.length,
+      audioCount: audioResults.length,
+      unionCount: candidateMap.size,
+      timingMs: {
+        identityQuery: identityTime,
+        audioQuery: audioTime,
+        total: totalTime,
+      },
+    },
+  };
+}
+
 /**
  * Helper: Check if a track has embeddings
  */
@@ -437,5 +665,39 @@ export async function hasEmbeddings(
   return {
     identity: types.has('identity'),
     audio: types.has('audio_vibe'),
+  };
+}
+
+export async function hasEmbeddingsForSeedTracks(
+  seedTracks: SeedTrackRef[]
+): Promise<{ identity: boolean; audio: boolean }> {
+  const dedupedSeedTracks = Array.from(
+    new Map(
+      seedTracks
+        .filter((seed) => seed.trackId && Number.isFinite(seed.friendId))
+        .map((seed) => [`${seed.trackId}:${seed.friendId}`, seed] as const)
+    ).values()
+  );
+
+  if (dedupedSeedTracks.length === 0) {
+    return { identity: false, audio: false };
+  }
+
+  const { valuesClause, params } = buildSeedValues(dedupedSeedTracks);
+  const query = `
+    WITH seeds(track_id, friend_id) AS (
+      VALUES ${valuesClause}
+    )
+    SELECT DISTINCT te.embedding_type
+    FROM track_embeddings te
+    JOIN seeds s
+      ON te.track_id = s.track_id
+     AND te.friend_id = s.friend_id
+  `;
+  const result = await pool.query(query, params);
+  const types = new Set(result.rows.map((row) => row.embedding_type));
+  return {
+    identity: types.has("identity"),
+    audio: types.has("audio_vibe"),
   };
 }

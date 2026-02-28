@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Spinner, Text } from "@chakra-ui/react";
 
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
-import { useMeili } from "@/providers/MeiliProvider";
 import BackfillFilters from "@/components/backfill/BackfillFilters";
 import { useUsername } from "@/providers/UsernameProvider";
 import BackfillActionBar from "@/components/backfill/BackfillActionBar";
@@ -30,7 +29,6 @@ export default function BackfillAudioPage() {
   // Pagination state
   const [page, setPage] = useState(1);
   const pageSize = 15;
-  const { client: meiliClient, ready } = useMeili();
   const { mutate: updateStatus } = useBackfillStatusMutation();
   const { mutateAsync: vectorize } = useVectorizeTrackMutation();
   const { mutateAsync: analyze } = useAsyncAnalyzeTrackMutation();
@@ -62,7 +60,6 @@ export default function BackfillAudioPage() {
     query,
     setQuery,
   } = useSearchResults({
-    client: ready ? meiliClient : null,
     mode: "page",
     limit: pageSize,
     page,

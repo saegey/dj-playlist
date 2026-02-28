@@ -1,150 +1,134 @@
 import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Track } from "@/types/track";
-import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 
-// Local structural type to accept tracks that may contain embeddings
-export type TrackWithEmbedding = Track & {
-  _vectors?: {
-    default?: number[];
+export type TrackWithEmbedding = Track;
+
+type RecommendationCandidate = {
+  trackId: string;
+  friendId: number;
+  metadata?: {
+    title?: string;
+    artist?: string;
+    album?: string;
+    year?: string | null;
+    bpm?: number | null;
+    key?: string | null;
+    genres?: string[];
+    styles?: string[];
   };
 };
 
-function parseEmbeddingValue(value: unknown): number[] | null {
-  if (Array.isArray(value) && value.length > 0) {
-    return value.map((n) => Number(n)).filter((n) => Number.isFinite(n));
+type RecommendationCandidatesResponse = {
+  candidates?: RecommendationCandidate[];
+};
+
+async function fetchRecommendationsFromApi(
+  seeds: Array<{ track_id: string; friend_id: number }>,
+  limit: number
+): Promise<Track[]> {
+  const response = await fetch("/api/recommendations/candidates", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      tracks: seeds,
+      limit_identity: limit,
+      limit_audio: limit,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch recommendation candidates");
   }
-  if (typeof value === "string" && value.trim().length > 0) {
-    try {
-      const parsed = JSON.parse(value) as unknown;
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed
-          .map((n) => Number(n))
-          .filter((n) => Number.isFinite(n));
-      }
-    } catch {
-      // ignore parse failures
-    }
-  }
-  return null;
+  const payload = (await response.json()) as RecommendationCandidatesResponse;
+  const candidates = payload.candidates ?? [];
+  return candidates.map((candidate) => {
+    const metadata = candidate.metadata ?? {};
+    return {
+      id: 0,
+      track_id: candidate.trackId,
+      friend_id: candidate.friendId,
+      title: metadata.title ?? candidate.trackId,
+      artist: metadata.artist ?? "Unknown artist",
+      album: metadata.album ?? "Unknown album",
+      year: metadata.year ?? "",
+      styles: Array.isArray(metadata.styles) ? metadata.styles : [],
+      genres: Array.isArray(metadata.genres) ? metadata.genres : [],
+      duration: "",
+      position: 0,
+      discogs_url: "",
+      apple_music_url: "",
+      bpm: metadata.bpm != null ? String(metadata.bpm) : undefined,
+      key: metadata.key ?? undefined,
+      local_tags: undefined,
+      notes: undefined,
+    } as Track;
+  });
 }
 
-function extractEmbedding(track: TrackWithEmbedding): number[] | null {
-  return (
-    parseEmbeddingValue(track._vectors?.default) ??
-    parseEmbeddingValue((track as Track & { embedding?: unknown }).embedding)
-  );
-}
-
-function quoteMeiliString(value: string): string {
-  return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-}
-
-function buildRecommendationFilter(trackIds: string[], friendId?: number): string | undefined {
-  const clauses: string[] = [];
-  const uniqueIds = Array.from(new Set(trackIds.filter(Boolean)));
-  if (uniqueIds.length > 0) {
-    clauses.push(`NOT track_id IN [${uniqueIds.map(quoteMeiliString).join(", ")}]`);
-  }
-  if (typeof friendId === "number") {
-    clauses.push(`friend_id = ${friendId}`);
-  }
-  return clauses.length > 0 ? clauses.join(" AND ") : undefined;
-}
-
-function computeAverageEmbedding(list: TrackWithEmbedding[]): number[] | null {
-  const embeddings = list
-    .map((t) => extractEmbedding(t))
-    .filter((emb): emb is number[] => Array.isArray(emb) && emb.length > 0);
-  if (embeddings.length === 0) return null;
-  const dim = embeddings[0].length;
-  const avg = new Array(dim).fill(0);
-  for (const emb of embeddings) {
-    for (let i = 0; i < dim; i++) avg[i] += emb[i];
-  }
-  for (let i = 0; i < dim; i++) avg[i] /= embeddings.length;
-  return avg;
-}
-
-/**
- * Hook that returns a recommendation function backed by Meilisearch vector search.
- * The returned function takes (k, playlist) and returns top-k similar tracks not in the playlist,
- * optionally scoped to the current selected username.
- */
 export function useRecommendations() {
-  const { client: meiliClient, ready } = useMeili();
   const { friend: selectedFriend } = useUsername();
 
   const getRecommendations = useCallback(
-    async (
-      k: number = 25,
-      playlist: TrackWithEmbedding[] = []
-    ): Promise<Track[]> => {
-      const playlistAvgEmbedding = computeAverageEmbedding(playlist);
-      if (!playlistAvgEmbedding || playlistAvgEmbedding.length === 0) return [];
-      if (!ready || !meiliClient) return [];
-
+    async (k: number = 25, playlist: TrackWithEmbedding[] = []): Promise<Track[]> => {
+      const seeds = playlist
+        .map((track) => ({
+          track_id: track.track_id,
+          friend_id: selectedFriend?.id ?? track.friend_id,
+        }))
+        .filter(
+          (track): track is { track_id: string; friend_id: number } =>
+            typeof track.track_id === "string" && typeof track.friend_id === "number"
+        );
+      if (seeds.length === 0) return [];
+      const dedupedSeeds = Array.from(
+        new Map(seeds.map((seed) => [`${seed.track_id}:${seed.friend_id}`, seed])).values()
+      );
       try {
-        const index = meiliClient.index("tracks");
-        const playlistIds = playlist.map((t) => t.track_id);
-        const scopeFriendId = selectedFriend?.id ?? playlist[0]?.friend_id;
-        const filter = buildRecommendationFilter(playlistIds, scopeFriendId);
-        const results = await index.search(undefined, {
-          vector: playlistAvgEmbedding,
-          limit: k,
-          filter,
-        });
-        return (results.hits as Track[]) || [];
+        return await fetchRecommendationsFromApi(dedupedSeeds, k);
       } catch (err) {
         console.error("Error fetching recommendations:", err);
         return [];
       }
     },
-    [meiliClient, ready, selectedFriend]
+    [selectedFriend]
   );
 
   return getRecommendations;
 }
 
-/**
- * React Query version of recommendations hook.
- * Returns a query object with data, isLoading, etc.
- */
 export function useRecommendationsQuery(
   playlist: TrackWithEmbedding[] = [],
   limit: number = 50
 ) {
-  const { client: meiliClient, ready } = useMeili();
   const { friend: selectedFriend } = useUsername();
-
-  // Generate a stable key based on playlist track IDs
-  const playlistIds = playlist.map((t) => t.track_id).sort();
-  const friendId = selectedFriend?.id ?? playlist[0]?.friend_id;
+  const seeds = playlist
+    .map((track) => ({
+      track_id: track.track_id,
+      friend_id: selectedFriend?.id ?? track.friend_id,
+    }))
+    .filter(
+      (track): track is { track_id: string; friend_id: number } =>
+        typeof track.track_id === "string" && typeof track.friend_id === "number"
+    );
+  const dedupedSeeds = Array.from(
+    new Map(seeds.map((seed) => [`${seed.track_id}:${seed.friend_id}`, seed])).values()
+  );
+  const seedKey = dedupedSeeds.map((seed) => `${seed.track_id}:${seed.friend_id}`).sort();
 
   return useQuery({
-    queryKey: ["recommendations", { playlistIds, limit, friendId }],
+    queryKey: ["recommendations", { seeds: seedKey, limit }],
     queryFn: async (): Promise<Track[]> => {
-      const playlistAvgEmbedding = computeAverageEmbedding(playlist);
-      if (!playlistAvgEmbedding || playlistAvgEmbedding.length === 0) return [];
-      if (!ready || !meiliClient) return [];
-
+      if (dedupedSeeds.length === 0) return [];
       try {
-        const index = meiliClient.index("tracks");
-        const filter = buildRecommendationFilter(playlistIds, friendId);
-        const results = await index.search(undefined, {
-          vector: playlistAvgEmbedding,
-          limit,
-          filter,
-        });
-        return (results.hits as Track[]) || [];
+        return await fetchRecommendationsFromApi(dedupedSeeds, limit);
       } catch (err) {
         console.error("Error fetching recommendations:", err);
         return [];
       }
     },
-    enabled: playlist.length > 0 && ready,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: dedupedSeeds.length > 0,
+    staleTime: 1000 * 60 * 5,
   });
 }
 

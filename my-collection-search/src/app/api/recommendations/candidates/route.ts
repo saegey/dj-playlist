@@ -17,9 +17,15 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { retrieveCandidates, hasEmbeddings } from "@/lib/recommendation-candidate-retriever";
+import {
+  retrieveCandidates,
+  retrieveCandidatesForSeedTracks,
+  hasEmbeddings,
+  hasEmbeddingsForSeedTracks,
+} from "@/lib/recommendation-candidate-retriever";
 import {
   recommendationsQuerySchema,
+  recommendationsBatchBodySchema,
   recommendationsResponseSchema,
 } from "@/api-contract/schemas";
 
@@ -90,6 +96,75 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error("[Recommendation Candidates] Error:", error);
+    return NextResponse.json(
+      {
+        error: "Failed to retrieve recommendation candidates",
+        message: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const parsedBody = recommendationsBatchBodySchema.safeParse(await request.json());
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid recommendation body",
+          details: parsedBody.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+
+    const { tracks, limit_identity, limit_audio, ivfflat_probes } = parsedBody.data;
+
+    if (limit_identity < 1 || limit_identity > 1000) {
+      return NextResponse.json(
+        { error: "limit_identity must be between 1 and 1000" },
+        { status: 400 }
+      );
+    }
+    if (limit_audio < 1 || limit_audio > 1000) {
+      return NextResponse.json(
+        { error: "limit_audio must be between 1 and 1000" },
+        { status: 400 }
+      );
+    }
+
+    const seedTracks = tracks.map((track) => ({
+      trackId: track.track_id,
+      friendId: track.friend_id,
+    }));
+
+    const embeddings = await hasEmbeddingsForSeedTracks(seedTracks);
+    if (!embeddings.identity && !embeddings.audio) {
+      return NextResponse.json(
+        {
+          error: "No embeddings found for provided seed tracks",
+          message: "None of the provided tracks have identity or audio vibe embeddings.",
+          embeddings,
+        },
+        { status: 404 }
+      );
+    }
+
+    const result = await retrieveCandidatesForSeedTracks(seedTracks, {
+      limitIdentity: limit_identity,
+      limitAudio: limit_audio,
+      ivfflatProbes: ivfflat_probes,
+    });
+
+    const response = {
+      ...result,
+      seedEmbeddings: embeddings,
+    };
+    const validated = recommendationsResponseSchema.parse(response);
+    return NextResponse.json(validated);
+  } catch (error) {
+    console.error("[Recommendation Candidates POST] Error:", error);
     return NextResponse.json(
       {
         error: "Failed to retrieve recommendation candidates",

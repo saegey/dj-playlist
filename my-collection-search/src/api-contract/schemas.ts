@@ -150,6 +150,18 @@ export const recommendationsQuerySchema = z.object({
   ivfflat_probes: intFromInputSchema.optional().default(10),
 });
 
+export const recommendationSeedTrackSchema = z.object({
+  track_id: z.string().min(1),
+  friend_id: intFromInputSchema,
+});
+
+export const recommendationsBatchBodySchema = z.object({
+  tracks: z.array(recommendationSeedTrackSchema).min(1).max(100),
+  limit_identity: intFromInputSchema.optional().default(200),
+  limit_audio: intFromInputSchema.optional().default(200),
+  ivfflat_probes: intFromInputSchema.optional().default(10),
+});
+
 export const seedEmbeddingsSchema = z.object({
   identity: z.boolean(),
   audio: z.boolean(),

@@ -17,6 +17,20 @@ type PlaylistTrackRow = {
   friend_id: number;
 };
 
+function normalizePlaylistCreatedAt<T extends { created_at?: unknown }>(playlist: T): T & { created_at: string } {
+  const raw = playlist.created_at;
+  const createdAt =
+    raw instanceof Date
+      ? raw.toISOString()
+      : typeof raw === "string"
+      ? raw
+      : new Date(raw as string | number).toISOString();
+  return {
+    ...playlist,
+    created_at: createdAt,
+  };
+}
+
 // Helper functions for friend_id resolution
 async function getDefaultFriendId(): Promise<number> {
   const result = await pool.query("SELECT id FROM friends ORDER BY id LIMIT 1");
@@ -72,10 +86,12 @@ async function getAllPlaylistsWithTracks() {
       tracksByPlaylist[row.playlist_id] = [];
     tracksByPlaylist[row.playlist_id].push(row);
   });
-  return playlists.map((p: Playlist) => ({
-    ...p,
-    tracks: tracksByPlaylist[p.id] || [],
-  }));
+  return playlists.map((p: Playlist) =>
+    normalizePlaylistCreatedAt({
+      ...p,
+      tracks: tracksByPlaylist[p.id] || [],
+    })
+  );
 }
 
 // Types for playlist track input (allows metadata passthrough)
@@ -444,7 +460,7 @@ export async function POST(req: Request) {
       console.error("PostHog capture error:", posthogError);
     }
 
-    const validated = playlistSchema.parse(playlist);
+    const validated = playlistSchema.parse(normalizePlaylistCreatedAt(playlist));
     return NextResponse.json(validated, { status: 201 });
   } catch (error) {
     console.error("Error creating playlist:", error);
@@ -572,7 +588,9 @@ export async function PATCH(req: Request) {
         })
       );
 
-      const validated = playlistSchema.parse({ ...playlistRow, tracks: trackIds });
+      const validated = playlistSchema.parse(
+        normalizePlaylistCreatedAt({ ...playlistRow, tracks: trackIds })
+      );
       return NextResponse.json(validated);
     } finally {
       client.release();
