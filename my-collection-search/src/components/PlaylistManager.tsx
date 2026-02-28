@@ -52,7 +52,6 @@ export default function PlaylistManager({
   const { friend: currentUserFriend } = useUsername();
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
-    showSpotifyUsernames: true,
   });
 
   const { replacePlaylist } = usePlaylistPlayer();

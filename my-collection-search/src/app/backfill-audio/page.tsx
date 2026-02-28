@@ -24,7 +24,7 @@ export default function BackfillAudioPage() {
   const [showMissingVectors, setShowMissingVectors] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { friends: usernames, friendsLoading: usernamesLoading } =
-    useFriendsQuery({ showCurrentUser: true, showSpotifyUsernames: true });
+    useFriendsQuery({ showCurrentUser: true });
   const { friend: selectedFriend } = useUsername();
   const [analyzing, setAnalyzing] = useState(false);
   // Pagination state
@@ -147,7 +147,6 @@ export default function BackfillAudioPage() {
           apple_music_url: track.apple_music_url,
           youtube_url: track.youtube_url,
           soundcloud_url: track.soundcloud_url,
-          spotify_url: track.spotify_url,
         });
 
         console.log(`Queued track ${trackId} for processing, job ID: ${response.jobId}`);

@@ -3,7 +3,7 @@
 import React from "react";
 import { Box, Table, Badge, RatingGroup, Link, Icon, Flex } from "@chakra-ui/react";
 import { Track } from "@/types/track";
-import { SiDiscogs, SiApplemusic, SiYoutube, SiSpotify, SiSoundcloud } from "react-icons/si";
+import { SiDiscogs, SiApplemusic, SiYoutube, SiSoundcloud } from "react-icons/si";
 import { FaPlay } from "react-icons/fa";
 import { keyToCamelot } from "@/lib/playlistOrder";
 import { getTrackDurationSeconds } from "@/lib/trackUtils";
@@ -153,11 +153,6 @@ export default function TrackTableView({
                     {track.discogs_url && (
                       <Link href={track.discogs_url} target="_blank" aria-label="Discogs">
                         <SiDiscogs size={16} />
-                      </Link>
-                    )}
-                    {track.spotify_url && (
-                      <Link href={track.spotify_url} target="_blank" aria-label="Spotify">
-                        <SiSpotify size={16} />
                       </Link>
                     )}
                     {track.apple_music_url && (

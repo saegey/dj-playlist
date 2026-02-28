@@ -56,7 +56,6 @@ const SearchResults: React.FC = () => {
   const { friend: currentUserFriend, setFriend, isHydrated } = useUsername();
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
-    showSpotifyUsernames: true,
   });
 
   // Ensure tracks view is always scoped to a library unless user explicitly clears.
@@ -140,7 +139,6 @@ const SearchResults: React.FC = () => {
       has_missing_any_streaming: !!filters.missingAnyStreamingUrl,
       has_missing_apple_music: !!filters.missingAppleMusic,
       has_missing_youtube: !!filters.missingYouTube,
-      has_missing_spotify: !!filters.missingSpotify,
       has_missing_soundcloud: !!filters.missingSoundCloud,
     });
   };

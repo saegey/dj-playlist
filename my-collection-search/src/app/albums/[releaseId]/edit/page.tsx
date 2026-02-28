@@ -197,7 +197,6 @@ function EditAlbumContent() {
           local_tags: track.local_tags,
           star_rating: track.star_rating,
           apple_music_url: track.apple_music_url,
-          spotify_url: track.spotify_url,
           youtube_url: track.youtube_url,
           soundcloud_url: track.soundcloud_url,
         })),

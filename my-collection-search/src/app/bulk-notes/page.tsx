@@ -30,7 +30,6 @@ export default function BulkNotesPage() {
   const [aiPrompt, setAiPrompt] = useState<string>("");
   const { friends, friendsLoading } = useFriendsQuery({
     showCurrentUser: true,
-    showSpotifyUsernames: true,
   });
   const { friend } = useUsername();
   const [bulkJson, setBulkJson] = useState("");
@@ -126,7 +125,7 @@ export default function BulkNotesPage() {
         url:
           t.discogs_url && t.discogs_url.trim() !== ""
             ? t.discogs_url
-            : t.spotify_url,
+            : t.apple_music_url || t.youtube_url || t.soundcloud_url,
       }));
     const fullPrompt = buildBulkTrackMetadataPrompt(selectedTracks, aiPrompt);
     // Robust clipboard copy with fallback

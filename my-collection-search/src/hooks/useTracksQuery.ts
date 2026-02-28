@@ -39,7 +39,6 @@ export function useTracksQuery() {
         danceability:
           form.danceability != null ? String(form.danceability) : undefined,
         apple_music_url: form.apple_music_url,
-        spotify_url: form.spotify_url,
         youtube_url: form.youtube_url,
         soundcloud_url: form.soundcloud_url,
         star_rating: form.star_rating,

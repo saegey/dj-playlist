@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button, Menu, Icon, Box } from "@chakra-ui/react";
-import { SiApplemusic, SiChatbot, SiSpotify, SiYoutube, SiDiscogs } from "react-icons/si";
+import { SiApplemusic, SiChatbot, SiYoutube, SiDiscogs } from "react-icons/si";
 import { FiDownload, FiMoreVertical, FiTrash } from "react-icons/fi";
 import { HiUpload } from "react-icons/hi";
 
@@ -15,9 +15,6 @@ export interface TrackEditActionsProps {
 
   youtubeLoading: boolean;
   onSearchYouTube: () => void;
-
-  spotifyLoading: boolean;
-  onSearchSpotify: () => void;
 
   discogsLoading?: boolean;
   onSearchDiscogs?: () => void;
@@ -41,7 +38,6 @@ export default function TrackEditActions(props: TrackEditActionsProps) {
     onSearchApple,
     youtubeLoading,
     onSearchYouTube,
-    onSearchSpotify,
     discogsLoading,
     onSearchDiscogs,
     analyzeLoading,
@@ -92,10 +88,6 @@ export default function TrackEditActions(props: TrackEditActionsProps) {
             >
               <Icon as={SiYoutube} />
               {youtubeLoading ? "Searching YouTube..." : "Search YouTube"}
-            </Menu.Item>
-
-            <Menu.Item value="spotify" onSelect={onSearchSpotify}>
-              <Icon as={SiSpotify} /> Search Spotify
             </Menu.Item>
 
             {onSearchDiscogs && (

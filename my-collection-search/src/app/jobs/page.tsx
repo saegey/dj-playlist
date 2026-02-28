@@ -143,13 +143,6 @@ export default function JobsPage() {
         color: "orange" as const,
         quality: "audio"
       };
-    } else if (data.spotify_url) {
-      return {
-        name: "spotdl",
-        source: "Spotify",
-        color: "green" as const,
-        quality: "320k"
-      };
     }
 
     return {
@@ -202,7 +195,6 @@ export default function JobsPage() {
       discogs_url: (job.data.discogs_url as string | undefined) || "",
       apple_music_url: (job.data.apple_music_url as string | undefined) || "",
       youtube_url: job.data.youtube_url,
-      spotify_url: job.data.spotify_url,
       soundcloud_url: job.data.soundcloud_url,
       album_thumbnail: job.data.album_thumbnail || "/images/placeholder-artwork.png",
       local_tags: "",

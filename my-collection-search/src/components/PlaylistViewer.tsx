@@ -197,7 +197,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     const missingAudio = tracks.filter(
       (t) =>
         !t.local_audio_url &&
-        (t.apple_music_url || t.spotify_url || t.youtube_url || t.soundcloud_url)
+        (t.apple_music_url || t.youtube_url || t.soundcloud_url)
     );
 
     if (missingAudio.length === 0) {
@@ -217,7 +217,6 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           title: track.title,
           artist: track.artist,
           apple_music_url: track.apple_music_url || undefined,
-          spotify_url: track.spotify_url || undefined,
           youtube_url: track.youtube_url || undefined,
           soundcloud_url: track.soundcloud_url || undefined,
         });

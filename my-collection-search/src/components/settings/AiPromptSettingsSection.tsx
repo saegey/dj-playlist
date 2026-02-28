@@ -19,7 +19,6 @@ export default function AiPromptSettingsSection(): React.JSX.Element {
   const { friend, setFriend } = useUsername();
   const { friends, friendsLoading } = useFriendsQuery({
     showCurrentUser: true,
-    showSpotifyUsernames: true,
   });
 
   const [prompt, setPrompt] = React.useState("");

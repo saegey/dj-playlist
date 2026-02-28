@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Button, Menu, Portal, Dialog, Flex, Box, Icon, Link } from "@chakra-ui/react";
 import { FiCalendar, FiClock, FiDownload, FiEdit, FiMoreVertical, FiPlus, FiPlusSquare, FiZap, FiTarget } from "react-icons/fi";
-import { SiApplemusic, SiSpotify, SiYoutube, SiSoundcloud } from "react-icons/si";
+import { SiApplemusic, SiYoutube, SiSoundcloud } from "react-icons/si";
 
 import type { Track } from "@/types/track";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
@@ -40,7 +40,7 @@ export default function TrackActionsMenu({ track }: Props) {
     Boolean(track.apple_music_url || track.youtube_url || track.soundcloud_url);
   const canAnalyze =
     !!track.local_audio_url ||
-    Boolean(track.apple_music_url || track.youtube_url || track.soundcloud_url || track.spotify_url);
+    Boolean(track.apple_music_url || track.youtube_url || track.soundcloud_url);
   const canRecalcDuration =
     !!track.local_audio_url && (!track.duration_seconds || track.duration_seconds <= 0);
   const canSyncYearFromAudio = !!track.local_audio_url;
@@ -131,7 +131,6 @@ export default function TrackActionsMenu({ track }: Props) {
             apple_music_url: track.apple_music_url,
             youtube_url: track.youtube_url,
             soundcloud_url: cleanSoundcloudUrl(track.soundcloud_url),
-            spotify_url: track.spotify_url,
             title: track.title,
             artist: track.artist,
           });
@@ -294,7 +293,7 @@ export default function TrackActionsMenu({ track }: Props) {
               </Menu.Item>
 
               {/* Music Service Links */}
-              {(track.apple_music_url || track.spotify_url || track.youtube_url || track.soundcloud_url) && (
+              {(track.apple_music_url || track.youtube_url || track.soundcloud_url) && (
                 <>
                   <Box
                     as="hr"
@@ -307,13 +306,6 @@ export default function TrackActionsMenu({ track }: Props) {
                     <Menu.Item value="apple" asChild>
                       <Link href={track.apple_music_url} target="_blank" rel="noopener noreferrer">
                         <Icon as={SiApplemusic} /> Apple Music
-                      </Link>
-                    </Menu.Item>
-                  )}
-                  {track.spotify_url && (
-                    <Menu.Item value="spotify" asChild>
-                      <Link href={track.spotify_url} target="_blank" rel="noopener noreferrer">
-                        <Icon as={SiSpotify} /> Spotify
                       </Link>
                     </Menu.Item>
                   )}

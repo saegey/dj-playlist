@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { Pool } from "pg";
+import {
+  playlistDetailParamsSchema,
+  playlistDetailResponseSchema,
+} from "@/api-contract/schemas";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -9,13 +13,14 @@ export async function GET(
 ) {
   try {
     const { id: idParam } = await params;
-    const id = Number(idParam);
-    if (!idParam || Number.isNaN(id)) {
+    const parsedParams = playlistDetailParamsSchema.safeParse({ id: idParam });
+    if (!parsedParams.success) {
       return NextResponse.json(
-        { error: "Invalid playlist id" },
+        { error: "Invalid playlist id", details: parsedParams.error.flatten() },
         { status: 400 }
       );
     }
+    const id = parsedParams.data.id;
 
     // Ensure playlist exists
     const playlistRes = await pool.query(
@@ -43,11 +48,13 @@ export async function GET(
         };
       }
     );
-    return NextResponse.json({
+    const response = {
       playlist_id: id,
       tracks: trackIds,
       playlist_name: playlistRes.rows[0].name,
-    });
+    };
+    const validated = playlistDetailResponseSchema.parse(response);
+    return NextResponse.json(validated);
   } catch (error) {
     console.error("Error fetching playlist tracks:", error);
     return NextResponse.json(

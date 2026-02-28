@@ -25,7 +25,6 @@ export async function POST(request: Request) {
       soundcloud_url,
       track_id,
       friend_id,
-      spotify_url,
     } = body;
 
     let filePath: string | null = null;
@@ -59,36 +58,6 @@ export async function POST(request: Request) {
           console.warn(
             "Apple Music download failed, will try YouTube or SoundCloud if available.",
             appleErr
-          );
-        }
-      }
-      // Try Spotify Music if available
-      if (!filePath && spotify_url) {
-        console.log(`Downloading from Spotify: ${spotify_url}`);
-        try {
-          const spotifyOutDir = path.join(tmpDir, `spotify_${Date.now()}`);
-          fs.mkdirSync(spotifyOutDir, { recursive: true });
-          await execAsync(
-            `freyr get --no-tree --directory "${spotifyOutDir}" "${spotify_url}"`
-          );
-          // Find the newest .m4a file in the output directory
-          const files = fs
-            .readdirSync(spotifyOutDir)
-            .filter((f) => f.endsWith(".m4a"))
-            .map((f) => ({
-              file: path.join(spotifyOutDir, f),
-              mtime: fs.statSync(path.join(spotifyOutDir, f)).mtime.getTime(),
-            }))
-            .sort((a, b) => b.mtime - a.mtime);
-          if (files.length > 0 && fs.statSync(files[0].file).size > 0) {
-            filePath = files[0].file;
-          } else {
-            throw new Error("Downloaded .m4a file from Spotify not found");
-          }
-        } catch (spotifyErr) {
-          console.warn(
-            "Spotify download failed, will try YouTube or SoundCloud if available.",
-            spotifyErr
           );
         }
       }

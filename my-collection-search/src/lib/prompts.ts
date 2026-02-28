@@ -40,7 +40,7 @@ export function buildBulkTrackMetadataPrompt(
         `Title: ${t.title}`,
         `Artist: ${t.artist}`,
         `Album: ${t.album ?? ""}`,
-        t.url ? `Discogs/Spotify URL: ${t.url}` : undefined,
+        t.url ? `Reference URL: ${t.url}` : undefined,
         `---`,
       ].filter(Boolean);
       return lines.join("\n");

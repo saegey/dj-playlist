@@ -13,7 +13,6 @@ import AiPromptSettingsSection from "@/components/settings/AiPromptSettingsSecti
 import EmbeddingPromptSettingsSection from "@/components/settings/EmbeddingPromptSettingsSection";
 import PageContainer from "@/components/layout/PageContainer";
 import DiscogsSyncDialog from "@/components/settings/dialogs/DiscogsSyncDialog";
-import SpotifySyncDialog from "@/components/settings/dialogs/SpotifySyncDialog";
 import RemoveFriendDialog from "@/components/settings/dialogs/RemoveFriendDialog"; // your streamed removal dialog
 
 export default function SettingsPage() {
@@ -34,7 +33,6 @@ export default function SettingsPage() {
 
         {/* dialogs */}
         <DiscogsSyncDialog />
-        <SpotifySyncDialog />
         <RemoveFriendDialog />
       </SyncStreamsProvider>
     </SettingsDialogsProvider>

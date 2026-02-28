@@ -20,8 +20,6 @@ import { YoutubeVideo } from "@/types/track";
 import { useAppleMusicPicker } from "@/hooks/useAppleMusicPicker";
 import AppleMusicPickerDialog from "@/components/AppleMusicPickerDialog";
 import { cleanSoundcloudUrl } from "@/lib/url";
-import { useSpotifyPicker } from "@/hooks/useSpotifyPicker";
-import SpotifyPickerDialog from "@/components/SpotifyPickerDialog";
 import YouTubePickerDialog from "@/components/YouTubePickerDialog";
 import TrackEditFormSkeleton from "@/components/TrackEditFormSkeleton";
 import { createTrackEditActionsWrapper } from "@/components/TrackEditActionsWrapper";
@@ -46,7 +44,6 @@ export interface TrackEditFormProps {
   key?: string | undefined | null;
   danceability?: number | null;
   apple_music_url?: string;
-  spotify_url?: string;
   youtube_url?: string;
   soundcloud_url?: string;
   star_rating?: number;
@@ -83,7 +80,6 @@ export default function TrackEditForm({
     danceability: (track?.danceability as string | undefined) || "",
     apple_music_url: track?.apple_music_url || "",
     youtube_url: track?.youtube_url || "",
-    spotify_url: track?.spotify_url || "",
     soundcloud_url: track?.soundcloud_url || "",
     star_rating:
       typeof track?.star_rating === "number" ? track!.star_rating : 0,
@@ -105,7 +101,6 @@ export default function TrackEditForm({
       danceability: (track.danceability as string | undefined) || "",
       apple_music_url: track.apple_music_url || "",
       youtube_url: track.youtube_url || "",
-      spotify_url: track.spotify_url || "",
       soundcloud_url: track.soundcloud_url || "",
       star_rating:
         typeof track.star_rating === "number" ? track.star_rating : 0,
@@ -125,12 +120,6 @@ export default function TrackEditForm({
   const [discogsVideos, setDiscogsVideos] = useState<DiscogsVideo[] | null>(null);
   const [showDiscogsModal, setShowDiscogsModal] = useState(false);
   const [discogsLoading, setDiscogsLoading] = useState(false);
-
-  const spotifyPicker = useSpotifyPicker({
-    onSelect: (track) => {
-      setForm((prev) => ({ ...prev, spotify_url: track.url }));
-    },
-  });
 
   const applePicker = useAppleMusicPicker({
     onSelect: (song) => {
@@ -298,10 +287,6 @@ export default function TrackEditForm({
     searchYouTube(title, artist);
   };
 
-  const searchSpotify = async () => {
-    await spotifyPicker.search({ title: form.title, artist: form.artist });
-  };
-
   const searchDiscogs = async () => {
     if (!track?.track_id) {
       toaster.create({
@@ -372,7 +357,6 @@ export default function TrackEditForm({
         soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
         track_id: form.track_id,
         friend_id: form.friend_id,
-        spotify_url: form.spotify_url,
       });
       console.log("Analysis job queued:", response);
 
@@ -441,8 +425,6 @@ export default function TrackEditForm({
     onSearchApple: searchAppleMusic,
     youtubeLoading: youtubeLoading,
     onSearchYouTube: searchYouTube,
-    spotifyLoading: spotifyPicker.loading,
-    onSearchSpotify: searchSpotify,
     discogsLoading: discogsLoading,
     onSearchDiscogs: searchDiscogs,
     analyzeLoading: analyzeLoading,
@@ -480,8 +462,7 @@ export default function TrackEditForm({
                         analyzeLoading ||
                         (!form.apple_music_url &&
                           !form.youtube_url &&
-                          !form.soundcloud_url &&
-                          !form.spotify_url)
+                          !form.soundcloud_url)
                       }
                     />
                   )}
@@ -584,12 +565,6 @@ export default function TrackEditForm({
                       onChange={handleChange}
                     />
                     <LabeledInput
-                      label="Spotify URL"
-                      name="spotify_url"
-                      value={form.spotify_url || ""}
-                      onChange={handleChange}
-                    />
-                    <LabeledInput
                       label="SoundCloud URL"
                       name="soundcloud_url"
                       value={form.soundcloud_url || ""}
@@ -629,17 +604,6 @@ export default function TrackEditForm({
                     initialTitle={form.title}
                     initialArtist={form.artist}
                     onSearch={handleYouTubeSearch}
-                  />
-
-                  {/* --- Spotify Dialog --- */}
-                  <SpotifyPickerDialog
-                    open={spotifyPicker.isOpen}
-                    loading={spotifyPicker.loading}
-                    results={spotifyPicker.results}
-                    onOpenChange={(open) =>
-                      open ? spotifyPicker.open() : spotifyPicker.close()
-                    }
-                    onSelect={(t) => spotifyPicker.select(t)}
                   />
 
                   {/* --- Apple Music Dialog --- */}

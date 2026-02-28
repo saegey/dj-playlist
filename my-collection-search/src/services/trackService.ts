@@ -58,7 +58,6 @@ export type AnalyzeArgs = {
   apple_music_url?: string | null;
   youtube_url?: string | null;
   soundcloud_url?: string | null;
-  spotify_url?: string | null;
 };
 
 export type AnalyzeResponse = {

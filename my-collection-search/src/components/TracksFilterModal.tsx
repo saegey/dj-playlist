@@ -16,7 +16,6 @@ export interface TracksFilter {
   missingAudio?: boolean;
   missingAppleMusic?: boolean;
   missingYouTube?: boolean;
-  missingSpotify?: boolean;
   missingSoundCloud?: boolean;
   missingAnyStreamingUrl?: boolean;
   missingMetadata?: boolean;
@@ -104,7 +103,7 @@ export default function TracksFilterModal({
                       <Checkbox.HiddenInput />
                       <Checkbox.Control />
                       <Text fontSize="sm" ml={2}>
-                        Missing all streaming URLs (Apple/YouTube/Spotify/SoundCloud)
+                        Missing all streaming URLs (Apple/YouTube/SoundCloud)
                       </Text>
                     </Checkbox.Root>
 
@@ -130,16 +129,6 @@ export default function TracksFilterModal({
                           <Checkbox.HiddenInput />
                           <Checkbox.Control />
                           <Text fontSize="sm" ml={2}>Missing YouTube URL</Text>
-                        </Checkbox.Root>
-
-                        <Checkbox.Root
-                          checked={filters.missingSpotify}
-                          onChange={() => handleCheckboxChange("missingSpotify")}
-                          disabled={filters.missingAnyStreamingUrl}
-                        >
-                          <Checkbox.HiddenInput />
-                          <Checkbox.Control />
-                          <Text fontSize="sm" ml={2}>Missing Spotify URL</Text>
                         </Checkbox.Root>
 
                         <Checkbox.Root

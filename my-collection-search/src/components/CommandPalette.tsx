@@ -113,9 +113,10 @@ export default function CommandPalette() {
   }, [open, query, ready, client, friend?.id]);
 
   const filteredPlaylists = React.useMemo(() => {
+    const playlistItems = Array.isArray(playlists) ? playlists : [];
     const q = query.trim().toLowerCase();
-    if (!q) return playlists.slice(0, 8);
-    return playlists
+    if (!q) return playlistItems.slice(0, 8);
+    return playlistItems
       .filter((p) => p.name.toLowerCase().includes(q))
       .slice(0, 8);
   }, [playlists, query]);

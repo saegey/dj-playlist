@@ -28,7 +28,7 @@ export async function POST(
       // and have at least one music service URL
       const result = await pool.query(
         `SELECT track_id, friend_id, apple_music_url, youtube_url,
-                soundcloud_url, spotify_url, title, artist
+                soundcloud_url, title, artist
          FROM tracks
          WHERE release_id = $1
            AND friend_id = $2
@@ -36,8 +36,7 @@ export async function POST(
            AND (
              apple_music_url IS NOT NULL OR
              youtube_url IS NOT NULL OR
-             soundcloud_url IS NOT NULL OR
-             spotify_url IS NOT NULL
+             soundcloud_url IS NOT NULL
            )
          ORDER BY position`,
         [releaseId, friendId]
@@ -63,7 +62,6 @@ export async function POST(
           apple_music_url: track.apple_music_url,
           youtube_url: track.youtube_url,
           soundcloud_url: track.soundcloud_url,
-          spotify_url: track.spotify_url,
           title: track.title,
           artist: track.artist,
         });

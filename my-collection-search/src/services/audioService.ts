@@ -16,7 +16,6 @@ export type Downloader = "freyr" | "spotdl" | "yt-dlp" | "scdl";
 
 export interface AudioDownloadOptions {
   apple_music_url?: string;
-  spotify_url?: string;
   youtube_url?: string;
   soundcloud_url?: string;
   preferred_downloader?: Downloader;
@@ -44,10 +43,8 @@ export class AudioService {
   ): Promise<AudioDownloadResult> {
     const {
       apple_music_url,
-      spotify_url,
       youtube_url,
       soundcloud_url,
-      preferred_downloader,
     } = options;
 
     let filePath: string | null = null;
@@ -62,26 +59,7 @@ export class AudioService {
       }
     }
 
-    // 2. If a preferred downloader is specified, try that for Spotify
-    if (!filePath && preferred_downloader && spotify_url) {
-      if (preferred_downloader === "spotdl") {
-        console.log(`Using preferred downloader SpotDL for Spotify: ${spotify_url}`);
-        try {
-          filePath = await this.downloadFromSpotDL(spotify_url);
-        } catch (spotdlErr) {
-          console.warn("SpotDL download failed, will try fallback downloaders.", spotdlErr);
-        }
-      } else if (preferred_downloader === "freyr") {
-        console.log(`Using preferred downloader Freyr for Spotify: ${spotify_url}`);
-        try {
-          filePath = await this.downloadFromSpotify(spotify_url);
-        } catch (freyrErr) {
-          console.warn("Freyr download failed, will try fallback downloaders.", freyrErr);
-        }
-      }
-    }
-
-    // 3. Fallback to original priority order if above failed
+    // 2. Fallback to original priority order if above failed
 
     // Try Apple Music with Freyr if SpotDL failed
     if (!filePath && apple_music_url) {
@@ -90,26 +68,6 @@ export class AudioService {
         filePath = await this.downloadFromAppleMusic(apple_music_url);
       } catch (appleErr) {
         console.warn("Apple Music (Freyr) download failed, will try next source.", appleErr);
-      }
-    }
-
-    // Try Spotify with Freyr if SpotDL wasn't already tried
-    if (!filePath && spotify_url && preferred_downloader !== "spotdl") {
-      console.log(`Downloading from Spotify (Freyr): ${spotify_url}`);
-      try {
-        filePath = await this.downloadFromSpotify(spotify_url);
-      } catch (spotifyErr) {
-        console.warn("Spotify (Freyr) download failed, will try next source.", spotifyErr);
-      }
-    }
-
-    // Try Spotify with SpotDL if Freyr wasn't already tried
-    if (!filePath && spotify_url && preferred_downloader !== "freyr") {
-      console.log(`Downloading from Spotify (SpotDL): ${spotify_url}`);
-      try {
-        filePath = await this.downloadFromSpotDL(spotify_url);
-      } catch (spotdlErr) {
-        console.warn("Spotify (SpotDL) download failed, will try next source.", spotdlErr);
       }
     }
 
@@ -191,30 +149,6 @@ export class AudioService {
       return files[0].file;
     } else {
       throw new Error("Downloaded .m4a file from Apple Music not found");
-    }
-  }
-
-  private async downloadFromSpotify(url: string): Promise<string> {
-    const spotifyOutDir = path.join(this.tmpDir, `spotify_${Date.now()}`);
-    fs.mkdirSync(spotifyOutDir, { recursive: true });
-
-    await execAsync(
-      `freyr get --no-tree --directory "${spotifyOutDir}" "${url}"`
-    );
-
-    const files = fs
-      .readdirSync(spotifyOutDir)
-      .filter((f) => f.endsWith(".m4a"))
-      .map((f) => ({
-        file: path.join(spotifyOutDir, f),
-        mtime: fs.statSync(path.join(spotifyOutDir, f)).mtime.getTime(),
-      }))
-      .sort((a, b) => b.mtime - a.mtime);
-
-    if (files.length > 0 && fs.statSync(files[0].file).size > 0) {
-      return files[0].file;
-    } else {
-      throw new Error("Downloaded .m4a file from Spotify not found");
     }
   }
 

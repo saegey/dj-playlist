@@ -234,7 +234,6 @@ export function MissingAppleProvider({
               ? (data as { danceability?: number }).danceability
               : undefined,
           apple_music_url: data.apple_music_url,
-          spotify_url: data.spotify_url,
           youtube_url: data.youtube_url,
           soundcloud_url: data.soundcloud_url,
           star_rating:

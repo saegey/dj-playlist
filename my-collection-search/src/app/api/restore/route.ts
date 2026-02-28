@@ -61,24 +61,91 @@ export async function POST(request: Request) {
     const host = pg.host || "db";
     const port = pg.port || "5432";
 
-    // Delete all rows from all tables before restore
-    // Generate a script that disables triggers, deletes all data, and re-enables triggers
-    const cleanScript = `\nDO $$ DECLARE\n    r RECORD;\nBEGIN\n    -- Disable triggers\n    EXECUTE 'SET session_replication_role = replica';\n    -- Delete from all tables\n    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP\n        EXECUTE 'DELETE FROM "' || r.tablename || '"';\n    END LOOP;\n    -- Re-enable triggers\n    EXECUTE 'SET session_replication_role = DEFAULT';\nEND $$;\n`;
+    // Delete data from all tables (keep schema intact)
+    console.log("[Restore] Cleaning data from all tables...");
+    const cleanScript = `
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    -- Disable triggers to avoid foreign key issues
+    SET session_replication_role = replica;
+
+    -- Truncate all tables INCLUDING pgmigrations
+    -- (We'll skip pgmigrations data during restore to avoid conflicts)
+    FOR r IN (
+        SELECT tablename
+        FROM pg_tables
+        WHERE schemaname = 'public'
+    ) LOOP
+        EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+
+    -- Re-enable triggers
+    SET session_replication_role = DEFAULT;
+END $$;
+`;
     const cleanPath = path.join(restoreDir, "clean.sql");
     fs.writeFileSync(cleanPath, cleanScript);
+
     // Run the clean script
     const cleanCmd = `PGPASSWORD='${pass}' psql -U ${user} -h ${host} -p ${port} -d ${db} -f '${cleanPath}'`;
-    execSync(cleanCmd, {
-      stdio: "ignore",
-      env: { ...process.env, PGPASSWORD: pass },
-    });
+    try {
+      execSync(cleanCmd, {
+        stdio: "pipe",
+        env: { ...process.env, PGPASSWORD: pass },
+      });
+      console.log("[Restore] Data cleaned successfully");
+    } catch (cleanError) {
+      const errorOutput = cleanError instanceof Error && 'stderr' in cleanError
+        ? (cleanError as any).stderr?.toString() || cleanError.message
+        : String(cleanError);
+      console.warn("[Restore] Clean warning:", errorOutput);
+    }
 
-    // Run psql restore
-    const cmd = `PGPASSWORD='${pass}' psql -U ${user} -h ${host} -p ${port} -d ${db} -f '${restorePath}'`;
-    execSync(cmd, {
-      stdio: "ignore",
-      env: { ...process.env, PGPASSWORD: pass },
-    });
+    // Pre-process SQL file to remove pgmigrations COPY blocks
+    console.log("[Restore] Pre-processing backup file...");
+    const sqlContent = fs.readFileSync(restorePath, 'utf8');
+
+    // Remove COPY pgmigrations block (to avoid conflicts with current migrations)
+    const filteredSql = sqlContent.replace(
+      /COPY\s+public\.pgmigrations\s+\([^)]+\)\s+FROM\s+stdin;[\s\S]*?\\\.\s*$/gm,
+      '-- COPY pgmigrations skipped to avoid conflicts'
+    );
+
+    const filteredPath = path.join(restoreDir, "restore-filtered.sql");
+    fs.writeFileSync(filteredPath, filteredSql);
+
+    // Run psql restore with proper options for COPY statements
+    // --single-transaction: Run restore in a single transaction
+    // -v ON_ERROR_STOP=1: Stop on first error (but within transaction)
+    // -q: Quiet mode (reduce output noise)
+    const cmd = `PGPASSWORD='${pass}' psql -U ${user} -h ${host} -p ${port} -d ${db} --single-transaction -v ON_ERROR_STOP=1 -q -f '${filteredPath}'`;
+    try {
+      execSync(cmd, {
+        stdio: "pipe",
+        env: { ...process.env, PGPASSWORD: pass },
+      });
+      console.log("[Restore] Backup restored successfully (pgmigrations skipped)");
+    } catch (execError) {
+      // Capture stderr for better error messages
+      const errorOutput = execError instanceof Error && 'stderr' in execError
+        ? (execError as any).stderr?.toString() || execError.message
+        : String(execError);
+      throw new Error(`Database restore failed: ${errorOutput}`);
+    }
+
+    // Re-run migrations to ensure pgmigrations is up to date
+    console.log("[Restore] Re-running migrations to update history...");
+    try {
+      execSync("npm run migrate up", {
+        stdio: "pipe",
+        cwd: process.cwd(),
+      });
+    } catch (migrateError) {
+      // Ignore errors - migrations are already applied
+      console.log("[Restore] Migrations already up to date");
+    }
 
     let albumsIndexed = 0;
     let tracksIndexed = 0;

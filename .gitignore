@@ -17,3 +17,9 @@ djplaylist_backup_*
 
 # IMPORTANT: Never commit MCP config with production API keys!
 .mcp.json
+
+# Claude Code working files
+.claude/scratch/
+.claude/questions.txt
+.claude/notes/
+*.claude-temp.md

@@ -10,7 +10,6 @@ export async function POST(request: Request) {
       soundcloud_url,
       track_id,
       friend_id,
-      spotify_url,
       preferred_downloader
     } = body;
 
@@ -23,7 +22,7 @@ export async function POST(request: Request) {
     }
 
     // Validate that at least one URL is provided
-    if (!apple_music_url && !youtube_url && !soundcloud_url && !spotify_url) {
+    if (!apple_music_url && !youtube_url && !soundcloud_url) {
       return NextResponse.json(
         { error: "At least one music service URL is required" },
         { status: 400 }
@@ -37,7 +36,6 @@ export async function POST(request: Request) {
       track_id,
       friend_id: parseInt(friend_id, 10),
       apple_music_url,
-      spotify_url,
       youtube_url,
       soundcloud_url,
       preferred_downloader,

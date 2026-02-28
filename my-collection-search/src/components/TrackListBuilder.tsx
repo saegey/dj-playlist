@@ -18,7 +18,6 @@ export interface TrackFormData {
   local_tags?: string;
   star_rating?: number;
   apple_music_url?: string;
-  spotify_url?: string;
   youtube_url?: string;
   soundcloud_url?: string;
 }
@@ -192,13 +191,6 @@ export default function TrackListBuilder({
                   value={track.apple_music_url || ''}
                   onChange={(e) => updateTrack(index, 'apple_music_url', e.target.value)}
                   placeholder="https://music.apple.com/..."
-                  size="sm"
-                />
-                <LabeledInput
-                  label="Spotify URL"
-                  value={track.spotify_url || ''}
-                  onChange={(e) => updateTrack(index, 'spotify_url', e.target.value)}
-                  placeholder="https://open.spotify.com/..."
                   size="sm"
                 />
                 <LabeledInput

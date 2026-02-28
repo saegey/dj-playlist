@@ -31,12 +31,9 @@ export async function removeFriendApi(username: string) {
 }
 
 export async function fetchFriends(
-  showCurrentUser?: boolean,
-  showSpotifyUsernames?: boolean
+  showCurrentUser?: boolean
 ): Promise<Friend[]> {
-  const res = await fetch(
-    `/api/friends?showCurrentUser=${!!showCurrentUser}&showSpotifyUsernames=${!!showSpotifyUsernames}`
-  );
+  const res = await fetch(`/api/friends?showCurrentUser=${!!showCurrentUser}`);
   const data = await res.json();
   return data.results || [];
 }

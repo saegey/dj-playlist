@@ -1,6 +1,12 @@
 import { Playlist } from "@/types/track";
 import { NextResponse } from "next/server";
 import { getPostHogClient } from "@/lib/posthog-server";
+import {
+  playlistSchema,
+  playlistCreateBodySchema,
+  playlistDeleteQuerySchema,
+  playlistPatchBodySchema,
+} from "@/api-contract/schemas";
 
 import { Pool } from "pg";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -339,13 +345,16 @@ async function createPlaylistWithTracks(data: {
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-    if (!id) {
+    const parsedQuery = playlistDeleteQuerySchema.safeParse({
+      id: searchParams.get("id"),
+    });
+    if (!parsedQuery.success) {
       return NextResponse.json(
-        { error: "Missing playlist id" },
+        { error: "Missing playlist id", details: parsedQuery.error.flatten() },
         { status: 400 }
       );
     }
+    const { id } = parsedQuery.data;
     // Delete playlist (playlist_tracks will cascade)
     const result = await pool.query(
       "DELETE FROM playlists WHERE id = $1 RETURNING *",
@@ -388,7 +397,15 @@ export async function DELETE(req: Request) {
 export async function GET() {
   try {
     const playlists = await getAllPlaylistsWithTracks();
-    return NextResponse.json(playlists);
+    const validated = playlistSchema.array().safeParse(playlists);
+    if (!validated.success) {
+      console.warn(
+        "Playlists response failed schema validation; returning raw payload for compatibility",
+        validated.error.flatten()
+      );
+      return NextResponse.json(playlists);
+    }
+    return NextResponse.json(validated.data);
   } catch (error) {
     console.error("Error fetching playlists:", error);
     return NextResponse.json(
@@ -400,7 +417,14 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const data = await req.json();
+    const parsedBody = playlistCreateBodySchema.safeParse(await req.json());
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: "Invalid playlist payload", details: parsedBody.error.flatten() },
+        { status: 400 }
+      );
+    }
+    const data = parsedBody.data;
     const playlist = await createPlaylistWithTracks(data);
 
     // PostHog: Track playlist creation (server-side)
@@ -420,7 +444,8 @@ export async function POST(req: Request) {
       console.error("PostHog capture error:", posthogError);
     }
 
-    return NextResponse.json(playlist, { status: 201 });
+    const validated = playlistSchema.parse(playlist);
+    return NextResponse.json(validated, { status: 201 });
   } catch (error) {
     console.error("Error creating playlist:", error);
     return NextResponse.json(
@@ -433,32 +458,17 @@ export async function POST(req: Request) {
 // Update a playlist's name and/or tracks
 export async function PATCH(req: Request) {
   try {
-    const body = await req.json();
-    const idRaw = body?.id;
-    const name: string | undefined = body?.name;
-    const tracks: (string | PlaylistTrackInput)[] | undefined = body?.tracks;
-    const default_friend_id: number | undefined = body?.default_friend_id;
-
-    const id = Number(idRaw);
-    if (!idRaw || Number.isNaN(id)) {
+    const parsedBody = playlistPatchBodySchema.safeParse(await req.json());
+    if (!parsedBody.success) {
       return NextResponse.json(
-        { error: "Invalid or missing playlist id" },
+        {
+          error: "Invalid playlist update payload",
+          details: parsedBody.error.flatten(),
+        },
         { status: 400 }
       );
     }
-
-    if (name !== undefined && typeof name !== "string") {
-      return NextResponse.json(
-        { error: "'name' must be a string" },
-        { status: 400 }
-      );
-    }
-    if (tracks !== undefined && !Array.isArray(tracks)) {
-      return NextResponse.json(
-        { error: "'tracks' must be an array of track ids or objects" },
-        { status: 400 }
-      );
-    }
+    const { id, name, tracks, default_friend_id } = parsedBody.data;
 
     const client = await pool.connect();
     try {
@@ -562,7 +572,8 @@ export async function PATCH(req: Request) {
         })
       );
 
-      return NextResponse.json({ ...playlistRow, tracks: trackIds });
+      const validated = playlistSchema.parse({ ...playlistRow, tracks: trackIds });
+      return NextResponse.json(validated);
     } finally {
       client.release();
     }

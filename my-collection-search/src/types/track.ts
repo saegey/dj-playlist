@@ -40,64 +40,6 @@ export type Track = {
   hasVectors?: boolean;
 };
 
-// Spotify track type based on API response
-export type SpotifyTrack = {
-  added_at: string;
-  track: {
-    album: {
-      album_type: string;
-      artists: Array<{
-        external_urls: { spotify: string };
-        href: string;
-        id: string;
-        name: string;
-        type: string;
-        uri: string;
-      }>;
-      available_markets: string[];
-      external_urls: { spotify: string };
-      href: string;
-      id: string;
-      images: Array<{
-        height: number;
-        width: number;
-        url: string;
-      }>;
-      is_playable: boolean;
-      name: string;
-      release_date: string;
-      release_date_precision: string;
-      total_tracks: number;
-      type: string;
-      uri: string;
-    };
-    artists: Array<{
-      external_urls: { spotify: string };
-      href: string;
-      id: string;
-      name: string;
-      type: string;
-      uri: string;
-    }>;
-    available_markets: string[];
-    disc_number: number;
-    duration_ms: number;
-    explicit: boolean;
-    external_ids: { isrc: string };
-    external_urls: { spotify: string };
-    href: string;
-    id: string;
-    is_local: boolean;
-    is_playable: boolean;
-    name: string;
-    popularity: number;
-    preview_url: string | null;
-    track_number: number;
-    type: string;
-    uri: string;
-  };
-};
-
 export type YoutubeVideo = {
   id: string;
   title: string;
@@ -122,18 +64,6 @@ export interface Playlist {
   tracks: { track_id: string; friend_id: number; position: number }[];
   created_at: string;
 }
-
-export type SpotifyApiTrack = {
-  id: string;
-  name: string;
-  artists: { name: string }[];
-  album: {
-    name: string;
-    images?: { url: string }[];
-  };
-  external_urls: { spotify: string };
-  duration_ms: number;
-};
 
 export interface DiscogsRelease {
   id: number | string;

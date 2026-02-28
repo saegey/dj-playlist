@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button, Flex, Menu, Text, Box } from "@chakra-ui/react";
 import { FiDatabase, FiBriefcase, FiTrash2, FiMoreVertical, FiImage } from "react-icons/fi";
-import { SiDiscogs, SiSpotify } from "react-icons/si";
+import { SiDiscogs } from "react-icons/si";
 import { toaster } from "@/components/ui/toaster";
 import {
   useUpdateDiscogsIndex,
@@ -12,9 +12,7 @@ import {
   useCleanupManifests,
   useDeleteReleases,
 } from "@/hooks/useDiscogsQuery";
-import { useIngestSpotifyIndex } from "@/hooks/useSpotifyQuery";
 import { useBackupsQuery } from "@/hooks/useBackupsQuery";
-import { useSettingsDialogs } from "@/providers/SettingsDialogProvider";
 import { useCleanupAlbums, useBackfillReleaseId } from "@/hooks/useAlbumsQuery";
 import ManifestVerificationDialog from "@/components/settings/dialogs/ManifestVerificationDialog";
 import RemovedReleasesDialog from "@/components/settings/dialogs/RemovedReleasesDialog";
@@ -37,9 +35,7 @@ export default function ActionsGrid() {
   });
   const verifyManifests = useVerifyManifests();
   const cleanupManifests = useCleanupManifests();
-  const spotifyIndex = useIngestSpotifyIndex();
   const { addBackup, addBackupLoading } = useBackupsQuery();
-  const { setSpotifySyncOpen } = useSettingsDialogs();
   const cleanupAlbums = useCleanupAlbums();
   const backfillReleaseId = useBackfillReleaseId();
   const [durationFixLoading, setDurationFixLoading] = useState(false);
@@ -264,16 +260,6 @@ export default function ActionsGrid() {
               </Menu.Item>
 
               <Menu.Item
-                value="sync-spotify"
-                onClick={() => setSpotifySyncOpen(true)}
-                disabled={disableAll}
-              >
-                <SiSpotify /> Sync Spotify
-              </Menu.Item>
-
-              <Menu.Separator />
-
-              <Menu.Item
                 value="ingest-discogs"
                 onClick={() =>
                   discogsIndex.mutate(undefined, {
@@ -294,29 +280,6 @@ export default function ActionsGrid() {
                 disabled={disableAll || discogsIndex.isPending}
               >
                 <FiDatabase /> Ingest Discogs Data
-              </Menu.Item>
-
-              <Menu.Item
-                value="ingest-spotify"
-                onClick={() =>
-                  spotifyIndex.mutate(undefined, {
-                    onSuccess: (data) =>
-                      toaster.create({
-                        title: "Spotify Index Updated",
-                        type: "success",
-                        description: data?.message || "Done",
-                      }),
-                    onError: (e) =>
-                      toaster.create({
-                        title: "Spotify Index Update Failed",
-                        type: "error",
-                        description: e.message,
-                      }),
-                  })
-                }
-                disabled={disableAll || spotifyIndex.isPending}
-              >
-                <FiDatabase /> Ingest Spotify Data
               </Menu.Item>
 
               <Menu.Separator />
