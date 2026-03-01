@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Use Node base image with Debian Bookworm (Python 3.11)
-FROM node:20-bookworm
+FROM node:22-bookworm
 
 # Install system dependencies (with cached apt) and ensure lockfiles are cleared
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \

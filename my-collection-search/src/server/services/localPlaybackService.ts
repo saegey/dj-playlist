@@ -33,7 +33,13 @@ class LocalPlaybackService {
   }
 
   private resolveMpdFilePath(filename: string): string {
-    const normalized = filename.replace(/\\/g, '/').replace(/^\/+/, '');
+    // Normalize slashes, strip leading slashes, and reject path traversal segments
+    const normalized = filename
+      .replace(/\\/g, '/')
+      .replace(/^\/+/, '')
+      .split('/')
+      .filter((segment) => segment !== '..' && segment !== '.')
+      .join('/');
     if (!this.mpdPathPrefix) return normalized;
     const prefix = this.mpdPathPrefix.replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
     return `${prefix}/${normalized}`;

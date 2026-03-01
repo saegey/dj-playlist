@@ -47,11 +47,7 @@ export async function POST(request: Request) {
     return new Response(JSON.stringify({ embedding }), { status: 200 });
   } catch (err) {
     console.error("Vectorize error:", err);
-    const errorMessage =
-      typeof err === "object" && err !== null && "message" in err
-        ? (err as { message?: string }).message
-        : "Internal error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "Failed to vectorize track" }), {
       status: 500,
     });
   }

@@ -6,9 +6,13 @@
 export function getManifestPath(username: string): string {
   const currentUser = process.env.DISCOGS_USERNAME;
   if (currentUser && username === currentUser) {
-    return path.join(DISCOGS_EXPORTS_DIR, "manifest.json");
+    const p = path.join(DISCOGS_EXPORTS_DIR, "manifest.json");
+    assertWithinExportsDir(p);
+    return p;
   }
-  return path.join(DISCOGS_EXPORTS_DIR, `manifest_${username}.json`);
+  const p = path.join(DISCOGS_EXPORTS_DIR, `manifest_${safePart(username)}.json`);
+  assertWithinExportsDir(p);
+  return p;
 }
 /**
  * Get all release IDs for a given username from their manifest file.
@@ -36,6 +40,20 @@ export const DISCOGS_EXPORTS_DIR = path.resolve(
   "discogs_exports"
 );
 
+/** Strip any characters that could escape the exports directory */
+function safePart(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
+/** Throw if the resolved path escapes the exports directory */
+function assertWithinExportsDir(filePath: string): void {
+  const resolved = path.resolve(filePath);
+  const base = DISCOGS_EXPORTS_DIR + path.sep;
+  if (!resolved.startsWith(base) && resolved !== DISCOGS_EXPORTS_DIR) {
+    throw new Error(`Path traversal detected: ${filePath}`);
+  }
+}
+
 export function getManifestFiles(): string[] {
   if (!fs.existsSync(DISCOGS_EXPORTS_DIR)) return [];
   return fs
@@ -53,6 +71,8 @@ export function getReleasePath(
   username: string,
   releaseId: string
 ): string | null {
+  const safeUsername = safePart(username);
+  const safeReleaseId = safePart(releaseId);
   // For friends, prioritize their specific release file
   if (
     username &&
@@ -61,8 +81,9 @@ export function getReleasePath(
   ) {
     const friendPath = path.join(
       DISCOGS_EXPORTS_DIR,
-      `${username}_release_${releaseId}.json`
+      `${safeUsername}_release_${safeReleaseId}.json`
     );
+    assertWithinExportsDir(friendPath);
     if (fs.existsSync(friendPath)) {
       return friendPath;
     }
@@ -71,8 +92,9 @@ export function getReleasePath(
   // Fall back to current user's release file
   const currentUserPath = path.join(
     DISCOGS_EXPORTS_DIR,
-    `release_${releaseId}.json`
+    `release_${safeReleaseId}.json`
   );
+  assertWithinExportsDir(currentUserPath);
   if (fs.existsSync(currentUserPath)) {
     return currentUserPath;
   }
@@ -84,18 +106,24 @@ export function getReleaseWritePath(
   username: string,
   releaseId: string
 ): string {
+  const safeUsername = safePart(username);
+  const safeReleaseId = safePart(releaseId);
   // For writing new releases, determine the path based on username
   if (
     username &&
     process.env.DISCOGS_USERNAME &&
     username !== process.env.DISCOGS_USERNAME
   ) {
-    return path.join(
+    const p = path.join(
       DISCOGS_EXPORTS_DIR,
-      `${username}_release_${releaseId}.json`
+      `${safeUsername}_release_${safeReleaseId}.json`
     );
+    assertWithinExportsDir(p);
+    return p;
   } else {
-    return path.join(DISCOGS_EXPORTS_DIR, `release_${releaseId}.json`);
+    const p = path.join(DISCOGS_EXPORTS_DIR, `release_${safeReleaseId}.json`);
+    assertWithinExportsDir(p);
+    return p;
   }
 }
 

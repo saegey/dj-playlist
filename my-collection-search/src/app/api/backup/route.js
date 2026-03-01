@@ -69,6 +69,7 @@ export async function POST() {
     }
     return new Response(JSON.stringify({ message: `Backup created: ${path.basename(backupFile)}` }), { status: 200 });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), { status: 500 });
+    console.error('[backup] POST error:', e);
+    return new Response(JSON.stringify({ error: 'Failed to create backup' }), { status: 500 });
   }
 }
