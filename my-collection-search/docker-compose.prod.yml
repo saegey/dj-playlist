@@ -1,45 +1,20 @@
+# Production compose template extending docker-compose.yml.
+# Usage: docker compose -f docker-compose.prod.yml up -d
+
 services:
   app:
+    extends:
+      file: docker-compose.yml
+      service: app
     image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
     container_name: myapp
-    ports:
-      - "3000:3000"
     environment:
-      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
-      MEILISEARCH_HOST: ${MEILISEARCH_HOST}
-      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY}
-      MEILISEARCH_EXTERNAL_HOST: ${MEILISEARCH_EXTERNAL_HOST}
-      MEILI_PARENT_KEY: ${MEILI_PARENT_KEY}
-      MEILI_PARENT_KEY_UID: ${MEILI_PARENT_KEY_UID}
-      APPLE_MUSIC_TEAM_ID: ${APPLE_MUSIC_TEAM_ID}
-      APPLE_MUSIC_KEY_ID: ${APPLE_MUSIC_KEY_ID}
       APPLE_MUSIC_PRIVATE_KEY_PATH: ${APPLE_MUSIC_PRIVATE_KEY_PATH:-/app/audio/AuthKey_${APPLE_MUSIC_KEY_ID}.p8}
-      DISCOGS_USER_TOKEN: ${DISCOGS_USER_TOKEN}
-      DISCOGS_USERNAME: ${DISCOGS_USERNAME}
-      DISCOGS_FOLDER_ID: ${DISCOGS_FOLDER_ID}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
-      SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
-      SPOTIFY_REDIRECT_URI: ${SPOTIFY_REDIRECT_URI}
-      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY}
       NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY}
       NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST}
       NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
       SENTRY_DSN: ${SENTRY_DSN}
-      REDIS_URL: redis://redis:6379
-      ESSENTIA_API_URL: http://essentia:8001/analyze
-      ESSENTIA_DATA_DIR: /app/essentia-data
-      ENABLE_AUDIO_PLAYBACK: ${ENABLE_AUDIO_PLAYBACK:-false}
-      AUDIO_DEVICE: ${AUDIO_DEVICE:-default}
-      MPD_HOST: ${MPD_HOST:-mpd}
-      MPD_PORT: ${MPD_PORT:-6600}
-      MPD_PATH_PREFIX: ${MPD_PATH_PREFIX:-}
       AIRPLAY_AUTO_PAUSE: ${AIRPLAY_AUTO_PAUSE:-true}
-
-    depends_on:
-      - db
-      - meili
-      - redis
     volumes:
       - ${APP_AUDIO_MOUNT:-music_data:/app/audio}
       - db_dumps:/app/dumps
@@ -49,93 +24,57 @@ services:
       - album_covers:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
       - /var/run/docker.sock:/var/run/docker.sock  # Required for AirPlay interruption control
-      # Optional: Mount ALSA config for dmix (software mixing with AirPlay)
-      # - ./config/asound.conf:/etc/asound.conf:ro
-    # USB DAC audio device passthrough (optional)
-    # Uncomment the lines below to enable USB DAC playback
     devices:
       - /dev/snd:/dev/snd  # Pass through all audio devices
-    # Optional: Add specific DAC device if you want to limit to one device
-    #   - /dev/snd/controlC1:/dev/snd/controlC1  # Control interface for card 1
-    #   - /dev/snd/pcmC1D0p:/dev/snd/pcmC1D0p    # Playback device for card 1
     restart: unless-stopped
-  db:
-    image: pgvector/pgvector:pg15
-    restart: always
-    environment:
-      POSTGRES_USER: djplaylist
-      POSTGRES_PASSWORD: djplaylistpassword
-      POSTGRES_DB: djplaylist
-    volumes:
-      - db_data:/var/lib/postgresql/data
 
   migrate:
+    extends:
+      file: docker-compose.yml
+      service: migrate
     image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
-    working_dir: /app
-    environment:
-      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
-    entrypoint: ["sh", "-c", "npx wait-port db:5432 && npx node-pg-migrate up"]
-    depends_on:
-      - db
+
+  db:
+    extends:
+      file: docker-compose.yml
+      service: db
 
   meili:
-    image: getmeili/meilisearch:v1.6
-    restart: always
-    environment:
-      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY:-mysupersecretkey}
-      MEILI_EXPERIMENTAL_ENABLE_VECTOR_STORE: "true"
-    ports:
-      - "7700:7700"
-    volumes:
-      - meili_data:/meili_data
+    extends:
+      file: docker-compose.yml
+      service: meili
 
   essentia:
+    extends:
+      file: docker-compose.yml
+      service: essentia
     image: ghcr.io/saegey/essentia-api:${IMAGE_TAG:-latest}
     container_name: essentia-api
-    ports:
-      - "8001:8001"
 
   ga-service:
+    extends:
+      file: docker-compose.yml
+      service: ga-service
     image: ghcr.io/saegey/ga-service:${IMAGE_TAG:-latest}
     container_name: ga-service
-    ports:
-      - "8002:8002"
 
   redis:
-    image: redis:7-alpine
-    restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
+    extends:
+      file: docker-compose.yml
+      service: redis
 
   download-worker:
+    extends:
+      file: docker-compose.yml
+      service: download-worker
     image: ghcr.io/saegey/download-worker:${IMAGE_TAG:-latest}
     container_name: download-worker
-    environment:
-      REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
-      GAMDL_COOKIE_FILE: /app/cookies/gamdl_cookies.txt
-      ESSENTIA_DATA_DIR: /app/essentia-data
-    depends_on:
-      - redis
-      - db
-    volumes:
-      - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
-      - album_covers:/app/public/uploads/album-covers
-      - cookie_data:/app/cookies  # Shared cookie storage with app service
-      - essentia_data:/app/essentia-data
     restart: unless-stopped
 
-  # MPD (Music Player Daemon) for local DAC playback
   mpd:
-    image: vimagick/mpd:latest
-    container_name: mpd
-    restart: unless-stopped
-    ports:
-      - "6600:6600"  # MPD protocol port
-    devices:
-      - /dev/snd:/dev/snd  # Audio device passthrough
+    extends:
+      file: docker-compose.yml
+      service: mpd
     volumes:
       - ${MPD_AUDIO_MOUNT:-music_data:/var/lib/mpd/music:ro}  # Read-only music files
       - mpd_data:/var/lib/mpd  # MPD state/database
@@ -170,7 +109,6 @@ services:
       - ./scripts/shairport-entrypoint.sh:/usr/local/bin/shairport-entrypoint.sh:ro
     entrypoint: ["/usr/local/bin/shairport-entrypoint.sh"]
     # Exclusive hardware access mode - only one service can use DAC at a time
-
 
 volumes:
   db_data:
