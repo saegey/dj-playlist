@@ -1,46 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-interface AlbumMetadata {
-  title: string;
-  artist: string;
-  year?: string;
-  genres?: string[];
-  styles?: string[];
-  album_notes?: string;
-  album_rating?: number;
-  purchase_price?: number;
-  condition?: string;
-  label?: string;
-  catalog_number?: string;
-  country?: string;
-  format?: string;
-  library_identifier?: string;
-}
-
-interface TrackMetadata {
-  track_id?: string; // Optional - if present, update; if absent, create new
-  title: string;
-  artist: string;
-  position?: string;
-  duration_seconds?: number;
-  bpm?: number;
-  key?: string;
-  notes?: string;
-  local_tags?: string;
-  star_rating?: number;
-  apple_music_url?: string;
-  spotify_url?: string;
-  youtube_url?: string;
-  soundcloud_url?: string;
-}
-
-interface UpdateAlbumWithTracksParams {
-  release_id: string;
-  album: AlbumMetadata;
-  tracks: TrackMetadata[];
-  friend_id: number;
-  coverArt?: File | null;
-}
+import { UpdateAlbumWithTracksParams } from "@/types/albumMetadata";
 
 async function updateAlbumWithTracks(params: UpdateAlbumWithTracksParams) {
   const formData = new FormData();

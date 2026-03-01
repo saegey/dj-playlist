@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
-import { Album } from "@/types/track";
+import { albumApiService } from "@/services/albumApiService";
 
 /**
  * GET /api/albums/[releaseId]?friend_id=X
@@ -21,41 +20,17 @@ export async function GET(
         { status: 400 }
       );
     }
-
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
-
-    // Fetch album
-    const albumResult = await pool.query<Album>(
-      `SELECT * FROM albums WHERE release_id = $1 AND friend_id = $2`,
-      [releaseId, friendId]
-    );
-
-    if (albumResult.rows.length === 0) {
-      await pool.end();
-      return NextResponse.json(
-        { error: "Album not found" },
-        { status: 404 }
-      );
+    const parsedFriendId = Number.parseInt(friendId, 10);
+    if (!Number.isFinite(parsedFriendId)) {
+      return NextResponse.json({ error: "friend_id must be a number" }, { status: 400 });
     }
 
-    const album = albumResult.rows[0];
+    const detail = await albumApiService.getAlbumDetail(releaseId, parsedFriendId);
+    if (!detail) {
+      return NextResponse.json({ error: "Album not found" }, { status: 404 });
+    }
 
-    // Fetch tracks for this album
-    const tracksResult = await pool.query(
-      `SELECT * FROM tracks
-       WHERE release_id = $1 AND friend_id = $2
-       ORDER BY position`,
-      [releaseId, friendId]
-    );
-
-    await pool.end();
-
-    return NextResponse.json({
-      album,
-      tracks: tracksResult.rows,
-    });
+    return NextResponse.json(detail);
   } catch (error) {
     console.error("[Album Detail API] Error:", error);
     return NextResponse.json(

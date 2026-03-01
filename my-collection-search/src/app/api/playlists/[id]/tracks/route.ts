@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
 import {
   playlistDetailParamsSchema,
   playlistDetailResponseSchema,
 } from "@/api-contract/schemas";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { dbQuery } from "@/lib/serverDb";
 
 export async function GET(
   _request: Request,
@@ -23,7 +21,7 @@ export async function GET(
     const id = parsedParams.data.id;
 
     // Ensure playlist exists
-    const playlistRes = await pool.query(
+    const playlistRes = await dbQuery(
       "SELECT * FROM playlists WHERE id = $1",
       [id]
     );
@@ -35,19 +33,19 @@ export async function GET(
     }
 
     // Fetch ordered track ids for the playlist
-    const tracksRes = await pool.query(
+    const tracksRes = await dbQuery<{
+      track_id: string;
+      friend_id: number;
+      position: number;
+    }>(
       "SELECT track_id, friend_id, position FROM playlist_tracks WHERE playlist_id = $1 ORDER BY position ASC",
       [id]
     );
-    const trackIds = tracksRes.rows.map(
-      (r: { track_id: string; friend_id: number; position: number }) => {
-        return {
-          track_id: r.track_id,
-          friend_id: Number(r.friend_id), // Ensure it's a number
-          position: r.position,
-        };
-      }
-    );
+    const trackIds = tracksRes.rows.map((r) => ({
+      track_id: r.track_id,
+      friend_id: Number(r.friend_id), // Ensure it's a number
+      position: r.position,
+    }));
     const response = {
       playlist_id: id,
       tracks: trackIds,

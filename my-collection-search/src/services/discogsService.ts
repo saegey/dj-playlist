@@ -1,15 +1,8 @@
-import { DiscogsVideo } from "@/services/discogsApiClient";
-
-export interface DiscogsLookupRelease {
-  videos?: DiscogsVideo[];
-  video?: DiscogsVideo[];
-  [key: string]: unknown;
-}
-
-export interface DiscogsLookupResult {
-  release?: DiscogsLookupRelease | null;
-  [key: string]: unknown;
-}
+import type {
+  DiscogsLookupRelease,
+  DiscogsLookupResult,
+  DiscogsLookupVideo,
+} from "@/types/discogs";
 
 /**
  * Lookup Discogs videos for a track by track_id
@@ -39,11 +32,13 @@ export async function lookupDiscogsVideos(
  */
 export function extractDiscogsVideos(
   result: DiscogsLookupResult | null
-): DiscogsVideo[] {
+): DiscogsLookupVideo[] {
   if (!result?.release) return [];
 
   const rel = result.release as DiscogsLookupRelease;
-  const vids: DiscogsVideo[] = (rel.videos ?? rel.video ?? []) as DiscogsVideo[];
+  const vids: DiscogsLookupVideo[] = (rel.videos ??
+    rel.video ??
+    []) as DiscogsLookupVideo[];
 
   return vids || [];
 }

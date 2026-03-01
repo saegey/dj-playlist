@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
 import { getReleasePath, loadAlbum } from "@/services/discogsManifestService";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { albumRepository } from "@/services/albumRepository";
 
 export async function GET(
   request: NextRequest,
@@ -20,11 +18,7 @@ export async function GET(
       );
     }
 
-    const friendRes = await pool.query(
-      "SELECT username FROM friends WHERE id = $1 LIMIT 1",
-      [friendId]
-    );
-    const username = friendRes.rows[0]?.username as string | undefined;
+    const username = await albumRepository.getFriendUsernameById(friendId);
     if (!username) {
       return NextResponse.json({ error: "Friend not found" }, { status: 404 });
     }

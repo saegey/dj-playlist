@@ -17,6 +17,7 @@ import { useTracksQuery } from "@/hooks/useTracksQuery";
 import type { TrackEditFormProps } from "@/components/TrackEditForm";
 import { fetchAppleMusicAISearch } from "@/services/aiService";
 import { fetchMissingAppleTracks } from "@/services/trackService";
+import type { DiscogsLookupResult } from "@/types/discogs";
 
 type AppleResultsMap = Record<string, AppleMusicResult[] | null | undefined>;
 
@@ -58,40 +59,6 @@ type MissingAppleActions = {
 const MissingAppleContext = createContext<
   (MissingAppleState & MissingAppleActions) | null
 >(null);
-
-// Types for the Discogs lookup endpoint
-export type DiscogsVideo = {
-  uri?: string;
-  url?: string;
-  title?: string;
-  duration?: number | string;
-  description?: string;
-};
-export type DiscogsLookupRelease = {
-  id: string | number;
-  title: string;
-  artists?: { name: string }[];
-  artists_sort?: string;
-  year?: number | null;
-  styles?: string[];
-  genres?: string[];
-  uri?: string | null;
-  thumb?: string | null;
-  videos?: DiscogsVideo[]; // Discogs exports often use 'videos'
-  video?: DiscogsVideo[]; // being defensive if singular is used in some dumps
-};
-type DiscogsLookupTrack = {
-  position: string;
-  title: string;
-  duration: string;
-  artists?: { name: string }[];
-};
-export type DiscogsLookupResult = {
-  releaseId: string;
-  filePath: string;
-  release: DiscogsLookupRelease; // returned as full release in the endpoint
-  matchedTrack: DiscogsLookupTrack | null;
-};
 
 export function MissingAppleProvider({
   children,

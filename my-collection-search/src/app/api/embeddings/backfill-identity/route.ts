@@ -12,17 +12,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Pool } from "pg";
 import { generateAndStoreIdentityEmbedding } from "@/lib/identity-embedding";
+import type { BackfillOptions } from "@/types/backfill";
 
 export const maxDuration = 300; // 5 minutes
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-interface BackfillOptions {
-  friend_id?: number;
-  force?: boolean;
-  limit?: number;
-  batch_size?: number;
-}
 
 /**
  * Fetch tracks that need identity embeddings

@@ -13,25 +13,19 @@
 import { Pool } from "pg";
 import { generateAndStoreIdentityEmbedding } from "../lib/identity-embedding";
 import { generateAndStoreAudioVibeEmbedding } from "../lib/audio-vibe-embedding";
+import type {
+  EmbeddingBackfillOptions,
+  EmbeddingType,
+} from "../types/backfill";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-type EmbeddingType = "identity" | "audio_vibe";
-
-interface BackfillOptions {
-  type: EmbeddingType;
-  friend_id?: number;
-  force?: boolean;
-  limit?: number;
-  batch_size?: number;
-}
 
 /**
  * Parse command-line arguments
  */
-function parseArgs(): BackfillOptions {
+function parseArgs(): EmbeddingBackfillOptions {
   const args = process.argv.slice(2);
-  const options: BackfillOptions = {
+  const options: EmbeddingBackfillOptions = {
     type: "identity", // Default
     batch_size: 5, // Default
   };
@@ -82,7 +76,7 @@ Examples:
  * Fetch tracks that need embeddings
  */
 async function getTracksNeedingEmbeddings(
-  options: BackfillOptions
+  options: EmbeddingBackfillOptions
 ): Promise<{ track_id: string; friend_id: number }[]> {
   const { type, friend_id, force, limit } = options;
 

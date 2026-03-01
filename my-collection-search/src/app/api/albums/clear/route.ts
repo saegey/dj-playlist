@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
 import { getMeiliClient } from "@/lib/meili";
+import { albumRepository } from "@/services/albumRepository";
 
 /**
  * DELETE endpoint to clear all albums from both PostgreSQL and MeiliSearch
@@ -8,16 +8,11 @@ import { getMeiliClient } from "@/lib/meili";
  */
 export async function DELETE() {
   try {
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
-
     const meiliClient = getMeiliClient();
 
     // Clear PostgreSQL albums table
     console.log("[Clear Albums] Deleting all albums from PostgreSQL...");
-    const result = await pool.query("DELETE FROM albums");
-    const deletedCount = result.rowCount || 0;
+    const deletedCount = await albumRepository.deleteAllAlbums();
     console.log(
       `[Clear Albums] Deleted ${deletedCount} albums from PostgreSQL`
     );
@@ -32,8 +27,6 @@ export async function DELETE() {
       console.warn("[Clear Albums] MeiliSearch clear warning:", meiliError);
       // Continue even if MeiliSearch fails
     }
-
-    await pool.end();
 
     return NextResponse.json({
       success: true,

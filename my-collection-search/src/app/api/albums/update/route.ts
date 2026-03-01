@@ -1,7 +1,8 @@
 // API endpoint for updating album metadata (rating, notes, purchase_price, condition)
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
 import { getMeiliClient } from "@/lib/meili";
+import { withDbTransaction } from "@/lib/serverDb";
+import { albumRepository } from "@/services/albumRepository";
 
 interface AlbumUpdateRequest {
   release_id: string;
@@ -25,39 +26,18 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-    });
-
-    // Build dynamic SET clause based on provided fields
-    const updates: string[] = [];
-    const values: (string | number | null)[] = [release_id, friend_id];
-    let paramIndex = 3;
-
-    if (album_rating !== undefined) {
-      updates.push(`album_rating = $${paramIndex}`);
-      values.push(album_rating);
-      paramIndex++;
+    if (
+      album_rating === undefined &&
+      album_notes === undefined &&
+      purchase_price === undefined &&
+      condition === undefined &&
+      library_identifier === undefined
+    ) {
+      return NextResponse.json(
+        { error: "No fields to update" },
+        { status: 400 }
+      );
     }
-
-    if (album_notes !== undefined) {
-      updates.push(`album_notes = $${paramIndex}`);
-      values.push(album_notes);
-      paramIndex++;
-    }
-
-    if (purchase_price !== undefined) {
-      updates.push(`purchase_price = $${paramIndex}`);
-      values.push(purchase_price);
-      paramIndex++;
-    }
-
-    if (condition !== undefined) {
-      updates.push(`condition = $${paramIndex}`);
-      values.push(condition);
-      paramIndex++;
-    }
-
     if (library_identifier !== undefined) {
       // Validate length (max 50 chars as per schema)
       if (library_identifier !== null && library_identifier.length > 50) {
@@ -66,68 +46,50 @@ export async function PATCH(request: NextRequest) {
           { status: 400 }
         );
       }
-      updates.push(`library_identifier = $${paramIndex}`);
-      values.push(library_identifier);
-      paramIndex++;
     }
 
-    if (updates.length === 0) {
-      return NextResponse.json(
-        { error: "No fields to update" },
-        { status: 400 }
-      );
-    }
+    const updatedAlbum = await withDbTransaction(async (client) => {
+      return albumRepository.updateAlbumFields(client, {
+        release_id,
+        friend_id,
+        album_rating,
+        album_notes,
+        purchase_price,
+        condition,
+        library_identifier,
+      });
+    });
 
-    // Always update updated_at
-    updates.push("updated_at = current_timestamp");
-
-    const query = `
-      UPDATE albums
-      SET ${updates.join(", ")}
-      WHERE release_id = $1 AND friend_id = $2
-      RETURNING *
-    `;
-
-    const result = await pool.query(query, values);
-
-    if (result.rows.length === 0) {
-      await pool.end();
+    if (!updatedAlbum) {
       return NextResponse.json(
         { error: "Album not found" },
         { status: 404 }
       );
     }
 
-    const updatedAlbum = result.rows[0];
-
     // If library_identifier was updated, fetch all tracks for this album and update them in MeiliSearch
     let updatedTracksCount = 0;
     if (library_identifier !== undefined) {
       try {
         // Fetch all tracks for this album with the new library_identifier from JOIN
-        const tracksResult = await pool.query(
-          `SELECT t.*, a.library_identifier
-           FROM tracks t
-           LEFT JOIN albums a ON t.release_id = a.release_id AND t.friend_id = a.friend_id
-           WHERE t.release_id = $1 AND t.friend_id = $2`,
-          [release_id, friend_id]
+        const tracksResult = await albumRepository.getTracksForAlbumWithLibraryIdentifier(
+          release_id,
+          friend_id
         );
 
-        if (tracksResult.rows.length > 0) {
+        if (tracksResult.length > 0) {
           const meiliClient = getMeiliClient();
           const tracksIndex = meiliClient.index("tracks");
 
           // Update all tracks in MeiliSearch with the new library_identifier
-          await tracksIndex.updateDocuments(tracksResult.rows);
-          updatedTracksCount = tracksResult.rows.length;
+          await tracksIndex.updateDocuments(tracksResult);
+          updatedTracksCount = tracksResult.length;
         }
       } catch (tracksError) {
         console.error("Error updating tracks in MeiliSearch:", tracksError);
         // Don't fail the request if tracks update fails
       }
     }
-
-    await pool.end();
 
     // Update album in MeiliSearch
     try {

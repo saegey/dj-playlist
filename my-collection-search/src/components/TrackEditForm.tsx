@@ -31,7 +31,7 @@ import { useYouTubeMusicSearchMutation } from "@/hooks/useYouTubeMusicSearchMuta
 import { toaster } from "@/components/ui/toaster";
 import DiscogsVideosModal from "@/components/DiscogsVideosModal";
 import { lookupDiscogsVideos, extractDiscogsVideos } from "@/services/discogsService";
-import { DiscogsVideo } from "@/services/discogsApiClient";
+import type { DiscogsLookupVideo } from "@/types/discogs";
 
 export interface TrackEditFormProps {
   track_id: string; // Optional for new tracks
@@ -117,7 +117,7 @@ export default function TrackEditForm({
   const [removeAudioLoading, setRemoveAudioLoading] = useState(false);
 
   // Discogs state
-  const [discogsVideos, setDiscogsVideos] = useState<DiscogsVideo[] | null>(null);
+  const [discogsVideos, setDiscogsVideos] = useState<DiscogsLookupVideo[] | null>(null);
   const [showDiscogsModal, setShowDiscogsModal] = useState(false);
   const [discogsLoading, setDiscogsLoading] = useState(false);
 

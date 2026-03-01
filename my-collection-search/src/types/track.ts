@@ -1,3 +1,5 @@
+import type { DiscogsSimpleArtist, DiscogsVideo } from "@/types/discogs";
+
 export type Track = {
   id: number;
   track_id: string;
@@ -75,7 +77,7 @@ export interface DiscogsRelease {
   genres?: string[];
   uri?: string;
   thumb?: string;
-  videos?: { uri: string; title: string; description?: string; duration?: number; embed?: boolean }[];
+  videos?: DiscogsVideo[];
   tracklist: ProcessedTrack[];
   date_added: string;
   date_changed: string;
@@ -109,14 +111,11 @@ export interface DiscogsTrack {
   friend_id?: number; // resolved via friends table during upsert/index
 }
 
-interface DiscogsArtist {
-  name: string;
-}
 export interface ProcessedTrack {
   position: string;
   title: string;
   duration: string;
-  artists: DiscogsArtist[];
+  artists: DiscogsSimpleArtist[];
   duration_seconds?: number | null;
   apple_music_url?: string | null;
   spotify_url?: string | null;

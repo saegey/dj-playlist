@@ -1,9 +1,7 @@
-import { Pool } from "pg";
 import { NextResponse } from "next/server";
 import { TextEncoder } from "util";
 import { getPostHogClient } from "@/lib/posthog-server";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { dbQuery } from "@/lib/serverDb";
 
 export async function GET() {
   try {
@@ -18,7 +16,7 @@ export async function GET() {
     //   });
     // } else {
     console.debug("Fetching all friends excluding current user");
-    const { rows } = await pool.query(
+    const { rows } = await dbQuery(
       "SELECT id, username FROM friends ORDER BY added_at DESC"
     );
     // }
@@ -44,7 +42,7 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-    await pool.query(
+    await dbQuery(
       "INSERT INTO friends (username) VALUES ($1) ON CONFLICT DO NOTHING",
       [username]
     );
@@ -169,7 +167,7 @@ export async function DELETE(request: Request) {
 
         // Remove from Postgres tracks table (if you store per-user tracks)
         try {
-          await pool.query("DELETE FROM tracks WHERE username = $1", [
+          await dbQuery("DELETE FROM tracks WHERE username = $1", [
             username,
           ]);
           controller.enqueue(
@@ -188,7 +186,7 @@ export async function DELETE(request: Request) {
         }
 
         // Remove from friends table
-        await pool.query("DELETE FROM friends WHERE username = $1", [username]);
+        await dbQuery("DELETE FROM friends WHERE username = $1", [username]);
         controller.enqueue(encoder.encode(`Deleted friend: ${username}\n`));
 
         // PostHog: Track friend removed (server-side)

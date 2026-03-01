@@ -10,13 +10,13 @@ import {
   Spinner,
   Flex,
 } from "@chakra-ui/react";
-import { DiscogsVideo } from "@/services/discogsApiClient";
+import type { DiscogsLookupVideo } from "@/types/discogs";
 import AppleResultRow from "@/components/AppleResultRow";
 
 interface DiscogsVideosModalProps {
   open: boolean;
   onClose: () => void;
-  videos: DiscogsVideo[] | null;
+  videos: DiscogsLookupVideo[] | null;
   loading: boolean;
   trackTitle: string;
   trackArtist: string;
@@ -76,7 +76,10 @@ export default function DiscogsVideosModal({
                         album: trackAlbum || "",
                         url: video.uri ?? "#",
                         artwork: undefined,
-                        duration: video.duration ? video.duration * 1000 : undefined, // Convert seconds to ms
+                        duration:
+                          typeof video.duration === "number"
+                            ? video.duration * 1000
+                            : undefined, // Convert seconds to ms
                       }}
                       onSave={
                         onVideoSelect
