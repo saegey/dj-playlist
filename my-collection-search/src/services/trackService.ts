@@ -1,4 +1,4 @@
-import { TrackEditFormProps } from "@/components/TrackEditForm";
+import type { TrackEditFormProps } from "@/components/track-edit/types";
 import type { Track } from "@/types/track";
 import { http } from "./http";
 

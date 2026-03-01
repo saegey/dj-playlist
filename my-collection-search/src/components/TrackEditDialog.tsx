@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { Track } from "@/types/track";
-import type { TrackEditFormProps } from "./TrackEditForm";
+import type { TrackEditFormProps } from "@/components/track-edit/types";
 import { useTrackByIdQuery } from "@/hooks/useTrackByIdQuery";
 
 const TrackEditForm = dynamic(() => import("./TrackEditForm"), { ssr: false });

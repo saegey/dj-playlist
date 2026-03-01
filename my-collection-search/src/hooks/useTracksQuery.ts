@@ -2,7 +2,7 @@
 import { useMutation } from "@tanstack/react-query";
 
 import { saveTrack } from "@/services/trackService";
-import type { TrackEditFormProps } from "@/components/TrackEditForm";
+import type { TrackEditFormProps } from "@/components/track-edit/types";
 import { useTrackStore } from "@/stores/trackStore";
 
 // Shape returned by saveTrack is void; customize if API starts returning a Track

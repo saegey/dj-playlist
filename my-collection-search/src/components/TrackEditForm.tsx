@@ -3,60 +3,24 @@
 import React, { useState, useRef } from "react";
 import {
   Box,
-  Button,
-  Text,
-  Stack,
   Flex,
   Portal,
   Dialog,
   CloseButton,
-  RatingGroup,
 } from "@chakra-ui/react";
-import LabeledInput from "@/components/form/LabeledInput";
-import LabeledTextarea from "@/components/form/LabeledTextarea";
-
-import { YoutubeVideo } from "@/types/track";
-// icons used within extracted components
-import { useAppleMusicPicker } from "@/hooks/useAppleMusicPicker";
-import AppleMusicPickerDialog from "@/components/AppleMusicPickerDialog";
 import { cleanSoundcloudUrl } from "@/lib/url";
-import YouTubePickerDialog from "@/components/YouTubePickerDialog";
 import TrackEditFormSkeleton from "@/components/TrackEditFormSkeleton";
 import { createTrackEditActionsWrapper } from "@/components/TrackEditActionsWrapper";
-import { useAsyncAnalyzeTrackMutation } from "@/hooks/useAsyncAnalyzeTrackMutation";
-import { useUploadTrackAudioMutation } from "@/hooks/useUploadTrackAudioMutation";
-import { buildTrackMetadataPrompt } from "@/lib/prompts";
-import { useTrackMetadataMutation } from "@/hooks/useTrackMetadataMutation";
-import { useYouTubeMusicSearchMutation } from "@/hooks/useYouTubeMusicSearchMutation";
-import { toaster } from "@/components/ui/toaster";
-import DiscogsVideosModal from "@/components/DiscogsVideosModal";
-import { lookupDiscogsVideos, extractDiscogsVideos } from "@/services/discogsService";
-import type { DiscogsLookupVideo } from "@/types/discogs";
+import { useTrackEditSearchIntegrations } from "@/components/track-edit/useTrackEditSearchIntegrations";
+import { useTrackEditAudioActions } from "@/components/track-edit/useTrackEditAudioActions";
+import TrackEditFormFields from "@/components/track-edit/TrackEditFormFields";
+import TrackEditFormDialogs from "@/components/track-edit/TrackEditFormDialogs";
+import {
+  toTrackEditFormState,
+  type TrackEditFormProps,
+} from "@/components/track-edit/types";
 
-export interface TrackEditFormProps {
-  track_id: string; // Optional for new tracks
-  isrc?: string;
-  title?: string;
-  artist?: string;
-  album?: string;
-  year?: string | number | null;
-  duration?: string;
-  discogs_url?: string;
-  spotify_url?: string;
-  release_id?: string;
-  local_tags?: string | undefined;
-  notes?: string | undefined | null;
-  bpm?: number | null;
-  key?: string | undefined | null;
-  danceability?: number | null;
-  apple_music_url?: string;
-  youtube_url?: string;
-  soundcloud_url?: string;
-  star_rating?: number;
-  duration_seconds?: number | null; // Optional for new tracks
-  friend_id: number;
-  local_audio_url?: string | null;
-}
+export type { TrackEditFormProps } from "@/components/track-edit/types";
 
 export default function TrackEditForm({
   track,
@@ -74,139 +38,44 @@ export default function TrackEditForm({
   // File upload logic
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [form, setForm] = useState({
-    track_id: track?.track_id || "",
-    album: track?.album || "",
-    title: track?.title || "",
-    artist: track?.artist || "",
-    local_tags: (track?.local_tags as string | undefined) || "",
-    notes: (track?.notes as string | undefined) || "",
-    bpm: (track?.bpm as string | undefined) || "",
-    key: (track?.key as string | undefined) || "",
-    danceability: (track?.danceability as string | undefined) || "",
-    apple_music_url: track?.apple_music_url || "",
-    youtube_url: track?.youtube_url || "",
-    soundcloud_url: track?.soundcloud_url || "",
-    star_rating:
-      typeof track?.star_rating === "number" ? track!.star_rating : 0,
-    duration_seconds: track?.duration_seconds || undefined, // Optional for new tracks
-    friend_id: track?.friend_id,
-  });
+  const [form, setForm] = useState(() => toTrackEditFormState(track));
 
   React.useEffect(() => {
-    if (!track) return;
-    setForm({
-      track_id: track.track_id || "",
-      album: track.album || "",
-      title: track.title || "",
-      artist: track.artist || "",
-      local_tags: (track.local_tags as string | undefined) || "",
-      notes: (track.notes as string | undefined) || "",
-      bpm: (track.bpm as string | undefined) || "",
-      key: (track.key as string | undefined) || "",
-      danceability: (track.danceability as string | undefined) || "",
-      apple_music_url: track.apple_music_url || "",
-      youtube_url: track.youtube_url || "",
-      soundcloud_url: track.soundcloud_url || "",
-      star_rating:
-        typeof track.star_rating === "number" ? track.star_rating : 0,
-      duration_seconds: track.duration_seconds || undefined,
-      friend_id: track.friend_id,
-    });
+    setForm(toTrackEditFormState(track));
   }, [track]);
 
-  const [youtubeResults, setYoutubeResults] = useState<YoutubeVideo[]>([]);
-  const { mutateAsync: searchYouTubeMusic, isPending: youtubeLoading } =
-    useYouTubeMusicSearchMutation();
-  const [showYoutubeModal, setShowYoutubeModal] = useState(false);
-  const [showRemoveAudioConfirm, setShowRemoveAudioConfirm] = useState(false);
-  const [removeAudioLoading, setRemoveAudioLoading] = useState(false);
-
-  // Discogs state
-  const [discogsVideos, setDiscogsVideos] = useState<DiscogsLookupVideo[] | null>(null);
-  const [showDiscogsModal, setShowDiscogsModal] = useState(false);
-  const [discogsLoading, setDiscogsLoading] = useState(false);
-
-  const applePicker = useAppleMusicPicker({
-    onSelect: (song) => {
-      setForm((prev) => ({
-        ...prev,
-        apple_music_url: song.url,
-        duration_seconds: song.duration
-          ? Math.round(song.duration / 1000)
-          : undefined,
-      }));
-    },
-  });
-
   const [loading, setLoading] = useState(false);
-  const { mutateAsync: analyze, isPending: analyzeLoading } =
-    useAsyncAnalyzeTrackMutation();
-  const { mutateAsync: uploadAudio, isPending: uploadLoading } =
-    useUploadTrackAudioMutation();
-  const { mutateAsync: fetchMetadata, isPending: aiLoading } =
-    useTrackMetadataMutation();
-  const [aiPrompt, setAiPrompt] = useState<string>("");
-
-  React.useEffect(() => {
-    const friendId = form.friend_id;
-    if (!friendId) return;
-    const run = async () => {
-      try {
-        const res = await fetch(
-          `/api/settings/ai-prompt?friend_id=${encodeURIComponent(friendId)}`
-        );
-        const data = await res.json();
-        if (res.ok && typeof data.prompt === "string") {
-          setAiPrompt(data.prompt);
-        }
-      } catch (err) {
-        console.error("Failed to load AI prompt settings", err);
-      }
-    };
-    run();
-  }, [form.friend_id]);
-
-  const handleFileUpload = async (selectedFile: File) => {
-    try {
-      const { analysis: data } = await uploadAudio({
-        file: selectedFile,
-        track_id: form.track_id,
-      });
-      setForm((prev) => ({
-        ...prev,
-        bpm:
-          typeof data.rhythm?.bpm === "number"
-            ? String(Math.round(data.rhythm.bpm))
-            : prev.bpm,
-        key:
-          data.tonal?.key_edma?.key && data.tonal?.key_edma?.scale
-            ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
-            : prev.key,
-        danceability:
-          typeof data.rhythm?.danceability === "number"
-            ? data.rhythm.danceability.toFixed(3)
-            : prev.danceability,
-        duration_seconds:
-          typeof data.metadata?.audio_properties?.length === "number"
-            ? Math.round(data.metadata.audio_properties.length)
-            : prev.duration_seconds,
-      }));
-
-      toaster.create({
-        title: "Upload Successful",
-        description: "Audio file uploaded and analyzed",
-        type: "success",
-      });
-    } catch (err) {
-      toaster.create({
-        title: "Upload Failed",
-        description: err instanceof Error ? err.message : String(err),
-        type: "error",
-      });
-    }
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+  const {
+    aiLoading,
+    fetchFromChatGPT,
+    applePicker,
+    searchAppleMusic,
+    youtubeLoading,
+    searchYouTube,
+    youtubeResults,
+    showYoutubeModal,
+    setShowYoutubeModal,
+    handleYouTubeSearch,
+    handleYoutubeSelect,
+    discogsLoading,
+    searchDiscogs,
+    discogsVideos,
+    showDiscogsModal,
+    setShowDiscogsModal,
+    handleDiscogsVideoSelect,
+  } = useTrackEditSearchIntegrations({ track, form, setForm });
+  const {
+    analyzeLoading,
+    uploadLoading,
+    handleAnalyzeAudio,
+    onFileSelected,
+    showRemoveAudioConfirm,
+    setShowRemoveAudioConfirm,
+    closeRemoveAudioConfirm,
+    handleRemoveAudioClick,
+    handleRemoveAudioConfirm,
+    removeAudioLoading,
+  } = useTrackEditAudioActions({ form, setForm, onSave, fileInputRef });
 
   const handleStarRating = (rating: number) => {
     setForm((prev) => ({ ...prev, star_rating: rating }));
@@ -241,202 +110,6 @@ export default function TrackEditForm({
     }
   };
 
-  const fetchFromChatGPT = async () => {
-    try {
-      const prompt = buildTrackMetadataPrompt(
-        {
-          title: form.title,
-          artist: form.artist,
-          album: form.album,
-          year: track?.year,
-          duration: track?.duration,
-          duration_seconds:
-            typeof form.duration_seconds === "number"
-              ? form.duration_seconds
-              : null,
-          isrc: track?.isrc,
-          release_id: track?.release_id,
-          discogs_url: track?.discogs_url,
-          apple_music_url: form.apple_music_url || null,
-          youtube_url: form.youtube_url || null,
-          soundcloud_url: form.soundcloud_url || null,
-          spotify_url: track?.spotify_url,
-        },
-        aiPrompt
-      );
-      const data = await fetchMetadata({
-        prompt,
-        friend_id: form.friend_id,
-      });
-      setForm((prev) => ({
-        ...prev,
-        local_tags: (data.genre as string) || prev.local_tags,
-        notes: (data.notes as string) || prev.notes,
-      }));
-    } catch {
-      alert("Error fetching from AI");
-    }
-  };
-
-  const searchYouTube = async (title?: string, artist?: string) => {
-    setShowYoutubeModal(true);
-    setYoutubeResults([]);
-
-    const searchTitle = title || form.title;
-    const searchArtist = artist || form.artist;
-
-    // Only search if both title and artist are non-empty
-    if (!searchTitle || !searchArtist || searchTitle.trim() === '' || searchArtist.trim() === '') {
-      return;
-    }
-
-    try {
-      const data = await searchYouTubeMusic({
-        title: searchTitle,
-        artist: searchArtist,
-      });
-      setYoutubeResults(data.results || []);
-    } catch (err) {
-      console.error("YouTube search error:", err);
-      alert("YouTube search error");
-    }
-  };
-
-  const handleYouTubeSearch = (title: string, artist: string) => {
-    searchYouTube(title, artist);
-  };
-
-  const searchDiscogs = async () => {
-    if (!track?.track_id) {
-      toaster.create({
-        title: "Cannot search Discogs",
-        description: "Track ID is missing",
-        type: "error",
-      });
-      return;
-    }
-
-    setShowDiscogsModal(true);
-    setDiscogsLoading(true);
-    try {
-      const result = await lookupDiscogsVideos(track.track_id);
-      const videos = extractDiscogsVideos(result);
-      setDiscogsVideos(videos);
-
-      if (videos.length === 0) {
-        toaster.create({
-          title: "No videos found",
-          description: "No Discogs videos found for this release",
-          type: "warning",
-        });
-      }
-    } catch (err) {
-      console.error("Discogs search error:", err);
-      toaster.create({
-        title: "Discogs search error",
-        description: err instanceof Error ? err.message : String(err),
-        type: "error",
-      });
-      setDiscogsVideos([]);
-    } finally {
-      setDiscogsLoading(false);
-    }
-  };
-
-  const handleDiscogsVideoSelect = (url: string) => {
-    // Discogs videos are YouTube URLs, save to youtube_url field
-    setForm((prev) => ({ ...prev, youtube_url: url }));
-    setShowDiscogsModal(false);
-    toaster.create({
-      title: "YouTube URL Added",
-      description: "Discogs video URL saved to YouTube field",
-      type: "success",
-    });
-  };
-
-  const handleYoutubeSelect = (video: YoutubeVideo) => {
-    setForm((prev) => ({ ...prev, youtube_url: video.url }));
-    setShowYoutubeModal(false);
-  };
-
-  const searchAppleMusic = async () => {
-    await applePicker.search({ title: form.title, artist: form.artist });
-  };
-
-  // Apple selection handled via useAppleMusicPicker onSelect
-
-  const handleAnalyzeAudio = async () => {
-    try {
-      if (!form.friend_id) {
-        throw new Error("Track is missing friend_id");
-      }
-      const response = await analyze({
-        apple_music_url: form.apple_music_url,
-        youtube_url: form.youtube_url,
-        soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
-        track_id: form.track_id,
-        friend_id: form.friend_id,
-      });
-      console.log("Analysis job queued:", response);
-
-      toaster.create({
-        title: "Audio Analysis Queued",
-        description: `Job ID: ${response.jobId}. The track will be analyzed automatically. Check the Job Queue for progress.`,
-        type: "success",
-      });
-    } catch (err) {
-      console.error("Audio analysis error:", err);
-      toaster.create({
-        title: "Audio Analysis Failed",
-        description: "Error queuing audio analysis: " + (err instanceof Error ? err.message : err),
-        type: "error",
-      });
-    }
-  };
-
-  const handleRemoveAudioClick = () => {
-    setShowRemoveAudioConfirm(true);
-  };
-
-  const handleRemoveAudioConfirm = async () => {
-    setRemoveAudioLoading(true);
-    try {
-      if (!form.friend_id) {
-        throw new Error("Track is missing friend_id");
-      }
-
-      // Call onSave with local_audio_url set to null to remove it
-      await Promise.resolve(
-        onSave({
-          ...form,
-          bpm: Number(form.bpm) || null,
-          key: form.key || null,
-          danceability: Number(form.danceability) || null,
-          duration_seconds: Number(form.duration_seconds) || null,
-          friend_id: form.friend_id,
-          soundcloud_url: cleanSoundcloudUrl(form.soundcloud_url),
-          local_audio_url: null,
-        })
-      );
-
-      toaster.create({
-        title: "Audio Removed",
-        description: "Local audio file has been removed",
-        type: "success",
-      });
-
-      setShowRemoveAudioConfirm(false);
-    } catch (err) {
-      toaster.create({
-        title: "Remove Audio Failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        type: "error",
-      });
-    } finally {
-      setRemoveAudioLoading(false);
-    }
-  };
-
   const TrackEditActionsWrapper = createTrackEditActionsWrapper({
     aiLoading: aiLoading,
     onFetchAI: fetchFromChatGPT,
@@ -449,11 +122,7 @@ export default function TrackEditForm({
     analyzeLoading: analyzeLoading,
     onAnalyzeAudio: handleAnalyzeAudio,
     uploadLoading: uploadLoading,
-    onFileSelected: (file) => {
-      if (file) {
-        handleFileUpload(file);
-      }
-    },
+    onFileSelected,
     hasAudio: !!track?.local_audio_url,
     onRemoveAudio: handleRemoveAudioClick,
     removeAudioLoading: removeAudioLoading,
@@ -496,194 +165,40 @@ export default function TrackEditForm({
                 <TrackEditFormSkeleton />
               ) : (
                 <Box as="form" onSubmit={handleSubmit}>
-                  <Stack
-                    borderWidth={{ base: "0", md: "1px" }}
-                    borderRadius="md"
-                    padding={{ base: 2, md: 4 }}
-                    marginBottom={{ base: 2, md: 4 }}
-                    marginTop={{ base: 2, md: 4 }}
-                  >
-                    <LabeledInput
-                      label="Title"
-                      name="title"
-                      value={form.title}
-                      onChange={handleChange}
-                    />
-                    <LabeledInput
-                      label="Artist"
-                      name="artist"
-                      value={form.artist}
-                      onChange={handleChange}
-                    />
-                    <LabeledInput
-                      label="Album"
-                      name="album"
-                      value={form.album}
-                      onChange={handleChange}
-                    />
-                    <Flex gap={2} flexWrap="wrap">
-                      <Box flex={{ base: "1 1 calc(50% - 4px)", md: "1" }}>
-                        <LabeledInput
-                          label="BPM"
-                          name="bpm"
-                          value={form.bpm}
-                          onChange={handleChange}
-                          type="number"
-                        />
-                      </Box>
-                      <Box flex={{ base: "1 1 calc(50% - 4px)", md: "1" }}>
-                        <LabeledInput
-                          label="Key"
-                          name="key"
-                          value={form.key}
-                          onChange={handleChange}
-                        />
-                      </Box>
-                      <Box flex={{ base: "1 1 calc(50% - 4px)", md: "1" }}>
-                        <LabeledInput
-                          label="Danceability"
-                          name="danceability"
-                          value={form.danceability ?? ""}
-                          onChange={handleChange}
-                          type="number"
-                        />
-                      </Box>
-                      <Box flex={{ base: "1 1 calc(50% - 4px)", md: "1" }}>
-                        <LabeledInput
-                          label="Duration (seconds)"
-                          name="duration_seconds"
-                          value={form.duration_seconds ?? ""}
-                          onChange={handleChange}
-                          type="number"
-                        />
-                      </Box>
-                    </Flex>
-                    <LabeledInput
-                      label="Genre (comma separated)"
-                      name="local_tags"
-                      value={form.local_tags}
-                      onChange={handleChange}
-                    />
-                    <LabeledTextarea
-                      label="Notes"
-                      name="notes"
-                      value={form.notes}
-                      height={"100px"}
-                      onChange={handleChange}
-                    />
-                    <LabeledInput
-                      label="Apple Music URL"
-                      name="apple_music_url"
-                      value={form.apple_music_url || ""}
-                      onChange={handleChange}
-                    />
-                    <LabeledInput
-                      label="YouTube URL"
-                      name="youtube_url"
-                      value={form.youtube_url || ""}
-                      onChange={handleChange}
-                    />
-                    <LabeledInput
-                      label="SoundCloud URL"
-                      name="soundcloud_url"
-                      value={form.soundcloud_url || ""}
-                      onChange={handleChange}
-                    />
-
-                    <Box>
-                      <Text mb={1} fontSize="sm">
-                        Rating
-                      </Text>
-                      <RatingGroup.Root
-                        value={form.star_rating}
-                        onValueChange={({ value }) => handleStarRating(value)}
-                        size="md"
-                        count={5}
-                      >
-                        <RatingGroup.HiddenInput />
-                        <RatingGroup.Control />
-                      </RatingGroup.Root>
-                    </Box>
-                  </Stack>
-                  <Button
-                    type="submit"
+                  <TrackEditFormFields
+                    values={form}
                     loading={loading}
-                    disabled={loading}
-                    size={"sm"}
-                  >
-                    Save
-                  </Button>
-
-                  <YouTubePickerDialog
-                    open={showYoutubeModal}
-                    loading={youtubeLoading}
-                    results={youtubeResults}
-                    onOpenChange={(open) => setShowYoutubeModal(open)}
-                    onSelect={(video) => handleYoutubeSelect(video)}
-                    initialTitle={form.title}
-                    initialArtist={form.artist}
-                    onSearch={handleYouTubeSearch}
+                    onChange={handleChange}
+                    onStarRatingChange={handleStarRating}
                   />
 
-                  {/* --- Apple Music Dialog --- */}
-                  <AppleMusicPickerDialog
-                    open={applePicker.isOpen}
-                    onOpenChange={(open) =>
+                  <TrackEditFormDialogs
+                    track={track}
+                    title={form.title}
+                    artist={form.artist}
+                    album={form.album}
+                    youtubeOpen={showYoutubeModal}
+                    youtubeLoading={youtubeLoading}
+                    youtubeResults={youtubeResults}
+                    onYouTubeOpenChange={setShowYoutubeModal}
+                    onYouTubeSelect={handleYoutubeSelect}
+                    onYouTubeSearch={handleYouTubeSearch}
+                    appleOpen={applePicker.isOpen}
+                    onAppleOpenChange={(open) =>
                       open ? applePicker.open() : applePicker.close()
                     }
-                    track={track}
-                    onSelect={(song) => applePicker.select(song)}
+                    onAppleSelect={(song) => applePicker.select(song)}
+                    discogsOpen={showDiscogsModal}
+                    onDiscogsClose={() => setShowDiscogsModal(false)}
+                    discogsVideos={discogsVideos}
+                    discogsLoading={discogsLoading}
+                    onDiscogsVideoSelect={handleDiscogsVideoSelect}
+                    removeAudioOpen={showRemoveAudioConfirm}
+                    onRemoveAudioOpenChange={setShowRemoveAudioConfirm}
+                    onRemoveAudioCancel={closeRemoveAudioConfirm}
+                    onRemoveAudioConfirm={handleRemoveAudioConfirm}
+                    removeAudioLoading={removeAudioLoading}
                   />
-
-                  {/* --- Discogs Videos Dialog --- */}
-                  <DiscogsVideosModal
-                    open={showDiscogsModal}
-                    onClose={() => setShowDiscogsModal(false)}
-                    videos={discogsVideos}
-                    loading={discogsLoading}
-                    trackTitle={form.title}
-                    trackArtist={form.artist}
-                    trackAlbum={form.album}
-                    onVideoSelect={handleDiscogsVideoSelect}
-                  />
-
-                  {/* --- Remove Audio Confirmation Dialog --- */}
-                  <Dialog.Root
-                    open={showRemoveAudioConfirm}
-                    onOpenChange={(d) => setShowRemoveAudioConfirm(d.open)}
-                  >
-                    <Dialog.Backdrop />
-                    <Dialog.Positioner>
-                      <Dialog.Content>
-                        <Dialog.Header>
-                          <Dialog.Title>Remove Audio</Dialog.Title>
-                        </Dialog.Header>
-                        <Dialog.Body>
-                          <Text>
-                            Are you sure you want to remove the local audio file? This
-                            action cannot be undone.
-                          </Text>
-                        </Dialog.Body>
-                        <Dialog.Footer>
-                          <Button
-                            variant="outline"
-                            onClick={() => setShowRemoveAudioConfirm(false)}
-                            disabled={removeAudioLoading}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            colorPalette="red"
-                            onClick={handleRemoveAudioConfirm}
-                            loading={removeAudioLoading}
-                            disabled={removeAudioLoading}
-                          >
-                            Remove
-                          </Button>
-                        </Dialog.Footer>
-                      </Dialog.Content>
-                    </Dialog.Positioner>
-                  </Dialog.Root>
                 </Box>
               )}
             </Dialog.Body>

@@ -14,7 +14,7 @@ import { AppleMusicResult } from "@/types/apple";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
 import { useTracksQuery } from "@/hooks/useTracksQuery";
-import type { TrackEditFormProps } from "@/components/TrackEditForm";
+import type { TrackEditFormProps } from "@/components/track-edit/types";
 import { fetchAppleMusicAISearch } from "@/services/aiService";
 import { fetchMissingAppleTracks } from "@/services/trackService";
 import type { DiscogsLookupResult } from "@/types/discogs";

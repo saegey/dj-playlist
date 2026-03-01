@@ -18,7 +18,7 @@ import {
 import { SiApplemusic } from "react-icons/si";
 import type { AppleMusicResult } from "@/types/track";
 import { useAppleMusicAISearchQuery } from "@/hooks/useAppleMusicAISearchQuery";
-import { TrackEditFormProps } from "./TrackEditForm";
+import type { TrackEditFormProps } from "@/components/track-edit/types";
 
 type Props = {
   open: boolean;
