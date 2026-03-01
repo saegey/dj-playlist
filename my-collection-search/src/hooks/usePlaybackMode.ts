@@ -1,11 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { PlaybackMode } from '@/components/PlaybackModeSelector';
+import { useState, useCallback, useEffect } from "react";
+import type { PlaybackMode } from "@/components/PlaybackModeSelector";
+import { controlLocalPlayback } from "@/services/internalApi/playback";
 
-const STORAGE_KEY = 'mcs:playbackMode';
-const MODE_CHANGED_EVENT = 'mcs:playbackModeChanged';
+const STORAGE_KEY = "mcs:playbackMode";
+const MODE_CHANGED_EVENT = "mcs:playbackModeChanged";
 
 function isPlaybackMode(value: string | null): value is PlaybackMode {
-  return value === 'browser' || value === 'local-dac';
+  return value === "browser" || value === "local-dac";
 }
 
 /**
@@ -13,7 +14,7 @@ function isPlaybackMode(value: string | null): value is PlaybackMode {
  * Persists the user's preference to localStorage
  */
 export function usePlaybackMode() {
-  const [mode, setModeState] = useState<PlaybackMode>('browser');
+  const [mode, setModeState] = useState<PlaybackMode>("browser");
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -23,7 +24,7 @@ export function usePlaybackMode() {
         setModeState(saved);
       }
     } catch (error) {
-      console.error('Failed to load playback mode from localStorage:', error);
+      console.error("Failed to load playback mode from localStorage:", error);
     }
   }, []);
 
@@ -44,14 +45,14 @@ export function usePlaybackMode() {
     };
 
     window.addEventListener(MODE_CHANGED_EVENT, onModeChanged as EventListener);
-    window.addEventListener('storage', onStorage);
+    window.addEventListener("storage", onStorage);
 
     return () => {
       window.removeEventListener(
         MODE_CHANGED_EVENT,
         onModeChanged as EventListener
       );
-      window.removeEventListener('storage', onStorage);
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
 
@@ -64,7 +65,7 @@ export function usePlaybackMode() {
         new CustomEvent(MODE_CHANGED_EVENT, { detail: { mode: newMode } })
       );
     } catch (error) {
-      console.error('Failed to save playback mode to localStorage:', error);
+      console.error("Failed to save playback mode to localStorage:", error);
     }
   }, []);
 
@@ -75,125 +76,71 @@ export function usePlaybackMode() {
  * Hook to control local DAC playback via API
  */
 export function useLocalPlayback() {
+  const runAction = useCallback(
+    async (body: Parameters<typeof controlLocalPlayback>[0]) => {
+      try {
+        return await controlLocalPlayback(body);
+      } catch (error) {
+        console.error("Local playback action error:", error);
+        throw error;
+      }
+    },
+    []
+  );
+
   const play = useCallback(async (filename: string) => {
     try {
-      const res = await fetch('/api/playback/local', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'play', filename }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to play track');
-      }
-
-      return await res.json();
+      return await runAction({ action: "play", filename });
     } catch (error) {
-      console.error('Local playback error:', error);
+      console.error("Local playback error:", error);
       throw error;
     }
-  }, []);
+  }, [runAction]);
 
   const pause = useCallback(async () => {
     try {
-      const res = await fetch('/api/playback/local', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'pause' }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to pause playback');
-      }
-
-      return await res.json();
+      return await runAction({ action: "pause" });
     } catch (error) {
-      console.error('Local playback pause error:', error);
+      console.error("Local playback pause error:", error);
       throw error;
     }
-  }, []);
+  }, [runAction]);
 
   const resume = useCallback(async () => {
     try {
-      const res = await fetch('/api/playback/local', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resume' }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to resume playback');
-      }
-
-      return await res.json();
+      return await runAction({ action: "resume" });
     } catch (error) {
-      console.error('Local playback resume error:', error);
+      console.error("Local playback resume error:", error);
       throw error;
     }
-  }, []);
+  }, [runAction]);
 
   const stop = useCallback(async () => {
     try {
-      const res = await fetch('/api/playback/local', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'stop' }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to stop playback');
-      }
-
-      return await res.json();
+      return await runAction({ action: "stop" });
     } catch (error) {
-      console.error('Local playback stop error:', error);
+      console.error("Local playback stop error:", error);
       throw error;
     }
-  }, []);
+  }, [runAction]);
 
   const seek = useCallback(async (seconds: number) => {
     try {
-      const res = await fetch('/api/playback/local', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'seek', seconds }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to seek');
-      }
-
-      return await res.json();
+      return await runAction({ action: "seek", seconds });
     } catch (error) {
-      console.error('Local playback seek error:', error);
+      console.error("Local playback seek error:", error);
       throw error;
     }
-  }, []);
+  }, [runAction]);
 
   const setVolume = useCallback(async (volume: number) => {
     try {
-      const res = await fetch('/api/playback/local', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'volume', volume }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to set volume');
-      }
-
-      return await res.json();
+      return await runAction({ action: "volume", volume });
     } catch (error) {
-      console.error('Local playback volume error:', error);
+      console.error("Local playback volume error:", error);
       throw error;
     }
-  }, []);
+  }, [runAction]);
 
   return { play, pause, resume, stop, seek, setVolume };
 }

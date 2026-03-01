@@ -62,6 +62,51 @@ export const discogsLookupResponseSchema = z
   })
   .passthrough();
 
+export const localPlaybackActionSchema = z.enum([
+  "play",
+  "pause",
+  "resume",
+  "stop",
+  "seek",
+  "volume",
+]);
+
+export const localPlaybackControlBodySchema = z.object({
+  action: localPlaybackActionSchema,
+  filename: z.string().optional(),
+  seconds: z.number().optional(),
+  volume: z.number().optional(),
+});
+
+export const localPlaybackControlResponseSchema = z.object({
+  success: z.boolean(),
+  status: z.unknown().optional(),
+  volume: z.number().optional(),
+});
+
+export const localPlaybackStatusResponseSchema = z.object({
+  enabled: z.boolean(),
+  status: z.unknown(),
+});
+
+export const localPlaybackTestResponseSchema = z
+  .object({
+    available: z.boolean(),
+    message: z.string().optional(),
+    error: z.string().optional(),
+    config: z
+      .object({
+        ENABLE_AUDIO_PLAYBACK: z.string().optional(),
+        AUDIO_DEVICE: z.string().optional(),
+        MPD_HOST: z.string().optional(),
+        MPD_PORT: z.string().optional(),
+        MPD_PATH_PREFIX: z.string().optional(),
+      })
+      .optional(),
+    testResult: z.unknown().optional(),
+  })
+  .passthrough();
+
 export const playlistTrackRefSchema = z.object({
   track_id: z.string(),
   friend_id: z.number().int().nullable().optional(),

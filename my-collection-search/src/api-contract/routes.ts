@@ -31,6 +31,10 @@ import {
   essentiaBackfillResponseSchema,
   manifestCleanupResponseSchema,
   manifestVerificationResponseSchema,
+  localPlaybackControlBodySchema,
+  localPlaybackControlResponseSchema,
+  localPlaybackStatusResponseSchema,
+  localPlaybackTestResponseSchema,
   playlistCreateBodySchema,
   playlistDeleteQuerySchema,
   playlistDetailParamsSchema,
@@ -1377,6 +1381,142 @@ const remainingTracksContracts: ApiContractRoute[] = [
 ];
 
 export const apiContractRoutes: ApiContractRoute[] = [
+  {
+    operationId: "getLocalPlaybackStatus",
+    method: "get",
+    path: "/api/playback/local",
+    summary: "Get current local playback status",
+    tags: ["Playback"],
+    successSchema: localPlaybackStatusResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Local playback status",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  enabled: { type: "boolean" },
+                  status: { type: "object", additionalProperties: true },
+                },
+                required: ["enabled", "status"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "controlLocalPlayback",
+    method: "post",
+    path: "/api/playback/local",
+    summary: "Control local playback actions",
+    tags: ["Playback"],
+    bodySchema: localPlaybackControlBodySchema,
+    successSchema: localPlaybackControlResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                action: {
+                  type: "string",
+                  enum: ["play", "pause", "resume", "stop", "seek", "volume"],
+                },
+                filename: { type: "string" },
+                seconds: { type: "number" },
+                volume: { type: "number" },
+              },
+              required: ["action"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Playback action result",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean" },
+                  status: { type: "object", additionalProperties: true },
+                  volume: { type: "number" },
+                },
+                required: ["success"],
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid action payload",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "testLocalPlayback",
+    method: "get",
+    path: "/api/playback/test",
+    summary: "Test local playback configuration and availability",
+    tags: ["Playback"],
+    successSchema: localPlaybackTestResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Playback test result",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  available: { type: "boolean" },
+                  message: { type: "string" },
+                  error: { type: "string" },
+                  config: { type: "object", additionalProperties: true },
+                  testResult: { type: "object", additionalProperties: true },
+                },
+                required: ["available"],
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
   {
     operationId: "listPlaylists",
     method: "get",
