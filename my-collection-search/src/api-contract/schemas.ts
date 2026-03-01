@@ -187,6 +187,123 @@ export const trackSearchPostResponseSchema = meiliSearchMetaSchema.extend({
   tracks: z.array(z.unknown()),
 });
 
+export const trackPlaylistMembershipSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  position: z.number().int(),
+});
+
+export const trackPlaylistsResponseSchema = z.object({
+  playlists: z.array(trackPlaylistMembershipSchema).optional(),
+});
+
+export const trackAudioMetadataEmbeddedCoverSchema = z
+  .object({
+    index: z.number().int(),
+    codec_name: z.string().optional(),
+    width: z.number().int().optional(),
+    height: z.number().int().optional(),
+    pix_fmt: z.string().optional(),
+  })
+  .passthrough();
+
+export const trackAudioMetadataResponseSchema = z.object({
+  track_id: z.string(),
+  friend_id: z.number().int(),
+  local_audio_url: z.string(),
+  audio_file_album_art_url: z.string().nullable().optional(),
+  has_embedded_cover: z.boolean(),
+  embedded_cover: trackAudioMetadataEmbeddedCoverSchema.nullable().optional(),
+  probe: z.unknown(),
+});
+
+export const trackExtractEmbeddedCoverResponseSchema = z
+  .object({
+    success: z.boolean(),
+    audio_file_album_art_url: z.string(),
+    message: z.string(),
+  })
+  .passthrough();
+
+export const trackEssentiaResponseSchema = z.object({
+  track_id: z.string(),
+  friend_id: z.number().int(),
+  file_path: z.string(),
+  data: z.unknown(),
+});
+
+export const trackEmbeddingPreviewResponseSchema = z.object({
+  track_id: z.string(),
+  friend_id: z.number().int(),
+  isDefaultTemplate: z.boolean(),
+  template: z.string(),
+  prompt: z.string(),
+});
+
+export const embeddingPreviewTypeSchema = z.enum(["identity", "audio_vibe"]);
+
+export const identityEmbeddingDataSchema = z.object({
+  title: z.string(),
+  artist: z.string(),
+  album: z.string(),
+  era: z.string(),
+  country: z.string(),
+  labels: z.array(z.string()),
+  composers: z.array(z.string()),
+  genres: z.array(z.string()),
+  styles: z.array(z.string()),
+  tags: z.array(z.string()),
+});
+
+export const audioVibeEmbeddingDataSchema = z.object({
+  bpm: z.string(),
+  bpmRange: z.string(),
+  key: z.string(),
+  camelot: z.string(),
+  danceability: z.string(),
+  energy: z.string(),
+  dominantMood: z.string(),
+  moodProfile: z.string(),
+  vibeDescriptors: z.array(z.string()),
+  acoustic: z.string().optional(),
+  vocalPresence: z.string().optional(),
+  percussiveness: z.string().optional(),
+  partyMood: z.string().optional(),
+});
+
+export const embeddingIdentityPreviewApiResponseSchema = z.object({
+  type: z.literal("identity"),
+  text: z.string(),
+  data: identityEmbeddingDataSchema,
+});
+
+export const embeddingAudioVibePreviewApiResponseSchema = z.object({
+  type: z.literal("audio_vibe"),
+  text: z.string(),
+  data: audioVibeEmbeddingDataSchema,
+});
+
+export const embeddingPreviewResponseSchema = z.discriminatedUnion("type", [
+  embeddingIdentityPreviewApiResponseSchema,
+  embeddingAudioVibePreviewApiResponseSchema,
+]);
+
+export const identityEmbeddingPreviewResponseSchema = z.object({
+  identityText: z.string(),
+  identityData: identityEmbeddingDataSchema,
+});
+
+export const audioVibeEmbeddingPreviewResponseSchema = z.object({
+  vibeText: z.string(),
+  vibeData: audioVibeEmbeddingDataSchema,
+});
+
+export const legacyEmbeddingPreviewResponseSchema = z.object({
+  type: embeddingPreviewTypeSchema,
+  text: z.string(),
+  data: z.unknown(),
+});
+
 export const bulkNotesUpdateSchema = z
   .object({
     track_id: z.string().min(1),

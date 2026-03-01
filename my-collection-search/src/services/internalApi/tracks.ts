@@ -1,99 +1,50 @@
 import { z } from "zod";
 import {
+  audioVibeEmbeddingDataSchema,
+  audioVibeEmbeddingPreviewResponseSchema,
   bulkNotesBodySchema,
   bulkNotesResponseSchema,
   bulkNotesUpdateSchema,
   coverArtBackfillBodySchema,
   coverArtBackfillResponseSchema,
   durationBackfillResponseSchema,
+  embeddingAudioVibePreviewApiResponseSchema,
+  embeddingIdentityPreviewApiResponseSchema,
+  embeddingPreviewResponseSchema,
+  identityEmbeddingDataSchema,
+  identityEmbeddingPreviewResponseSchema,
+  trackAudioMetadataResponseSchema,
+  trackEmbeddingPreviewResponseSchema,
+  trackEssentiaResponseSchema,
+  trackExtractEmbeddedCoverResponseSchema,
+  trackPlaylistsResponseSchema,
+  trackPlaylistMembershipSchema,
   essentiaBackfillBodySchema,
   essentiaBackfillResponseSchema,
 } from "@/api-contract/schemas";
 import { http } from "@/services/http";
 import type { Track } from "@/types/track";
 
-export type TrackPlaylistMembership = {
-  id: number;
-  name: string;
-  position: number;
-};
+export type TrackPlaylistMembership = z.infer<typeof trackPlaylistMembershipSchema>;
+type TrackPlaylistsApiResponse = z.infer<typeof trackPlaylistsResponseSchema>;
+export type TrackAudioMetadataResponse = z.infer<typeof trackAudioMetadataResponseSchema>;
+export type TrackExtractEmbeddedCoverResponse = z.infer<
+  typeof trackExtractEmbeddedCoverResponseSchema
+>;
+export type TrackEssentiaResponse = z.infer<typeof trackEssentiaResponseSchema>;
+export type TrackEmbeddingPreviewResponse = z.infer<
+  typeof trackEmbeddingPreviewResponseSchema
+>;
+type EmbeddingPreviewResponse = z.infer<typeof embeddingPreviewResponseSchema>;
 
-export type TrackAudioMetadataResponse = {
-  track_id: string;
-  friend_id: number;
-  local_audio_url: string;
-  audio_file_album_art_url?: string | null;
-  has_embedded_cover: boolean;
-  embedded_cover?: {
-    index: number;
-    codec_name?: string;
-    width?: number;
-    height?: number;
-    pix_fmt?: string;
-  } | null;
-  probe: unknown;
-};
-
-export type TrackEssentiaResponse = {
-  track_id: string;
-  friend_id: number;
-  file_path: string;
-  data: unknown;
-};
-
-export type TrackEmbeddingPreviewResponse = {
-  track_id: string;
-  friend_id: number;
-  isDefaultTemplate: boolean;
-  template: string;
-  prompt: string;
-};
-
-type EmbeddingPreviewType = "identity" | "audio_vibe";
-
-type EmbeddingPreviewResponse = {
-  type: EmbeddingPreviewType;
-  text: string;
-  data: unknown;
-};
-
-export type IdentityEmbeddingData = {
-  title: string;
-  artist: string;
-  album: string;
-  era: string;
-  country: string;
-  labels: string[];
-  genres: string[];
-  styles: string[];
-  tags: string[];
-};
-
-export type IdentityEmbeddingPreviewResponse = {
-  identityText: string;
-  identityData: IdentityEmbeddingData;
-};
-
-export type AudioVibeEmbeddingData = {
-  bpm: string;
-  bpmRange: string;
-  key: string;
-  camelot: string;
-  danceability: string;
-  energy: string;
-  dominantMood: string;
-  moodProfile: string;
-  vibeDescriptors: string[];
-  acoustic?: string;
-  vocalPresence?: string;
-  percussiveness?: string;
-  partyMood?: string;
-};
-
-export type AudioVibeEmbeddingPreviewResponse = {
-  vibeText: string;
-  vibeData: AudioVibeEmbeddingData;
-};
+export type IdentityEmbeddingData = z.infer<typeof identityEmbeddingDataSchema>;
+export type IdentityEmbeddingPreviewResponse = z.infer<
+  typeof identityEmbeddingPreviewResponseSchema
+>;
+export type AudioVibeEmbeddingData = z.infer<typeof audioVibeEmbeddingDataSchema>;
+export type AudioVibeEmbeddingPreviewResponse = z.infer<
+  typeof audioVibeEmbeddingPreviewResponseSchema
+>;
 
 export type DurationBackfillResponse = z.infer<
   typeof durationBackfillResponseSchema
@@ -116,7 +67,7 @@ export async function fetchTrackPlaylists(
   trackId: string,
   friendId: number
 ): Promise<TrackPlaylistMembership[]> {
-  const data = await http<{ playlists?: TrackPlaylistMembership[] }>(
+  const data = await http<TrackPlaylistsApiResponse>(
     `/api/tracks/${encodeURIComponent(trackId)}/playlists?friend_id=${friendId}`,
     {
       method: "GET",
@@ -144,7 +95,7 @@ export async function extractEmbeddedCover(
   trackId: string,
   friendId: number
 ): Promise<string> {
-  const data = await http<{ audio_file_album_art_url?: string }>(
+  const data = await http<TrackExtractEmbeddedCoverResponse>(
     `/api/tracks/${encodeURIComponent(trackId)}/audio-metadata`,
     {
       method: "POST",
@@ -193,11 +144,11 @@ export async function fetchIdentityEmbeddingPreview(
       cache: "no-store",
     }
   );
-
-  return {
-    identityText: preview.text,
-    identityData: preview.data as IdentityEmbeddingData,
-  };
+  const parsed = embeddingIdentityPreviewApiResponseSchema.parse(preview);
+  return identityEmbeddingPreviewResponseSchema.parse({
+    identityText: parsed.text,
+    identityData: parsed.data,
+  });
 }
 
 export async function fetchAudioVibeEmbeddingPreview(
@@ -211,11 +162,11 @@ export async function fetchAudioVibeEmbeddingPreview(
       cache: "no-store",
     }
   );
-
-  return {
-    vibeText: preview.text,
-    vibeData: preview.data as AudioVibeEmbeddingData,
-  };
+  const parsed = embeddingAudioVibePreviewApiResponseSchema.parse(preview);
+  return audioVibeEmbeddingPreviewResponseSchema.parse({
+    vibeText: parsed.text,
+    vibeData: parsed.data,
+  });
 }
 
 export async function queueFixMissingDurations(): Promise<DurationBackfillResponse> {
