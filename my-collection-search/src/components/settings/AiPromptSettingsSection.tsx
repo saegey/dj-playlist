@@ -14,6 +14,10 @@ import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
 import UsernameSelect from "@/components/UsernameSelect";
 import { toaster } from "@/components/ui/toaster";
+import {
+  fetchAiPromptSettings,
+  updateAiPromptSettings,
+} from "@/services/internalApi/settings";
 
 export default function AiPromptSettingsSection(): React.JSX.Element {
   const { friend, setFriend } = useUsername();
@@ -31,15 +35,7 @@ export default function AiPromptSettingsSection(): React.JSX.Element {
     const run = async () => {
       setLoading(true);
       try {
-        const friendId = friend?.id;
-        const url = friendId
-          ? `/api/settings/ai-prompt?friend_id=${encodeURIComponent(friendId)}`
-          : "/api/settings/ai-prompt";
-        const res = await fetch(url);
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || "Failed to load prompt");
-        }
+        const data = await fetchAiPromptSettings({ friend_id: friend?.id });
         setPrompt(data.prompt || "");
         setDefaultPrompt(data.defaultPrompt || "");
         setIsDefault(Boolean(data.isDefault));
@@ -66,15 +62,10 @@ export default function AiPromptSettingsSection(): React.JSX.Element {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/settings/ai-prompt", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friend_id: friend.id, prompt }),
+      const data = await updateAiPromptSettings({
+        friend_id: friend.id,
+        prompt,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to save prompt");
-      }
       setPrompt(data.prompt || prompt);
       setIsDefault(Boolean(data.isDefault));
       toaster.create({ title: "Prompt saved", type: "success" });
@@ -99,15 +90,10 @@ export default function AiPromptSettingsSection(): React.JSX.Element {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/settings/ai-prompt", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friend_id: friend.id, prompt: "" }),
+      const data = await updateAiPromptSettings({
+        friend_id: friend.id,
+        prompt: "",
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to reset prompt");
-      }
       setPrompt(data.prompt || defaultPrompt);
       setIsDefault(true);
       toaster.create({ title: "Prompt reset to default", type: "success" });

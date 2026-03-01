@@ -293,6 +293,26 @@ export const manifestCleanupResponseSchema = z.object({
   }),
 });
 
+export const aiPromptSettingsQuerySchema = z.object({
+  friend_id: intFromInputSchema.optional(),
+});
+
+export const aiPromptSettingsPutBodySchema = z.object({
+  friend_id: intFromInputSchema,
+  prompt: z.string().optional().default(""),
+});
+
+export const aiPromptSettingsGetResponseSchema = z.object({
+  prompt: z.string(),
+  defaultPrompt: z.string(),
+  isDefault: z.boolean(),
+});
+
+export const aiPromptSettingsPutResponseSchema = z.object({
+  prompt: z.string(),
+  isDefault: z.boolean(),
+});
+
 export const albumReleaseParamsSchema = z.object({
   releaseId: z.string().min(1),
 });

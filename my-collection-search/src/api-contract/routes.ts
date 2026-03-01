@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  aiPromptSettingsGetResponseSchema,
+  aiPromptSettingsPutBodySchema,
+  aiPromptSettingsPutResponseSchema,
+  aiPromptSettingsQuerySchema,
   albumDetailResponseSchema,
   albumDiscogsRawResponseSchema,
   albumFriendQuerySchema,
@@ -30,7 +34,7 @@ import {
   trackSearchPostResponseSchema,
 } from "@/api-contract/schemas";
 
-export type HttpMethod = "get" | "post" | "patch" | "delete";
+export type HttpMethod = "get" | "post" | "patch" | "put" | "delete";
 
 export type ApiContractRoute = {
   operationId: string;
@@ -1788,6 +1792,113 @@ export const apiContractRoutes: ApiContractRoute[] = [
         },
         "404": {
           description: "Seed embeddings missing",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getAiPromptSettings",
+    method: "get",
+    path: "/api/settings/ai-prompt",
+    summary: "Get AI metadata prompt settings",
+    tags: ["Settings"],
+    querySchema: aiPromptSettingsQuerySchema,
+    successSchema: aiPromptSettingsGetResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "friend_id",
+          in: "query",
+          required: false,
+          schema: { type: "integer" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "AI prompt settings",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  prompt: { type: "string" },
+                  defaultPrompt: { type: "string" },
+                  isDefault: { type: "boolean" },
+                },
+                required: ["prompt", "defaultPrompt", "isDefault"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid query parameter",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "updateAiPromptSettings",
+    method: "put",
+    path: "/api/settings/ai-prompt",
+    summary: "Update AI metadata prompt settings",
+    tags: ["Settings"],
+    bodySchema: aiPromptSettingsPutBodySchema,
+    successSchema: aiPromptSettingsPutResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                friend_id: { type: "integer" },
+                prompt: { type: "string" },
+              },
+              required: ["friend_id"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "AI prompt updated",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  prompt: { type: "string" },
+                  isDefault: { type: "boolean" },
+                },
+                required: ["prompt", "isDefault"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid payload",
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
