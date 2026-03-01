@@ -1,7 +1,11 @@
 import OpenAI from "openai";
 import { getTrackMetadataPromptForFriend } from "@/lib/serverPrompts";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai: OpenAI | undefined;
+function getOpenAI(): OpenAI {
+  _openai ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 const PRIMARY_MODEL = process.env.OPENAI_TRACK_METADATA_MODEL || "gpt-5-mini";
 const FALLBACK_MODEL =
   process.env.OPENAI_TRACK_METADATA_FALLBACK_MODEL || "gpt-4.1-mini";
@@ -58,7 +62,7 @@ type ParseableResponse = {
 };
 
 function parseMetadataFromResponse(
-  response: Awaited<ReturnType<typeof openai.responses.create>>
+  response: Awaited<ReturnType<OpenAI["responses"]["create"]>>
 ): MetadataResult {
   const res = response as ParseableResponse;
   const candidates: string[] = [];
@@ -133,7 +137,7 @@ async function fetchMetadata(
   };
 
   try {
-    const response = await openai.responses.create(baseRequest);
+    const response = await getOpenAI().responses.create(baseRequest);
     return parseMetadataFromResponse(response);
   } catch (error) {
     const err = error as { message?: string; status?: number };
@@ -152,7 +156,7 @@ async function fetchMetadata(
       `[track-metadata] model '${model}' failed (${err.status ?? "unknown"}), retrying with '${fallbackModel}'`
     );
 
-    const retryResponse = await openai.responses.create({
+    const retryResponse = await getOpenAI().responses.create({
       ...baseRequest,
       model: fallbackModel,
     });
