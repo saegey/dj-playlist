@@ -1,120 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
-import path from "path";
-import fs from "fs";
-import { promisify } from "util";
-import { execFile } from "child_process";
-
-const execFileAsync = promisify(execFile);
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-type TrackRow = {
-  track_id: string;
-  friend_id: number;
-  local_audio_url: string | null;
-  composer: string | null;
-};
-
-function normalizeAudioFilename(raw: string): string {
-  let value = raw.trim();
-  try {
-    value = decodeURIComponent(value);
-  } catch {
-    // ignore malformed encoding and use raw value
-  }
-
-  if (value.startsWith("http://") || value.startsWith("https://")) {
-    try {
-      const parsed = new URL(value);
-      const nested = parsed.searchParams.get("filename");
-      if (nested) value = nested;
-      else value = path.basename(parsed.pathname);
-    } catch {
-      // keep original
-    }
-  }
-
-  value = value.replace(/^\/+/, "");
-  value = value.replace(/^app\/audio\//, "");
-  value = value.replace(/^audio\//, "");
-  return value;
-}
-
-function resolveAudioFilePath(filename: string): string | null {
-  const audioDir = process.env.AUDIO_DIR || "/app/audio";
-  const normalized = normalizeAudioFilename(filename);
-  if (!normalized) return null;
-
-  const root = path.resolve(audioDir);
-  const primary = path.resolve(audioDir, normalized);
-  if (
-    primary.startsWith(root) &&
-    fs.existsSync(primary) &&
-    fs.statSync(primary).isFile()
-  ) {
-    return primary;
-  }
-
-  const base = path.basename(normalized);
-  const fallback = path.resolve(audioDir, base);
-  if (
-    fallback.startsWith(root) &&
-    fs.existsSync(fallback) &&
-    fs.statSync(fallback).isFile()
-  ) {
-    return fallback;
-  }
-
-  return null;
-}
-
-async function fetchTrack(trackId: string, friendId: number): Promise<TrackRow | null> {
-  const { rows } = await pool.query<TrackRow>(
-    `
-    SELECT track_id, friend_id, local_audio_url, composer
-    FROM tracks
-    WHERE track_id = $1 AND friend_id = $2
-    LIMIT 1
-    `,
-    [trackId, friendId]
-  );
-  return rows[0] ?? null;
-}
-
-function extractComposerFromProbe(probe: unknown): string | null {
-  const tags = (
-    probe &&
-    typeof probe === "object" &&
-    "format" in probe &&
-    probe.format &&
-    typeof probe.format === "object" &&
-    "tags" in probe.format &&
-    probe.format.tags &&
-    typeof probe.format.tags === "object"
-  )
-    ? (probe.format.tags as Record<string, unknown>)
-    : null;
-
-  if (!tags) return null;
-
-  // Check common composer tag names
-  const composerKeys = [
-    "composer",
-    "COMPOSER",
-    "Composer",
-    "TPE2",  // ID3 tag for band/orchestra/accompaniment
-    "TCOM",  // ID3 tag for composer
-  ];
-
-  for (const key of composerKeys) {
-    const value = tags[key];
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
-    }
-  }
-
-  return null;
-}
+import { trackRepository } from "@/server/repositories/trackRepository";
+import { trackAudioMetadataService } from "@/server/services/trackAudioMetadataService";
 
 export async function POST(
   request: NextRequest,
@@ -132,7 +18,7 @@ export async function POST(
       );
     }
 
-    const track = await fetchTrack(trackId, friendId);
+    const track = await trackRepository.findTrackAudioMetadata(trackId, friendId);
     if (!track) {
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
@@ -143,7 +29,9 @@ export async function POST(
       );
     }
 
-    const audioPath = resolveAudioFilePath(track.local_audio_url);
+    const audioPath = trackAudioMetadataService.resolveAudioFilePath(
+      track.local_audio_url
+    );
     if (!audioPath) {
       return NextResponse.json(
         { error: "Local audio file not found" },
@@ -151,17 +39,11 @@ export async function POST(
       );
     }
 
-    const { stdout } = await execFileAsync("ffprobe", [
-      "-v",
-      "quiet",
-      "-print_format",
-      "json",
-      "-show_entries",
-      "format_tags",
+    const probe = await trackAudioMetadataService.runFfprobe(
       audioPath,
-    ]);
-    const probe = JSON.parse(stdout);
-    const composer = extractComposerFromProbe(probe);
+      "format_tags"
+    );
+    const composer = trackAudioMetadataService.extractComposerFromProbe(probe);
 
     if (!composer) {
       return NextResponse.json(
@@ -170,31 +52,15 @@ export async function POST(
       );
     }
 
-    await pool.query(
-      `
-      UPDATE tracks
-      SET composer = $1
-      WHERE track_id = $2 AND friend_id = $3
-      `,
-      [composer, trackId, friendId]
-    );
+    await trackRepository.updateTrackComposer(trackId, friendId, composer);
 
     // Update MeiliSearch
     try {
-      const { rows } = await pool.query(
-        `
-        SELECT
-          t.*,
-          COALESCE(a.library_identifier, t.library_identifier) AS library_identifier
-        FROM tracks t
-        LEFT JOIN albums a
-          ON t.release_id = a.release_id AND t.friend_id = a.friend_id
-        WHERE t.track_id = $1 AND t.friend_id = $2
-        LIMIT 1
-        `,
-        [trackId, friendId]
-      );
-      const updatedTrack = rows[0];
+      const updatedTrack =
+        await trackRepository.findTrackByTrackIdAndFriendIdWithLibraryFallback(
+          trackId,
+          friendId
+        );
       if (updatedTrack) {
         const { getMeiliClient } = await import("@/lib/meili");
         const meiliClient = getMeiliClient();

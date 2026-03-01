@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 export async function POST(req: Request) {
   try {
@@ -14,27 +12,7 @@ export async function POST(req: Request) {
     }
 
     // Build a VALUES table of (track_id, friend_id, ord) to preserve order
-    const values: string[] = [];
-  const params: (string | number)[] = [];
-    let p = 1;
-    for (let i = 0; i < tracks.length; i++) {
-      const t = tracks[i];
-      values.push(`($${p++}::text,$${p++}::int,$${p++}::int)`);
-      params.push(t.track_id, t.friend_id, i);
-    }
-    const query = `
-      SELECT
-        t.*,
-        COALESCE(a.library_identifier, t.library_identifier) AS library_identifier,
-        v.ord
-      FROM (VALUES ${values.join(",")}) AS v(track_id, friend_id, ord)
-      JOIN tracks t
-        ON t.track_id = v.track_id AND t.friend_id = v.friend_id
-      LEFT JOIN albums a
-        ON t.release_id = a.release_id AND t.friend_id = a.friend_id
-      ORDER BY v.ord
-    `;
-    const { rows } = await pool.query(query, params);
+    const rows = await trackRepository.findTracksByRefsPreservingOrder(tracks);
 
     // Normalize embedding into _vectors.default
     const ordered = rows.map((t) => {

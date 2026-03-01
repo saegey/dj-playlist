@@ -20,7 +20,7 @@ export function buildMeiliSearchFilters(filters: TracksFilter): string[] {
   // Missing ALL streaming URLs
   if (filters.missingAnyStreamingUrl) {
     filterStrings.push(
-      "(apple_music_url IS NULL AND youtube_url IS NULL AND spotify_url IS NULL AND soundcloud_url IS NULL)"
+      "(apple_music_url IS NULL AND youtube_url IS NULL AND soundcloud_url IS NULL)"
     );
   } else {
     // Individual streaming URL filters (only if not using "all" filter)
@@ -30,10 +30,6 @@ export function buildMeiliSearchFilters(filters: TracksFilter): string[] {
 
     if (filters.missingYouTube) {
       filterStrings.push("youtube_url IS NULL");
-    }
-
-    if (filters.missingSpotify) {
-      filterStrings.push("spotify_url IS NULL");
     }
 
     if (filters.missingSoundCloud) {
@@ -66,7 +62,6 @@ export function createEmptyFilters(): TracksFilter {
     missingAudio: false,
     missingAppleMusic: false,
     missingYouTube: false,
-    missingSpotify: false,
     missingSoundCloud: false,
     missingAnyStreamingUrl: false,
     missingMetadata: false,

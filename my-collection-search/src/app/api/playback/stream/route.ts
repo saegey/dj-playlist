@@ -1,4 +1,4 @@
-import { localPlaybackService } from '@/services/localPlaybackService';
+import { localPlaybackService } from '@/server/services/localPlaybackService';
 
 export const dynamic = 'force-dynamic';
 

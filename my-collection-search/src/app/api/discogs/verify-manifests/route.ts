@@ -5,7 +5,11 @@ import {
   getReleasePath,
   getManifestPath,
   saveManifest,
-} from "@/services/discogsManifestService";
+} from "@/server/services/discogsManifestService";
+import {
+  manifestCleanupResponseSchema,
+  manifestVerificationResponseSchema,
+} from "@/api-contract/schemas";
 
 interface VerificationResult {
   username: string;
@@ -18,18 +22,17 @@ export async function GET() {
   try {
     const manifestFiles = getManifestFiles();
     if (!manifestFiles.length) {
-      return NextResponse.json(
-        {
-          message: "No manifest files found yet. Run Discogs sync to create them.",
-          results: [],
-          summary: {
-            totalManifests: 0,
-            totalMissingFiles: 0,
-            totalValidFiles: 0,
-          },
+      const emptyResponse = {
+        message: "No manifest files found yet. Run Discogs sync to create them.",
+        results: [],
+        summary: {
+          totalManifests: 0,
+          totalMissingFiles: 0,
+          totalValidFiles: 0,
         },
-        { status: 200 }
-      );
+      };
+      const validated = manifestVerificationResponseSchema.parse(emptyResponse);
+      return NextResponse.json(validated, { status: 200 });
     }
 
     const results: VerificationResult[] = [];
@@ -57,7 +60,7 @@ export async function GET() {
       });
     }
 
-    return NextResponse.json({
+    const response = {
       message: "Manifest verification complete",
       results,
       summary: {
@@ -65,7 +68,9 @@ export async function GET() {
         totalMissingFiles: results.reduce((sum, r) => sum + r.missingFiles.length, 0),
         totalValidFiles: results.reduce((sum, r) => sum + r.validFiles.length, 0),
       },
-    });
+    };
+    const validated = manifestVerificationResponseSchema.parse(response);
+    return NextResponse.json(validated);
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -76,18 +81,17 @@ export async function POST() {
   try {
     const manifestFiles = getManifestFiles();
     if (!manifestFiles.length) {
-      return NextResponse.json(
-        {
-          message: "No manifest files to clean yet.",
-          results: [],
-          summary: {
-            totalManifests: 0,
-            totalRemoved: 0,
-            totalKept: 0,
-          },
+      const emptyResponse = {
+        message: "No manifest files to clean yet.",
+        results: [],
+        summary: {
+          totalManifests: 0,
+          totalRemoved: 0,
+          totalKept: 0,
         },
-        { status: 200 }
-      );
+      };
+      const validated = manifestCleanupResponseSchema.parse(emptyResponse);
+      return NextResponse.json(validated, { status: 200 });
     }
 
     const results: {
@@ -124,7 +128,7 @@ export async function POST() {
       });
     }
 
-    return NextResponse.json({
+    const response = {
       message: "Manifests cleaned successfully",
       results,
       summary: {
@@ -132,7 +136,9 @@ export async function POST() {
         totalRemoved: results.reduce((sum, r) => sum + r.removed.length, 0),
         totalKept: results.reduce((sum, r) => sum + r.after, 0),
       },
-    });
+    };
+    const validated = manifestCleanupResponseSchema.parse(response);
+    return NextResponse.json(validated);
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));
     return NextResponse.json({ error: err.message }, { status: 500 });

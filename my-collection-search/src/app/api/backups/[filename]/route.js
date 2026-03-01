@@ -35,8 +35,9 @@ export async function GET(_req, context) {
       },
     });
   } catch (e) {
+    console.error('[backups/filename] GET error:', e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
+      JSON.stringify({ error: 'Failed to retrieve backup file' }),
       {
         status: 500,
         headers: { 'Content-Type': 'application/json' },

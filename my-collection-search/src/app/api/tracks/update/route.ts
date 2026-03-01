@@ -1,30 +1,30 @@
 import { NextResponse } from "next/server";
-import { updateTrack } from "@/lib/db";
 import { getTrackEmbedding } from "@/lib/track-embedding";
 import { getPostHogClient } from "@/lib/posthog-server";
+import {
+  trackRepository,
+  type TrackWithLibraryIdentifierRow,
+  type UpdateTrackInput,
+} from "@/server/repositories/trackRepository";
 
 export async function PATCH(req: Request) {
   const { getMeiliClient } = await import("@/lib/meili");
   const meiliClient = getMeiliClient();
 
   try {
-    const data = await req.json();
-    // Fetch the current track before update for comparison
-    const { Pool } = await import("pg");
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const currentRes = await pool.query(
-      "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2",
-      [data.track_id, data.friend_id]
+    const data = (await req.json()) as UpdateTrackInput;
+    const current = await trackRepository.findTrackByTrackIdAndFriendId(
+      data.track_id,
+      data.friend_id
     );
-    const current = currentRes.rows[0];
 
-    const updated = await updateTrack(data);
+    const updated = await trackRepository.updateTrackFields(data);
     if (!updated) {
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
 
     // Only update embedding if any prompt field changed
-    const promptFields = [
+    const promptFields: Array<keyof TrackWithLibraryIdentifierRow> = [
       "local_tags",
       "styles",
       "genres",
@@ -40,7 +40,9 @@ export async function PATCH(req: Request) {
       const after = updated?.[field];
       // For arrays, compare as strings
       if (Array.isArray(before) || Array.isArray(after)) {
-        if ((before || []).join() !== (after || []).join()) {
+        const beforeArr = Array.isArray(before) ? before : [];
+        const afterArr = Array.isArray(after) ? after : [];
+        if (beforeArr.join() !== afterArr.join()) {
           shouldUpdateEmbedding = true;
           break;
         }
@@ -54,10 +56,10 @@ export async function PATCH(req: Request) {
     if (shouldUpdateEmbedding) {
       try {
         embedding = await getTrackEmbedding(updated);
-        const pgVector = `[${embedding.join(",")}]`;
-        await pool.query(
-          "UPDATE tracks SET embedding = $1 WHERE track_id = $2 AND friend_id = $3",
-          [pgVector, updated.track_id, updated.friend_id]
+        await trackRepository.updateTrackEmbedding(
+          updated.track_id,
+          updated.friend_id,
+          embedding
         );
         updated.embedding = embedding;
       } catch (embedError) {

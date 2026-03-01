@@ -9,16 +9,14 @@ import {
 
 export function useFriendsQuery({
   showCurrentUser = false,
-  showSpotifyUsernames = false,
 }: {
   showCurrentUser?: boolean;
-  showSpotifyUsernames?: boolean;
 } = {}) {
   const qc = useQueryClient();
 
   const { data: friends = [], isLoading } = useQuery({
     queryKey: queryKeys.friends(),
-    queryFn: () => fetchFriends(!!showCurrentUser, !!showSpotifyUsernames),
+    queryFn: () => fetchFriends(!!showCurrentUser),
   });
 
   const addFriend = useMutation({

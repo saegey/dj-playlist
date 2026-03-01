@@ -2,6 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import { Box, Flex, Spinner, Text, Button } from "@chakra-ui/react";
 import { useAlbumsInfiniteQuery } from "@/hooks/useAlbumsQuery";
+import { useAlbumsByRefs } from "@/hooks/useAlbum";
 import AlbumResult from "./AlbumResult";
 import { useSearchParams } from "next/navigation";
 
@@ -13,13 +14,19 @@ export default function AlbumSearchResults() {
   const sort = searchParams.get("sort") || "date_added:desc";
   const friendId = searchParams.get("friend_id");
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } =
+  const { data, albumRefs, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } =
     useAlbumsInfiniteQuery({
       q: query,
       sort,
       friend_id: friendId ? parseInt(friendId) : undefined,
       limit: 20,
     });
+  const albumsFromStore = useAlbumsByRefs(albumRefs);
+  const albumsFromQuery = data?.pages.flatMap((page) => page.hits) || [];
+  const albums =
+    albumsFromStore.length > 0 || albumsFromQuery.length === 0
+      ? albumsFromStore
+      : albumsFromQuery;
 
   // Intersection observer for infinite scroll
   useEffect(() => {
@@ -60,7 +67,6 @@ export default function AlbumSearchResults() {
     );
   }
 
-  const albums = data?.pages.flatMap((page) => page.hits) || [];
   const totalHits = data?.pages[0]?.estimatedTotalHits || 0;
 
   if (albums.length === 0) {
@@ -95,6 +101,10 @@ export default function AlbumSearchResults() {
         {albums.map((album) => (
           <AlbumResult
             key={`${album.release_id}_${album.friend_id}`}
+            albumRef={{
+              release_id: album.release_id,
+              friend_id: album.friend_id,
+            }}
             album={album}
             showEditFields={true}
           />

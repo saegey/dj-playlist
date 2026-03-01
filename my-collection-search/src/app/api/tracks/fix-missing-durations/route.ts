@@ -1,32 +1,16 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
-import { redisJobService } from "@/services/redisJobService";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { trackOpsService } from "@/server/services/trackOpsService";
 
 export async function POST() {
-  const { rows } = await pool.query(
-    "SELECT track_id, friend_id, local_audio_url FROM tracks WHERE duration_seconds IS NULL AND local_audio_url LIKE '%.m4a'"
-  );
-
-  const jobIds: string[] = [];
-  const errors: { track_id: string; error: string }[] = [];
-
-  for (const row of rows) {
-    try {
-      const jobId = await redisJobService.createDurationJob({
-        track_id: row.track_id,
-        friend_id: row.friend_id,
-        local_audio_url: row.local_audio_url,
-      });
-      jobIds.push(jobId);
-    } catch (err) {
-      errors.push({
-        track_id: row.track_id,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
+  try {
+    const result = await trackOpsService.queueMissingDurationFixJobs();
+    return NextResponse.json(result);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error("Error queueing missing duration fixes:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to queue missing duration fixes" },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ queued: jobIds.length, jobIds, errors });
 }

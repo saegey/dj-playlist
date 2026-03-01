@@ -11,7 +11,7 @@ import {
   RatingGroup,
   Badge,
 } from "@chakra-ui/react";
-import { SiDiscogs, SiApplemusic, SiYoutube, SiSpotify, SiSoundcloud } from "react-icons/si";
+import { SiDiscogs, SiApplemusic, SiYoutube, SiSoundcloud } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
 import { FaPlay } from "react-icons/fa";
@@ -283,11 +283,6 @@ export default function TrackResultCompact({
                 {track.discogs_url && (
                   <Link href={track.discogs_url} target="_blank" aria-label="Discogs">
                     <SiDiscogs size={16} style={{ opacity: 0.7 }} />
-                  </Link>
-                )}
-                {track.spotify_url && (
-                  <Link href={track.spotify_url} target="_blank" aria-label="Spotify">
-                    <SiSpotify size={16} style={{ opacity: 0.7 }} />
                   </Link>
                 )}
                 {track.apple_music_url && (

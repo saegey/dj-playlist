@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPlaylistCountsForTracks } from "@/lib/db";
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 // POST: { track_refs: { track_id: string; friend_id: number }[] }
 export async function POST(req: NextRequest) {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Returns: { ["track_id:friend_id"]: count }
-    const counts = await getPlaylistCountsForTracks(sanitized);
+    const counts = await trackRepository.getPlaylistCountsForTracks(sanitized);
     return NextResponse.json(counts);
   } catch (e) {
     console.error("Error getting playlist counts:", e);

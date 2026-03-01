@@ -16,7 +16,10 @@ function resolveMeiliHost(): string {
 
 export function getMeiliClient() {
   const host = resolveMeiliHost();
-  const apiKey = process.env.MEILISEARCH_API_KEY || "mysupersecretkey";
+  const apiKey = process.env.MEILISEARCH_API_KEY;
+  if (!apiKey) {
+    throw new Error("Missing MEILISEARCH_API_KEY");
+  }
 
   return new MeiliSearch({ host, apiKey });
 }

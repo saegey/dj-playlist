@@ -88,7 +88,11 @@ export function usePlaylistActions(playlistId?: number) {
     // Export tracks with username for cross-installation compatibility
     // Exclude vector/embedding fields and computed fields from export
     const exportTracks = tracks.map((t) => {
-      const { embedding, _vectors, _semanticScore, hasVectors, ...trackData } = t as Track;
+      const trackData = { ...t } as Partial<Track> & Record<string, unknown>;
+      delete trackData.embedding;
+      delete trackData._vectors;
+      delete trackData._semanticScore;
+      delete trackData.hasVectors;
       return {
         ...trackData,
         // Ensure track_id and username are present for cross-installation compatibility

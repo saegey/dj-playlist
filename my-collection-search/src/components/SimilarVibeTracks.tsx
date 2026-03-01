@@ -62,7 +62,7 @@ export default function SimilarVibeTracks({
         </Text>
         {String(error).includes("no audio vibe embedding") && (
           <Text fontSize="sm" mt={2} color="gray.600">
-            This track doesn't have an audio vibe embedding yet. Run the
+            This track does not have an audio vibe embedding yet. Run the
             backfill command to generate embeddings.
           </Text>
         )}

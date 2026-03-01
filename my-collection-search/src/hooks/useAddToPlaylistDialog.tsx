@@ -3,7 +3,7 @@
 import React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toaster } from "@/components/ui/toaster";
-import { updatePlaylist, importPlaylist } from "@/services/playlistService";
+import { updatePlaylist, importPlaylist } from "@/services/internalApi/playlists";
 import { queryKeys } from "@/lib/queryKeys";
 import type { Track, Playlist } from "@/types/track";
 import PlaylistSelectionDialog from "@/components/PlaylistSelectionDialog";
@@ -39,10 +39,7 @@ export function useAddToPlaylistDialog() {
         { track_id: track.track_id, friend_id: track.friend_id }
       ];
 
-      const res = await updatePlaylist(playlist.id, { tracks: updatedTracks });
-      if (!res.ok) {
-        throw new Error("Failed to update playlist");
-      }
+      await updatePlaylist(playlist.id, { tracks: updatedTracks });
 
       return { playlist, track };
     },
@@ -74,12 +71,9 @@ export function useAddToPlaylistDialog() {
   // Mutation for creating new playlist with track
   const createPlaylistMutation = useMutation({
     mutationFn: async ({ name, track }: { name: string; track: Track }) => {
-      const res = await importPlaylist(name, [
+      await importPlaylist(name, [
         { track_id: track.track_id, friend_id: track.friend_id }
       ]);
-      if (!res.ok) {
-        throw new Error("Failed to create playlist");
-      }
       return { name, track };
     },
     onSuccess: ({ name, track }) => {

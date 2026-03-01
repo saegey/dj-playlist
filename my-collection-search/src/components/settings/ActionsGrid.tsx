@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button, Flex, Menu, Text, Box } from "@chakra-ui/react";
 import { FiDatabase, FiBriefcase, FiTrash2, FiMoreVertical, FiImage } from "react-icons/fi";
-import { SiDiscogs, SiSpotify } from "react-icons/si";
+import { SiDiscogs } from "react-icons/si";
 import { toaster } from "@/components/ui/toaster";
 import {
   useUpdateDiscogsIndex,
@@ -12,13 +12,16 @@ import {
   useCleanupManifests,
   useDeleteReleases,
 } from "@/hooks/useDiscogsQuery";
-import { useIngestSpotifyIndex } from "@/hooks/useSpotifyQuery";
 import { useBackupsQuery } from "@/hooks/useBackupsQuery";
-import { useSettingsDialogs } from "@/providers/SettingsDialogProvider";
-import { useCleanupAlbums, useBackfillReleaseId } from "@/hooks/useAlbumsQuery";
+import { useCleanupAlbums } from "@/hooks/useAlbumsQuery";
 import ManifestVerificationDialog from "@/components/settings/dialogs/ManifestVerificationDialog";
 import RemovedReleasesDialog from "@/components/settings/dialogs/RemovedReleasesDialog";
 import type { VerificationResult } from "@/services/internalApi/discogs";
+import {
+  queueBackfillEssentia,
+  queueExtractMissingCoverArt,
+  queueFixMissingDurations,
+} from "@/services/internalApi/tracks";
 
 export default function ActionsGrid() {
   const [removedReleasesOpen, setRemovedReleasesOpen] = useState(false);
@@ -37,11 +40,8 @@ export default function ActionsGrid() {
   });
   const verifyManifests = useVerifyManifests();
   const cleanupManifests = useCleanupManifests();
-  const spotifyIndex = useIngestSpotifyIndex();
   const { addBackup, addBackupLoading } = useBackupsQuery();
-  const { setSpotifySyncOpen } = useSettingsDialogs();
   const cleanupAlbums = useCleanupAlbums();
-  const backfillReleaseId = useBackfillReleaseId();
   const [durationFixLoading, setDurationFixLoading] = useState(false);
   const [coverArtBackfillLoading, setCoverArtBackfillLoading] = useState(false);
   const [essentiaBackfillLoading, setEssentiaBackfillLoading] = useState(false);
@@ -56,17 +56,12 @@ export default function ActionsGrid() {
     discogsSync.isPending ||
     addBackupLoading ||
     verifyManifests.isPending ||
-    cleanupAlbums.isPending ||
-    backfillReleaseId.isPending;
+    cleanupAlbums.isPending;
 
   const handleFixMissingDurations = async () => {
     setDurationFixLoading(true);
     try {
-      const res = await fetch("/api/tracks/fix-missing-durations", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to fix durations");
-      }
+      const data = await queueFixMissingDurations();
       toaster.create({
         title: "Duration backfill queued",
         description: `Queued ${data.queued} tracks${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,
@@ -87,11 +82,7 @@ export default function ActionsGrid() {
   const handleExtractMissingCoverArt = async () => {
     setCoverArtBackfillLoading(true);
     try {
-      const res = await fetch("/api/tracks/extract-missing-cover-art", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to queue embedded cover extraction");
-      }
+      const data = await queueExtractMissingCoverArt();
       toaster.create({
         title: "Embedded cover extraction queued",
         description: `Queued ${data.queuedAlbums ?? data.queued} albums for ${data.tracksImpacted ?? 0} tracks${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,
@@ -112,11 +103,7 @@ export default function ActionsGrid() {
   const handleBackfillEssentia = async () => {
     setEssentiaBackfillLoading(true);
     try {
-      const res = await fetch("/api/tracks/backfill-essentia", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to queue Essentia backfill");
-      }
+      const data = await queueBackfillEssentia();
       toaster.create({
         title: "Essentia backfill queued",
         description: `Queued ${data.queued} tracks, skipped ${data.skipped_existing} existing analyses${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,
@@ -264,16 +251,6 @@ export default function ActionsGrid() {
               </Menu.Item>
 
               <Menu.Item
-                value="sync-spotify"
-                onClick={() => setSpotifySyncOpen(true)}
-                disabled={disableAll}
-              >
-                <SiSpotify /> Sync Spotify
-              </Menu.Item>
-
-              <Menu.Separator />
-
-              <Menu.Item
                 value="ingest-discogs"
                 onClick={() =>
                   discogsIndex.mutate(undefined, {
@@ -294,29 +271,6 @@ export default function ActionsGrid() {
                 disabled={disableAll || discogsIndex.isPending}
               >
                 <FiDatabase /> Ingest Discogs Data
-              </Menu.Item>
-
-              <Menu.Item
-                value="ingest-spotify"
-                onClick={() =>
-                  spotifyIndex.mutate(undefined, {
-                    onSuccess: (data) =>
-                      toaster.create({
-                        title: "Spotify Index Updated",
-                        type: "success",
-                        description: data?.message || "Done",
-                      }),
-                    onError: (e) =>
-                      toaster.create({
-                        title: "Spotify Index Update Failed",
-                        type: "error",
-                        description: e.message,
-                      }),
-                  })
-                }
-                disabled={disableAll || spotifyIndex.isPending}
-              >
-                <FiDatabase /> Ingest Spotify Data
               </Menu.Item>
 
               <Menu.Separator />
@@ -345,30 +299,6 @@ export default function ActionsGrid() {
               </Menu.Item>
 
               <Menu.Separator />
-
-              <Menu.Item
-                value="fix-links"
-                onClick={() =>
-                  backfillReleaseId.mutate(undefined, {
-                    onSuccess: () => {
-                      toaster.create({
-                        title: "Backfill Complete",
-                        type: "success",
-                        description: "Fixed tracks missing release_id",
-                      });
-                    },
-                    onError: (e: Error) =>
-                      toaster.create({
-                        title: "Backfill Failed",
-                        type: "error",
-                        description: e.message,
-                      }),
-                  })
-                }
-                disabled={disableAll || backfillReleaseId.isPending}
-              >
-                <FiDatabase /> Fix Track Links
-              </Menu.Item>
 
               <Menu.Item
                 value="cleanup-albums"

@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { Provider as ChakraProvider } from "@/components/ui/provider";
-import { MeiliProvider } from "@/providers/MeiliProvider";
 import { UsernameProvider } from "@/providers/UsernameProvider";
 import PlaylistPlayer from "@/components/PlaylistPlayer";
 import { PlaylistPlayerProvider } from "@/providers/PlaylistPlayerProvider";
@@ -36,16 +35,14 @@ export default function ClientProviders({
       <QueryClientProvider client={client}>
         <JobWatcherProvider>
           <UsernameProvider>
-            <MeiliProvider>
-              <TrackEditProvider>
-                <PlaylistsProvider>
-                  <PlaylistPlayerProvider>
-                    {children}
-                    <PlaylistPlayer />
-                  </PlaylistPlayerProvider>
-                </PlaylistsProvider>
-              </TrackEditProvider>
-            </MeiliProvider>
+            <TrackEditProvider>
+              <PlaylistsProvider>
+                <PlaylistPlayerProvider>
+                  {children}
+                  <PlaylistPlayer />
+                </PlaylistPlayerProvider>
+              </PlaylistsProvider>
+            </TrackEditProvider>
           </UsernameProvider>
         </JobWatcherProvider>
         {process.env.NODE_ENV === "development" && (

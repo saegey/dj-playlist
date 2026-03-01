@@ -23,9 +23,10 @@ import {
 import { LuInfo, LuRefreshCw, LuTrash2 } from "react-icons/lu";
 import { useJobsQuery } from "@/hooks/useJobsQuery";
 import { useMutation } from "@tanstack/react-query";
-import { clearAllJobs, type JobInfo } from "@/services/jobsService";
+import { clearAllJobs } from "@/services/internalApi/jobs";
 import TrackResultStore from "@/components/TrackResultStore";
 import type { Track } from "@/types/track";
+import type { JobInfo } from "@/types/jobs";
 import PageContainer from "@/components/layout/PageContainer";
 
 export default function JobsPage() {
@@ -143,13 +144,6 @@ export default function JobsPage() {
         color: "orange" as const,
         quality: "audio"
       };
-    } else if (data.spotify_url) {
-      return {
-        name: "spotdl",
-        source: "Spotify",
-        color: "green" as const,
-        quality: "320k"
-      };
     }
 
     return {
@@ -202,7 +196,6 @@ export default function JobsPage() {
       discogs_url: (job.data.discogs_url as string | undefined) || "",
       apple_music_url: (job.data.apple_music_url as string | undefined) || "",
       youtube_url: job.data.youtube_url,
-      spotify_url: job.data.spotify_url,
       soundcloud_url: job.data.soundcloud_url,
       album_thumbnail: job.data.album_thumbnail || "/images/placeholder-artwork.png",
       local_tags: "",

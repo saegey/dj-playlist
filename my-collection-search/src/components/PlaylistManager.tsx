@@ -3,7 +3,6 @@
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import DeletePlaylistDialog from "@/components/DeletePlaylistDialog";
-import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import FriendSelectDialog from "@/components/FriendSelectDialog";
 import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
 import {
@@ -19,40 +18,27 @@ import {
   Separator,
   Menu,
 } from "@chakra-ui/react";
-import { MeiliSearch } from "meilisearch";
 
 import { Toaster, toaster } from "@/components/ui/toaster"; // See below
-import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
 import { FiHeadphones, FiTrash, FiMoreVertical } from "react-icons/fi";
 import { TbFileImport } from "react-icons/tb";
 import { usePlaylists } from "@/providers/PlaylistsProvider";
-import { importPlaylist, PlaylistTrackPayload } from "@/services/playlistService";
+import { importPlaylist, PlaylistTrackPayload } from "@/services/internalApi/playlists";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { FaPlay } from "react-icons/fa";
-import { fetchTracksByIds } from "@/services/trackService";
+import { fetchTracksByIds } from "@/services/internalApi/tracks";
 import { formatDateWithRelative } from "@/lib/date";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
 import posthog from "posthog-js";
 
-type Props = {
-  xmlImportModalOpen: boolean;
-  setXmlImportModalOpen: (open: boolean) => void;
-  client: MeiliSearch | null;
-};
-
-export default function PlaylistManager({
-  xmlImportModalOpen,
-  setXmlImportModalOpen,
-  client,
-}: Props) {
+export default function PlaylistManager() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playlists, loadingPlaylists, fetchPlaylists } = usePlaylists();
   const { friend: currentUserFriend } = useUsername();
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
-    showSpotifyUsernames: true,
   });
 
   const { replacePlaylist } = usePlaylistPlayer();
@@ -65,11 +51,6 @@ export default function PlaylistManager({
     open: boolean;
     playlistId: number | null;
   }>({ open: false, playlistId: null });
-
-  // State for import playlist dialog
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [importedTracks, setImportedTracks] = useState<string[]>([]);
-  const [importedName, setImportedName] = useState("Imported Playlist");
 
   // State for friend selection dialog
   const [friendSelectDialogOpen, setFriendSelectDialogOpen] = useState(false);
@@ -126,15 +107,14 @@ export default function PlaylistManager({
 
       if (!tracksData.length) throw new Error("No valid tracks found");
 
-      // Fetch friends to resolve usernames
-      const friendsRes = await fetch("/api/friends");
-      const friendsData = await friendsRes.json();
-      const friends = friendsData.results || [];
+      // Resolve usernames using already-loaded friends list.
+      const availableFriends = friends || [];
 
       // Check if we can resolve all usernames to friend_ids
       const hasUsernames = tracksData.some((t) => t.username);
       const canResolveAll = hasUsernames && tracksData.every((t) =>
-        !t.username || friends.some((f: { username: string }) => f.username === t.username)
+        !t.username ||
+        availableFriends.some((f) => f.username === t.username)
       );
 
       if (!hasUsernames || !canResolveAll) {
@@ -145,7 +125,7 @@ export default function PlaylistManager({
       }
 
       // Resolve usernames to friend_ids
-      const friendMap = new Map(friends.map((f: { id: number; username: string }) => [f.username, f.id]));
+      const friendMap = new Map(availableFriends.map((f) => [f.username, f.id]));
       const tracks: PlaylistTrackPayload[] = tracksData
         .map((t) => {
           const friendId = t.username ? friendMap.get(t.username) : undefined;
@@ -163,45 +143,21 @@ export default function PlaylistManager({
       }
 
       // Import directly
-      const res = await importPlaylist(name, tracks);
-      if (res.ok) {
-        notify({ title: `Imported '${name}'`, type: "success" });
-        fetchPlaylists();
+      await importPlaylist(name, tracks);
+      notify({ title: `Imported '${name}'`, type: "success" });
+      fetchPlaylists();
 
-        // PostHog: Track playlist import
-        posthog.capture("playlist_imported", {
-          playlist_name: name,
-          track_count: tracks.length,
-          import_format: "json",
-        });
-      } else {
-        notify({ title: "Failed to import playlist", type: "error" });
-      }
+      // PostHog: Track playlist import
+      posthog.capture("playlist_imported", {
+        playlist_name: name,
+        track_count: tracks.length,
+        import_format: "json",
+      });
     } catch (err) {
       console.error("Import error:", err);
       notify({ title: "Error importing playlist", type: "error" });
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  // Handler for confirming import with name
-  const handleConfirmImport = async () => {
-    if (!importedTracks.length || !importedName.trim()) return;
-    try {
-      const res = await importPlaylist(importedName, importedTracks);
-      if (res.ok) {
-        notify({ title: `Imported '${importedName}'`, type: "success" });
-        fetchPlaylists();
-      } else {
-        notify({ title: "Failed to import playlist", type: "error" });
-      }
-    } catch {
-      notify({ title: "Error importing playlist", type: "error" });
-    } finally {
-      setImportDialogOpen(false);
-      setImportedTracks([]);
-      setImportedName("Imported Playlist");
     }
   };
 
@@ -215,20 +171,16 @@ export default function PlaylistManager({
         friend_id: selectedFriendId,
       }));
 
-      const res = await importPlaylist(pendingImport.name, tracks);
-      if (res.ok) {
-        notify({ title: `Imported '${pendingImport.name}'`, type: "success" });
-        fetchPlaylists();
+      await importPlaylist(pendingImport.name, tracks);
+      notify({ title: `Imported '${pendingImport.name}'`, type: "success" });
+      fetchPlaylists();
 
-        // PostHog: Track playlist import
-        posthog.capture("playlist_imported", {
-          playlist_name: pendingImport.name,
-          track_count: tracks.length,
-          import_format: "json",
-        });
-      } else {
-        notify({ title: "Failed to import playlist", type: "error" });
-      }
+      // PostHog: Track playlist import
+      posthog.capture("playlist_imported", {
+        playlist_name: pendingImport.name,
+        track_count: tracks.length,
+        import_format: "json",
+      });
     } catch {
       notify({ title: "Error importing playlist", type: "error" });
     } finally {
@@ -258,12 +210,6 @@ export default function PlaylistManager({
               </Menu.Trigger>
               <Menu.Positioner>
                 <Menu.Content>
-                  <Menu.Item
-                    value="import-apple-xml"
-                    onClick={() => setXmlImportModalOpen(true)}
-                  >
-                    <TbFileImport /> Import Apple XML
-                  </Menu.Item>
                   <Menu.Item
                     value="import-json"
                     onClick={() => fileInputRef.current?.click()}
@@ -310,13 +256,6 @@ export default function PlaylistManager({
                   Save your playlists to access them here.
                 </EmptyState.Description>
                 <HStack>
-                  <Button
-                    size="xs"
-                    variant="surface"
-                    onClick={() => setXmlImportModalOpen(true)}
-                  >
-                    Import Apple XML
-                  </Button>
                   <Button
                     size="xs"
                     onClick={() => fileInputRef.current?.click()}
@@ -447,12 +386,6 @@ export default function PlaylistManager({
         fetchPlaylists={fetchPlaylists}
         notify={notify}
       />
-      <AppleMusicXmlImport
-        isOpen={xmlImportModalOpen}
-        onClose={() => setXmlImportModalOpen(false)}
-        client={client}
-        fetchPlaylists={fetchPlaylists}
-      />
       <input
         type="file"
         accept="application/json"
@@ -461,15 +394,6 @@ export default function PlaylistManager({
         onChange={handleImportJson}
       />
       <Toaster />
-      <NamePlaylistDialog
-        open={importDialogOpen}
-        name={importedName}
-        setName={setImportedName}
-        trackCount={importedTracks.length}
-        onConfirm={handleConfirmImport}
-        onCancel={() => setImportDialogOpen(false)}
-        confirmLabel="Import"
-      />
       <FriendSelectDialog
         open={friendSelectDialogOpen}
         selectedFriendId={selectedFriendId}

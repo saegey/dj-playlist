@@ -1,12 +1,19 @@
 # My Collection Search — Project Brief (for Claude Code)
 
+## State Ownership
+- See `docs/state-ownership.md` for the canonical state model.
+- In short:
+  - Zustand owns `Track`/`Album` entities
+  - React Query owns request lifecycle, status, and lightweight query metadata
+- See `docs/frontend-api-pattern.md` for the frontend API pattern (Zod/OpenAPI route contracts, typed `internalApi/*`, and shared `http` helpers instead of inline `fetch`).
+
 ## Overview
 - Next.js app to browse, search, and manage a personal DJ track collection.
 - Data sources: PostgreSQL (with pgvector) + Meilisearch for fast search.
 - Features: full-text search with infinite scroll, playlist views, track editing (rating, notes, links), audio analysis, AI helpers.
 
 ## Tech stack
-- Framework: Next.js 15, React 19, TypeScript
+- Framework: Next.js 16, React 19, TypeScript
 - UI: Chakra UI v3
 - Data: TanStack Query v5, Meilisearch
 - DB: Postgres (pgvector), migrations via node-pg-migrate
@@ -18,9 +25,9 @@
   - npm run build / npm start — production build/run
   - npm run migrate — run DB migrations (requires DATABASE_URL)
 - Docker (recommended for DB + Meili + app):
-  - docker-compose up -d db meili
-  - docker-compose run --rm migrate
-  - docker-compose up app
+  - docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db meili
+  - docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm migrate
+  - docker compose -f docker-compose.yml -f docker-compose.dev.yml up app
 - Key env vars (see docker-compose.yml and .env):
   - DATABASE_URL, MEILISEARCH_HOST, MEILISEARCH_API_KEY
   - Apple/Spotify/Discogs/OpenAI credentials as needed
@@ -29,7 +36,9 @@
 - src/components — UI (e.g., SearchResults, TrackResult, PlaylistViewer)
 - src/hooks — data hooks, mutations, cache helpers
 - src/lib — queryKeys, helpers
-- src/services — HTTP services to /api (tracks, playlists, etc.)
+- src/server/repositories — backend DB access (*Repository.ts files)
+- src/server/services — backend-only services (DB, Redis, Meili, external APIs)
+- src/services — frontend-only: http.ts, aiService.ts, backupService.ts, internalApi/
 - src/providers - React context providers
 - src/types — domain types (Track, etc.)
 - migrations — node-pg-migrate scripts
@@ -52,16 +61,11 @@
 - Single-page mode uses the same page shape (no pages array).
 
 ## Caching and optimistic updates
-- src/hooks/useTracksCacheUpdater.ts
-  - Updates every ["tracks", {…}] query (infinite or single) and ["playlist-tracks", …] arrays by merging partial Track patches by track_id.
-  - Merge ignores undefined fields; doesn’t wipe existing values.
-- src/hooks/useTracksQuery.ts
-  - saveTrack mutation with optimistic update:
-    - cancel queries for tracks & playlist-tracks
-    - snapshot matching caches, apply patch, rollback on error
-    - on success, merge server Track and lightly invalidate inactive queries
-- src/hooks/useBackfillStatusMutation.ts
-  - Patches status fields across ["tracks", {…}]
+- Refer to `docs/state-ownership.md` for current rules.
+- Summary:
+  - Query hooks fetch/hydrate into Zustand stores
+  - Entity reads render from Zustand
+  - React Query cache updates are for non-entity metadata/refs and invalidation
 
 ## UI notes
 - TrackResult renders star rating as controlled value (reflects cache updates).
@@ -171,7 +175,7 @@ Backups
 - POST /api/restore (multipart) → { message? }
 
 Meilisearch admin (server-side helper)
-- Tracks index: searchable/filterable fields and ranking rules in code (see services/meiliIndexService.ts)
+- Tracks index: searchable/filterable fields and ranking rules in code (see server/services/meiliIndexService.ts)
 
 Error shape & status codes
 - http<T>() throws Error(message) when !res.ok.

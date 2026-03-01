@@ -14,9 +14,11 @@ import { AppleMusicResult } from "@/types/apple";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
 import { useTracksQuery } from "@/hooks/useTracksQuery";
-import type { TrackEditFormProps } from "@/components/TrackEditForm";
+import type { TrackEditFormProps } from "@/components/track-edit/types";
 import { fetchAppleMusicAISearch } from "@/services/aiService";
-import { fetchMissingAppleTracks } from "@/services/trackService";
+import { fetchMissingAppleTracks } from "@/services/internalApi/tracks";
+import type { DiscogsLookupResult } from "@/types/discogs";
+import { lookupDiscogsRelease } from "@/services/internalApi/discogs";
 
 type AppleResultsMap = Record<string, AppleMusicResult[] | null | undefined>;
 
@@ -58,40 +60,6 @@ type MissingAppleActions = {
 const MissingAppleContext = createContext<
   (MissingAppleState & MissingAppleActions) | null
 >(null);
-
-// Types for the Discogs lookup endpoint
-export type DiscogsVideo = {
-  uri?: string;
-  url?: string;
-  title?: string;
-  duration?: number | string;
-  description?: string;
-};
-export type DiscogsLookupRelease = {
-  id: string | number;
-  title: string;
-  artists?: { name: string }[];
-  artists_sort?: string;
-  year?: number | null;
-  styles?: string[];
-  genres?: string[];
-  uri?: string | null;
-  thumb?: string | null;
-  videos?: DiscogsVideo[]; // Discogs exports often use 'videos'
-  video?: DiscogsVideo[]; // being defensive if singular is used in some dumps
-};
-type DiscogsLookupTrack = {
-  position: string;
-  title: string;
-  duration: string;
-  artists?: { name: string }[];
-};
-export type DiscogsLookupResult = {
-  releaseId: string;
-  filePath: string;
-  release: DiscogsLookupRelease; // returned as full release in the endpoint
-  matchedTrack: DiscogsLookupTrack | null;
-};
 
 export function MissingAppleProvider({
   children,
@@ -234,7 +202,6 @@ export function MissingAppleProvider({
               ? (data as { danceability?: number }).danceability
               : undefined,
           apple_music_url: data.apple_music_url,
-          spotify_url: data.spotify_url,
           youtube_url: data.youtube_url,
           soundcloud_url: data.soundcloud_url,
           star_rating:
@@ -265,17 +232,18 @@ export function MissingAppleProvider({
         return discogsByTrack[id];
       }
 
-      const params = new URLSearchParams({ track_id: id });
-      if (selectedUsername)
-        params.set("friend_id", selectedUsername.id.toString());
-      const res = await fetch(`/api/ai/discogs?${params.toString()}`);
-      if (!res.ok) {
+      try {
+        const data = (await lookupDiscogsRelease({
+          track_id: id,
+          username: selectedUsername?.username,
+          friend_id: selectedUsername?.id,
+        })) as DiscogsLookupResult;
+        setDiscogsByTrack((prev) => ({ ...prev, [id]: data }));
+        return data;
+      } catch {
         setDiscogsByTrack((prev) => ({ ...prev, [id]: null }));
         return null;
       }
-      const data: DiscogsLookupResult = await res.json();
-      setDiscogsByTrack((prev) => ({ ...prev, [id]: data }));
-      return data;
     },
     [tracks, currentIndex, selectedUsername, discogsByTrack]
   );

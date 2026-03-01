@@ -10,13 +10,12 @@ import React, {
   ReactNode,
 } from "react";
 import type { Playlist, Track } from "@/types/track";
-import { importPlaylist } from "@/services/playlistService";
+import { importPlaylist } from "@/services/internalApi/playlists";
 import {
   useRecommendations,
   type TrackWithEmbedding as TrackWithEmbeddingFromHook,
 } from "@/hooks/useRecommendations";
 import { usePlaylistsQuery } from "@/hooks/usePlaylistsQuery";
-// import { useCreatePlaylistMutation } from "@/hooks/usePlaylistMutations";
 import { moveTrackReorder } from "@/utils/playlist";
 import { toaster } from "@/components/ui/toaster";
 import {
@@ -261,11 +260,10 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
   }, [playlist, sortGeneticMutation]);
 
   const savePlaylist = useCallback(async () => {
-    const res = await importPlaylist(
+    await importPlaylist(
       playlistInfo.name || playlistName,
       orderedPlaylist.map((t) => t.track_id)
     );
-    if (!res.ok) throw new Error("Failed to save playlist");
   }, [playlistInfo.name, playlistName, orderedPlaylist]);
 
   const exportPlaylist = useCallback(() => {

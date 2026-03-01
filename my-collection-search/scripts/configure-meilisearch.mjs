@@ -9,9 +9,15 @@
 
 import { MeiliSearch } from 'meilisearch';
 
+const meiliApiKey = process.env.MEILISEARCH_API_KEY;
+if (!meiliApiKey) {
+  console.error('Missing MEILISEARCH_API_KEY');
+  process.exit(1);
+}
+
 const meiliClient = new MeiliSearch({
   host: process.env.MEILISEARCH_HOST || 'http://localhost:7700',
-  apiKey: process.env.MEILISEARCH_API_KEY || 'mysupersecretkey',
+  apiKey: meiliApiKey,
 });
 
 async function configureMeiliSearch() {
@@ -19,29 +25,6 @@ async function configureMeiliSearch() {
     console.log('Configuring MeiliSearch tracks index...\n');
 
     const index = meiliClient.index('tracks');
-
-    // Configure embedders
-    console.log('Setting up embedders...');
-    const embedderResp = await fetch(
-      `${meiliClient.config.host}/indexes/tracks/settings/embedders`,
-      {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${meiliClient.config.apiKey ?? ''}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          default: { source: 'userProvided', dimensions: 1536 },
-        }),
-      }
-    );
-    if (!embedderResp.ok) {
-      const details = await embedderResp.text();
-      throw new Error(
-        `Failed to configure embedders (${embedderResp.status}): ${details}`
-      );
-    }
-    console.log('✅ Embedders configured\n');
 
     // Configure searchable attributes
     console.log('Configuring searchable attributes...');
@@ -69,7 +52,6 @@ async function configureMeiliSearch() {
       'styles',
       'local_audio_url',
       'apple_music_url',
-      'hasVectors',
       'youtube_url',
       'spotify_url',
       'soundcloud_url',

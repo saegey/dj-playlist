@@ -4,7 +4,7 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 
 import type { Track } from "@/types/track";
 import TrackEditDialog from "@/components/TrackEditDialog";
-import type { TrackEditFormProps } from "@/components/TrackEditForm";
+import type { TrackEditFormProps } from "@/components/track-edit/types";
 import { toaster } from "@/components/ui/toaster";
 import { useTracksQuery } from "@/hooks/useTracksQuery";
 

@@ -76,10 +76,6 @@ function BackfillRow({
           >
             SoundCloud
           </a>
-        ) : track.spotify_url ? (
-          <a href={track.spotify_url} target="_blank" rel="noopener noreferrer">
-            Spotify
-          </a>
         ) : (
           <Text color="gray.400">—</Text>
         )}

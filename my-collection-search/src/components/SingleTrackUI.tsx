@@ -18,8 +18,8 @@ import { useMissingApple } from "@/providers/MissingAppleContext";
 import { AppleMusicResult } from "@/types/apple";
 import {
   DiscogsLookupRelease,
-  DiscogsVideo,
-} from "@/providers/MissingAppleContext";
+  DiscogsLookupVideo,
+} from "@/types/discogs";
 import { FiChevronLeft, FiChevronRight, FiMoreVertical } from "react-icons/fi";
 import { toaster } from "@/components/ui/toaster";
 import { useTrackEditor } from "@/providers/TrackEditProvider";
@@ -146,9 +146,9 @@ export default function SingleTrackUI() {
               onClick={async () => {
                 const data = await lookupDiscogs(track.track_id);
                 const rel = data?.release as DiscogsLookupRelease | undefined;
-                const vids: DiscogsVideo[] = (rel?.videos ??
+                const vids: DiscogsLookupVideo[] = (rel?.videos ??
                   rel?.video ??
-                  []) as DiscogsVideo[];
+                  []) as DiscogsLookupVideo[];
                 if (!vids || vids.length === 0) {
                   toaster.create({ title: "No videos found", type: "warning" });
                 } else {
@@ -214,9 +214,9 @@ export default function SingleTrackUI() {
             (() => {
               const rel = discogsByTrack[track.track_id]!
                 .release as DiscogsLookupRelease;
-              const vids: DiscogsVideo[] = (rel.videos ??
+              const vids: DiscogsLookupVideo[] = (rel.videos ??
                 rel.video ??
-                []) as DiscogsVideo[];
+                []) as DiscogsLookupVideo[];
               if (!vids || vids.length === 0) return null;
               return (
                 <Box mt={3} mb={2}>

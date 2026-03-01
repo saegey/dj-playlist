@@ -1,17 +1,15 @@
 "use client";
 import { useMutation } from "@tanstack/react-query";
 
-import { saveTrack } from "@/services/trackService";
-import type { TrackEditFormProps } from "@/components/TrackEditForm";
-import { useTrackStore } from "@/stores/trackStore";
+import { saveTrack } from "@/services/internalApi/tracks";
+import type { TrackEditFormProps } from "@/components/track-edit/types";
 import type { Track } from "@/types/track";
-import { useTracksCacheUpdater } from "./useTracksCacheUpdater";
+import { useTrackStore } from "@/stores/trackStore";
 
 // Shape returned by saveTrack is void; customize if API starts returning a Track
 
 export function useTracksQuery() {
   const { updateTrack, getTrack, setTrack } = useTrackStore();
-  const { updateTracksInCache } = useTracksCacheUpdater();
 
   const saveTrackMutation = useMutation({
     mutationFn: async (data: TrackEditFormProps) => {
@@ -39,7 +37,6 @@ export function useTracksQuery() {
         danceability:
           form.danceability != null ? String(form.danceability) : undefined,
         apple_music_url: form.apple_music_url,
-        spotify_url: form.spotify_url,
         youtube_url: form.youtube_url,
         soundcloud_url: form.soundcloud_url,
         star_rating: form.star_rating,
@@ -49,9 +46,6 @@ export function useTracksQuery() {
 
       // Apply optimistic update to Zustand
       updateTrack(track_id, friend_id, updates);
-
-      // Apply optimistic update to React Query caches (search, playlists, albums, recommendations)
-      updateTracksInCache({ track_id, friend_id, ...updates });
 
       console.log("Optimistically updated track", track_id, "with", updates);
 
@@ -68,9 +62,7 @@ export function useTracksQuery() {
     onSuccess: (updatedTrack) => {
       // Apply the server response to the store
       if (updatedTrack?.track_id) {
-        setTrack(updatedTrack as Track);
-        // Also update React Query caches with server response
-        updateTracksInCache(updatedTrack as Track);
+        setTrack(updatedTrack);
       }
     },
   });

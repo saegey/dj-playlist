@@ -22,7 +22,6 @@ function AlbumsPageContent() {
 
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
-    showSpotifyUsernames: true,
   });
 
   const [query, setQuery] = React.useState(searchParams.get("q") || "");

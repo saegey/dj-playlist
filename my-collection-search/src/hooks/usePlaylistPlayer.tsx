@@ -5,6 +5,7 @@ import type { Track } from "@/types/track";
 
 export function usePlaylistPlayer(initial: Track[] = []) {
   const playlistRef = useRef<Track[]>(initial);
+  const [playlist, setPlaylist] = useState<Track[]>(initial);
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -14,7 +15,9 @@ export function usePlaylistPlayer(initial: Track[] = []) {
 
   const replacePlaylist = useCallback(
     (next: Track[], { autoplay = true, startIndex = 0 } = {}) => {
-      playlistRef.current = [...next];
+      const nextPlaylist = [...next];
+      playlistRef.current = nextPlaylist;
+      setPlaylist(nextPlaylist);
       setPlVersion((v) => v + 1);
 
       const hasTracks = playlistRef.current.length > 0;
@@ -45,7 +48,7 @@ export function usePlaylistPlayer(initial: Track[] = []) {
       setIsPlaying(false);
     }
     prevPlaylistHashRef.current = playlistHash;
-  }, [playlistRef]);
+  }, [plVersion]);
 
   // Keep currentTrack in sync with currentTrackIndex and playlist
   useEffect(() => {
@@ -125,7 +128,9 @@ export function usePlaylistPlayer(initial: Track[] = []) {
 
   const appendToQueue = useCallback((items: Track[] | Track) => {
     const toAdd = Array.isArray(items) ? items : [items];
-    playlistRef.current = [...playlistRef.current, ...toAdd];
+    const nextPlaylist = [...playlistRef.current, ...toAdd];
+    playlistRef.current = nextPlaylist;
+    setPlaylist(nextPlaylist);
     setPlVersion((v) => v + 1);
   }, []);
 
@@ -179,7 +184,7 @@ export function usePlaylistPlayer(initial: Track[] = []) {
     playTrack,
     replacePlaylist, // new
     appendToQueue,   // new
-    playlist: playlistRef.current,
+    playlist,
     audioElement,
   };
 }

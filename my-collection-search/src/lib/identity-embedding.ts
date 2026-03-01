@@ -4,10 +4,8 @@
  */
 
 import OpenAI from "openai";
-import { Pool } from "pg";
 import crypto from "crypto";
 import {
-  normalizeList,
   formatList,
   yearToEra,
   normalizeCountry,
@@ -17,23 +15,15 @@ import {
   normalizeLocalTags,
   normalizeComposer,
 } from "./identity-normalization";
-import { Track } from "@/types/track";
+import {
+  trackRepository,
+  type TrackWithAlbumMetadataRow,
+} from "@/server/repositories/trackRepository";
+import { embeddingsRepository } from "@/server/repositories/embeddingsRepository";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "My API Key",
 });
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-/**
- * Extended track data with album metadata
- */
-interface TrackWithAlbum extends Track {
-  album_country?: string | null;
-  album_label?: string | null;
-  album_genres?: string[] | null;
-  album_styles?: string[] | null;
-}
 
 /**
  * Normalized identity data for embedding
@@ -57,27 +47,14 @@ interface IdentityData {
 export async function fetchTrackWithAlbum(
   track_id: string,
   friend_id: number
-): Promise<TrackWithAlbum | null> {
-  const query = `
-    SELECT
-      t.*,
-      a.country AS album_country,
-      a.label AS album_label,
-      a.genres AS album_genres,
-      a.styles AS album_styles
-    FROM tracks t
-    LEFT JOIN albums a ON t.release_id = a.release_id AND t.friend_id = a.friend_id
-    WHERE t.track_id = $1 AND t.friend_id = $2
-  `;
-
-  const result = await pool.query(query, [track_id, friend_id]);
-  return result.rows[0] || null;
+): Promise<TrackWithAlbumMetadataRow | null> {
+  return trackRepository.findTrackWithAlbumMetadata(track_id, friend_id);
 }
 
 /**
  * Build normalized identity data from track
  */
-export function buildIdentityData(track: TrackWithAlbum): IdentityData {
+export function buildIdentityData(track: TrackWithAlbumMetadataRow): IdentityData {
   // Normalize basic fields
   const title = (track.title || "unknown").trim();
   const artist = (track.artist || "unknown").trim();
@@ -196,25 +173,16 @@ export async function storeIdentityEmbedding(
   model = "text-embedding-3-small",
   dims = 1536
 ): Promise<void> {
-  const pgVector = `[${embedding.join(",")}]`;
-
-  await pool.query(
-    `
-    INSERT INTO track_embeddings (
-      track_id, friend_id, embedding_type, model, dims, embedding, source_hash, identity_text, updated_at
-    )
-    VALUES ($1, $2, 'identity', $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
-    ON CONFLICT (track_id, friend_id, embedding_type)
-    DO UPDATE SET
-      embedding = EXCLUDED.embedding,
-      source_hash = EXCLUDED.source_hash,
-      identity_text = EXCLUDED.identity_text,
-      model = EXCLUDED.model,
-      dims = EXCLUDED.dims,
-      updated_at = CURRENT_TIMESTAMP
-  `,
-    [track_id, friend_id, model, dims, pgVector, sourceHash, identityText]
-  );
+  await embeddingsRepository.upsertTrackEmbedding({
+    trackId: track_id,
+    friendId: friend_id,
+    embeddingType: "identity",
+    model,
+    dims,
+    embedding,
+    sourceHash,
+    identityText,
+  });
 }
 
 /**
@@ -225,20 +193,16 @@ export async function needsEmbeddingUpdate(
   friend_id: number,
   newSourceHash: string
 ): Promise<boolean> {
-  const result = await pool.query(
-    `
-    SELECT source_hash
-    FROM track_embeddings
-    WHERE track_id = $1 AND friend_id = $2 AND embedding_type = 'identity'
-  `,
-    [track_id, friend_id]
+  const sourceHash = await embeddingsRepository.findEmbeddingSourceHash(
+    track_id,
+    friend_id,
+    "identity"
   );
-
-  if (result.rows.length === 0) {
+  if (!sourceHash) {
     return true; // No embedding exists
   }
 
-  return result.rows[0].source_hash !== newSourceHash;
+  return sourceHash !== newSourceHash;
 }
 
 /**

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
+import { settingsService } from "@/server/services/settingsService";
+import type { GamdlSettingsUpdate } from "@/types/gamdl";
 
 export const runtime = "nodejs";
 
@@ -19,33 +20,11 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-    // Get settings for the friend, create with defaults if not exists
-    await pool.query(`
-      INSERT INTO gamdl_settings (friend_id)
-      VALUES ($1)
-      ON CONFLICT (friend_id) DO NOTHING
-    `, [friendId]);
-
-    // Now get the settings (either just created or existing)
-    const settingsResult = await pool.query(`
-      SELECT * FROM gamdl_settings WHERE friend_id = $1
-    `, [friendId]);
-
-    if (settingsResult.rows.length === 0) {
-      return NextResponse.json(
-        { error: "Failed to create or retrieve settings" },
-        { status: 500 }
-      );
-    }
-
-    await pool.end();
+    const settings = await settingsService.getGamdlSettings(Number(friendId));
 
     return NextResponse.json({
-      settings: settingsResult.rows[0]
+      settings,
     });
-
   } catch (error) {
     console.error("Failed to get gamdl settings:", error);
     return NextResponse.json(
@@ -65,7 +44,9 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { friend_id, ...updates } = body;
+    const { friend_id, ...updates } = body as {
+      friend_id?: number | string;
+    } & GamdlSettingsUpdate;
 
     if (!friend_id) {
       return NextResponse.json(
@@ -74,59 +55,37 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Validate update fields
-    const allowedFields = [
-      'audio_quality', 'audio_format', 'save_cover', 'cover_format',
-      'save_lyrics', 'lyrics_format', 'overwrite_existing',
-      'skip_music_videos', 'max_retries'
-    ];
+    const friendIdNum = Number(friend_id);
+    if (!friendIdNum || Number.isNaN(friendIdNum)) {
+      return NextResponse.json(
+        { error: "friend_id must be a number" },
+        { status: 400 }
+      );
+    }
 
-    const updateFields = Object.keys(updates).filter(key => allowedFields.includes(key));
-
-    if (updateFields.length === 0) {
+    if (Object.keys(updates).length === 0) {
       return NextResponse.json(
         { error: "No valid fields to update" },
         { status: 400 }
       );
     }
 
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-    // Ensure settings exist for this friend
-    await pool.query(`
-      INSERT INTO gamdl_settings (friend_id)
-      VALUES ($1)
-      ON CONFLICT (friend_id) DO NOTHING
-    `, [friend_id]);
-
-    // Build dynamic update query
-    const setClause = updateFields.map((field, index) => `${field} = $${index + 2}`).join(', ');
-    const values = [friend_id, ...updateFields.map(field => updates[field])];
-
-    const updateQuery = `
-      UPDATE gamdl_settings
-      SET ${setClause}, updated_at = CURRENT_TIMESTAMP
-      WHERE friend_id = $1
-      RETURNING *
-    `;
-
-    const result = await pool.query(updateQuery, values);
-
-    if (result.rows.length === 0) {
+    const settings = await settingsService.updateGamdlSettings(
+      friendIdNum,
+      updates
+    );
+    if (!settings) {
       return NextResponse.json(
-        { error: "Settings not found" },
-        { status: 404 }
+        { error: "No valid fields to update" },
+        { status: 400 }
       );
     }
-
-    await pool.end();
 
     return NextResponse.json({
       success: true,
       message: "Settings updated successfully",
-      settings: result.rows[0]
+      settings,
     });
-
   } catch (error) {
     console.error("Failed to update gamdl settings:", error);
     return NextResponse.json(

@@ -9,9 +9,20 @@ export function getEssentiaDataDir(): string {
   return process.env.ESSENTIA_DATA_DIR || path.join(process.cwd(), "essentia-data");
 }
 
+function assertWithinDataDir(filePath: string): void {
+  const dir = getEssentiaDataDir();
+  const resolved = path.resolve(filePath);
+  const base = path.resolve(dir) + path.sep;
+  if (!resolved.startsWith(base)) {
+    throw new Error(`Path traversal detected: ${filePath}`);
+  }
+}
+
 export function getEssentiaAnalysisPath(trackId: string, friendId: number): string {
   const fileName = `${safePart(trackId)}_${friendId}.json`;
-  return path.join(getEssentiaDataDir(), fileName);
+  const filePath = path.join(getEssentiaDataDir(), fileName);
+  assertWithinDataDir(filePath);
+  return filePath;
 }
 
 export function writeEssentiaAnalysis(

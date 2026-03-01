@@ -1,14 +1,12 @@
 import OpenAI from "openai";
-import { Pool } from "pg";
 import { Track } from "@/types/track";
+import { settingsRepository } from "@/server/repositories/settingsRepository";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
     ? process.env.OPENAI_API_KEY
     : "My API Key",
 });
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const DEFAULT_TEMPLATE = [
   "Title: {{title}}",
@@ -70,14 +68,9 @@ async function getTemplateForFriend(friendId?: number): Promise<string> {
   if (cached && cached.expiresAt > now) return cached.template;
 
   try {
-    const { rows } = await pool.query(
-      "SELECT prompt_template FROM embedding_prompt_settings WHERE friend_id = $1",
-      [friendId]
-    );
     const template =
-      rows.length > 0 && typeof rows[0].prompt_template === "string"
-        ? rows[0].prompt_template
-        : DEFAULT_TEMPLATE;
+      (await settingsRepository.findEmbeddingTemplateByFriendId(friendId)) ??
+      DEFAULT_TEMPLATE;
     templateCache.set(friendId, {
       template,
       expiresAt: now + TEMPLATE_TTL_MS,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchJobs } from "@/services/jobsService";
+import { fetchJobs } from "@/services/internalApi/jobs";
 
 export function useJobsQuery(options?: {
   enabled?: boolean;

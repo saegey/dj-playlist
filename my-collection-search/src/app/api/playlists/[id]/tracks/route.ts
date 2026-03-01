@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import {
+  playlistDetailParamsSchema,
+  playlistDetailResponseSchema,
+} from "@/api-contract/schemas";
+import { playlistManagementService } from "@/server/services/playlistManagementService";
 
 export async function GET(
   _request: Request,
@@ -9,45 +11,25 @@ export async function GET(
 ) {
   try {
     const { id: idParam } = await params;
-    const id = Number(idParam);
-    if (!idParam || Number.isNaN(id)) {
+    const parsedParams = playlistDetailParamsSchema.safeParse({ id: idParam });
+    if (!parsedParams.success) {
       return NextResponse.json(
-        { error: "Invalid playlist id" },
+        { error: "Invalid playlist id", details: parsedParams.error.flatten() },
         { status: 400 }
       );
     }
+    const id = parsedParams.data.id;
 
-    // Ensure playlist exists
-    const playlistRes = await pool.query(
-      "SELECT * FROM playlists WHERE id = $1",
-      [id]
-    );
-    if (playlistRes.rowCount === 0) {
+    const result = await playlistManagementService.getPlaylistTrackDetails(id);
+    if (result.notFound) {
       return NextResponse.json(
         { error: "Playlist not found" },
         { status: 404 }
       );
     }
 
-    // Fetch ordered track ids for the playlist
-    const tracksRes = await pool.query(
-      "SELECT track_id, friend_id, position FROM playlist_tracks WHERE playlist_id = $1 ORDER BY position ASC",
-      [id]
-    );
-    const trackIds = tracksRes.rows.map(
-      (r: { track_id: string; friend_id: number; position: number }) => {
-        return {
-          track_id: r.track_id,
-          friend_id: Number(r.friend_id), // Ensure it's a number
-          position: r.position,
-        };
-      }
-    );
-    return NextResponse.json({
-      playlist_id: id,
-      tracks: trackIds,
-      playlist_name: playlistRes.rows[0].name,
-    });
+    const validated = playlistDetailResponseSchema.parse(result.detail);
+    return NextResponse.json(validated);
   } catch (error) {
     console.error("Error fetching playlist tracks:", error);
     return NextResponse.json(

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCookieFileInfo, saveCookieFile, deleteCookieFile } from "@/lib/cookieUtils";
+import { gamdlCookieService } from "@/server/services/gamdlCookieService";
 
 export const runtime = "nodejs";
 
@@ -9,7 +9,7 @@ export const runtime = "nodejs";
  */
 export async function GET() {
   try {
-    const cookieInfo = await getCookieFileInfo();
+    const cookieInfo = await gamdlCookieService.getCookieFileInfo();
     return NextResponse.json(cookieInfo);
   } catch (error) {
     console.error("Failed to get cookie file info:", error);
@@ -31,24 +31,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("cookieFile");
-
-    if (!file || typeof file === "string") {
-      return NextResponse.json(
-        { error: "No cookie file provided" },
-        { status: 400 }
-      );
-    }
-
-    // Validate file type and name
-    if (!file.name.endsWith('.txt') && !file.name.includes('cookie')) {
-      return NextResponse.json(
-        { error: "Please upload a .txt cookie file" },
-        { status: 400 }
-      );
-    }
-
-    // Save and validate the cookie file
-    const cookieInfo = await saveCookieFile(file);
+    const cookieInfo = await gamdlCookieService.uploadCookieFile(file);
 
     return NextResponse.json({
       success: true,
@@ -74,7 +57,7 @@ export async function POST(req: NextRequest) {
  */
 export async function DELETE() {
   try {
-    await deleteCookieFile();
+    await gamdlCookieService.deleteCookieFile();
 
     return NextResponse.json({
       success: true,

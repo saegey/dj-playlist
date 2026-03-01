@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
 import fs from "fs";
 import path from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
+import { albumRepository } from "@/server/repositories/albumRepository";
 
 const execFileAsync = promisify(execFile);
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-type TrackRow = {
-  track_id: string;
-  friend_id: number;
-  release_id: string;
-  local_audio_url: string | null;
-};
 
 function normalizeAudioFilename(raw: string): string {
   let value = raw.trim();
@@ -68,7 +60,7 @@ function resolveAudioFilePath(filename: string): string | null {
   return null;
 }
 
-async function runFfprobe(filePath: string): Promise<any> {
+async function runFfprobe(filePath: string): Promise<unknown> {
   const { stdout } = await execFileAsync("ffprobe", [
     "-v",
     "quiet",
@@ -81,11 +73,21 @@ async function runFfprobe(filePath: string): Promise<any> {
   return JSON.parse(stdout);
 }
 
-function getAttachedPicStream(probe: any): any | null {
-  const streams = Array.isArray(probe?.streams) ? probe.streams : [];
+function getAttachedPicStream(probe: unknown): { index?: number; disposition?: { attached_pic?: number; default?: number }; codec_type?: string } | null {
+  const streams =
+    probe &&
+    typeof probe === "object" &&
+    "streams" in probe &&
+    Array.isArray((probe as { streams?: unknown }).streams)
+      ? ((probe as { streams: unknown[] }).streams as Array<{
+          index?: number;
+          disposition?: { attached_pic?: number; default?: number };
+          codec_type?: string;
+        }>)
+      : [];
   return (
     streams.find(
-      (s: any) =>
+      (s) =>
         s?.disposition?.attached_pic === 1 ||
         (s?.codec_type === "video" && s?.disposition?.default === 0)
     ) ?? null
@@ -110,17 +112,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { rows } = await pool.query<TrackRow>(
-      `
-      SELECT track_id, friend_id, release_id, local_audio_url
-      FROM tracks
-      WHERE friend_id = $1
-        AND release_id::text = $2::text
-        AND local_audio_url IS NOT NULL
-        AND local_audio_url <> ''
-      ORDER BY track_id
-      `,
-      [friendId, releaseId]
+    const rows = await albumRepository.getTracksForReleaseWithAudio(
+      friendId,
+      releaseId
     );
 
     if (rows.length === 0) {
@@ -171,26 +165,16 @@ export async function POST(request: NextRequest) {
     ]);
 
     const publicUrl = `/uploads/album-covers/${outputFile}`;
-    const updateRes = await pool.query(
-      `
-      UPDATE tracks
-      SET audio_file_album_art_url = $1
-      WHERE friend_id = $2
-        AND release_id::text = $3::text
-      `,
-      [publicUrl, friendId, releaseId]
+    const updatedCount = await albumRepository.updateAlbumCoverForRelease(
+      friendId,
+      releaseId,
+      publicUrl
     );
 
     try {
-      const { rows: updatedTracks } = await pool.query(
-        `
-        SELECT t.*, COALESCE(a.library_identifier, t.library_identifier) AS library_identifier
-        FROM tracks t
-        LEFT JOIN albums a
-          ON t.release_id = a.release_id AND t.friend_id = a.friend_id
-        WHERE t.friend_id = $1 AND t.release_id::text = $2::text
-        `,
-        [friendId, releaseId]
+      const updatedTracks = await albumRepository.getTracksForAlbumWithLibraryIdentifier(
+        releaseId,
+        friendId
       );
       if (updatedTracks.length > 0) {
         const { getMeiliClient } = await import("@/lib/meili");
@@ -208,7 +192,7 @@ export async function POST(request: NextRequest) {
       friend_id: friendId,
       audio_file_album_art_url: publicUrl,
       source_track_id: sourceTrackId,
-      tracks_updated: updateRes.rowCount || 0,
+      tracks_updated: updatedCount,
     });
   } catch (error) {
     console.error("Error extracting album cover from local audio:", error);

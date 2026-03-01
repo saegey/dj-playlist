@@ -20,35 +20,14 @@ import { LuPlay, LuCheck, LuX, LuClock } from "react-icons/lu";
 import { FiMoreVertical } from "react-icons/fi";
 import { toaster } from "@/components/ui/toaster";
 import { useMutation } from "@tanstack/react-query";
-
-interface TestResult {
-  success: boolean;
-  message: string;
-  details?: {
-    gamdl_available: boolean;
-    cookie_file_exists: boolean;
-    cookie_file_valid: boolean;
-    test_download_attempted?: boolean;
-    test_download_success?: boolean;
-    error_type?: string;
-  };
-}
-
-async function testGamdlConnection(): Promise<TestResult> {
-  const response = await fetch("/api/settings/gamdl/test", {
-    method: "POST",
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.details || error.error || "Test connection failed");
-  }
-
-  return response.json();
-}
+import {
+  testGamdlConnection,
+  type GamdlConnectionTestResponse,
+} from "@/services/internalApi/settings";
 
 export default function GamdlTestConnection() {
-  const [lastResult, setLastResult] = React.useState<TestResult | null>(null);
+  const [lastResult, setLastResult] =
+    React.useState<GamdlConnectionTestResponse | null>(null);
 
   const testMutation = useMutation({
     mutationFn: testGamdlConnection,
@@ -72,6 +51,14 @@ export default function GamdlTestConnection() {
       setLastResult({
         success: false,
         message: error.message,
+        details: {
+          gamdl_available: false,
+          cookie_file_exists: false,
+          cookie_file_valid: false,
+          test_download_attempted: false,
+          test_download_success: false,
+          error_type: "request_error",
+        },
       });
       toaster.create({
         title: "Test Failed",

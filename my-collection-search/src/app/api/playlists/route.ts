@@ -1,367 +1,38 @@
-import { Playlist } from "@/types/track";
 import { NextResponse } from "next/server";
 import { getPostHogClient } from "@/lib/posthog-server";
+import {
+  playlistSchema,
+  playlistCreateBodySchema,
+  playlistDeleteQuerySchema,
+  playlistPatchBodySchema,
+} from "@/api-contract/schemas";
+import {
+  normalizePlaylistCreatedAt,
+  playlistManagementService,
+} from "@/server/services/playlistManagementService";
+import { playlistRepository } from "@/server/repositories/playlistRepository";
 
-import { Pool } from "pg";
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-type PlaylistTrackRow = {
-  playlist_id: number;
-  track_id: string;
-  friend_id: number;
-};
-
-// Helper functions for friend_id resolution
-async function getDefaultFriendId(): Promise<number> {
-  const result = await pool.query("SELECT id FROM friends ORDER BY id LIMIT 1");
-  if (result.rows.length === 0) {
-    throw new Error("No friends found");
-  }
-  return result.rows[0].id;
-}
-
-async function resolveFriendIdForTrack(
-  trackId: string,
-  username?: string
-): Promise<number> {
-  if (username) {
-    const result = await pool.query(
-      "SELECT id FROM friends WHERE username = $1",
-      [username]
-    );
-    if (result.rows.length > 0) {
-      return result.rows[0].id;
-    }
-  }
-
-  // Fallback: find any friend who has this track
-  const result = await pool.query(
-    "SELECT friend_id FROM tracks WHERE track_id = $1 LIMIT 1",
-    [trackId]
-  );
-  if (result.rows.length > 0) {
-    return result.rows[0].friend_id;
-  }
-
-  return await getDefaultFriendId();
-}
-
-// Helper: fetch all playlists with their tracks
-async function getAllPlaylistsWithTracks() {
-  const playlistsRes = await pool.query(
-    "SELECT * FROM playlists ORDER BY created_at DESC"
-  );
-  const playlists = playlistsRes.rows;
-  if (playlists.length === 0) return [];
-  const playlistIds = playlists.map((p: Playlist) => p.id);
-  // Fetch tracks with position, order by position
-  const tracksRes = await pool.query(
-    "SELECT playlist_id, track_id, friend_id FROM playlist_tracks WHERE playlist_id = ANY($1) ORDER BY position ASC",
-    [playlistIds]
-  );
-  const tracksByPlaylist: Record<number, PlaylistTrackRow[]> = {};
-
-  tracksRes.rows.forEach((row: PlaylistTrackRow) => {
-    if (!tracksByPlaylist[row.playlist_id])
-      tracksByPlaylist[row.playlist_id] = [];
-    tracksByPlaylist[row.playlist_id].push(row);
-  });
-  return playlists.map((p: Playlist) => ({
-    ...p,
-    tracks: tracksByPlaylist[p.id] || [],
-  }));
-}
-
-// Types for playlist track input (allows metadata passthrough)
-interface PlaylistTrackInput {
-  track_id: string;
-  friend_id?: number;
-  username?: string | null;
-  title?: string | null;
-  artist?: string | null;
-  album?: string | null;
-  year?: string | number | null;
-  styles?: string[] | null;
-  genres?: string[] | null;
-  duration?: string | null;
-  duration_seconds?: number | null;
-  position?: number | null;
-  discogs_url?: string | null;
-  apple_music_url?: string | null;
-  youtube_url?: string | null;
-  spotify_url?: string | null;
-  soundcloud_url?: string | null;
-  album_thumbnail?: string | null;
-  local_tags?: string | null;
-  bpm?: number | string | null;
-  key?: string | null;
-  danceability?: number | null;
-  notes?: string | null;
-  star_rating?: number | null;
-  release_id?: string | null;
-  mood_happy?: number | null;
-  mood_sad?: number | null;
-  mood_relaxed?: number | null;
-  mood_aggressive?: number | null;
-  local_audio_url?: string | null;
-}
-
-function normalizeStringArray(arr?: unknown): string[] | null {
-  if (!arr) return null;
-  if (Array.isArray(arr)) return arr.map(String);
-  return null;
-}
-
-async function upsertTracksWithMetadata(
-  tracks: PlaylistTrackInput[]
-): Promise<void> {
-  if (!tracks || tracks.length === 0) return;
-
-  const columns = [
-    "title",
-    "artist",
-    "album",
-    "year",
-    "styles",
-    "genres",
-    "duration",
-    "discogs_url",
-    "apple_music_url",
-    "youtube_url",
-    "soundcloud_url",
-    "album_thumbnail",
-    "local_tags",
-    "bpm",
-    "key",
-    "danceability",
-    "duration_seconds",
-    "notes",
-    "local_audio_url",
-    "star_rating",
-    "release_id",
-    "mood_happy",
-    "mood_sad",
-    "mood_relaxed",
-    "mood_aggressive",
-    "username",
-  ] as const;
-
-  for (const rawTrack of tracks) {
-    if (!rawTrack.track_id || !rawTrack.friend_id) continue;
-    const title =
-      typeof rawTrack.title === "string" && rawTrack.title.trim().length > 0
-        ? rawTrack.title.trim()
-        : null;
-    const artist =
-      typeof rawTrack.artist === "string" && rawTrack.artist.trim().length > 0
-        ? rawTrack.artist.trim()
-        : null;
-
-    const bpmNumber =
-      typeof rawTrack.bpm === "number"
-        ? rawTrack.bpm
-        : typeof rawTrack.bpm === "string"
-        ? Number(rawTrack.bpm)
-        : null;
-    const durationSecondsNumber =
-      typeof rawTrack.duration_seconds === "number"
-        ? rawTrack.duration_seconds
-        : typeof rawTrack.duration_seconds === "string"
-        ? Number(rawTrack.duration_seconds)
-        : null;
-    const starRatingNumber =
-      typeof rawTrack.star_rating === "number"
-        ? rawTrack.star_rating
-        : typeof rawTrack.star_rating === "string"
-        ? Number(rawTrack.star_rating)
-        : null;
-
-    const updateValues: Record<(typeof columns)[number], unknown> = {
-      title,
-      artist,
-      album: rawTrack.album ?? null,
-      year:
-        typeof rawTrack.year === "number" || typeof rawTrack.year === "string"
-          ? rawTrack.year
-          : null,
-      styles: normalizeStringArray(rawTrack.styles),
-      genres: normalizeStringArray(rawTrack.genres),
-      duration: rawTrack.duration ?? null,
-      discogs_url: rawTrack.discogs_url ?? null,
-      apple_music_url: rawTrack.apple_music_url ?? null,
-      youtube_url: rawTrack.youtube_url ?? null,
-      soundcloud_url: rawTrack.soundcloud_url ?? null,
-      album_thumbnail: rawTrack.album_thumbnail ?? null,
-      local_tags: rawTrack.local_tags ?? null,
-      bpm: Number.isFinite(bpmNumber) ? bpmNumber : null,
-      key: rawTrack.key ?? null,
-      danceability: rawTrack.danceability ?? null,
-      duration_seconds: Number.isFinite(durationSecondsNumber)
-        ? durationSecondsNumber
-        : null,
-      notes: rawTrack.notes ?? null,
-      local_audio_url: rawTrack.local_audio_url ?? null,
-      star_rating: Number.isFinite(starRatingNumber) ? starRatingNumber : null,
-      release_id: rawTrack.release_id ?? null,
-      mood_happy: rawTrack.mood_happy ?? null,
-      mood_sad: rawTrack.mood_sad ?? null,
-      mood_relaxed: rawTrack.mood_relaxed ?? null,
-      mood_aggressive: rawTrack.mood_aggressive ?? null,
-      username: rawTrack.username ?? null,
-    };
-
-    // Try update first to avoid relying on a specific unique constraint
-    const updateParams: unknown[] = [];
-    const setClauses: string[] = [];
-    let idx = 1;
-    for (const col of columns) {
-      setClauses.push(`${col} = COALESCE($${idx}, ${col})`);
-      updateParams.push(updateValues[col]);
-      idx += 1;
-    }
-    // WHERE params
-    updateParams.push(rawTrack.track_id, rawTrack.friend_id);
-
-    const updateSql = `
-      UPDATE tracks
-      SET ${setClauses.join(", ")}
-      WHERE track_id = $${idx} AND friend_id = $${idx + 1}
-      RETURNING track_id;
-    `;
-
-    const updateRes = await pool.query(updateSql, updateParams);
-    if ((updateRes?.rowCount ?? 0) > 0) {
-      continue; // updated existing row
-    }
-
-    // Insert if no existing row
-    const insertTitle = title ?? rawTrack.track_id;
-    const insertArtist = artist ?? "Unknown Artist";
-
-    // Get username: prefer from track data, fallback to friend_id lookup
-    let username = rawTrack.username;
-    if (!username) {
-      const friendRes = await pool.query(
-        "SELECT username FROM friends WHERE id = $1",
-        [rawTrack.friend_id]
-      );
-      username = friendRes.rows[0]?.username;
-    }
-
-    if (!username) {
-      throw new Error(
-        `Cannot insert track ${rawTrack.track_id}: username is required but not found for friend_id ${rawTrack.friend_id}`
-      );
-    }
-
-    const insertValues = {
-      ...updateValues,
-      title: insertTitle,
-      artist: insertArtist,
-      username,
-    };
-    const insertColumns = ["track_id", "friend_id", ...columns] as const;
-    const insertParams: unknown[] = [
-      rawTrack.track_id,
-      rawTrack.friend_id,
-      ...columns.map((col) => insertValues[col]),
-    ];
-    const placeholders = insertColumns.map((_, i) => `$${i + 1}`).join(", ");
-    const insertSql = `
-      INSERT INTO tracks (${insertColumns.join(", ")})
-      VALUES (${placeholders})
-      ON CONFLICT (track_id) DO NOTHING;
-    `;
-
-    await pool.query(insertSql, insertParams);
-  }
-}
-
-// Helper: create playlist and insert tracks
-async function createPlaylistWithTracks(data: {
-  name: string;
-  tracks: PlaylistTrackInput[];
-}) {
-  const { name, tracks } = data;
-  const playlistRes = await pool.query(
-    "INSERT INTO playlists (name) VALUES ($1) RETURNING *",
-    [name]
-  );
-  const playlist = playlistRes.rows[0];
-
-  if (tracks && tracks.length > 0) {
-    // Resolve friend_id for each track based on username (not friend_id from import)
-    const resolvedTracks = await Promise.all(
-      tracks.map(async (track, i) => {
-        // Always resolve friend_id from username for cross-installation compatibility
-        const friendId = await resolveFriendIdForTrack(
-          track.track_id,
-          track.username ?? undefined
-        );
-
-        return {
-          ...track,
-          friend_id: friendId,
-          position: i,
-        };
-      })
-    );
-
-    await upsertTracksWithMetadata(resolvedTracks);
-
-    // Insert with position and friend_id
-    const values = resolvedTracks
-      .map((_, i) => `($1, $${i * 3 + 2}, $${i * 3 + 3}, $${i * 3 + 4})`)
-      .join(",");
-    const query = `INSERT INTO playlist_tracks (playlist_id, track_id, friend_id, position) VALUES ${values} ON CONFLICT DO NOTHING`;
-
-    const params = [playlist.id];
-    resolvedTracks.forEach((track) => {
-      params.push(track.track_id, track.friend_id, track.position);
-    });
-
-    console.debug("Executing query:", query, params);
-    await pool.query(query, params);
-  }
-
-  return {
-    ...playlist,
-    tracks:
-      tracks.map((t) => ({
-        track_id: t.track_id,
-        friend_id: t.friend_id,
-        position: t.position,
-      })) || [],
-  };
-}
-
-// Helper: delete playlist (playlist_tracks will cascade)
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
-    if (!id) {
+    const parsedQuery = playlistDeleteQuerySchema.safeParse({
+      id: searchParams.get("id"),
+    });
+    if (!parsedQuery.success) {
       return NextResponse.json(
-        { error: "Missing playlist id" },
+        { error: "Missing playlist id", details: parsedQuery.error.flatten() },
         { status: 400 }
       );
     }
-    // Delete playlist (playlist_tracks will cascade)
-    const result = await pool.query(
-      "DELETE FROM playlists WHERE id = $1 RETURNING *",
-      [id]
-    );
-    if (result.rowCount === 0) {
-      return NextResponse.json(
-        { error: "Playlist not found" },
-        { status: 404 }
-      );
+
+    const { id } = parsedQuery.data;
+    const deletedPlaylist = await playlistRepository.deletePlaylistById(id);
+    if (!deletedPlaylist) {
+      return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
     }
 
-    // PostHog: Track playlist deletion (server-side)
     try {
       const posthog = getPostHogClient();
-      const deletedPlaylist = result.rows[0];
       posthog.capture({
         distinctId: "server",
         event: "playlist_deleted",
@@ -387,8 +58,16 @@ export async function DELETE(req: Request) {
 
 export async function GET() {
   try {
-    const playlists = await getAllPlaylistsWithTracks();
-    return NextResponse.json(playlists);
+    const playlists = await playlistManagementService.getAllPlaylistsWithTracks();
+    const validated = playlistSchema.array().safeParse(playlists);
+    if (!validated.success) {
+      console.warn(
+        "Playlists response failed schema validation; returning raw payload for compatibility",
+        validated.error.flatten()
+      );
+      return NextResponse.json(playlists);
+    }
+    return NextResponse.json(validated.data);
   } catch (error) {
     console.error("Error fetching playlists:", error);
     return NextResponse.json(
@@ -400,10 +79,20 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const data = await req.json();
-    const playlist = await createPlaylistWithTracks(data);
+    const parsedBody = playlistCreateBodySchema.safeParse(await req.json());
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { error: "Invalid playlist payload", details: parsedBody.error.flatten() },
+        { status: 400 }
+      );
+    }
 
-    // PostHog: Track playlist creation (server-side)
+    const { name, tracks } = parsedBody.data;
+    const playlist = await playlistManagementService.createPlaylistWithTracks({
+      name,
+      tracks,
+    });
+
     try {
       const posthog = getPostHogClient();
       posthog.capture({
@@ -420,7 +109,8 @@ export async function POST(req: Request) {
       console.error("PostHog capture error:", posthogError);
     }
 
-    return NextResponse.json(playlist, { status: 201 });
+    const validated = playlistSchema.parse(normalizePlaylistCreatedAt(playlist));
+    return NextResponse.json(validated, { status: 201 });
   } catch (error) {
     console.error("Error creating playlist:", error);
     return NextResponse.json(
@@ -430,142 +120,26 @@ export async function POST(req: Request) {
   }
 }
 
-// Update a playlist's name and/or tracks
 export async function PATCH(req: Request) {
   try {
-    const body = await req.json();
-    const idRaw = body?.id;
-    const name: string | undefined = body?.name;
-    const tracks: (string | PlaylistTrackInput)[] | undefined = body?.tracks;
-    const default_friend_id: number | undefined = body?.default_friend_id;
-
-    const id = Number(idRaw);
-    if (!idRaw || Number.isNaN(id)) {
+    const parsedBody = playlistPatchBodySchema.safeParse(await req.json());
+    if (!parsedBody.success) {
       return NextResponse.json(
-        { error: "Invalid or missing playlist id" },
+        {
+          error: "Invalid playlist update payload",
+          details: parsedBody.error.flatten(),
+        },
         { status: 400 }
       );
     }
 
-    if (name !== undefined && typeof name !== "string") {
-      return NextResponse.json(
-        { error: "'name' must be a string" },
-        { status: 400 }
-      );
-    }
-    if (tracks !== undefined && !Array.isArray(tracks)) {
-      return NextResponse.json(
-        { error: "'tracks' must be an array of track ids or objects" },
-        { status: 400 }
-      );
+    const result = await playlistManagementService.updatePlaylist(parsedBody.data);
+    if (result.notFound) {
+      return NextResponse.json({ error: "Playlist not found" }, { status: 404 });
     }
 
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-
-      // Ensure playlist exists
-      const existsRes = await client.query(
-        "SELECT id, name FROM playlists WHERE id = $1",
-        [id]
-      );
-      if (existsRes.rowCount === 0) {
-        await client.query("ROLLBACK");
-        return NextResponse.json(
-          { error: "Playlist not found" },
-          { status: 404 }
-        );
-      }
-
-      // Update name if provided
-      if (name !== undefined) {
-        await client.query("UPDATE playlists SET name = $1 WHERE id = $2", [
-          name,
-          id,
-        ]);
-      }
-
-      // Update tracks if provided (replace positions)
-      if (tracks !== undefined) {
-        await client.query(
-          "DELETE FROM playlist_tracks WHERE playlist_id = $1",
-          [id]
-        );
-        if (tracks.length > 0) {
-          // Resolve friend_id for each track (prefer explicit friend_id)
-          const resolvedTracks = await Promise.all(
-            tracks.map(async (track, i) => {
-              const trackId =
-                typeof track === "string" ? track : track.track_id;
-              const username =
-                typeof track === "object" ? track.username ?? undefined : undefined;
-
-              // Prefer explicit friend_id if provided by client
-              const rawFriendId =
-                typeof track === "object" ? track.friend_id : undefined;
-              let friendId =
-                typeof rawFriendId === "number" && Number.isFinite(rawFriendId)
-                  ? rawFriendId
-                  : undefined;
-
-              if (!friendId && default_friend_id) {
-                friendId = default_friend_id;
-              }
-
-              if (!friendId) {
-                // Resolve friend_id from username or track ownership as fallback
-                friendId = await resolveFriendIdForTrack(trackId, username);
-              }
-
-              return {
-                ...(typeof track === "object" ? track : { track_id: trackId }),
-                track_id: trackId,
-                friend_id: friendId,
-                position: i,
-              };
-            })
-          );
-
-          await upsertTracksWithMetadata(resolvedTracks);
-
-          // Insert with position and friend_id
-          const values = resolvedTracks
-            .map((_, i) => `($1, $${i * 3 + 2}, $${i * 3 + 3}, $${i * 3 + 4})`)
-            .join(",");
-          const insertSql = `INSERT INTO playlist_tracks (playlist_id, track_id, friend_id, position) VALUES ${values}`;
-
-          const params: (string | number)[] = [id];
-          resolvedTracks.forEach((track) => {
-            params.push(track.track_id, track.friend_id, track.position);
-          });
-
-          await client.query(insertSql, params);
-        }
-      }
-
-      await client.query("COMMIT");
-
-      // Fetch updated playlist and tracks
-      const playlistRes = await pool.query(
-        "SELECT * FROM playlists WHERE id = $1",
-        [id]
-      );
-      const playlistRow = playlistRes.rows[0];
-      const tracksRes = await pool.query(
-        "SELECT track_id, friend_id FROM playlist_tracks WHERE playlist_id = $1 ORDER BY position ASC",
-        [id]
-      );
-      const trackIds = tracksRes.rows.map(
-        (r: { track_id: string; friend_id: number }) => ({
-          track_id: r.track_id,
-          friend_id: r.friend_id,
-        })
-      );
-
-      return NextResponse.json({ ...playlistRow, tracks: trackIds });
-    } finally {
-      client.release();
-    }
+    const validated = playlistSchema.parse(result.playlist);
+    return NextResponse.json(validated);
   } catch (error) {
     console.error("Error updating playlist:", error);
     return NextResponse.json(

@@ -1,75 +1,27 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Track } from '@/types/track';
-
-interface AlbumMetadata {
-  title: string;
-  artist: string;
-  year?: string;
-  genres?: string[];
-  styles?: string[];
-  album_notes?: string;
-  album_rating?: number;
-  purchase_price?: number;
-  condition?: string;
-  label?: string;
-  catalog_number?: string;
-  country?: string;
-  format?: string;
-  library_identifier?: string;
-}
-
-interface TrackMetadata {
-  title: string;
-  artist: string;
-  position?: string;
-  duration_seconds?: number;
-  bpm?: number;
-  key?: string;
-  notes?: string;
-  local_tags?: string;
-  star_rating?: number;
-  apple_music_url?: string;
-  spotify_url?: string;
-  youtube_url?: string;
-  soundcloud_url?: string;
-}
-
-interface CreateAlbumRequest {
-  album: AlbumMetadata;
-  tracks: TrackMetadata[];
-  friend_id: number;
-  coverArt?: File | null;
-}
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Album } from "@/types/track";
+import { CreateAlbumRequest } from "@/types/albumMetadata";
+import { useAlbumStore } from "@/stores/albumStore";
+import { useTrackStore } from "@/stores/trackStore";
+import { createAlbum, type CreateAlbumResponse } from "@/services/internalApi/albums";
 
 export function useCreateAlbumMutation() {
   const qc = useQueryClient();
+  const setAlbum = useAlbumStore((state) => state.setAlbum);
+  const setTracks = useTrackStore((state) => state.setTracks);
 
-  return useMutation({
-    mutationFn: async (data: CreateAlbumRequest) => {
-      const formData = new FormData();
-      formData.append('album', JSON.stringify(data.album));
-      formData.append('tracks', JSON.stringify(data.tracks));
-      formData.append('friend_id', data.friend_id.toString());
-      if (data.coverArt) {
-        formData.append('cover_art', data.coverArt);
+  return useMutation<CreateAlbumResponse, Error, CreateAlbumRequest>({
+    mutationFn: async (data: CreateAlbumRequest) => createAlbum(data),
+    onSuccess: (data) => {
+      if (data?.album) {
+        setAlbum(data.album as Album);
       }
-
-      const res = await fetch('/api/albums/create', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to create album');
+      if (Array.isArray(data?.tracks) && data.tracks.length > 0) {
+        setTracks(data.tracks);
       }
-
-      return res.json() as Promise<{ album: Record<string, unknown>; tracks: Track[] }>;
-    },
-    onSuccess: () => {
       // Invalidate albums and tracks queries to trigger refetch
-      qc.invalidateQueries({ queryKey: ['albums'] });
-      qc.invalidateQueries({ queryKey: ['tracks'] });
+      qc.invalidateQueries({ queryKey: ["albums"] });
+      qc.invalidateQueries({ queryKey: ["tracks"] });
     },
   });
 }

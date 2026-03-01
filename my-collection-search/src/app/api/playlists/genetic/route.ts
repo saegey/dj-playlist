@@ -1,9 +1,23 @@
 import { NextResponse } from "next/server";
+import {
+  playlistGeneticBodySchema,
+  playlistGeneticResponseSchema,
+} from "@/api-contract/schemas";
 
 export async function POST(req: Request) {
   try {
-    const data = await req.json();
-    const inputTracks = Array.isArray(data?.playlist) ? data.playlist : [];
+    const parsedBody = playlistGeneticBodySchema.safeParse(await req.json());
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid playlist payload",
+          details: parsedBody.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+
+    const inputTracks = parsedBody.data.playlist;
     const invalid: Array<{ track_id?: string; reason: string }> = [];
 
     const normalizedTracks = inputTracks
@@ -71,6 +85,12 @@ export async function POST(req: Request) {
       }),
     });
     const responseJson = await res.json();
+    if (res.ok) {
+      const validated = playlistGeneticResponseSchema.safeParse(responseJson);
+      if (validated.success) {
+        return NextResponse.json(validated.data, { status: res.status });
+      }
+    }
     return NextResponse.json(responseJson, { status: res.status });
   } catch (error) {
     console.error("Error creating playlist:", error);

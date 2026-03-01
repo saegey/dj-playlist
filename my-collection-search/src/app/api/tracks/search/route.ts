@@ -1,20 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Track } from "@/types/track";
 import { getMeiliClient } from "@/lib/meili";
+import {
+  trackSearchGetQuerySchema,
+  trackSearchGetResponseSchema,
+  trackSearchPostBodySchema,
+  trackSearchPostResponseSchema,
+} from "@/api-contract/schemas";
 
 const client = getMeiliClient();
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const q = searchParams.get("q") || "";
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = parseInt(searchParams.get("offset") || "0");
-    const filter = searchParams.get("filter");
+    const parsedQuery = trackSearchGetQuerySchema.safeParse(
+      Object.fromEntries(request.nextUrl.searchParams.entries())
+    );
+    if (!parsedQuery.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid query parameters",
+          details: parsedQuery.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+    const { q, limit, offset, filter } = parsedQuery.data;
 
     const index = client.index<Track>("tracks");
 
-    const searchOptions: any = {
+    const searchOptions: {
+      limit: number;
+      offset: number;
+      filter?: string;
+    } = {
       limit,
       offset,
     };
@@ -25,13 +43,15 @@ export async function GET(request: NextRequest) {
 
     const results = await index.search(q, searchOptions);
 
-    return NextResponse.json({
+    const response = {
       hits: results.hits,
       estimatedTotalHits: results.estimatedTotalHits,
       offset: results.offset,
       limit: results.limit,
       processingTimeMs: results.processingTimeMs,
-    });
+    };
+    const validated = trackSearchGetResponseSchema.parse(response);
+    return NextResponse.json(validated);
   } catch (error: any) {
     console.error("Search error:", error);
     return NextResponse.json(
@@ -43,8 +63,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { query = "", limit = 20, offset = 0, filters } = body;
+    const parsedBody = trackSearchPostBodySchema.safeParse(await request.json());
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid request body",
+          details: parsedBody.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+    const { query, limit, offset, filters } = parsedBody.data;
 
     const index = client.index<Track>("tracks");
 
@@ -61,7 +90,11 @@ export async function POST(request: NextRequest) {
         filterArray.push(`friend_id = ${filters.friend_id}`);
     }
 
-    const searchOptions: any = {
+    const searchOptions: {
+      limit: number;
+      offset: number;
+      filter?: string[];
+    } = {
       limit,
       offset,
     };
@@ -72,13 +105,15 @@ export async function POST(request: NextRequest) {
 
     const results = await index.search(query, searchOptions);
 
-    return NextResponse.json({
+    const response = {
       tracks: results.hits,
       estimatedTotalHits: results.estimatedTotalHits,
       offset: results.offset,
       limit: results.limit,
       processingTimeMs: results.processingTimeMs,
-    });
+    };
+    const validated = trackSearchPostResponseSchema.parse(response);
+    return NextResponse.json(validated);
   } catch (error: any) {
     console.error("Search error:", error);
     return NextResponse.json(

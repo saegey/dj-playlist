@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTrackStore } from "@/stores/trackStore";
-import { useTracksCacheUpdater } from "@/hooks/useTracksCacheUpdater";
 import type { Track } from "@/types/track";
 
 interface JobCompletedEvent {
@@ -33,22 +32,30 @@ type JobEvent = JobCompletedEvent | JobErrorEvent;
 
 export function useJobEventsSSE(enabled: boolean = true) {
   const queryClient = useQueryClient();
-  const { updateTrack } = useTrackStore();
-  const { updateTracksInCache } = useTracksCacheUpdater();
+  const updateTrack = useTrackStore((state) => state.updateTrack);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (!enabled) return;
-    // Only run on client side
-    if (typeof window === "undefined") return;
+    if (!enabled) {
+      setIsConnected(false);
+      return;
+    }
+
+    // Avoid duplicate connections if the effect re-runs while still connected.
+    if (eventSourceRef.current) {
+      return;
+    }
 
     // Create SSE connection
-    eventSourceRef.current = new EventSource("/api/jobs/events");
+    const eventSource = new EventSource("/api/jobs/events");
+    eventSourceRef.current = eventSource;
 
-    eventSourceRef.current.onmessage = (event) => {
+    eventSource.onmessage = (event) => {
       try {
         if (event.data === "connected") {
           console.log("Job events SSE connected");
+          setIsConnected(true);
           return;
         }
 
@@ -83,7 +90,6 @@ export function useJobEventsSSE(enabled: boolean = true) {
 
           if (Object.keys(updates).length > 0) {
             updateTrack(jobEvent.track_id, jobEvent.friend_id, updates);
-            updateTracksInCache({ track_id: jobEvent.track_id, friend_id: jobEvent.friend_id, ...updates });
           }
 
           // Invalidate tracks queries
@@ -101,18 +107,20 @@ export function useJobEventsSSE(enabled: boolean = true) {
       }
     };
 
-    eventSourceRef.current.onerror = (error) => {
+    eventSource.onerror = (error) => {
       console.error("Job events SSE connection error:", error);
+      setIsConnected(false);
     };
 
     // Cleanup on unmount
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
+      eventSource.close();
+      if (eventSourceRef.current === eventSource) {
         eventSourceRef.current = null;
       }
+      setIsConnected(false);
     };
-  }, [enabled, queryClient, updateTrack, updateTracksInCache]);
+  }, [enabled, queryClient, updateTrack]);
 
-  return typeof window !== "undefined" && eventSourceRef.current?.readyState === EventSource.OPEN;
+  return isConnected;
 }

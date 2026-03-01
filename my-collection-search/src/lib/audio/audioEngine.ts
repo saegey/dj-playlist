@@ -2,6 +2,7 @@
  * Audio Engine for DJ Transition Tester
  * Manages dual-deck audio playback with Web Audio API
  */
+import { httpArrayBuffer } from "@/services/http";
 
 export interface DeckState {
   buffer: AudioBuffer | null;
@@ -53,8 +54,7 @@ export class AudioEngine {
    */
   async loadTrack(deck: "A" | "B", audioUrl: string): Promise<void> {
     try {
-      const response = await fetch(audioUrl);
-      const arrayBuffer = await response.arrayBuffer();
+      const arrayBuffer = await httpArrayBuffer(audioUrl);
       const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
 
       const deckState = this.getDeck(deck);

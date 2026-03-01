@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
+import { settingsService } from "@/server/services/settingsService";
 
 export const runtime = "nodejs";
 
@@ -19,28 +19,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const friendIdNum = Number(friend_id);
+    if (!friendIdNum || Number.isNaN(friendIdNum)) {
+      return NextResponse.json(
+        { error: "friend_id must be a number" },
+        { status: 400 }
+      );
+    }
 
-    // Delete existing settings (will trigger recreation with defaults)
-    await pool.query(`
-      DELETE FROM gamdl_settings WHERE friend_id = $1
-    `, [friend_id]);
-
-    // Create new settings with defaults
-    const result = await pool.query(`
-      INSERT INTO gamdl_settings (friend_id)
-      VALUES ($1)
-      RETURNING *
-    `, [friend_id]);
-
-    await pool.end();
+    const settings = await settingsService.resetGamdlSettings(friendIdNum);
 
     return NextResponse.json({
       success: true,
       message: "Settings reset to defaults",
-      settings: result.rows[0]
+      settings,
     });
-
   } catch (error) {
     console.error("Failed to reset gamdl settings:", error);
     return NextResponse.json(

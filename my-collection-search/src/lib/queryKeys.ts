@@ -52,6 +52,20 @@ export const queryKeys = {
     mode?: string;
     page?: number;
   }) => ["tracks", args] as const,
+  trackById: (track_id: string, friend_id: number) =>
+    ["track", "by-id", track_id, friend_id] as const,
+  trackPlaylists: (track_id: string, friend_id: number) =>
+    ["track", "playlists", track_id, friend_id] as const,
+  trackAudioMetadata: (track_id: string, friend_id: number) =>
+    ["track", "audio-metadata", track_id, friend_id] as const,
+  trackEssentia: (track_id: string, friend_id: number) =>
+    ["track", "essentia", track_id, friend_id] as const,
+  trackEmbeddingPreview: (track_id: string, friend_id: number) =>
+    ["track", "embedding-preview", track_id, friend_id] as const,
+  trackIdentityEmbeddingPreview: (track_id: string, friend_id: number) =>
+    ["track", "identity-embedding-preview", track_id, friend_id] as const,
+  trackAudioVibeEmbeddingPreview: (track_id: string, friend_id: number) =>
+    ["track", "audio-vibe-embedding-preview", track_id, friend_id] as const,
   // Root key helpers for prefix matching (invalidate/setQueriesData with exact:false)
   tracksRoot: () => ["tracks"] as const,
   playlistCounts: (ids: readonly string[]) => ["playlistCounts", ids] as const,
@@ -61,14 +75,6 @@ export const queryKeys = {
     return [
       "ai",
       "apple-music-search",
-      args.title ?? "",
-      args.artist ?? "",
-    ] as const;
-  },
-  spotifySearchKey(args: { title?: string; artist?: string }) {
-    return [
-      "ai",
-      "spotify-track-search",
       args.title ?? "",
       args.artist ?? "",
     ] as const;

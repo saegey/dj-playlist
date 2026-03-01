@@ -35,11 +35,10 @@ import {
   importPlaylist,
   updatePlaylist,
   type PlaylistTrackPayload,
-} from "@/services/playlistService";
-import { analyzeTrackAsync } from "@/services/trackService";
+} from "@/services/internalApi/playlists";
+import { analyzeTrackAsync } from "@/services/internalApi/tracks";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { queryKeys } from "@/lib/queryKeys";
-import posthog from "posthog-js";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
@@ -136,17 +135,12 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
         ...newTracks,
       ];
 
-      const res = await updatePlaylist(playlistId, { tracks: combinedTracks });
-
-      if (res.ok) {
-        toaster.create({
-          title: `Appended ${newTracks.length} tracks to playlist`,
-          type: "success",
-        });
-        refetchTrackIds();
-      } else {
-        toaster.create({ title: "Failed to append tracks", type: "error" });
-      }
+      await updatePlaylist(playlistId, { tracks: combinedTracks });
+      toaster.create({
+        title: `Appended ${newTracks.length} tracks to playlist`,
+        type: "success",
+      });
+      refetchTrackIds();
     } catch (err) {
       console.error("Append error:", err);
       toaster.create({ title: "Error appending tracks", type: "error" });
@@ -197,7 +191,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     const missingAudio = tracks.filter(
       (t) =>
         !t.local_audio_url &&
-        (t.apple_music_url || t.spotify_url || t.youtube_url || t.soundcloud_url)
+        (t.apple_music_url || t.youtube_url || t.soundcloud_url)
     );
 
     if (missingAudio.length === 0) {
@@ -217,7 +211,6 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           title: track.title,
           artist: track.artist,
           apple_music_url: track.apple_music_url || undefined,
-          spotify_url: track.spotify_url || undefined,
           youtube_url: track.youtube_url || undefined,
           soundcloud_url: track.soundcloud_url || undefined,
         });
@@ -249,14 +242,13 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
       return;
     }
     try {
-      const res = await importPlaylist(
+      await importPlaylist(
         finalName,
         tracksPlaylist.map(({ track_id, friend_id }) => ({
           track_id,
           friend_id,
         }))
       );
-      if (!res.ok) throw new Error("Failed to duplicate playlist");
       toaster.create({
         title: `Duplicated playlist as "${finalName}"`,
         type: "success",
@@ -280,8 +272,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
       return;
     }
     try {
-      const res = await updatePlaylist(playlistId, { name: finalName });
-      if (!res.ok) throw new Error("Failed to rename playlist");
+      await updatePlaylist(playlistId, { name: finalName });
       toaster.create({
         title: "Playlist renamed",
         type: "success",

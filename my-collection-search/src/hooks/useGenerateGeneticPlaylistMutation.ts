@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { generateGeneticPlaylist } from "@/services/playlistService";
+import { generateGeneticPlaylist } from "@/services/internalApi/playlists";
 import type { Track } from "@/types/track";
 
 export function useGenerateGeneticPlaylistMutation() {

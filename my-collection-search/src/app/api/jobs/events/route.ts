@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { redisJobService } from "@/services/redisJobService";
+import { redisJobService } from "@/server/services/redisJobService";
 
 export async function GET(request: NextRequest) {
   const encoder = new TextEncoder();

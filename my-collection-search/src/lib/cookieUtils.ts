@@ -1,18 +1,6 @@
 import { promises as fs } from "fs";
 import * as path from "path";
-
-export interface CookieFileInfo {
-  exists: boolean;
-  filename?: string;
-  size?: number;
-  lastModified?: Date;
-  domains?: string[];
-  cookieCount?: number;
-  hasAppleMusic?: boolean;
-  expiryDates?: Date[];
-  isValid?: boolean;
-  validationErrors?: string[];
-}
+import type { CookieFileInfo } from "@/types/gamdl";
 
 /**
  * Parse cookie file and extract information

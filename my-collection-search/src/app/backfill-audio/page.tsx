@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Spinner, Text } from "@chakra-ui/react";
 
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
-import { useMeili } from "@/providers/MeiliProvider";
 import BackfillFilters from "@/components/backfill/BackfillFilters";
 import { useUsername } from "@/providers/UsernameProvider";
 import BackfillActionBar from "@/components/backfill/BackfillActionBar";
@@ -16,6 +15,7 @@ import { useBackfillStatusMutation } from "@/hooks/useBackfillStatusMutation";
 import { useVectorizeTrackMutation } from "@/hooks/useVectorizeTrackMutation";
 import { useAsyncAnalyzeTrackMutation } from "@/hooks/useAsyncAnalyzeTrackMutation";
 import PageContainer from "@/components/layout/PageContainer";
+import { useTrackStore } from "@/stores/trackStore";
 
 // BackfillTrack moved to components/backfill/types
 
@@ -24,13 +24,12 @@ export default function BackfillAudioPage() {
   const [showMissingVectors, setShowMissingVectors] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const { friends: usernames, friendsLoading: usernamesLoading } =
-    useFriendsQuery({ showCurrentUser: true, showSpotifyUsernames: true });
+    useFriendsQuery({ showCurrentUser: true });
   const { friend: selectedFriend } = useUsername();
   const [analyzing, setAnalyzing] = useState(false);
   // Pagination state
   const [page, setPage] = useState(1);
   const pageSize = 15;
-  const { client: meiliClient, ready } = useMeili();
   const { mutate: updateStatus } = useBackfillStatusMutation();
   const { mutateAsync: vectorize } = useVectorizeTrackMutation();
   const { mutateAsync: analyze } = useAsyncAnalyzeTrackMutation();
@@ -56,13 +55,12 @@ export default function BackfillAudioPage() {
 
   // Use shared search hook in paginated mode with page size 1
   const {
-    results: tracks,
+    trackInfo,
     estimatedResults,
     loading,
     query,
     setQuery,
   } = useSearchResults({
-    client: ready ? meiliClient : null,
     mode: "page",
     limit: pageSize,
     page,
@@ -74,8 +72,11 @@ export default function BackfillAudioPage() {
     setPage(1);
   }, [selectedFriend, query, showMissingAudio, showMissingVectors]);
 
-  // Derive page tracks with UI-only status fields (mutated optimistically)
-  const pageTracks = (tracks as BackfillTrack[]) || [];
+  const pageTracks = useTrackStore((state) =>
+    trackInfo
+      .map((ref) => state.tracks.get(`${ref.trackId}:${ref.friendId}`))
+      .filter((track): track is BackfillTrack => track !== undefined)
+  );
 
   const toggleSelect = (trackId: string) => {
     setSelected((prev) => {
@@ -147,7 +148,6 @@ export default function BackfillAudioPage() {
           apple_music_url: track.apple_music_url,
           youtube_url: track.youtube_url,
           soundcloud_url: track.soundcloud_url,
-          spotify_url: track.spotify_url,
         });
 
         console.log(`Queued track ${trackId} for processing, job ID: ${response.jobId}`);

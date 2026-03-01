@@ -1,6 +1,6 @@
 "use client";
 
-import { deletePlaylist } from "@/services/playlistService";
+import { deletePlaylist } from "@/services/internalApi/playlists";
 import { useMutation } from "@tanstack/react-query";
 
 export function useDeletePlaylistMutation() {

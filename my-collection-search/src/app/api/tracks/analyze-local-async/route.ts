@@ -1,14 +1,6 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
-import { redisJobService } from "@/services/redisJobService";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-type TrackRow = {
-  track_id: string;
-  friend_id: number;
-  local_audio_url: string | null;
-};
+import { redisJobService } from "@/server/services/redisJobService";
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 export async function POST(request: Request) {
   try {
@@ -28,16 +20,10 @@ export async function POST(request: Request) {
         : null;
 
     if (!localAudioUrl) {
-      const { rows } = await pool.query<TrackRow>(
-        `
-        SELECT track_id, friend_id, local_audio_url
-        FROM tracks
-        WHERE track_id = $1 AND friend_id = $2
-        LIMIT 1
-        `,
-        [trackId, friendId]
+      const track = await trackRepository.findTrackWithLocalAudio(
+        trackId,
+        friendId
       );
-      const track = rows[0];
       if (!track) {
         return NextResponse.json({ error: "Track not found" }, { status: 404 });
       }

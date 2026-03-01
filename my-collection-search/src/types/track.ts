@@ -1,3 +1,5 @@
+import type { DiscogsSimpleArtist, DiscogsVideo } from "@/types/discogs";
+
 export type Track = {
   id: number;
   track_id: string;
@@ -40,64 +42,6 @@ export type Track = {
   hasVectors?: boolean;
 };
 
-// Spotify track type based on API response
-export type SpotifyTrack = {
-  added_at: string;
-  track: {
-    album: {
-      album_type: string;
-      artists: Array<{
-        external_urls: { spotify: string };
-        href: string;
-        id: string;
-        name: string;
-        type: string;
-        uri: string;
-      }>;
-      available_markets: string[];
-      external_urls: { spotify: string };
-      href: string;
-      id: string;
-      images: Array<{
-        height: number;
-        width: number;
-        url: string;
-      }>;
-      is_playable: boolean;
-      name: string;
-      release_date: string;
-      release_date_precision: string;
-      total_tracks: number;
-      type: string;
-      uri: string;
-    };
-    artists: Array<{
-      external_urls: { spotify: string };
-      href: string;
-      id: string;
-      name: string;
-      type: string;
-      uri: string;
-    }>;
-    available_markets: string[];
-    disc_number: number;
-    duration_ms: number;
-    explicit: boolean;
-    external_ids: { isrc: string };
-    external_urls: { spotify: string };
-    href: string;
-    id: string;
-    is_local: boolean;
-    is_playable: boolean;
-    name: string;
-    popularity: number;
-    preview_url: string | null;
-    track_number: number;
-    type: string;
-    uri: string;
-  };
-};
-
 export type YoutubeVideo = {
   id: string;
   title: string;
@@ -123,18 +67,6 @@ export interface Playlist {
   created_at: string;
 }
 
-export type SpotifyApiTrack = {
-  id: string;
-  name: string;
-  artists: { name: string }[];
-  album: {
-    name: string;
-    images?: { url: string }[];
-  };
-  external_urls: { spotify: string };
-  duration_ms: number;
-};
-
 export interface DiscogsRelease {
   id: number | string;
   title: string;
@@ -145,7 +77,7 @@ export interface DiscogsRelease {
   genres?: string[];
   uri?: string;
   thumb?: string;
-  videos?: { uri: string; title: string; description?: string; duration?: number; embed?: boolean }[];
+  videos?: DiscogsVideo[];
   tracklist: ProcessedTrack[];
   date_added: string;
   date_changed: string;
@@ -179,14 +111,11 @@ export interface DiscogsTrack {
   friend_id?: number; // resolved via friends table during upsert/index
 }
 
-interface DiscogsArtist {
-  name: string;
-}
 export interface ProcessedTrack {
   position: string;
   title: string;
   duration: string;
-  artists: DiscogsArtist[];
+  artists: DiscogsSimpleArtist[];
   duration_seconds?: number | null;
   apple_music_url?: string | null;
   spotify_url?: string | null;

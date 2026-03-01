@@ -4,11 +4,11 @@ services:
       context: .
     container_name: myapp
     labels:
-      - "deployed.revision=*${GIT_SHA:-dev}"  # change on every commit → forces recreate
+      - "deployed.revision=*${GIT_SHA:-dev}"  # change on every commit -> forces recreate
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
+      DATABASE_URL: postgres://${POSTGRES_USER:-djplaylist}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-djplaylist}
       MEILISEARCH_HOST: ${MEILISEARCH_HOST}
       MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY}
       MEILI_PARENT_KEY: ${MEILI_PARENT_KEY}
@@ -54,8 +54,8 @@ services:
     #   - /dev/snd:/dev/snd  # Pass through all audio devices
     # Optional: Add specific DAC device if you want to limit to one device
     #   - /dev/snd/controlC1:/dev/snd/controlC1  # Control interface for card 1
-    #   - /dev/snd/pcmC1D0p:/dev/snd/pcmC1D0p    # Playback device for card 1  
-  
+    #   - /dev/snd/pcmC1D0p:/dev/snd/pcmC1D0p    # Playback device for card 1
+
   migrate:
     build:
       context: .
@@ -64,7 +64,7 @@ services:
     volumes:
       - .:/app
     environment:
-      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
+      DATABASE_URL: postgres://${POSTGRES_USER:-djplaylist}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-djplaylist}
     entrypoint: ["sh", "-c", "npx wait-port db:5432 && npx node-pg-migrate up"]
     depends_on:
       - db
@@ -73,9 +73,9 @@ services:
     image: pgvector/pgvector:pg15
     restart: always
     environment:
-      POSTGRES_USER: djplaylist
-      POSTGRES_PASSWORD: djplaylistpassword
-      POSTGRES_DB: djplaylist
+      POSTGRES_USER: ${POSTGRES_USER:-djplaylist}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-djplaylist}
     volumes:
       - db_data:/var/lib/postgresql/data
 
@@ -83,7 +83,7 @@ services:
     image: getmeili/meilisearch:v1.6
     restart: always
     environment:
-      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY:-mysupersecretkey}
+      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY:?Set MEILISEARCH_API_KEY}
       MEILI_EXPERIMENTAL_ENABLE_VECTOR_STORE: "true"
     ports:
       - "7700:7700"
@@ -116,14 +116,14 @@ services:
   #     - WATCHTOWER_POLL_INTERVAL=3600 # Check hourly
   #   depends_on:
   #     - app
-  
+
   essentia:
     build:
       context: ../essentia-api
     container_name: essentia-api
     ports:
       - "8001:8001"
-  
+
   ga-service:
     build:
       context: ../ga-service
@@ -146,7 +146,7 @@ services:
     container_name: download-worker
     environment:
       REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
+      DATABASE_URL: postgres://${POSTGRES_USER:-djplaylist}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-djplaylist}
       GAMDL_COOKIE_FILE: /app/cookies/gamdl_cookies.txt
       ESSENTIA_DATA_DIR: /app/essentia-data
     depends_on:
@@ -158,23 +158,6 @@ services:
       - cookie_data:/app/cookies  # Shared cookie storage with app service
       - essentia_data:/app/essentia-data
     restart: unless-stopped
-
-  # AirPlay Receiver (optional)
-  # Uncomment to enable AirPlay streaming to your USB DAC
-  # shairport-sync:
-  #   image: mikebrady/shairport-sync:latest
-  #   container_name: shairport-sync
-  #   network_mode: host  # Required for AirPlay discovery (mDNS/Bonjour)
-  #   restart: unless-stopped
-  #   environment:
-  #     # AirPlay device name (shows up in iOS/Mac AirPlay menu)
-  #     - AIRPLAY_NAME=${AIRPLAY_NAME:-GrooveNET Audio}
-  #   devices:
-  #     - /dev/snd:/dev/snd  # Share audio device with app
-  #   volumes:
-  #     - ./config/shairport-sync.conf:/etc/shairport-sync.conf:ro
-  #   # If using dmix for audio mixing, no special config needed
-  #   # If not using dmix, only one service can use the DAC at a time
 
 volumes:
   db_data:

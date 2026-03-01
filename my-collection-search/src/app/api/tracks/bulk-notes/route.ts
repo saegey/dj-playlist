@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { getTrackEmbedding } from "@/lib/track-embedding";
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 // POST: bulk update notes/genre
 export async function POST(request: Request) {
@@ -18,27 +16,22 @@ export async function POST(request: Request) {
       console.debug("Processing update:", u);
       if (!u.track_id) continue;
       // Fetch all current tracks for this track_id (all usernames)
-      const { rows: currentRows } = await pool.query(
-        `SELECT * FROM tracks WHERE track_id = $1`,
-        [u.track_id]
-      );
+      const currentRows = await trackRepository.findTracksByTrackId(u.track_id);
       // Update all rows for this track_id
-      await pool.query(
-        `UPDATE tracks SET local_tags = $1, notes = $2 WHERE track_id = $3`,
-        [u.local_tags || "", u.notes || "", u.track_id]
+      await trackRepository.updateTrackNotesAndTagsByTrackId(
+        u.track_id,
+        u.local_tags || "",
+        u.notes || ""
       );
       // Fetch all updated tracks for MeiliSearch
-      const { rows: updatedRows } = await pool.query(
-        `SELECT * FROM tracks WHERE track_id = $1`,
-        [u.track_id]
-      );
+      const updatedRows = await trackRepository.findTracksByTrackId(u.track_id);
       for (const updated of updatedRows) {
         // Only update embedding if local_tags or notes changed
         let shouldUpdateEmbedding = false;
         const current = currentRows.find(
           (r) => r.username === updated.username
         );
-        for (const field of ["local_tags", "notes"]) {
+        for (const field of ["local_tags", "notes"] as const) {
           const before = current?.[field];
           const after = updated?.[field];
           if (before !== after) {
@@ -49,10 +42,13 @@ export async function POST(request: Request) {
         if (shouldUpdateEmbedding) {
           try {
             const embedding = await getTrackEmbedding(updated);
-            const pgVector = `[${embedding.join(",")}]`;
-            await pool.query(
-              "UPDATE tracks SET embedding = $1 WHERE track_id = $2 AND username = $3",
-              [pgVector, updated.track_id, updated.username]
+            if (!updated.username) {
+              throw new Error("Missing username for embedding update");
+            }
+            await trackRepository.updateTrackEmbeddingByTrackIdAndUsername(
+              updated.track_id,
+              updated.username,
+              embedding
             );
             updated.embedding = embedding;
           } catch (embedError) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getJobStatus } from "@/services/jobService";
+import { getJobStatus } from "@/services/internalApi/jobs";
 
 export function useJobStatus(jobId: string | null, options?: {
   enabled?: boolean;
@@ -13,16 +13,14 @@ export function useJobStatus(jobId: string | null, options?: {
       if (!jobId) return null;
       return await getJobStatus(jobId);
     },
-    enabled: Boolean(jobId) && (options?.enabled !== false),
+    enabled: Boolean(jobId) && options?.enabled !== false,
     refetchInterval: (query) => {
-      // Stop polling if job is completed or failed
       const data = query.state.data;
-      if (!data || data.status === "completed" || data.status === "failed") {
+      if (!data || data.state === "completed" || data.state === "failed") {
         return false;
       }
-      // Poll every 2 seconds for active jobs
       return options?.refetchInterval ?? 2000;
     },
-    staleTime: 0, // Always refetch
+    staleTime: 0,
   });
 }

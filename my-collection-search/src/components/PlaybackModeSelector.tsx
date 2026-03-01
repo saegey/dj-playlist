@@ -9,8 +9,10 @@ import {
 } from "@chakra-ui/react";
 import { Tooltip } from "@/components/ui/tooltip";
 import { FiHeadphones, FiSpeaker } from "react-icons/fi";
-
-export type PlaybackMode = 'browser' | 'local-dac';
+import {
+  testLocalPlayback,
+  type PlaybackMode,
+} from "@/services/internalApi/playback";
 
 interface PlaybackModeSelectorProps {
   value: PlaybackMode;
@@ -38,8 +40,7 @@ export default function PlaybackModeSelector({
   useEffect(() => {
     async function checkLocalPlayback() {
       try {
-        const res = await fetch('/api/playback/test');
-        const data = await res.json();
+        const data = await testLocalPlayback();
         setIsLocalAvailable(data.available);
       } catch (error) {
         console.error('Failed to check local playback availability:', error);

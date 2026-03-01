@@ -1,7 +1,5 @@
-import { Pool } from "pg";
 import { NextRequest } from "next/server";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { friendService } from "@/server/services/friendService";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -21,15 +19,8 @@ export async function GET(request: NextRequest) {
         controller.enqueue(
           encoder.encode(`data: Adding friend '${username}'...\n\n`)
         );
-        // Simulate progress (replace with real steps as needed)
-        await new Promise((r) => setTimeout(r, 400));
         controller.enqueue(encoder.encode(`data: Checking database...\n\n`));
-        await new Promise((r) => setTimeout(r, 400));
-        // Actual DB insert
-        await pool.query(
-          "INSERT INTO friends (username) VALUES ($1) ON CONFLICT DO NOTHING",
-          [username]
-        );
+        await friendService.addFriend(username);
         controller.enqueue(
           encoder.encode(`data: Friend '${username}' added.\n\n`)
         );

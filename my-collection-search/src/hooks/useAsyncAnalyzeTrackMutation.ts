@@ -5,7 +5,7 @@ import {
   analyzeTrackAsync,
   type AnalyzeArgs,
   type AsyncAnalyzeResponse,
-} from "@/services/trackService";
+} from "@/services/internalApi/tracks";
 
 export function useAsyncAnalyzeTrackMutation() {
   return useMutation<AsyncAnalyzeResponse, Error, AnalyzeArgs>({

@@ -14,12 +14,15 @@ import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
 import UsernameSelect from "@/components/UsernameSelect";
 import { toaster } from "@/components/ui/toaster";
+import {
+  fetchEmbeddingPromptSettings,
+  updateEmbeddingPromptSettings,
+} from "@/services/internalApi/settings";
 
 export default function EmbeddingPromptSettingsSection(): React.JSX.Element {
   const { friend, setFriend } = useUsername();
   const { friends, friendsLoading } = useFriendsQuery({
     showCurrentUser: true,
-    showSpotifyUsernames: true,
   });
 
   const [template, setTemplate] = React.useState("");
@@ -32,15 +35,7 @@ export default function EmbeddingPromptSettingsSection(): React.JSX.Element {
     const run = async () => {
       setLoading(true);
       try {
-        const friendId = friend?.id;
-        const url = friendId
-          ? `/api/settings/embedding-prompt?friend_id=${encodeURIComponent(friendId)}`
-          : "/api/settings/embedding-prompt";
-        const res = await fetch(url);
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || "Failed to load embedding template");
-        }
+        const data = await fetchEmbeddingPromptSettings({ friend_id: friend?.id });
         setTemplate(data.template || "");
         setDefaultTemplate(data.defaultTemplate || "");
         setIsDefault(Boolean(data.isDefault));
@@ -67,15 +62,10 @@ export default function EmbeddingPromptSettingsSection(): React.JSX.Element {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/settings/embedding-prompt", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friend_id: friend.id, template }),
+      const data = await updateEmbeddingPromptSettings({
+        friend_id: friend.id,
+        template,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to save embedding template");
-      }
       setTemplate(data.template || template);
       setIsDefault(Boolean(data.isDefault));
       toaster.create({ title: "Embedding template saved", type: "success" });
@@ -100,15 +90,10 @@ export default function EmbeddingPromptSettingsSection(): React.JSX.Element {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/settings/embedding-prompt", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friend_id: friend.id, template: "" }),
+      const data = await updateEmbeddingPromptSettings({
+        friend_id: friend.id,
+        template: "",
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to reset embedding template");
-      }
       setTemplate(data.template || defaultTemplate);
       setIsDefault(true);
       toaster.create({ title: "Template reset to default", type: "success" });

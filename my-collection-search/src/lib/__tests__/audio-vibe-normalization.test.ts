@@ -1,4 +1,4 @@
-import { describe, it, expect } from "@jest/globals";
+import { describe, it, expect } from "vitest";
 import {
   normalizeBpmRange,
   normalizeBpmValue,
@@ -15,217 +15,186 @@ import {
   normalizePartyMood,
 } from "../audio-vibe-normalization";
 
-describe("audio-vibe-normalization", () => {
-  describe("normalizeBpmRange", () => {
-    it("should categorize BPM into ranges", () => {
-      expect(normalizeBpmRange(80)).toBe("very slow");
-      expect(normalizeBpmRange(100)).toBe("slow");
-      expect(normalizeBpmRange(120)).toBe("moderate");
-      expect(normalizeBpmRange(130)).toBe("upbeat");
-      expect(normalizeBpmRange(145)).toBe("fast");
-      expect(normalizeBpmRange(160)).toBe("very fast");
-      expect(normalizeBpmRange(180)).toBe("extremely fast");
-    });
+describe("normalizeBpmRange", () => {
+  it.each([
+    [80, "very slow"],
+    [100, "slow"],
+    [120, "moderate"],
+    [130, "upbeat"],
+    [145, "fast"],
+    [160, "very fast"],
+    [180, "extremely fast"],
+    ["128", "upbeat"],
+    [null, "unknown"],
+    [undefined, "unknown"],
+  ])("normalizeBpmRange(%s) === %s", (input, expected) => {
+    expect(normalizeBpmRange(input as never)).toBe(expected);
+  });
+});
 
-    it("should handle string input", () => {
-      expect(normalizeBpmRange("128")).toBe("upbeat");
-    });
+describe("normalizeBpmValue", () => {
+  it.each([
+    [127.8, "128"],
+    ["127.3", "127"],
+    [null, "unknown"],
+    [undefined, "unknown"],
+  ])("normalizeBpmValue(%s) === %s", (input, expected) => {
+    expect(normalizeBpmValue(input as never)).toBe(expected);
+  });
+});
 
-    it("should handle null/undefined", () => {
-      expect(normalizeBpmRange(null)).toBe("unknown");
-      expect(normalizeBpmRange(undefined)).toBe("unknown");
-    });
+describe("normalizeKey", () => {
+  it.each([
+    ["  C Major  ", "C Major"],
+    ["A Minor", "A Minor"],
+    [null, "unknown"],
+    [undefined, "unknown"],
+  ])("normalizeKey(%s) === %s", (input, expected) => {
+    expect(normalizeKey(input as never)).toBe(expected);
+  });
+});
+
+describe("getCamelotCode", () => {
+  it.each([
+    ["C Major", "8B"],
+    ["A Minor", "8A"],
+    ["D Major", "10B"],
+    ["B Minor", "10A"],
+    ["Unknown Key", ""],
+    [null, ""],
+  ])("getCamelotCode(%s) === %s", (input, expected) => {
+    expect(getCamelotCode(input as never)).toBe(expected);
+  });
+});
+
+describe("normalizeDanceability", () => {
+  it.each([
+    [0.1, "very low"],
+    [0.3, "low"],
+    [0.5, "moderate"],
+    [0.7, "high"],
+    [0.9, "very high"],
+    ["0.75", "high"],
+    [null, "unknown"],
+    [undefined, "unknown"],
+  ])("normalizeDanceability(%s) === %s", (input, expected) => {
+    expect(normalizeDanceability(input as never)).toBe(expected);
+  });
+});
+
+describe("calculateEnergy", () => {
+  it.each([
+    [0.8, 0.2, "moderate"],
+    [0.9, 0.9, "very high"],
+    [0.1, 0.1, "very low"],
+    [null, null, "very low"],
+    [0.5, null, "low"],
+  ])("calculateEnergy(%s, %s) === %s", (happy, aggressive, expected) => {
+    expect(calculateEnergy(happy as never, aggressive as never)).toBe(expected);
+  });
+});
+
+describe("getDominantMood", () => {
+  it.each([
+    [{ happy: 0.8, sad: 0.2, relaxed: 0.1, aggressive: 0.1 }, "happy"],
+    [{ happy: 0.1, sad: 0.7, relaxed: 0.2, aggressive: 0.1 }, "sad"],
+    [{ happy: 0.1, sad: 0.1, relaxed: 0.8, aggressive: 0.2 }, "relaxed"],
+    [{ happy: 0.1, sad: 0.1, relaxed: 0.2, aggressive: 0.9 }, "aggressive"],
+    [{ happy: 0.2, sad: 0.2, relaxed: 0.2, aggressive: 0.2 }, "neutral"],
+    [{}, "neutral"],
+  ])("getDominantMood(%o) === %s", (input, expected) => {
+    expect(getDominantMood(input as never)).toBe(expected);
+  });
+});
+
+describe("getVibeDescriptors", () => {
+  it("returns downtempo, energetic, uplifting for slow+high energy+happy", () => {
+    const descriptors = getVibeDescriptors(95, "high", "happy");
+    expect(descriptors).toContain("downtempo");
+    expect(descriptors).toContain("energetic");
+    expect(descriptors).toContain("uplifting");
   });
 
-  describe("normalizeBpmValue", () => {
-    it("should round BPM to nearest integer", () => {
-      expect(normalizeBpmValue(127.8)).toBe("128");
-      expect(normalizeBpmValue("127.3")).toBe("127");
-    });
-
-    it("should handle null/undefined", () => {
-      expect(normalizeBpmValue(null)).toBe("unknown");
-      expect(normalizeBpmValue(undefined)).toBe("unknown");
-    });
+  it("returns balanced for neutral", () => {
+    expect(getVibeDescriptors(120, "moderate", "neutral")).toEqual(["balanced"]);
   });
 
-  describe("normalizeKey", () => {
-    it("should trim key strings", () => {
-      expect(normalizeKey("  C Major  ")).toBe("C Major");
-      expect(normalizeKey("A Minor")).toBe("A Minor");
-    });
+  it("returns high-energy, energetic, driving for fast+very high+aggressive", () => {
+    const descriptors = getVibeDescriptors(150, "very high", "aggressive");
+    expect(descriptors).toContain("high-energy");
+    expect(descriptors).toContain("energetic");
+    expect(descriptors).toContain("driving");
+  });
+});
 
-    it("should handle null/undefined", () => {
-      expect(normalizeKey(null)).toBe("unknown");
-      expect(normalizeKey(undefined)).toBe("unknown");
-    });
+describe("formatMoodProfile", () => {
+  it("formats all mood scores", () => {
+    const profile = formatMoodProfile({ happy: 0.75, sad: 0.25, relaxed: 0.5, aggressive: 0.1 });
+    expect(profile).toContain("Happy (0.75)");
+    expect(profile).toContain("Sad (0.25)");
+    expect(profile).toContain("Relaxed (0.50)");
+    expect(profile).toContain("Aggressive (0.10)");
   });
 
-  describe("getCamelotCode", () => {
-    it("should map common keys to Camelot codes", () => {
-      expect(getCamelotCode("C Major")).toBe("8B");
-      expect(getCamelotCode("A Minor")).toBe("8A");
-      expect(getCamelotCode("D Major")).toBe("10B");
-      expect(getCamelotCode("B Minor")).toBe("10A");
-    });
-
-    it("should return empty string for unknown keys", () => {
-      expect(getCamelotCode("Unknown Key")).toBe("");
-      expect(getCamelotCode(null)).toBe("");
-    });
+  it("omits null/undefined/zero scores", () => {
+    const profile = formatMoodProfile({ happy: 0.8, sad: null, relaxed: undefined, aggressive: 0 });
+    expect(profile).toContain("Happy (0.80)");
+    expect(profile).not.toContain("Sad");
+    expect(profile).not.toContain("Relaxed");
+    expect(profile).not.toContain("Aggressive");
   });
 
-  describe("normalizeDanceability", () => {
-    it("should categorize danceability scores", () => {
-      expect(normalizeDanceability(0.1)).toBe("very low");
-      expect(normalizeDanceability(0.3)).toBe("low");
-      expect(normalizeDanceability(0.5)).toBe("moderate");
-      expect(normalizeDanceability(0.7)).toBe("high");
-      expect(normalizeDanceability(0.9)).toBe("very high");
-    });
-
-    it("should handle string input", () => {
-      expect(normalizeDanceability("0.75")).toBe("high");
-    });
-
-    it("should handle null/undefined", () => {
-      expect(normalizeDanceability(null)).toBe("unknown");
-      expect(normalizeDanceability(undefined)).toBe("unknown");
-    });
+  it("returns 'none' for empty input", () => {
+    expect(formatMoodProfile({})).toBe("none");
   });
+});
 
-  describe("calculateEnergy", () => {
-    it("should calculate energy from danceability and aggressiveness", () => {
-      expect(calculateEnergy(0.8, 0.2)).toBe("moderate"); // 0.8*0.6 + 0.2*0.4 = 0.56
-      expect(calculateEnergy(0.9, 0.9)).toBe("very high"); // 0.9*0.6 + 0.9*0.4 = 0.9
-      expect(calculateEnergy(0.1, 0.1)).toBe("very low"); // 0.1*0.6 + 0.1*0.4 = 0.1
-    });
-
-    it("should handle null/undefined inputs", () => {
-      expect(calculateEnergy(null, null)).toBe("very low"); // Treats as 0
-      expect(calculateEnergy(0.5, null)).toBe("low"); // 0.5*0.6 + 0*0.4 = 0.3
-    });
+describe("normalizeAcousticElectronic", () => {
+  it.each([
+    [0.9, 0.1, "very acoustic"],
+    [0.6, 0.3, "acoustic"],
+    [0.5, 0.5, "balanced"],
+    [0.3, 0.6, "electronic"],
+    [0.1, 0.9, "very electronic"],
+    [0.2, 0.2, "ambiguous"],
+    [undefined, undefined, "unknown"],
+  ])("normalizeAcousticElectronic(%s, %s) === %s", (a, b, expected) => {
+    expect(normalizeAcousticElectronic(a as never, b as never)).toBe(expected);
   });
+});
 
-  describe("getDominantMood", () => {
-    it("should identify dominant mood", () => {
-      expect(getDominantMood({ happy: 0.8, sad: 0.2, relaxed: 0.1, aggressive: 0.1 })).toBe("happy");
-      expect(getDominantMood({ happy: 0.1, sad: 0.7, relaxed: 0.2, aggressive: 0.1 })).toBe("sad");
-      expect(getDominantMood({ happy: 0.1, sad: 0.1, relaxed: 0.8, aggressive: 0.2 })).toBe("relaxed");
-      expect(getDominantMood({ happy: 0.1, sad: 0.1, relaxed: 0.2, aggressive: 0.9 })).toBe("aggressive");
-    });
-
-    it("should return neutral for low scores", () => {
-      expect(getDominantMood({ happy: 0.2, sad: 0.2, relaxed: 0.2, aggressive: 0.2 })).toBe("neutral");
-    });
-
-    it("should handle null/undefined", () => {
-      expect(getDominantMood({})).toBe("neutral");
-    });
+describe("normalizeVocalPresence", () => {
+  it.each([
+    [0.9, 0.1, "instrumental"],
+    [0.7, 0.25, "light vocals"],
+    [0.5, 0.5, "moderate vocals"],
+    [0.2, 0.8, "heavy vocals"],
+    [undefined, undefined, "unknown"],
+  ])("normalizeVocalPresence(%s, %s) === %s", (a, b, expected) => {
+    expect(normalizeVocalPresence(a as never, b as never)).toBe(expected);
   });
+});
 
-  describe("getVibeDescriptors", () => {
-    it("should generate descriptors based on BPM, energy, and mood", () => {
-      const descriptors = getVibeDescriptors(95, "high", "happy");
-      expect(descriptors).toContain("downtempo");
-      expect(descriptors).toContain("energetic");
-      expect(descriptors).toContain("uplifting");
-    });
-
-    it("should return balanced for neutral conditions", () => {
-      const descriptors = getVibeDescriptors(120, "moderate", "neutral");
-      expect(descriptors).toEqual(["balanced"]);
-    });
-
-    it("should handle high BPM", () => {
-      const descriptors = getVibeDescriptors(150, "very high", "aggressive");
-      expect(descriptors).toContain("high-energy");
-      expect(descriptors).toContain("energetic");
-      expect(descriptors).toContain("driving");
-    });
+describe("normalizePercussiveness", () => {
+  it.each([
+    [1.5, "sparse"],
+    [3, "moderate"],
+    [5, "rhythmic"],
+    [8, "very rhythmic"],
+    [undefined, "unknown"],
+  ])("normalizePercussiveness(%s) === %s", (input, expected) => {
+    expect(normalizePercussiveness(input as never)).toBe(expected);
   });
+});
 
-  describe("formatMoodProfile", () => {
-    it("should format mood scores", () => {
-      const profile = formatMoodProfile({
-        happy: 0.75,
-        sad: 0.25,
-        relaxed: 0.50,
-        aggressive: 0.10,
-      });
-      expect(profile).toContain("Happy (0.75)");
-      expect(profile).toContain("Sad (0.25)");
-      expect(profile).toContain("Relaxed (0.50)");
-      expect(profile).toContain("Aggressive (0.10)");
-    });
-
-    it("should omit null/undefined moods", () => {
-      const profile = formatMoodProfile({ happy: 0.8, sad: null, relaxed: undefined, aggressive: 0 });
-      expect(profile).toContain("Happy (0.80)");
-      expect(profile).not.toContain("Sad");
-      expect(profile).not.toContain("Relaxed");
-      expect(profile).not.toContain("Aggressive");
-    });
-
-    it("should return 'none' for empty moods", () => {
-      expect(formatMoodProfile({})).toBe("none");
-    });
-  });
-
-  describe("normalizeAcousticElectronic", () => {
-    it("should categorize acoustic/electronic balance", () => {
-      expect(normalizeAcousticElectronic(0.9, 0.1)).toBe("very acoustic");
-      expect(normalizeAcousticElectronic(0.6, 0.3)).toBe("acoustic");
-      expect(normalizeAcousticElectronic(0.5, 0.5)).toBe("balanced");
-      expect(normalizeAcousticElectronic(0.3, 0.6)).toBe("electronic");
-      expect(normalizeAcousticElectronic(0.1, 0.9)).toBe("very electronic");
-    });
-
-    it("should handle ambiguous cases", () => {
-      expect(normalizeAcousticElectronic(0.2, 0.2)).toBe("ambiguous");
-    });
-
-    it("should handle null/undefined", () => {
-      expect(normalizeAcousticElectronic(undefined, undefined)).toBe("unknown");
-    });
-  });
-
-  describe("normalizeVocalPresence", () => {
-    it("should categorize vocal presence", () => {
-      expect(normalizeVocalPresence(0.9, 0.1)).toBe("instrumental");
-      expect(normalizeVocalPresence(0.7, 0.25)).toBe("light vocals");
-      expect(normalizeVocalPresence(0.5, 0.5)).toBe("moderate vocals");
-      expect(normalizeVocalPresence(0.2, 0.8)).toBe("heavy vocals");
-    });
-
-    it("should handle null/undefined", () => {
-      expect(normalizeVocalPresence(undefined, undefined)).toBe("unknown");
-    });
-  });
-
-  describe("normalizePercussiveness", () => {
-    it("should categorize onset rate", () => {
-      expect(normalizePercussiveness(1.5)).toBe("sparse");
-      expect(normalizePercussiveness(3)).toBe("moderate");
-      expect(normalizePercussiveness(5)).toBe("rhythmic");
-      expect(normalizePercussiveness(8)).toBe("very rhythmic");
-    });
-
-    it("should handle undefined", () => {
-      expect(normalizePercussiveness(undefined)).toBe("unknown");
-    });
-  });
-
-  describe("normalizePartyMood", () => {
-    it("should categorize party mood", () => {
-      expect(normalizePartyMood(0.1)).toBe("low");
-      expect(normalizePartyMood(0.3)).toBe("moderate");
-      expect(normalizePartyMood(0.5)).toBe("high");
-      expect(normalizePartyMood(0.8)).toBe("very high");
-    });
-
-    it("should handle undefined", () => {
-      expect(normalizePartyMood(undefined)).toBe("unknown");
-    });
+describe("normalizePartyMood", () => {
+  it.each([
+    [0.1, "low"],
+    [0.3, "moderate"],
+    [0.5, "high"],
+    [0.8, "very high"],
+    [undefined, "unknown"],
+  ])("normalizePartyMood(%s) === %s", (input, expected) => {
+    expect(normalizePartyMood(input as never)).toBe(expected);
   });
 });

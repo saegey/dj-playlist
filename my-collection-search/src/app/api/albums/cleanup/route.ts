@@ -1,73 +1,60 @@
 // API endpoint to clean up albums with no tracks
 // Deletes albums where track_count = 0 or where no actual tracks exist in the database
 
-import { Pool } from "pg";
 import { getMeiliClient } from "@/lib/meili";
 import { NextResponse } from "next/server";
+import { withDbTransaction } from "@/lib/serverDb";
+import { albumRepository, type AlbumCleanupRow } from "@/server/repositories/albumRepository";
+
+function buildAlbumsToDelete(
+  emptyCountAlbums: AlbumCleanupRow[],
+  orphanedAlbums: AlbumCleanupRow[]
+): Map<string, AlbumCleanupRow> {
+  const albumsToDelete = new Map<string, AlbumCleanupRow>();
+  for (const album of emptyCountAlbums) {
+    albumsToDelete.set(`${album.release_id}_${album.friend_id}`, album);
+  }
+  for (const album of orphanedAlbums) {
+    albumsToDelete.set(`${album.release_id}_${album.friend_id}`, album);
+  }
+  return albumsToDelete;
+}
 
 export async function POST() {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-      });
-
       try {
         controller.enqueue(
           encoder.encode("Starting album cleanup process...\n\n")
         );
 
-        // Find albums with track_count = 0
         controller.enqueue(
           encoder.encode("Finding albums with track_count = 0...\n")
         );
-        const emptyCountResult = await pool.query(`
-          SELECT release_id, friend_id, title, artist
-          FROM albums
-          WHERE track_count = 0
-        `);
-        const emptyCountAlbums = emptyCountResult.rows;
+        const emptyCountAlbums = await albumRepository.listAlbumsWithTrackCountZero();
         controller.enqueue(
           encoder.encode(
             `Found ${emptyCountAlbums.length} albums with track_count = 0\n\n`
           )
         );
 
-        // Find albums where no actual tracks exist in the database
         controller.enqueue(
           encoder.encode(
             "Finding albums with no corresponding tracks in database...\n"
           )
         );
-        const orphanedResult = await pool.query(`
-          SELECT a.release_id, a.friend_id, a.title, a.artist, a.track_count
-          FROM albums a
-          LEFT JOIN tracks t ON a.release_id = t.release_id AND a.friend_id = t.friend_id
-          WHERE t.track_id IS NULL
-        `);
-        const orphanedAlbums = orphanedResult.rows;
+        const orphanedAlbums = await albumRepository.listOrphanedAlbums();
         controller.enqueue(
           encoder.encode(
             `Found ${orphanedAlbums.length} albums with no tracks in database\n\n`
           )
         );
 
-        // Combine both lists (use a Set to avoid duplicates)
-        const albumsToDelete = new Map<
-          string,
-          { release_id: string; friend_id: number; title: string; artist: string }
-        >();
-
-        for (const album of emptyCountAlbums) {
-          const key = `${album.release_id}_${album.friend_id}`;
-          albumsToDelete.set(key, album);
-        }
-
-        for (const album of orphanedAlbums) {
-          const key = `${album.release_id}_${album.friend_id}`;
-          albumsToDelete.set(key, album);
-        }
+        const albumsToDelete = buildAlbumsToDelete(
+          emptyCountAlbums,
+          orphanedAlbums
+        );
 
         controller.enqueue(
           encoder.encode(
@@ -80,55 +67,51 @@ export async function POST() {
             encoder.encode("✅ No albums to clean up. Database is healthy!\n")
           );
           controller.close();
-          await pool.end();
           return;
         }
 
-        // Delete from database
         controller.enqueue(
           encoder.encode("Deleting albums from database...\n")
         );
         let deletedCount = 0;
-
-        for (const [, album] of albumsToDelete) {
-          try {
-            await pool.query(
-              "DELETE FROM albums WHERE release_id = $1 AND friend_id = $2",
-              [album.release_id, album.friend_id]
-            );
-            deletedCount++;
-
-            if (deletedCount % 10 === 0) {
-              controller.enqueue(
-                encoder.encode(
-                  `Deleted ${deletedCount}/${albumsToDelete.size} albums...\n`
-                )
+        try {
+          await withDbTransaction(async (client) => {
+            for (const [, album] of albumsToDelete) {
+              await albumRepository.deleteAlbumByReleaseAndFriend(
+                client,
+                album.release_id,
+                album.friend_id
               );
+              deletedCount++;
+              if (deletedCount % 10 === 0) {
+                controller.enqueue(
+                  encoder.encode(
+                    `Deleted ${deletedCount}/${albumsToDelete.size} albums...\n`
+                  )
+                );
+              }
             }
-          } catch (error) {
-            controller.enqueue(
-              encoder.encode(
-                `❌ Error deleting album ${album.release_id} (${album.title}): ${
-                  error instanceof Error ? error.message : String(error)
-                }\n`
-              )
-            );
-          }
+          });
+        } catch (error) {
+          controller.enqueue(
+            encoder.encode(
+              `❌ Error deleting albums: ${
+                error instanceof Error ? error.message : String(error)
+              }\n`
+            )
+          );
         }
 
         controller.enqueue(
           encoder.encode(`\n✅ Deleted ${deletedCount} albums from database\n\n`)
         );
 
-        // Delete from MeiliSearch
         controller.enqueue(
           encoder.encode("Cleaning up MeiliSearch index...\n")
         );
-
         try {
           const meiliClient = getMeiliClient();
           const albumsIndex = meiliClient.index("albums");
-
           const docIds = Array.from(albumsToDelete.keys());
           let meiliDeletedCount = 0;
 
@@ -136,7 +119,6 @@ export async function POST() {
             try {
               await albumsIndex.deleteDocument(docId);
               meiliDeletedCount++;
-
               if (meiliDeletedCount % 10 === 0) {
                 controller.enqueue(
                   encoder.encode(
@@ -145,11 +127,7 @@ export async function POST() {
                 );
               }
             } catch (error) {
-              // Ignore errors for documents that don't exist in MeiliSearch
-              if (
-                error instanceof Error &&
-                !error.message.includes("not found")
-              ) {
+              if (error instanceof Error && !error.message.includes("not found")) {
                 controller.enqueue(
                   encoder.encode(
                     `⚠️  MeiliSearch delete warning for ${docId}: ${error.message}\n`
@@ -174,7 +152,6 @@ export async function POST() {
           );
         }
 
-        // Summary
         controller.enqueue(encoder.encode("\n📊 Cleanup Summary:\n"));
         controller.enqueue(
           encoder.encode(`  • Albums deleted from database: ${deletedCount}\n`)
@@ -190,26 +167,21 @@ export async function POST() {
           )
         );
 
-        // Show sample of deleted albums
-        if (albumsToDelete.size > 0) {
+        controller.enqueue(
+          encoder.encode("\n📝 Sample of deleted albums:\n")
+        );
+        const sample = Array.from(albumsToDelete.values()).slice(0, 10);
+        for (const album of sample) {
           controller.enqueue(
-            encoder.encode("\n📝 Sample of deleted albums:\n")
+            encoder.encode(
+              `  • ${album.artist} - ${album.title} (${album.release_id})\n`
+            )
           );
-          const sample = Array.from(albumsToDelete.values()).slice(0, 10);
-          for (const album of sample) {
-            controller.enqueue(
-              encoder.encode(
-                `  • ${album.artist} - ${album.title} (${album.release_id})\n`
-              )
-            );
-          }
-          if (albumsToDelete.size > 10) {
-            controller.enqueue(
-              encoder.encode(
-                `  ... and ${albumsToDelete.size - 10} more\n`
-              )
-            );
-          }
+        }
+        if (albumsToDelete.size > 10) {
+          controller.enqueue(
+            encoder.encode(`  ... and ${albumsToDelete.size - 10} more\n`)
+          );
         }
 
         controller.enqueue(
@@ -222,8 +194,6 @@ export async function POST() {
         }`;
         controller.enqueue(encoder.encode(`❌ ${errorMsg}\n`));
         controller.close();
-      } finally {
-        await pool.end();
       }
     },
   });
@@ -239,56 +209,21 @@ export async function POST() {
 
 // Also provide a GET endpoint that returns JSON summary without deleting
 export async function GET() {
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-  });
-
   try {
-    // Find albums with track_count = 0
-    const emptyCountResult = await pool.query(`
-      SELECT release_id, friend_id, title, artist, track_count
-      FROM albums
-      WHERE track_count = 0
-    `);
-
-    // Find albums where no actual tracks exist
-    const orphanedResult = await pool.query(`
-      SELECT a.release_id, a.friend_id, a.title, a.artist, a.track_count
-      FROM albums a
-      LEFT JOIN tracks t ON a.release_id = t.release_id AND a.friend_id = t.friend_id
-      WHERE t.track_id IS NULL
-    `);
-
-    // Combine and deduplicate
-    const albumsToClean = new Map<
-      string,
-      { release_id: string; friend_id: number; title: string; artist: string; track_count: number }
-    >();
-
-    for (const album of emptyCountResult.rows) {
-      const key = `${album.release_id}_${album.friend_id}`;
-      albumsToClean.set(key, album);
-    }
-
-    for (const album of orphanedResult.rows) {
-      const key = `${album.release_id}_${album.friend_id}`;
-      albumsToClean.set(key, album);
-    }
+    const emptyCountRows = await albumRepository.listAlbumsWithTrackCountZero();
+    const orphanedRows = await albumRepository.listOrphanedAlbums();
+    const albumsToClean = buildAlbumsToDelete(emptyCountRows, orphanedRows);
 
     return NextResponse.json({
       totalAlbumsToClean: albumsToClean.size,
-      emptyTrackCount: emptyCountResult.rows.length,
-      orphanedAlbums: orphanedResult.rows.length,
+      emptyTrackCount: emptyCountRows.length,
+      orphanedAlbums: orphanedRows.length,
       sample: Array.from(albumsToClean.values()).slice(0, 20),
     });
   } catch (error) {
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : String(error),
-      },
+      { error: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
-  } finally {
-    await pool.end();
   }
 }

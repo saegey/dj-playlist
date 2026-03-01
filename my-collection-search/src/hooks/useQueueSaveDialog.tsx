@@ -3,7 +3,7 @@
 import React from "react";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { toaster } from "@/components/ui/toaster";
-import { importPlaylist } from "@/services/playlistService";
+import { importPlaylist } from "@/services/internalApi/playlists";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 /**
@@ -34,8 +34,7 @@ export function useQueueSaveDialog() {
       }));
       console.log("Saving queue as playlist with tracks:", tracksWithFriendId);
       
-      const res = await importPlaylist(finalName.trim(), tracksWithFriendId);
-      if (!res.ok) throw new Error("Failed to save playlist");
+      await importPlaylist(finalName.trim(), tracksWithFriendId);
       
       toaster.create({ title: "Queue saved as playlist successfully", type: "success" });
       setOpen(false);

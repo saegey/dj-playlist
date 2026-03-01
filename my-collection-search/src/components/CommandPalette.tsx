@@ -4,11 +4,11 @@ import React from "react";
 import { Command } from "cmdk";
 import * as RadixDialog from "@radix-ui/react-dialog";
 import { useRouter, usePathname } from "next/navigation";
-import { useMeili } from "@/providers/MeiliProvider";
 import { useUsername } from "@/providers/UsernameProvider";
 import { usePlaylistsQuery } from "@/hooks/usePlaylistsQuery";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
-import { importPlaylist } from "@/services/playlistService";
+import { importPlaylist } from "@/services/internalApi/playlists";
+import { searchTracks } from "@/services/internalApi/tracks";
 import type { Track } from "@/types/track";
 import { toaster } from "@/components/ui/toaster";
 import styles from "./CommandPalette.module.css";
@@ -36,7 +36,6 @@ const isEditableTarget = (el: EventTarget | null) => {
 export default function CommandPalette() {
   const router = useRouter();
   const pathname = usePathname();
-  const { client, ready } = useMeili();
   const { friend } = useUsername();
   const { playlists } = usePlaylistsQuery({ enabled: true });
   const {
@@ -81,7 +80,7 @@ export default function CommandPalette() {
   React.useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      if (!open || !ready || !client) return;
+      if (!open) return;
       const q = query.trim();
       if (q.length === 0) {
         setTrackHits([]);
@@ -89,12 +88,15 @@ export default function CommandPalette() {
       }
       setLoadingTracks(true);
       try {
-        const index = client.index<TrackHit>("tracks");
-        const filter = friend?.id ? [`friend_id = ${friend.id}`] : undefined;
-        const res = await index.search(q, {
+        const params: Parameters<typeof searchTracks>[0] = {
+          q,
           limit: 8,
-          filter,
-        });
+          offset: 0,
+        };
+        if (friend?.id) {
+          params.filter = `friend_id = ${friend.id}`;
+        }
+        const res = await searchTracks(params);
         if (cancelled) return;
         setTrackHits(res.hits ?? []);
       } catch (err) {
@@ -110,12 +112,13 @@ export default function CommandPalette() {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [open, query, ready, client, friend?.id]);
+  }, [open, query, friend?.id]);
 
   const filteredPlaylists = React.useMemo(() => {
+    const playlistItems = Array.isArray(playlists) ? playlists : [];
     const q = query.trim().toLowerCase();
-    if (!q) return playlists.slice(0, 8);
-    return playlists
+    if (!q) return playlistItems.slice(0, 8);
+    return playlistItems
       .filter((p) => p.name.toLowerCase().includes(q))
       .slice(0, 8);
   }, [playlists, query]);
@@ -144,9 +147,7 @@ export default function CommandPalette() {
     }
 
     try {
-      const res = await importPlaylist(name.trim(), tracks);
-      if (!res.ok) throw new Error("Failed to create playlist");
-      const created = await res.json();
+      const created = await importPlaylist(name.trim(), tracks);
       toaster.create({
         title: "Playlist created",
         description: name.trim(),

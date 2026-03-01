@@ -1,39 +1,21 @@
 // API endpoint to backfill albums table from existing Discogs release files
 // This reads all release JSONs, creates album records, and indexes them in MeiliSearch
 
-import { Pool } from "pg";
+import { dbPool } from "@/lib/serverDb";
 import { getMeiliClient } from "@/lib/meili";
 import {
   getManifestFiles,
   parseManifestFile,
   getReleasePath,
   loadAlbum,
-} from "@/services/discogsManifestService";
-
-async function getFriendId(pool: Pool, username: string): Promise<number> {
-  const result = await pool.query(
-    "SELECT id FROM friends WHERE username = $1",
-    [username]
-  );
-  if (result.rows.length === 0) {
-    // Create friend if doesn't exist
-    const insertResult = await pool.query(
-      "INSERT INTO friends (username) VALUES ($1) RETURNING id",
-      [username]
-    );
-    return insertResult.rows[0].id;
-  }
-  return result.rows[0].id;
-}
+} from "@/server/services/discogsManifestService";
+import { albumRepository } from "@/server/repositories/albumRepository";
+import { upsertAlbum } from "@/server/services/albumUpsertService";
 
 export async function POST() {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-      });
-
       try {
         controller.enqueue(
           encoder.encode("Starting album backfill process...\n\n")
@@ -55,7 +37,7 @@ export async function POST() {
           );
 
           // Get or create friend_id
-          const friendId = await getFriendId(pool, username);
+          const friendId = await albumRepository.ensureFriendIdByUsername(username);
           controller.enqueue(
             encoder.encode(`Friend ID for ${username}: ${friendId}\n`)
           );
@@ -109,51 +91,7 @@ export async function POST() {
               };
 
               // Upsert album to database
-              await pool.query(
-                `
-                INSERT INTO albums (
-                  release_id, friend_id, title, artist, year, genres, styles,
-                  album_thumbnail, discogs_url, date_added, date_changed,
-                  track_count, label, catalog_number, country, format
-                )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-                ON CONFLICT (release_id, friend_id)
-                DO UPDATE SET
-                  title = EXCLUDED.title,
-                  artist = EXCLUDED.artist,
-                  year = EXCLUDED.year,
-                  genres = EXCLUDED.genres,
-                  styles = EXCLUDED.styles,
-                  album_thumbnail = EXCLUDED.album_thumbnail,
-                  discogs_url = EXCLUDED.discogs_url,
-                  date_added = EXCLUDED.date_added,
-                  date_changed = EXCLUDED.date_changed,
-                  track_count = EXCLUDED.track_count,
-                  label = EXCLUDED.label,
-                  catalog_number = EXCLUDED.catalog_number,
-                  country = EXCLUDED.country,
-                  format = EXCLUDED.format,
-                  updated_at = current_timestamp
-                `,
-                [
-                  albumRecord.release_id,
-                  albumRecord.friend_id,
-                  albumRecord.title,
-                  albumRecord.artist,
-                  albumRecord.year,
-                  albumRecord.genres,
-                  albumRecord.styles,
-                  albumRecord.album_thumbnail,
-                  albumRecord.discogs_url,
-                  albumRecord.date_added,
-                  albumRecord.date_changed,
-                  albumRecord.track_count,
-                  albumRecord.label,
-                  albumRecord.catalog_number,
-                  albumRecord.country,
-                  albumRecord.format,
-                ]
-              );
+              await upsertAlbum(dbPool, albumRecord);
 
               totalAlbums++;
               if (totalAlbums % 10 === 0) {
@@ -186,33 +124,8 @@ export async function POST() {
           const meiliClient = getMeiliClient();
 
           // Get all albums from database
-          const result = await pool.query(`
-            SELECT
-              release_id,
-              friend_id,
-              title,
-              artist,
-              year,
-              genres,
-              styles,
-              album_thumbnail,
-              discogs_url,
-              date_added,
-              date_changed,
-              track_count,
-              album_rating,
-              album_notes,
-              purchase_price,
-              condition,
-              label,
-              catalog_number,
-              country,
-              format,
-              library_identifier
-            FROM albums
-          `);
-
-          const albums = result.rows.map((row) => ({
+          const albumsRows = await albumRepository.listAlbumsForReindex();
+          const albums = albumsRows.map((row) => ({
             id: `${row.release_id}_${row.friend_id}`, // MeiliSearch primary key
             ...row,
           }));
@@ -294,8 +207,6 @@ export async function POST() {
         }`;
         controller.enqueue(encoder.encode(`❌ ${errorMsg}\n`));
         controller.close();
-      } finally {
-        await pool.end();
       }
     },
   });

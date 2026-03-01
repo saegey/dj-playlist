@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { vectorizeTrack } from "@/services/trackService";
+import { vectorizeTrack } from "@/services/internalApi/tracks";
 
 type VectorizeArgs = {
   track_id: string;

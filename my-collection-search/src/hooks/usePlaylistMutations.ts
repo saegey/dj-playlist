@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
-import { generateGeneticPlaylist, updatePlaylist } from "@/services/playlistService";
+import { generateGeneticPlaylist, updatePlaylist } from "@/services/internalApi/playlists";
 import type { Track } from "@/types/track";
 import { useTrackStore } from "@/stores/trackStore";
 import { toaster } from "@/components/ui/toaster";
@@ -110,8 +110,7 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
       }
       const newRefs = [...trackRefs];
       newRefs.splice(indexToRemove, 1);
-      const res = await updatePlaylist(playlistId, { tracks: newRefs });
-      if (!res.ok) throw new Error("Failed to remove track from playlist");
+      await updatePlaylist(playlistId, { tracks: newRefs });
       return newRefs;
     },
     onSuccess: (newRefs) => {
@@ -134,8 +133,7 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
         return trackRefs; // Track already exists, no change needed
       }
       const newRefs = [...trackRefs, { track_id: track.track_id, friend_id: track.friend_id! }];
-      const res = await updatePlaylist(playlistId, { tracks: newRefs });
-      if (!res.ok) throw new Error("Failed to add track to playlist");
+      await updatePlaylist(playlistId, { tracks: newRefs });
       return newRefs;
     },
     onSuccess: (newRefs, track) => {

@@ -10,28 +10,20 @@
  *   npm run backfill-identity -- --force
  */
 
-import { Pool } from "pg";
 import { generateAndStoreIdentityEmbedding } from "../lib/identity-embedding";
 import { generateAndStoreAudioVibeEmbedding } from "../lib/audio-vibe-embedding";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-type EmbeddingType = "identity" | "audio_vibe";
-
-interface BackfillOptions {
-  type: EmbeddingType;
-  friend_id?: number;
-  force?: boolean;
-  limit?: number;
-  batch_size?: number;
-}
+import { embeddingsRepository } from "../server/repositories/embeddingsRepository";
+import type {
+  EmbeddingBackfillOptions,
+  EmbeddingType,
+} from "../types/backfill";
 
 /**
  * Parse command-line arguments
  */
-function parseArgs(): BackfillOptions {
+function parseArgs(): EmbeddingBackfillOptions {
   const args = process.argv.slice(2);
-  const options: BackfillOptions = {
+  const options: EmbeddingBackfillOptions = {
     type: "identity", // Default
     batch_size: 5, // Default
   };
@@ -82,73 +74,9 @@ Examples:
  * Fetch tracks that need embeddings
  */
 async function getTracksNeedingEmbeddings(
-  options: BackfillOptions
+  options: EmbeddingBackfillOptions
 ): Promise<{ track_id: string; friend_id: number }[]> {
-  const { type, friend_id, force, limit } = options;
-
-  let query: string;
-  const params: any[] = [];
-
-  if (force) {
-    // Get all tracks (for audio_vibe, also filter by having audio data)
-    if (type === "audio_vibe") {
-      query = `
-        SELECT track_id, friend_id
-        FROM tracks
-        WHERE (bpm IS NOT NULL OR key IS NOT NULL OR danceability IS NOT NULL
-               OR mood_happy IS NOT NULL OR mood_sad IS NOT NULL
-               OR mood_relaxed IS NOT NULL OR mood_aggressive IS NOT NULL)
-        ${friend_id ? "AND friend_id = $1" : ""}
-        ORDER BY friend_id, track_id
-        ${limit ? `LIMIT ${limit}` : ""}
-      `;
-    } else {
-      query = `
-        SELECT track_id, friend_id
-        FROM tracks
-        ${friend_id ? "WHERE friend_id = $1" : ""}
-        ORDER BY friend_id, track_id
-        ${limit ? `LIMIT ${limit}` : ""}
-      `;
-    }
-    if (friend_id) params.push(friend_id);
-  } else {
-    // Get tracks without embeddings
-    if (type === "audio_vibe") {
-      query = `
-        SELECT t.track_id, t.friend_id
-        FROM tracks t
-        LEFT JOIN track_embeddings te
-          ON t.track_id = te.track_id
-          AND t.friend_id = te.friend_id
-          AND te.embedding_type = 'audio_vibe'
-        WHERE te.id IS NULL
-          AND (t.bpm IS NOT NULL OR t.key IS NOT NULL OR t.danceability IS NOT NULL
-               OR t.mood_happy IS NOT NULL OR t.mood_sad IS NOT NULL
-               OR t.mood_relaxed IS NOT NULL OR t.mood_aggressive IS NOT NULL)
-        ${friend_id ? "AND t.friend_id = $1" : ""}
-        ORDER BY t.friend_id, t.track_id
-        ${limit ? `LIMIT ${limit}` : ""}
-      `;
-    } else {
-      query = `
-        SELECT t.track_id, t.friend_id
-        FROM tracks t
-        LEFT JOIN track_embeddings te
-          ON t.track_id = te.track_id
-          AND t.friend_id = te.friend_id
-          AND te.embedding_type = 'identity'
-        WHERE te.id IS NULL
-        ${friend_id ? "AND t.friend_id = $1" : ""}
-        ORDER BY t.friend_id, t.track_id
-        ${limit ? `LIMIT ${limit}` : ""}
-      `;
-    }
-    if (friend_id) params.push(friend_id);
-  }
-
-  const result = await pool.query(query, params);
-  return result.rows;
+  return embeddingsRepository.listTracksForBackfill(options);
 }
 
 /**
@@ -214,7 +142,6 @@ async function main() {
 
     if (tracks.length === 0) {
       console.log(`✅ No tracks need ${typeLabel} embeddings`);
-      await pool.end();
       process.exit(0);
     }
 
@@ -280,11 +207,9 @@ async function main() {
       }
     }
 
-    await pool.end();
     process.exit(allFailed.length > 0 ? 1 : 0);
   } catch (error) {
     console.error("\n❌ Fatal error:", error);
-    await pool.end();
     process.exit(1);
   }
 }
