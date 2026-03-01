@@ -2,6 +2,8 @@ import { z } from "zod";
 import {
   similarVibeQuerySchema,
   similarVibeResponseSchema,
+  similarIdentityQuerySchema,
+  similarIdentityResponseSchema,
   trackPlaylistCountsBodySchema,
   trackPlaylistCountsResponseSchema,
   trackSearchGetQuerySchema,
@@ -64,6 +66,15 @@ export type TrackPlaylistCountRef = z.input<typeof trackPlaylistCountsBodySchema
 export type TrackPlaylistCountsResponse = z.infer<
   typeof trackPlaylistCountsResponseSchema
 >;
+export type SimilarTracksOptions = z.input<typeof similarIdentityQuerySchema>;
+type SimilarTracksResponseApi = z.infer<typeof similarIdentityResponseSchema>;
+export type SimilarTrack = Track & {
+  distance: number;
+  identity_text: string;
+};
+export type SimilarTracksResponse = Omit<SimilarTracksResponseApi, "tracks"> & {
+  tracks: SimilarTrack[];
+};
 export type SimilarVibeTracksOptions = z.input<typeof similarVibeQuerySchema>;
 type SimilarVibeTracksResponseApi = z.infer<typeof similarVibeResponseSchema>;
 export type SimilarVibeTrack = Track & {
@@ -372,6 +383,30 @@ export async function fetchSimilarVibeTracks(
 
   return await http<SimilarVibeTracksResponse>(
     `/api/embeddings/similar-vibe?${params.toString()}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+}
+
+export async function fetchSimilarTracks(
+  options: SimilarTracksOptions
+): Promise<SimilarTracksResponse> {
+  const params = new URLSearchParams({
+    track_id: options.track_id,
+    friend_id: String(options.friend_id),
+  });
+  if (typeof options.limit === "number") params.set("limit", String(options.limit));
+  if (typeof options.ivfflat_probes === "number") {
+    params.set("ivfflat_probes", String(options.ivfflat_probes));
+  }
+  if (options.era) params.set("era", options.era);
+  if (options.country) params.set("country", options.country);
+  if (options.tags) params.set("tags", options.tags);
+
+  return await http<SimilarTracksResponse>(
+    `/api/embeddings/similar?${params.toString()}`,
     {
       method: "GET",
       cache: "no-store",

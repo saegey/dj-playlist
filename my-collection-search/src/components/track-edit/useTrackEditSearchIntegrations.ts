@@ -7,7 +7,10 @@ import { buildTrackMetadataPrompt } from "@/lib/prompts";
 import { useTrackMetadataMutation } from "@/hooks/useTrackMetadataMutation";
 import { useYouTubeMusicSearchMutation } from "@/hooks/useYouTubeMusicSearchMutation";
 import { toaster } from "@/components/ui/toaster";
-import { lookupDiscogsVideos, extractDiscogsVideos } from "@/services/discogsService";
+import {
+  extractDiscogsVideos,
+  lookupDiscogsVideos,
+} from "@/services/internalApi/discogs";
 import { fetchAiPromptSettings } from "@/services/internalApi/settings";
 import type { DiscogsLookupVideo } from "@/types/discogs";
 import type {

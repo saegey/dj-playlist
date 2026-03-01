@@ -1,5 +1,19 @@
-import { Friend } from "@/types/track";
-import { streamLines } from "../sse";
+import { z } from "zod";
+import {
+  friendMutationResponseSchema,
+  friendsListQuerySchema,
+  friendsListResponseSchema,
+} from "@/api-contract/schemas";
+import type { Friend } from "@/types/track";
+import { http, streamLines } from "../http";
+
+export type FriendsListQuery = z.input<typeof friendsListQuerySchema>;
+export type FriendsListResponse = z.infer<typeof friendsListResponseSchema>;
+export type FriendMutationResponse = z.infer<typeof friendMutationResponseSchema>;
+export type RemoveFriendResponse = {
+  lines: string[];
+  message: string;
+};
 
 export async function removeFriendStream(
   username: string,
@@ -9,31 +23,43 @@ export async function removeFriendStream(
   await streamLines(url, { method: "DELETE" }, onLine);
 }
 
-export async function addFriendApi(username: string) {
-  const res = await fetch("/api/friends", {
+export async function addFriendApi(
+  username: string
+): Promise<FriendMutationResponse> {
+  return await http<FriendMutationResponse>("/api/friends", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username }),
   });
-  const data = await res.json();
-  return data;
 }
 
-export async function removeFriendApi(username: string) {
-  const res = await fetch(
-    `/api/friends?username=${encodeURIComponent(username)}`,
-    {
-      method: "DELETE",
-    }
-  );
-  const data = await res.json();
-  return data;
+export async function removeFriendApi(
+  username: string
+): Promise<RemoveFriendResponse> {
+  const lines: string[] = [];
+  await removeFriendStream(username, (line) => {
+    lines.push(line);
+  });
+  return { lines, message: lines.join("\n") };
 }
 
 export async function fetchFriends(
-  showCurrentUser?: boolean
+  showCurrentUser?: FriendsListQuery["showCurrentUser"]
 ): Promise<Friend[]> {
-  const res = await fetch(`/api/friends?showCurrentUser=${!!showCurrentUser}`);
-  const data = await res.json();
-  return data.results || [];
+  const params = new URLSearchParams();
+  if (typeof showCurrentUser !== "undefined") {
+    params.set(
+      "showCurrentUser",
+      typeof showCurrentUser === "boolean"
+        ? String(showCurrentUser)
+        : showCurrentUser
+    );
+  }
+  const query = params.toString();
+  const path = query ? `/api/friends?${query}` : "/api/friends";
+  const response = await http<FriendsListResponse>(path, {
+    method: "GET",
+    cache: "no-store",
+  });
+  return response.results ?? [];
 }

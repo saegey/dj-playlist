@@ -3,8 +3,11 @@ import {
   discogsLookupQuerySchema,
   discogsLookupResponseSchema,
 } from "@/api-contract/schemas";
-import { http } from "../http";
-import { streamLines } from "../sse";
+import type {
+  DiscogsLookupRelease,
+  DiscogsLookupVideo,
+} from "@/types/discogs";
+import { http, streamLines } from "../http";
 
 export type SyncResult = {
   message?: string;
@@ -108,4 +111,28 @@ export async function lookupDiscogsRelease(
     method: "GET",
     cache: "no-store",
   });
+}
+
+export async function lookupDiscogsVideos(
+  trackId: string
+): Promise<DiscogsLookupResponse | null> {
+  try {
+    return await lookupDiscogsRelease({ track_id: trackId });
+  } catch (error) {
+    console.error("Discogs lookup error:", error);
+    return null;
+  }
+}
+
+export function extractDiscogsVideos(
+  result: DiscogsLookupResponse | null
+): DiscogsLookupVideo[] {
+  if (!result?.release) return [];
+
+  const rel = result.release as DiscogsLookupRelease;
+  const vids: DiscogsLookupVideo[] = (rel.videos ??
+    rel.video ??
+    []) as DiscogsLookupVideo[];
+
+  return vids || [];
 }

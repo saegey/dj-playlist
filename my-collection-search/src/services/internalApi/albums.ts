@@ -16,8 +16,7 @@ import type {
   UpdateAlbumWithTracksParams,
 } from "@/types/albumMetadata";
 import type { Album, Track } from "@/types/track";
-import { http } from "@/services/http";
-import { streamLines } from "@/services/sse";
+import { http, streamLines } from "@/services/http";
 
 export type AlbumDiscogsRawResponse = z.infer<
   typeof albumDiscogsRawResponseSchema

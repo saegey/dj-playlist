@@ -29,12 +29,31 @@ import {
   embeddingPromptSettingsQuerySchema,
   essentiaBackfillBodySchema,
   essentiaBackfillResponseSchema,
+  friendDeleteQuerySchema,
+  friendMutationBodySchema,
+  friendMutationResponseSchema,
+  friendsListQuerySchema,
+  friendsListResponseSchema,
   manifestCleanupResponseSchema,
   manifestVerificationResponseSchema,
   localPlaybackControlBodySchema,
   localPlaybackControlResponseSchema,
   localPlaybackStatusResponseSchema,
   localPlaybackTestResponseSchema,
+  gamdlCookieDeleteResponseSchema,
+  gamdlCookieFileInfoSchema,
+  gamdlCookieUploadResponseSchema,
+  gamdlConnectionTestResponseSchema,
+  gamdlSettingsGetResponseSchema,
+  gamdlSettingsPutBodySchema,
+  gamdlSettingsPutResponseSchema,
+  gamdlSettingsQuerySchema,
+  gamdlSettingsResetBodySchema,
+  gamdlSettingsResetResponseSchema,
+  jobDetailsResponseSchema,
+  jobsClearResponseSchema,
+  jobsListQuerySchema,
+  jobsListResponseSchema,
   playlistCreateBodySchema,
   playlistDeleteQuerySchema,
   playlistDetailParamsSchema,
@@ -47,6 +66,8 @@ import {
   recommendationsQuerySchema,
   recommendationsBatchBodySchema,
   recommendationsResponseSchema,
+  similarIdentityQuerySchema,
+  similarIdentityResponseSchema,
   similarVibeQuerySchema,
   similarVibeResponseSchema,
   trackSearchGetQuerySchema,
@@ -1383,6 +1404,708 @@ const remainingTracksContracts: ApiContractRoute[] = [
 
 export const apiContractRoutes: ApiContractRoute[] = [
   {
+    operationId: "listFriends",
+    method: "get",
+    path: "/api/friends",
+    summary: "List friends/libraries",
+    tags: ["Friends"],
+    querySchema: friendsListQuerySchema,
+    successSchema: friendsListResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "showCurrentUser",
+          in: "query",
+          required: false,
+          schema: { type: "boolean" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Friends list",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  results: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: { type: "integer" },
+                        username: { type: "string" },
+                      },
+                      required: ["id", "username"],
+                    },
+                  },
+                },
+                required: ["results"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "addFriend",
+    method: "post",
+    path: "/api/friends",
+    summary: "Add a friend/library by username",
+    tags: ["Friends"],
+    bodySchema: friendMutationBodySchema,
+    successSchema: friendMutationResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                username: { type: "string" },
+              },
+              required: ["username"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Friend added",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  message: { type: "string" },
+                },
+                required: ["message"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid username",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "removeFriend",
+    method: "delete",
+    path: "/api/friends",
+    summary: "Remove a friend/library (streaming text progress)",
+    tags: ["Friends"],
+    querySchema: friendDeleteQuerySchema,
+    successSchema: z.string(),
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "username",
+          in: "query",
+          required: true,
+          schema: { type: "string" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Progress stream",
+          content: {
+            "text/plain": {
+              schema: { type: "string" },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid username",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "streamAddFriend",
+    method: "get",
+    path: "/api/friends/stream-add",
+    summary: "Stream add-friend progress via SSE",
+    tags: ["Friends"],
+    querySchema: friendDeleteQuerySchema,
+    successSchema: z.string(),
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "username",
+          in: "query",
+          required: true,
+          schema: { type: "string" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "SSE stream",
+          content: {
+            "text/event-stream": {
+              schema: { type: "string" },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid username",
+          content: { "text/event-stream": { schema: { type: "string" } } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "listJobs",
+    method: "get",
+    path: "/api/jobs",
+    summary: "List background jobs",
+    tags: ["Jobs"],
+    querySchema: jobsListQuerySchema,
+    successSchema: jobsListResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "limit",
+          in: "query",
+          required: false,
+          schema: { type: "integer", minimum: 1, maximum: 500, default: 100 },
+        },
+        {
+          name: "offset",
+          in: "query",
+          required: false,
+          schema: { type: "integer", minimum: 0, default: 0 },
+        },
+        {
+          name: "state",
+          in: "query",
+          required: false,
+          schema: {
+            type: "string",
+            enum: ["all", "waiting", "active", "completed", "failed"],
+            default: "all",
+          },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Jobs list",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  jobs: { type: "array", items: { type: "object", additionalProperties: true } },
+                  summary: {
+                    type: "object",
+                    properties: {
+                      total: { type: "integer" },
+                      waiting: { type: "integer" },
+                      active: { type: "integer" },
+                      completed: { type: "integer" },
+                      failed: { type: "integer" },
+                    },
+                    required: ["total", "waiting", "active", "completed", "failed"],
+                  },
+                  pagination: {
+                    type: "object",
+                    properties: {
+                      limit: { type: "integer" },
+                      offset: { type: "integer" },
+                      total_filtered: { type: "integer" },
+                      has_more: { type: "boolean" },
+                    },
+                    required: ["limit", "offset", "total_filtered", "has_more"],
+                  },
+                },
+                required: ["jobs", "summary"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "clearAllJobs",
+    method: "delete",
+    path: "/api/jobs",
+    summary: "Clear all queued and indexed jobs",
+    tags: ["Jobs"],
+    successSchema: jobsClearResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Jobs cleared",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean" },
+                  message: { type: "string" },
+                },
+                required: ["success", "message"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getJobById",
+    method: "get",
+    path: "/api/jobs/{jobId}",
+    summary: "Get a single job status by id",
+    tags: ["Jobs"],
+    successSchema: jobDetailsResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "jobId",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Job details",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  name: { type: "string" },
+                  state: { type: "string" },
+                  queue: { type: "string" },
+                  data: { type: "object", additionalProperties: true },
+                  progress: { type: "number" },
+                  returnvalue: {
+                    type: ["object", "array", "string", "number", "boolean", "null"],
+                  },
+                  finishedOn: { type: "number" },
+                  processedOn: { type: "number" },
+                  failedReason: { type: "string" },
+                  attemptsMade: { type: "integer" },
+                  delay: { type: "number" },
+                  timestamp: { type: "number" },
+                  opts: { type: "object", additionalProperties: true },
+                  logs: { type: "array", items: { type: "object", additionalProperties: true } },
+                },
+                required: ["id", "name", "state", "queue", "data", "progress", "attemptsMade"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Missing job id",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "404": {
+          description: "Job not found",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getGamdlCookieStatus",
+    method: "get",
+    path: "/api/settings/gamdl-cookies",
+    summary: "Get GAMDL cookie file status",
+    tags: ["Settings"],
+    successSchema: gamdlCookieFileInfoSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Cookie file status",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  exists: { type: "boolean" },
+                  filename: { type: "string" },
+                  size: { type: "number" },
+                  lastModified: { type: "string" },
+                  domains: { type: "array", items: { type: "string" } },
+                  cookieCount: { type: "integer" },
+                  hasAppleMusic: { type: "boolean" },
+                  expiryDates: { type: "array", items: { type: "string" } },
+                  isValid: { type: "boolean" },
+                  validationErrors: { type: "array", items: { type: "string" } },
+                },
+                required: ["exists"],
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "uploadGamdlCookieFile",
+    method: "post",
+    path: "/api/settings/gamdl-cookies",
+    summary: "Upload GAMDL cookie file",
+    tags: ["Settings"],
+    successSchema: gamdlCookieUploadResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "multipart/form-data": {
+            schema: {
+              type: "object",
+              properties: {
+                cookieFile: { type: "string", format: "binary" },
+              },
+              required: ["cookieFile"],
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Cookie file uploaded",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean" },
+                  message: { type: "string" },
+                  cookieInfo: { type: "object", additionalProperties: true },
+                },
+                required: ["success", "message", "cookieInfo"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid cookie upload",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "deleteGamdlCookieFile",
+    method: "delete",
+    path: "/api/settings/gamdl-cookies",
+    summary: "Delete GAMDL cookie file",
+    tags: ["Settings"],
+    successSchema: gamdlCookieDeleteResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Cookie file deleted",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean" },
+                  message: { type: "string" },
+                },
+                required: ["success", "message"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getGamdlSettings",
+    method: "get",
+    path: "/api/settings/gamdl",
+    summary: "Get GAMDL settings for a friend",
+    tags: ["Settings"],
+    querySchema: gamdlSettingsQuerySchema,
+    successSchema: gamdlSettingsGetResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "friend_id",
+          in: "query",
+          required: true,
+          schema: { type: "integer" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "GAMDL settings",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  settings: {
+                    type: "object",
+                    properties: {
+                      id: { type: "integer" },
+                      friend_id: { type: "integer" },
+                      audio_quality: { type: "string" },
+                      audio_format: { type: "string" },
+                      save_cover: { type: "boolean" },
+                      cover_format: { type: "string" },
+                      save_lyrics: { type: "boolean" },
+                      lyrics_format: { type: "string" },
+                      overwrite_existing: { type: "boolean" },
+                      skip_music_videos: { type: "boolean" },
+                      max_retries: { type: "integer" },
+                      created_at: { type: "string" },
+                      updated_at: { type: "string" },
+                    },
+                    required: [
+                      "id",
+                      "friend_id",
+                      "audio_quality",
+                      "audio_format",
+                      "save_cover",
+                      "cover_format",
+                      "save_lyrics",
+                      "lyrics_format",
+                      "overwrite_existing",
+                      "skip_music_videos",
+                      "max_retries",
+                      "created_at",
+                      "updated_at",
+                    ],
+                  },
+                },
+                required: ["settings"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Missing or invalid friend_id",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "updateGamdlSettings",
+    method: "put",
+    path: "/api/settings/gamdl",
+    summary: "Update GAMDL settings for a friend",
+    tags: ["Settings"],
+    bodySchema: gamdlSettingsPutBodySchema,
+    successSchema: gamdlSettingsPutResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                friend_id: { type: "integer" },
+                audio_quality: { type: "string" },
+                audio_format: { type: "string" },
+                save_cover: { type: "boolean" },
+                cover_format: { type: "string" },
+                save_lyrics: { type: "boolean" },
+                lyrics_format: { type: "string" },
+                overwrite_existing: { type: "boolean" },
+                skip_music_videos: { type: "boolean" },
+                max_retries: { type: "integer" },
+              },
+              required: ["friend_id"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "GAMDL settings updated",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean" },
+                  message: { type: "string" },
+                  settings: { type: "object", additionalProperties: true },
+                },
+                required: ["success", "message", "settings"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid update payload",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "resetGamdlSettings",
+    method: "post",
+    path: "/api/settings/gamdl/reset",
+    summary: "Reset GAMDL settings to defaults for a friend",
+    tags: ["Settings"],
+    bodySchema: gamdlSettingsResetBodySchema,
+    successSchema: gamdlSettingsResetResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                friend_id: { type: "integer" },
+              },
+              required: ["friend_id"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "GAMDL settings reset",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean" },
+                  message: { type: "string" },
+                  settings: { type: "object", additionalProperties: true },
+                },
+                required: ["success", "message", "settings"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Missing or invalid friend_id",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "testGamdlConnection",
+    method: "post",
+    path: "/api/settings/gamdl/test",
+    summary: "Test GAMDL setup and Apple Music auth readiness",
+    tags: ["Settings"],
+    successSchema: gamdlConnectionTestResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Test completed",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean" },
+                  message: { type: "string" },
+                  details: {
+                    type: "object",
+                    properties: {
+                      gamdl_available: { type: "boolean" },
+                      cookie_file_exists: { type: "boolean" },
+                      cookie_file_valid: { type: "boolean" },
+                      test_download_attempted: { type: "boolean" },
+                      test_download_success: { type: "boolean" },
+                      error_type: { type: "string" },
+                    },
+                    required: [
+                      "gamdl_available",
+                      "cookie_file_exists",
+                      "cookie_file_valid",
+                      "test_download_attempted",
+                      "test_download_success",
+                    ],
+                  },
+                },
+                required: ["success", "message", "details"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Test execution failed",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
     operationId: "getLocalPlaybackStatus",
     method: "get",
     path: "/api/playback/local",
@@ -2135,6 +2858,59 @@ export const apiContractRoutes: ApiContractRoute[] = [
         },
         "404": {
           description: "Seed embeddings missing",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "findSimilarIdentityTracks",
+    method: "get",
+    path: "/api/embeddings/similar",
+    summary: "Find similar tracks by identity embedding",
+    tags: ["Embeddings"],
+    querySchema: similarIdentityQuerySchema,
+    successSchema: similarIdentityResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        { name: "track_id", in: "query", required: true, schema: { type: "string" } },
+        { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
+        { name: "limit", in: "query", required: false, schema: { type: "integer", default: 50 } },
+        { name: "ivfflat_probes", in: "query", required: false, schema: { type: "integer", default: 10 } },
+        { name: "era", in: "query", required: false, schema: { type: "string" } },
+        { name: "country", in: "query", required: false, schema: { type: "string" } },
+        { name: "tags", in: "query", required: false, schema: { type: "string", description: "Comma-separated tags" } },
+      ],
+      responses: {
+        "200": {
+          description: "Similar identity tracks",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  source_track_id: { type: "string" },
+                  source_friend_id: { type: "integer" },
+                  filters: { type: "object", additionalProperties: true },
+                  count: { type: "integer" },
+                  tracks: { type: "array", items: { type: "object", additionalProperties: true } },
+                },
+                required: ["source_track_id", "source_friend_id", "filters", "count", "tracks"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Missing or invalid query",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "404": {
+          description: "Identity embedding not found",
           content: { "application/json": { schema: errorResponseSchemaObject } },
         },
         "500": {

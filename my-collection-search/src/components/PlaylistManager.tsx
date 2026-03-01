@@ -3,7 +3,6 @@
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import DeletePlaylistDialog from "@/components/DeletePlaylistDialog";
-import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import FriendSelectDialog from "@/components/FriendSelectDialog";
 import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
 import {
@@ -21,7 +20,6 @@ import {
 } from "@chakra-ui/react";
 
 import { Toaster, toaster } from "@/components/ui/toaster"; // See below
-import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
 import { FiHeadphones, FiTrash, FiMoreVertical } from "react-icons/fi";
 import { TbFileImport } from "react-icons/tb";
 import { usePlaylists } from "@/providers/PlaylistsProvider";
@@ -34,15 +32,7 @@ import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
 import posthog from "posthog-js";
 
-type Props = {
-  xmlImportModalOpen: boolean;
-  setXmlImportModalOpen: (open: boolean) => void;
-};
-
-export default function PlaylistManager({
-  xmlImportModalOpen,
-  setXmlImportModalOpen,
-}: Props) {
+export default function PlaylistManager() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playlists, loadingPlaylists, fetchPlaylists } = usePlaylists();
@@ -61,11 +51,6 @@ export default function PlaylistManager({
     open: boolean;
     playlistId: number | null;
   }>({ open: false, playlistId: null });
-
-  // State for import playlist dialog
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [importedTracks, setImportedTracks] = useState<string[]>([]);
-  const [importedName, setImportedName] = useState("Imported Playlist");
 
   // State for friend selection dialog
   const [friendSelectDialogOpen, setFriendSelectDialogOpen] = useState(false);
@@ -176,22 +161,6 @@ export default function PlaylistManager({
     }
   };
 
-  // Handler for confirming import with name
-  const handleConfirmImport = async () => {
-    if (!importedTracks.length || !importedName.trim()) return;
-    try {
-      await importPlaylist(importedName, importedTracks);
-      notify({ title: `Imported '${importedName}'`, type: "success" });
-      fetchPlaylists();
-    } catch {
-      notify({ title: "Error importing playlist", type: "error" });
-    } finally {
-      setImportDialogOpen(false);
-      setImportedTracks([]);
-      setImportedName("Imported Playlist");
-    }
-  };
-
   // Handler for friend selection confirmation
   const handleFriendSelectConfirm = async () => {
     if (!pendingImport || !selectedFriendId) return;
@@ -242,12 +211,6 @@ export default function PlaylistManager({
               <Menu.Positioner>
                 <Menu.Content>
                   <Menu.Item
-                    value="import-apple-xml"
-                    onClick={() => setXmlImportModalOpen(true)}
-                  >
-                    <TbFileImport /> Import Apple XML
-                  </Menu.Item>
-                  <Menu.Item
                     value="import-json"
                     onClick={() => fileInputRef.current?.click()}
                   >
@@ -293,13 +256,6 @@ export default function PlaylistManager({
                   Save your playlists to access them here.
                 </EmptyState.Description>
                 <HStack>
-                  <Button
-                    size="xs"
-                    variant="surface"
-                    onClick={() => setXmlImportModalOpen(true)}
-                  >
-                    Import Apple XML
-                  </Button>
                   <Button
                     size="xs"
                     onClick={() => fileInputRef.current?.click()}
@@ -430,11 +386,6 @@ export default function PlaylistManager({
         fetchPlaylists={fetchPlaylists}
         notify={notify}
       />
-      <AppleMusicXmlImport
-        isOpen={xmlImportModalOpen}
-        onClose={() => setXmlImportModalOpen(false)}
-        fetchPlaylists={fetchPlaylists}
-      />
       <input
         type="file"
         accept="application/json"
@@ -443,15 +394,6 @@ export default function PlaylistManager({
         onChange={handleImportJson}
       />
       <Toaster />
-      <NamePlaylistDialog
-        open={importDialogOpen}
-        name={importedName}
-        setName={setImportedName}
-        trackCount={importedTracks.length}
-        onConfirm={handleConfirmImport}
-        onCancel={() => setImportDialogOpen(false)}
-        confirmLabel="Import"
-      />
       <FriendSelectDialog
         open={friendSelectDialogOpen}
         selectedFriendId={selectedFriendId}

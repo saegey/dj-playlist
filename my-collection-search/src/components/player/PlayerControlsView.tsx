@@ -22,7 +22,7 @@ import {
 } from "react-icons/fi";
 import type { IconType } from "react-icons";
 import type { Track } from "@/types/track";
-import type { PlaybackMode } from "@/components/PlaybackModeSelector";
+import type { PlaybackMode } from "@/services/internalApi/playback";
 import ProgressSlider from "@/components/player/ProgressSlider";
 import CompactProgressSlider from "@/components/player/CompactProgressSlider";
 import Artwork from "@/components/player/Artwork";

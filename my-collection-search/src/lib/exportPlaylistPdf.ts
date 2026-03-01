@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import type { Track } from "@/types/track";
 import { formatSeconds, getTrackDurationSeconds } from "@/lib/trackUtils";
+import { httpArrayBuffer } from "@/services/http";
 
 const MONO_TTF_PATH = "/NotoSansMono-Regular.ttf";
 const MONO_TTF_VFS = "NotoSansMono-Regular.ttf";
@@ -22,11 +23,7 @@ async function ensureMonoFont(doc: jsPDF): Promise<void> {
   if (!monoLoadPromise) {
     monoLoadPromise = (async () => {
       try {
-        const res = await fetch(MONO_TTF_PATH);
-        if (!res.ok) {
-          throw new Error(`Failed to load ${MONO_TTF_PATH}`);
-        }
-        const buffer = await res.arrayBuffer();
+        const buffer = await httpArrayBuffer(MONO_TTF_PATH);
         monoBase64 = arrayBufferToBase64(buffer);
       } catch {
         // Fall back to built-in font if PT Mono isn't available

@@ -7,12 +7,7 @@ import PageContainer from "@/components/layout/PageContainer";
 const PlaylistsPage = () => {
   return (
     <PageContainer size="standard">
-      <PlaylistManager
-        xmlImportModalOpen={false}
-        setXmlImportModalOpen={function (): void {
-          throw new Error("Function not implemented.");
-        }}
-      />
+      <PlaylistManager />
     </PageContainer>
   );
 };

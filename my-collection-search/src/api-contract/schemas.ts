@@ -71,6 +71,8 @@ export const localPlaybackActionSchema = z.enum([
   "volume",
 ]);
 
+export const playbackModeSchema = z.enum(["browser", "local-dac"]);
+
 export const localPlaybackControlBodySchema = z.object({
   action: localPlaybackActionSchema,
   filename: z.string().optional(),
@@ -106,6 +108,220 @@ export const localPlaybackTestResponseSchema = z
     testResult: z.unknown().optional(),
   })
   .passthrough();
+
+export const gamdlCookieFileInfoSchema = z
+  .object({
+    exists: z.boolean(),
+    filename: z.string().optional(),
+    size: z.number().optional(),
+    lastModified: z.string().optional(),
+    domains: z.array(z.string()).optional(),
+    cookieCount: z.number().int().optional(),
+    hasAppleMusic: z.boolean().optional(),
+    expiryDates: z.array(z.string()).optional(),
+    isValid: z.boolean().optional(),
+    validationErrors: z.array(z.string()).optional(),
+  })
+  .passthrough();
+
+export const gamdlCookieUploadResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  cookieInfo: gamdlCookieFileInfoSchema,
+});
+
+export const gamdlCookieDeleteResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+
+export const gamdlAudioQualitySchema = z.enum([
+  "best",
+  "high",
+  "standard",
+  "lossless",
+]);
+
+export const gamdlAudioFormatSchema = z.enum(["m4a", "mp3", "aac", "flac"]);
+export const gamdlCoverFormatSchema = z.enum(["jpg", "png", "raw"]);
+export const gamdlLyricsFormatSchema = z.enum(["lrc", "srt", "ttml"]);
+
+export const gamdlSettingsSchema = z.object({
+  id: z.number().int(),
+  friend_id: z.number().int(),
+  audio_quality: gamdlAudioQualitySchema,
+  audio_format: gamdlAudioFormatSchema,
+  save_cover: z.boolean(),
+  cover_format: gamdlCoverFormatSchema,
+  save_lyrics: z.boolean(),
+  lyrics_format: gamdlLyricsFormatSchema,
+  overwrite_existing: z.boolean(),
+  skip_music_videos: z.boolean(),
+  max_retries: z.number().int(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const gamdlSettingsQuerySchema = z.object({
+  friend_id: intFromInputSchema,
+});
+
+export const gamdlSettingsGetResponseSchema = z.object({
+  settings: gamdlSettingsSchema,
+});
+
+export const gamdlSettingsPutBodySchema = z
+  .object({
+    friend_id: intFromInputSchema,
+    audio_quality: gamdlAudioQualitySchema.optional(),
+    audio_format: gamdlAudioFormatSchema.optional(),
+    save_cover: z.boolean().optional(),
+    cover_format: gamdlCoverFormatSchema.optional(),
+    save_lyrics: z.boolean().optional(),
+    lyrics_format: gamdlLyricsFormatSchema.optional(),
+    overwrite_existing: z.boolean().optional(),
+    skip_music_videos: z.boolean().optional(),
+    max_retries: intFromInputSchema.optional(),
+  })
+  .strict();
+
+export const gamdlSettingsPutResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  settings: gamdlSettingsSchema,
+});
+
+export const gamdlSettingsResetBodySchema = z.object({
+  friend_id: intFromInputSchema,
+});
+
+export const gamdlSettingsResetResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  settings: gamdlSettingsSchema,
+});
+
+export const gamdlConnectionTestDetailsSchema = z.object({
+  gamdl_available: z.boolean(),
+  cookie_file_exists: z.boolean(),
+  cookie_file_valid: z.boolean(),
+  test_download_attempted: z.boolean(),
+  test_download_success: z.boolean(),
+  error_type: z.string().optional(),
+});
+
+export const gamdlConnectionTestResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  details: gamdlConnectionTestDetailsSchema,
+});
+
+export const jobsListQuerySchema = z.object({
+  limit: nonNegativeIntFromInputSchema.optional().default(100),
+  offset: nonNegativeIntFromInputSchema.optional().default(0),
+  state: z
+    .enum(["all", "waiting", "active", "completed", "failed"])
+    .optional()
+    .default("all"),
+});
+
+export const jobDataSchema = z
+  .object({
+    track_id: z.string(),
+    friend_id: z.number().int(),
+    release_id: z.string().nullable().optional(),
+    job_type: z.string().optional(),
+    apple_music_url: z.string().optional(),
+    spotify_url: z.string().optional(),
+    youtube_url: z.string().optional(),
+    soundcloud_url: z.string().optional(),
+    title: z.string().nullable().optional(),
+    artist: z.string().nullable().optional(),
+    album: z.string().nullable().optional(),
+    year: z.union([z.string(), z.number()]).nullable().optional(),
+    album_thumbnail: z.string().nullable().optional(),
+    discogs_url: z.string().nullable().optional(),
+    local_audio_url: z.string().nullable().optional(),
+    library_identifier: z.string().nullable().optional(),
+    username: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export const jobInfoSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    state: z.enum(["waiting", "active", "completed", "failed"]),
+    progress: z.number(),
+    data: jobDataSchema,
+    returnvalue: z.unknown().optional(),
+    finishedOn: z.number().optional(),
+    failedReason: z.string().optional(),
+    attemptsMade: z.number().int(),
+    processedOn: z.number().optional(),
+    queue: z.string(),
+  })
+  .passthrough();
+
+export const jobsSummarySchema = z.object({
+  total: z.number().int(),
+  waiting: z.number().int(),
+  active: z.number().int(),
+  completed: z.number().int(),
+  failed: z.number().int(),
+});
+
+export const jobsPaginationSchema = z.object({
+  limit: z.number().int(),
+  offset: z.number().int(),
+  total_filtered: z.number().int(),
+  has_more: z.boolean(),
+});
+
+export const jobsListResponseSchema = z.object({
+  jobs: z.array(jobInfoSchema),
+  summary: jobsSummarySchema,
+  pagination: jobsPaginationSchema.optional(),
+});
+
+export const jobsClearResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+});
+
+export const jobDetailsResponseSchema = jobInfoSchema.extend({
+  delay: z.number().optional(),
+  timestamp: z.number().optional(),
+  opts: z.record(z.unknown()).optional(),
+  logs: z.array(z.unknown()).optional(),
+});
+
+export const friendSchema = z.object({
+  id: z.number().int(),
+  username: z.string(),
+});
+
+export const friendsListQuerySchema = z.object({
+  showCurrentUser: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .optional(),
+});
+
+export const friendsListResponseSchema = z.object({
+  results: z.array(friendSchema),
+});
+
+export const friendMutationBodySchema = z.object({
+  username: z.string().min(1),
+});
+
+export const friendMutationResponseSchema = z.object({
+  message: z.string(),
+});
+
+export const friendDeleteQuerySchema = z.object({
+  username: z.string().min(1),
+});
 
 export const playlistTrackRefSchema = z.object({
   track_id: z.string(),
@@ -687,6 +903,35 @@ export const similarVibeResponseSchema = z.object({
   source_friend_id: z.number().int(),
   count: z.number().int(),
   tracks: z.array(similarVibeTrackSchema),
+});
+
+export const similarIdentityQuerySchema = z.object({
+  track_id: z.string().min(1),
+  friend_id: intFromInputSchema,
+  limit: intFromInputSchema.optional().default(50),
+  ivfflat_probes: intFromInputSchema.optional().default(10),
+  era: z.string().optional(),
+  country: z.string().optional(),
+  tags: z.string().optional(),
+});
+
+export const similarIdentityFiltersSchema = z.object({
+  era: z.string().optional(),
+  country: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+export const similarIdentityTrackSchema = trackEntitySchema.extend({
+  distance: z.number(),
+  identity_text: z.string(),
+});
+
+export const similarIdentityResponseSchema = z.object({
+  source_track_id: z.string(),
+  source_friend_id: z.number().int(),
+  filters: similarIdentityFiltersSchema,
+  count: z.number().int(),
+  tracks: z.array(similarIdentityTrackSchema),
 });
 
 export const albumCreateResponseSchema = z.object({

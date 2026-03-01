@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
-import type { PlaybackMode } from "@/components/PlaybackModeSelector";
-import { controlLocalPlayback } from "@/services/internalApi/playback";
+import {
+  controlLocalPlayback,
+  type PlaybackMode,
+} from "@/services/internalApi/playback";
 
 const STORAGE_KEY = "mcs:playbackMode";
 const MODE_CHANGED_EVENT = "mcs:playbackModeChanged";

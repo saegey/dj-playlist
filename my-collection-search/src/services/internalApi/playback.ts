@@ -4,6 +4,7 @@ import {
   localPlaybackControlResponseSchema,
   localPlaybackStatusResponseSchema,
   localPlaybackTestResponseSchema,
+  playbackModeSchema,
 } from "@/api-contract/schemas";
 import { http } from "@/services/http";
 
@@ -15,6 +16,7 @@ export type LocalPlaybackStatusResponse = z.infer<
   typeof localPlaybackStatusResponseSchema
 >;
 export type LocalPlaybackTestResponse = z.infer<typeof localPlaybackTestResponseSchema>;
+export type PlaybackMode = z.infer<typeof playbackModeSchema>;
 
 export async function controlLocalPlayback(
   body: LocalPlaybackControlBody

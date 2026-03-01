@@ -23,7 +23,7 @@ import {
 import { LuInfo, LuRefreshCw, LuTrash2 } from "react-icons/lu";
 import { useJobsQuery } from "@/hooks/useJobsQuery";
 import { useMutation } from "@tanstack/react-query";
-import { clearAllJobs } from "@/services/jobsService";
+import { clearAllJobs } from "@/services/internalApi/jobs";
 import TrackResultStore from "@/components/TrackResultStore";
 import type { Track } from "@/types/track";
 import type { JobInfo } from "@/types/jobs";

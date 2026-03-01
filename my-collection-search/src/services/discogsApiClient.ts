@@ -1,4 +1,5 @@
 import type { DiscogsReleaseDetails } from "@/types/discogs";
+import { http } from "@/services/http";
 export type {
   DiscogsArtist,
   DiscogsLabel,
@@ -23,24 +24,16 @@ export async function getCollectionPage(
 ) {
   const urlBase = `https://api.discogs.com/users/${username}/collection/folders/${FOLDER_ID}/releases`;
   const url = `${urlBase}?page=${page}&per_page=${perPage}`;
-  const res = await fetch(url, {
+  return await http<unknown>(url, {
     headers: { Authorization: `Discogs token=${DISCOGS_USER_TOKEN}` },
   });
-  console.log(res);
-
-  if (!res.ok)
-    throw new Error(`Error fetching collection page ${page}: ${res.status}`);
-  return res.json();
 }
 
 export async function getReleaseDetails(
   releaseId: string
 ): Promise<DiscogsReleaseDetails> {
   const url = `https://api.discogs.com/releases/${releaseId}`;
-  const res = await fetch(url, {
+  return await http<DiscogsReleaseDetails>(url, {
     headers: { Authorization: `Discogs token=${DISCOGS_USER_TOKEN}` },
   });
-  if (!res.ok)
-    throw new Error(`Error fetching release ${releaseId}: ${res.status}`);
-  return res.json();
 }

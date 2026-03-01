@@ -8,6 +8,13 @@ import {
   embeddingPromptSettingsPutBodySchema,
   embeddingPromptSettingsPutResponseSchema,
   embeddingPromptSettingsQuerySchema,
+  gamdlConnectionTestResponseSchema,
+  gamdlSettingsGetResponseSchema,
+  gamdlSettingsPutBodySchema,
+  gamdlSettingsPutResponseSchema,
+  gamdlSettingsResetBodySchema,
+  gamdlSettingsResetResponseSchema,
+  gamdlSettingsSchema,
 } from "@/api-contract/schemas";
 import { http } from "@/services/http";
 
@@ -32,6 +39,19 @@ export type UpdateEmbeddingPromptSettingsBody = z.input<
 >;
 export type UpdateEmbeddingPromptSettingsResponse = z.infer<
   typeof embeddingPromptSettingsPutResponseSchema
+>;
+export type GamdlSettings = z.infer<typeof gamdlSettingsSchema>;
+export type GamdlSettingsResponse = z.infer<typeof gamdlSettingsGetResponseSchema>;
+export type UpdateGamdlSettingsBody = z.input<typeof gamdlSettingsPutBodySchema>;
+export type UpdateGamdlSettingsResponse = z.infer<
+  typeof gamdlSettingsPutResponseSchema
+>;
+export type ResetGamdlSettingsBody = z.input<typeof gamdlSettingsResetBodySchema>;
+export type ResetGamdlSettingsResponse = z.infer<
+  typeof gamdlSettingsResetResponseSchema
+>;
+export type GamdlConnectionTestResponse = z.infer<
+  typeof gamdlConnectionTestResponseSchema
 >;
 
 export async function fetchAiPromptSettings(
@@ -87,4 +107,42 @@ export async function updateEmbeddingPromptSettings(
       body: JSON.stringify(body),
     }
   );
+}
+
+export async function fetchGamdlSettings(
+  friendId: number
+): Promise<GamdlSettingsResponse> {
+  const params = new URLSearchParams({
+    friend_id: String(friendId),
+  });
+  return await http<GamdlSettingsResponse>(`/api/settings/gamdl?${params.toString()}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export async function updateGamdlSettings(
+  body: UpdateGamdlSettingsBody
+): Promise<UpdateGamdlSettingsResponse> {
+  return await http<UpdateGamdlSettingsResponse>("/api/settings/gamdl", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function resetGamdlSettings(
+  body: ResetGamdlSettingsBody
+): Promise<ResetGamdlSettingsResponse> {
+  return await http<ResetGamdlSettingsResponse>("/api/settings/gamdl/reset", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function testGamdlConnection(): Promise<GamdlConnectionTestResponse> {
+  return await http<GamdlConnectionTestResponse>("/api/settings/gamdl/test", {
+    method: "POST",
+  });
 }
