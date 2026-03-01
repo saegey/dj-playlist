@@ -1,57 +1,35 @@
-import { Pool } from "pg";
-import { DiscogsTrack } from "@/types/track";
+import { friendRepository } from "@/services/friendRepository";
+import { trackRepository } from "@/services/trackRepository";
+import type { DiscogsTrack, Track } from "@/types/track";
 
-export async function upsertTracks(pool: Pool, tracks: DiscogsTrack[]): Promise<DiscogsTrack[]> {
-  // 1) Ensure all friends exist and build username -> friend_id map
+export async function upsertTracks(tracks: DiscogsTrack[]): Promise<Track[]> {
   const usernames = Array.from(
     new Set(tracks.map((t) => t.username).filter((u): u is string => !!u))
   );
 
-  if (usernames.length) {
-    // Insert any missing friends
-    await pool.query(
-      `INSERT INTO friends (username)
-       SELECT UNNEST($1::text[])
-       ON CONFLICT (username) DO NOTHING`,
-      [usernames]
-    );
+  if (usernames.length > 0) {
+    await friendRepository.insertFriendsIfMissing(usernames);
   }
 
   const friendMap = new Map<string, number>();
-  if (usernames.length) {
-    const { rows } = await pool.query(
-      `SELECT id, username FROM friends WHERE username = ANY($1::text[])`,
-      [usernames]
-    );
-    for (const r of rows) friendMap.set(r.username, r.id);
+  if (usernames.length > 0) {
+    const friends = await friendRepository.listByUsernames(usernames);
+    for (const friend of friends) {
+      friendMap.set(friend.username, friend.id);
+    }
   }
 
-  // 2) Upsert tracks with resolved friend_id
-  const upserted: DiscogsTrack[] = [];
+  const upserted: Track[] = [];
+
   for (const track of tracks) {
-    let friendId: number | undefined = friendMap.get(track.username);
+    let friendId = friendMap.get(track.username);
+
     if (!friendId) {
-      // Fallback: create/select friend for this username on the fly
-      const { rows: inserted } = await pool.query(
-        `INSERT INTO friends (username) VALUES ($1)
-         ON CONFLICT (username) DO NOTHING
-         RETURNING id`,
-        [track.username]
-      );
-      if (inserted.length) {
-        const id: number = inserted[0].id;
-        friendId = id;
-        friendMap.set(track.username, id);
-      } else {
-        const { rows: got } = await pool.query(
-          `SELECT id FROM friends WHERE username = $1`,
-          [track.username]
-        );
-        if (got.length) {
-          const id: number = got[0].id;
-          friendId = id;
-          friendMap.set(track.username, id);
-        }
+      await friendRepository.insertFriendIfMissing(track.username);
+      const resolvedId = await friendRepository.findIdByUsername(track.username);
+      if (resolvedId) {
+        friendId = resolvedId;
+        friendMap.set(track.username, resolvedId);
       }
     }
 
@@ -62,66 +40,20 @@ export async function upsertTracks(pool: Pool, tracks: DiscogsTrack[]): Promise<
       continue;
     }
 
-    const { rows: insertedRows } = await pool.query(
-      `
-      INSERT INTO tracks (
-        track_id, title, artist, album, year,
-        styles, genres, duration, position,
-        discogs_url, album_thumbnail,
-        bpm, key, notes, local_tags,
-        apple_music_url, duration_seconds, username, friend_id, release_id
-      ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,
-        $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
-      )
-      ON CONFLICT (track_id, username)
-      DO UPDATE SET
-        title           = EXCLUDED.title,
-        artist          = EXCLUDED.artist,
-        album           = EXCLUDED.album,
-        year            = EXCLUDED.year,
-        styles          = EXCLUDED.styles,
-        genres          = EXCLUDED.genres,
-        duration        = EXCLUDED.duration,
-        position        = EXCLUDED.position,
-        discogs_url     = EXCLUDED.discogs_url,
-        album_thumbnail = EXCLUDED.album_thumbnail,
-        duration_seconds = EXCLUDED.duration_seconds,
-        friend_id       = EXCLUDED.friend_id,
-        release_id      = EXCLUDED.release_id
-        -- Note: URL fields (apple_music_url, youtube_url, spotify_url, soundcloud_url, local_audio_url)
-        -- are intentionally excluded from updates to preserve manually-added URLs
-      RETURNING *;
-      `,
-      [
-        track.track_id,
-        track.title,
-        track.artist,
-        track.album,
-        track.year,
-        track.styles,
-        track.genres,
-        track.duration,
-        track.position,
-        track.discogs_url,
-        track.album_thumbnail,
-        track.bpm,
-        track.key,
-        track.notes,
-        track.local_tags,
-        track.apple_music_url,
-        track.duration_seconds,
-        track.username,
-        friendId,
-        track.release_id,
-      ]
-    );
-    if (insertedRows.length !== 1) {
+    try {
+      const row = await trackRepository.upsertDiscogsTrackByTrackIdUsername(
+        track,
+        friendId
+      );
+      upserted.push(row);
+    } catch (error) {
       console.warn(
-        `[Discogs Index] Expected 1 row for ${track.track_id}@${track.username}, got ${insertedRows.length}`
+        `[Discogs Index] Failed to upsert ${track.track_id}@${track.username}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
       );
     }
-    upserted.push(insertedRows[0]);
   }
+
   return upserted;
 }

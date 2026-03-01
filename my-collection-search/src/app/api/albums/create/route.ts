@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
         date_changed: now,
       };
 
-      const createdAlbum = await upsertAlbum(client as never, albumToUpsert);
+      const createdAlbum = await upsertAlbum(client, albumToUpsert);
 
       // Insert tracks
       const createdTracks: Track[] = [];

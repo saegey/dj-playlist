@@ -8,9 +8,11 @@
  * Reranking and scoring will be implemented in Phase 2.
  */
 
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import {
+  recommendationRepository,
+  type RecommendationCandidateRow,
+} from "@/services/recommendationRepository";
+import { embeddingsRepository } from "@/services/embeddingsRepository";
 
 /**
  * Options for candidate retrieval
@@ -103,26 +105,7 @@ export interface RetrieveCandidatesResult {
 /**
  * Internal: Result from a single embedding query
  */
-interface EmbeddingQueryResult {
-  track_id: string;
-  friend_id: number;
-  distance: number;
-  title: string;
-  artist: string;
-  album: string;
-  year: string | null;
-  bpm: number | null;
-  key: string | null;
-  genres: string[];
-  styles: string[];
-  local_tags: string;
-  danceability: number | null;
-  mood_happy: number | null;
-  mood_sad: number | null;
-  mood_relaxed: number | null;
-  mood_aggressive: number | null;
-  star_rating: number | null;
-}
+type EmbeddingQueryResult = RecommendationCandidateRow;
 
 /**
  * Convert cosine distance [0..2] to similarity [0..1]
@@ -174,84 +157,24 @@ function parseTags(localTags: string): string[] {
   return localTags.split(",").map(tag => tag.trim()).filter(Boolean);
 }
 
-/**
- * Query similar tracks by identity embedding
- */
 async function queryIdentitySimilar(
   seedTrackId: string,
   seedFriendId: number,
   limit: number,
   ivfflatProbes: number
 ): Promise<EmbeddingQueryResult[]> {
-  // Set ivfflat probes for this query
-  await pool.query(`SET ivfflat.probes = ${ivfflatProbes}`);
-
-  // Get seed embedding
-  const embeddingResult = await pool.query(
-    `SELECT embedding FROM track_embeddings
-     WHERE track_id = $1 AND friend_id = $2 AND embedding_type = 'identity'`,
-    [seedTrackId, seedFriendId]
-  );
-
-  if (embeddingResult.rows.length === 0) {
-    console.warn(`[RecommendationCandidateRetriever] No identity embedding for seed track ${seedTrackId}`);
-    return [];
+  const rows = await recommendationRepository.findIdentitySimilar({
+    seedTrackId,
+    seedFriendId,
+    limit,
+    ivfflatProbes,
+  });
+  if (rows.length === 0) {
+    console.warn(
+      `[RecommendationCandidateRetriever] No identity embedding for seed track ${seedTrackId}`
+    );
   }
-
-  const seedEmbedding = embeddingResult.rows[0].embedding;
-
-  // Query similar tracks
-  const query = `
-    SELECT
-      t.track_id,
-      t.friend_id,
-      t.title,
-      t.artist,
-      t.album,
-      t.year,
-      t.bpm,
-      t.key,
-      t.genres,
-      t.styles,
-      t.local_tags,
-      t.danceability,
-      t.mood_happy,
-      t.mood_sad,
-      t.mood_relaxed,
-      t.mood_aggressive,
-      t.star_rating,
-      te.embedding <=> $1 AS distance
-    FROM track_embeddings te
-    JOIN tracks t ON te.track_id = t.track_id AND te.friend_id = t.friend_id
-    WHERE te.embedding_type = 'identity'
-      AND NOT (te.track_id = $2 AND te.friend_id = $3)
-    ORDER BY te.embedding <=> $1
-    LIMIT $4
-  `;
-
-  const result = await pool.query(query, [seedEmbedding, seedTrackId, seedFriendId, limit]);
-  return result.rows;
-}
-
-function buildSeedValues(seedTracks: SeedTrackRef[]): {
-  valuesClause: string;
-  params: Array<string | number>;
-  limitParamIndex: number;
-} {
-  const params: Array<string | number> = [];
-  const tuples: string[] = [];
-
-  for (let i = 0; i < seedTracks.length; i += 1) {
-    const offset = i * 2;
-    tuples.push(`($${offset + 1}::text, $${offset + 2}::integer)`);
-    params.push(seedTracks[i].trackId, seedTracks[i].friendId);
-  }
-
-  return {
-    valuesClause: tuples.join(", "),
-    params,
-    limitParamIndex: seedTracks.length * 2 + 1,
-  };
+  return rows;
 }
 
 async function queryIdentitySimilarByCentroid(
@@ -259,115 +182,31 @@ async function queryIdentitySimilarByCentroid(
   limit: number,
   ivfflatProbes: number
 ): Promise<EmbeddingQueryResult[]> {
-  await pool.query(`SET ivfflat.probes = ${ivfflatProbes}`);
-
-  const { valuesClause, params, limitParamIndex } = buildSeedValues(seedTracks);
-  const query = `
-    WITH seeds(track_id, friend_id) AS (
-      VALUES ${valuesClause}
-    ),
-    seed_embedding AS (
-      SELECT AVG(te.embedding) AS embedding
-      FROM track_embeddings te
-      JOIN seeds s
-        ON te.track_id = s.track_id
-       AND te.friend_id = s.friend_id
-      WHERE te.embedding_type = 'identity'
-    )
-    SELECT
-      t.track_id,
-      t.friend_id,
-      t.title,
-      t.artist,
-      t.album,
-      t.year,
-      t.bpm,
-      t.key,
-      t.genres,
-      t.styles,
-      t.local_tags,
-      t.danceability,
-      t.mood_happy,
-      t.mood_sad,
-      t.mood_relaxed,
-      t.mood_aggressive,
-      t.star_rating,
-      te.embedding <=> se.embedding AS distance
-    FROM track_embeddings te
-    JOIN tracks t ON te.track_id = t.track_id AND te.friend_id = t.friend_id
-    CROSS JOIN seed_embedding se
-    WHERE te.embedding_type = 'identity'
-      AND se.embedding IS NOT NULL
-      AND NOT EXISTS (
-        SELECT 1
-        FROM seeds s
-        WHERE s.track_id = te.track_id AND s.friend_id = te.friend_id
-      )
-    ORDER BY te.embedding <=> se.embedding
-    LIMIT $${limitParamIndex}
-  `;
-
-  const result = await pool.query(query, [...params, limit]);
-  return result.rows;
+  return recommendationRepository.findIdentitySimilarByCentroid({
+    seedTracks,
+    limit,
+    ivfflatProbes,
+  });
 }
 
-/**
- * Query similar tracks by audio vibe embedding
- */
 async function queryAudioSimilar(
   seedTrackId: string,
   seedFriendId: number,
   limit: number,
   ivfflatProbes: number
 ): Promise<EmbeddingQueryResult[]> {
-  // Set ivfflat probes for this query
-  await pool.query(`SET ivfflat.probes = ${ivfflatProbes}`);
-
-  // Get seed embedding
-  const embeddingResult = await pool.query(
-    `SELECT embedding FROM track_embeddings
-     WHERE track_id = $1 AND friend_id = $2 AND embedding_type = 'audio_vibe'`,
-    [seedTrackId, seedFriendId]
-  );
-
-  if (embeddingResult.rows.length === 0) {
-    console.warn(`[RecommendationCandidateRetriever] No audio_vibe embedding for seed track ${seedTrackId}`);
-    return [];
+  const rows = await recommendationRepository.findAudioSimilar({
+    seedTrackId,
+    seedFriendId,
+    limit,
+    ivfflatProbes,
+  });
+  if (rows.length === 0) {
+    console.warn(
+      `[RecommendationCandidateRetriever] No audio_vibe embedding for seed track ${seedTrackId}`
+    );
   }
-
-  const seedEmbedding = embeddingResult.rows[0].embedding;
-
-  // Query similar tracks
-  const query = `
-    SELECT
-      t.track_id,
-      t.friend_id,
-      t.title,
-      t.artist,
-      t.album,
-      t.year,
-      t.bpm,
-      t.key,
-      t.genres,
-      t.styles,
-      t.local_tags,
-      t.danceability,
-      t.mood_happy,
-      t.mood_sad,
-      t.mood_relaxed,
-      t.mood_aggressive,
-      t.star_rating,
-      te.embedding <=> $1 AS distance
-    FROM track_embeddings te
-    JOIN tracks t ON te.track_id = t.track_id AND te.friend_id = t.friend_id
-    WHERE te.embedding_type = 'audio_vibe'
-      AND NOT (te.track_id = $2 AND te.friend_id = $3)
-    ORDER BY te.embedding <=> $1
-    LIMIT $4
-  `;
-
-  const result = await pool.query(query, [seedEmbedding, seedTrackId, seedFriendId, limit]);
-  return result.rows;
+  return rows;
 }
 
 async function queryAudioSimilarByCentroid(
@@ -375,56 +214,11 @@ async function queryAudioSimilarByCentroid(
   limit: number,
   ivfflatProbes: number
 ): Promise<EmbeddingQueryResult[]> {
-  await pool.query(`SET ivfflat.probes = ${ivfflatProbes}`);
-
-  const { valuesClause, params, limitParamIndex } = buildSeedValues(seedTracks);
-  const query = `
-    WITH seeds(track_id, friend_id) AS (
-      VALUES ${valuesClause}
-    ),
-    seed_embedding AS (
-      SELECT AVG(te.embedding) AS embedding
-      FROM track_embeddings te
-      JOIN seeds s
-        ON te.track_id = s.track_id
-       AND te.friend_id = s.friend_id
-      WHERE te.embedding_type = 'audio_vibe'
-    )
-    SELECT
-      t.track_id,
-      t.friend_id,
-      t.title,
-      t.artist,
-      t.album,
-      t.year,
-      t.bpm,
-      t.key,
-      t.genres,
-      t.styles,
-      t.local_tags,
-      t.danceability,
-      t.mood_happy,
-      t.mood_sad,
-      t.mood_relaxed,
-      t.mood_aggressive,
-      t.star_rating,
-      te.embedding <=> se.embedding AS distance
-    FROM track_embeddings te
-    JOIN tracks t ON te.track_id = t.track_id AND te.friend_id = t.friend_id
-    CROSS JOIN seed_embedding se
-    WHERE te.embedding_type = 'audio_vibe'
-      AND se.embedding IS NOT NULL
-      AND NOT EXISTS (
-        SELECT 1
-        FROM seeds s
-        WHERE s.track_id = te.track_id AND s.friend_id = te.friend_id
-      )
-    ORDER BY te.embedding <=> se.embedding
-    LIMIT $${limitParamIndex}
-  `;
-
-  const result = await pool.query(query, [...params, limit]);
-  return result.rows;
+  return recommendationRepository.findAudioSimilarByCentroid({
+    seedTracks,
+    limit,
+    ivfflatProbes,
+  });
 }
 
 /**
@@ -654,17 +448,13 @@ export async function hasEmbeddings(
   trackId: string,
   friendId: number
 ): Promise<{ identity: boolean; audio: boolean }> {
-  const result = await pool.query(
-    `SELECT embedding_type FROM track_embeddings
-     WHERE track_id = $1 AND friend_id = $2`,
-    [trackId, friendId]
+  const types = new Set(
+    await embeddingsRepository.listEmbeddingTypesForTrack(trackId, friendId)
   );
 
-  const types = new Set(result.rows.map(r => r.embedding_type));
-
   return {
-    identity: types.has('identity'),
-    audio: types.has('audio_vibe'),
+    identity: types.has("identity"),
+    audio: types.has("audio_vibe"),
   };
 }
 
@@ -683,19 +473,9 @@ export async function hasEmbeddingsForSeedTracks(
     return { identity: false, audio: false };
   }
 
-  const { valuesClause, params } = buildSeedValues(dedupedSeedTracks);
-  const query = `
-    WITH seeds(track_id, friend_id) AS (
-      VALUES ${valuesClause}
-    )
-    SELECT DISTINCT te.embedding_type
-    FROM track_embeddings te
-    JOIN seeds s
-      ON te.track_id = s.track_id
-     AND te.friend_id = s.friend_id
-  `;
-  const result = await pool.query(query, params);
-  const types = new Set(result.rows.map((row) => row.embedding_type));
+  const types = new Set(
+    await embeddingsRepository.listEmbeddingTypesForTrackPairs(dedupedSeedTracks)
+  );
   return {
     identity: types.has("identity"),
     audio: types.has("audio_vibe"),

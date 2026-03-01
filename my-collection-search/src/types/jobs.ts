@@ -1,4 +1,4 @@
-import type { AnalysisResult } from "@/services/analysisService";
+import type { AnalysisResult } from "@/types/analysis";
 
 export type JobData = {
   track_id: string;

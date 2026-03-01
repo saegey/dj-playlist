@@ -208,6 +208,108 @@ export class EmbeddingsRepository {
       distance: Number(row.distance),
     }));
   }
+
+  async upsertTrackEmbedding(params: {
+    trackId: string;
+    friendId: number;
+    embeddingType: "identity" | "audio_vibe";
+    model: string;
+    dims: number;
+    embedding: number[];
+    sourceHash: string;
+    identityText: string;
+  }): Promise<void> {
+    const pgVector = `[${params.embedding.join(",")}]`;
+    await dbQuery(
+      `
+      INSERT INTO track_embeddings (
+        track_id, friend_id, embedding_type, model, dims, embedding, source_hash, identity_text, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
+      ON CONFLICT (track_id, friend_id, embedding_type)
+      DO UPDATE SET
+        embedding = EXCLUDED.embedding,
+        source_hash = EXCLUDED.source_hash,
+        identity_text = EXCLUDED.identity_text,
+        model = EXCLUDED.model,
+        dims = EXCLUDED.dims,
+        updated_at = CURRENT_TIMESTAMP
+      `,
+      [
+        params.trackId,
+        params.friendId,
+        params.embeddingType,
+        params.model,
+        params.dims,
+        pgVector,
+        params.sourceHash,
+        params.identityText,
+      ]
+    );
+  }
+
+  async findEmbeddingSourceHash(
+    trackId: string,
+    friendId: number,
+    embeddingType: "identity" | "audio_vibe"
+  ): Promise<string | null> {
+    const result = await dbQuery<{ source_hash: string | null }>(
+      `
+      SELECT source_hash
+      FROM track_embeddings
+      WHERE track_id = $1 AND friend_id = $2 AND embedding_type = $3
+      LIMIT 1
+      `,
+      [trackId, friendId, embeddingType]
+    );
+    return result.rows[0]?.source_hash ?? null;
+  }
+
+  async listEmbeddingTypesForTrack(
+    trackId: string,
+    friendId: number
+  ): Promise<string[]> {
+    const result = await dbQuery<{ embedding_type: string }>(
+      `
+      SELECT embedding_type
+      FROM track_embeddings
+      WHERE track_id = $1 AND friend_id = $2
+      `,
+      [trackId, friendId]
+    );
+    return result.rows.map((row) => row.embedding_type);
+  }
+
+  async listEmbeddingTypesForTrackPairs(
+    seedTracks: Array<{ trackId: string; friendId: number }>
+  ): Promise<string[]> {
+    if (seedTracks.length === 0) return [];
+
+    const values: string[] = [];
+    const params: Array<string | number> = [];
+
+    for (let i = 0; i < seedTracks.length; i += 1) {
+      const offset = i * 2;
+      values.push(`($${offset + 1}::text, $${offset + 2}::integer)`);
+      params.push(seedTracks[i].trackId, seedTracks[i].friendId);
+    }
+
+    const result = await dbQuery<{ embedding_type: string }>(
+      `
+      WITH seeds(track_id, friend_id) AS (
+        VALUES ${values.join(", ")}
+      )
+      SELECT DISTINCT te.embedding_type
+      FROM track_embeddings te
+      JOIN seeds s
+        ON te.track_id = s.track_id
+       AND te.friend_id = s.friend_id
+      `,
+      params
+    );
+
+    return result.rows.map((row) => row.embedding_type);
+  }
 }
 
 export const embeddingsRepository = new EmbeddingsRepository();

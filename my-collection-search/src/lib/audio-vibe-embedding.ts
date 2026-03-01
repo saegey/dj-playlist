@@ -5,7 +5,6 @@
  */
 
 import OpenAI from "openai";
-import { Pool } from "pg";
 import crypto from "crypto";
 import {
   normalizeBpmRange,
@@ -24,12 +23,12 @@ import {
 } from "./audio-vibe-normalization";
 import { Track } from "@/types/track";
 import { readEssentiaAnalysis } from "./essentia-storage";
+import { trackRepository } from "@/services/trackRepository";
+import { embeddingsRepository } from "@/services/embeddingsRepository";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "My API Key",
 });
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 /**
  * Essentia analysis structure (subset we care about)
@@ -249,25 +248,16 @@ export async function storeAudioVibeEmbedding(
   model = "text-embedding-3-small",
   dims = 1536
 ): Promise<void> {
-  const pgVector = `[${embedding.join(",")}]`;
-
-  await pool.query(
-    `
-    INSERT INTO track_embeddings (
-      track_id, friend_id, embedding_type, model, dims, embedding, source_hash, identity_text, updated_at
-    )
-    VALUES ($1, $2, 'audio_vibe', $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
-    ON CONFLICT (track_id, friend_id, embedding_type)
-    DO UPDATE SET
-      embedding = EXCLUDED.embedding,
-      source_hash = EXCLUDED.source_hash,
-      identity_text = EXCLUDED.identity_text,
-      model = EXCLUDED.model,
-      dims = EXCLUDED.dims,
-      updated_at = CURRENT_TIMESTAMP
-  `,
-    [track_id, friend_id, model, dims, pgVector, sourceHash, vibeText]
-  );
+  await embeddingsRepository.upsertTrackEmbedding({
+    trackId: track_id,
+    friendId: friend_id,
+    embeddingType: "audio_vibe",
+    model,
+    dims,
+    embedding,
+    sourceHash,
+    identityText: vibeText,
+  });
 }
 
 /**
@@ -278,20 +268,16 @@ export async function needsAudioVibeUpdate(
   friend_id: number,
   newSourceHash: string
 ): Promise<boolean> {
-  const result = await pool.query(
-    `
-    SELECT source_hash
-    FROM track_embeddings
-    WHERE track_id = $1 AND friend_id = $2 AND embedding_type = 'audio_vibe'
-  `,
-    [track_id, friend_id]
+  const sourceHash = await embeddingsRepository.findEmbeddingSourceHash(
+    track_id,
+    friend_id,
+    "audio_vibe"
   );
-
-  if (result.rows.length === 0) {
+  if (!sourceHash) {
     return true; // No embedding exists
   }
 
-  return result.rows[0].source_hash !== newSourceHash;
+  return sourceHash !== newSourceHash;
 }
 
 /**
@@ -317,13 +303,10 @@ export async function generateAndStoreAudioVibeEmbedding(
   friend_id: number,
   forceUpdate = false
 ): Promise<{ updated: boolean; reason: string }> {
-  // Fetch track
-  const result = await pool.query(
-    "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2",
-    [track_id, friend_id]
+  const track = await trackRepository.findTrackByTrackIdAndFriendIdRaw(
+    track_id,
+    friend_id
   );
-
-  const track = result.rows[0];
   if (!track) {
     throw new Error(`Track not found: ${track_id} (friend_id: ${friend_id})`);
   }
@@ -371,12 +354,10 @@ export async function getAudioVibePreview(
   track_id: string,
   friend_id: number
 ): Promise<{ vibeText: string; vibeData: AudioVibeData }> {
-  const result = await pool.query(
-    "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2",
-    [track_id, friend_id]
+  const track = await trackRepository.findTrackByTrackIdAndFriendIdRaw(
+    track_id,
+    friend_id
   );
-
-  const track = result.rows[0];
   if (!track) {
     throw new Error(`Track not found: ${track_id} (friend_id: ${friend_id})`);
   }

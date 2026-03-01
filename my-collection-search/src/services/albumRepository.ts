@@ -12,6 +12,31 @@ export type AlbumCleanupRow = {
   track_count?: number;
 };
 
+export type AlbumUpsertInput = Pick<
+  Album,
+  | "release_id"
+  | "friend_id"
+  | "title"
+  | "artist"
+  | "track_count"
+  | "year"
+  | "genres"
+  | "styles"
+  | "album_thumbnail"
+  | "discogs_url"
+  | "date_added"
+  | "date_changed"
+  | "label"
+  | "catalog_number"
+  | "country"
+  | "format"
+  | "album_notes"
+  | "album_rating"
+  | "purchase_price"
+  | "condition"
+  | "library_identifier"
+>;
+
 export class AlbumRepository {
   async getFriendUsernamesByIds(friendIds: number[]): Promise<Map<number, string>> {
     const usernameByFriendId = new Map<number, string>();
@@ -121,6 +146,85 @@ export class AlbumRepository {
       [username]
     );
     return inserted.rows[0].id;
+  }
+
+  async upsertAlbumRecord(
+    db: Queryable,
+    album: AlbumUpsertInput,
+    options?: { preserveManualFields?: boolean }
+  ): Promise<Album> {
+    const preserveManualFields = options?.preserveManualFields ?? false;
+    const manualUpdateSql = preserveManualFields
+      ? `
+        album_notes = albums.album_notes,
+        album_rating = albums.album_rating,
+        purchase_price = albums.purchase_price,
+        condition = albums.condition,
+        library_identifier = albums.library_identifier,
+      `
+      : `
+        album_notes = COALESCE(EXCLUDED.album_notes, albums.album_notes),
+        album_rating = COALESCE(EXCLUDED.album_rating, albums.album_rating),
+        purchase_price = COALESCE(EXCLUDED.purchase_price, albums.purchase_price),
+        condition = COALESCE(EXCLUDED.condition, albums.condition),
+        library_identifier = COALESCE(EXCLUDED.library_identifier, albums.library_identifier),
+      `;
+
+    const result = await db.query(
+      `
+      INSERT INTO albums (
+        release_id, friend_id, title, artist, year, genres, styles,
+        album_thumbnail, discogs_url, date_added, date_changed,
+        track_count, label, catalog_number, country, format,
+        album_notes, album_rating, purchase_price, condition, library_identifier
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      ON CONFLICT (release_id, friend_id)
+      DO UPDATE SET
+        title = EXCLUDED.title,
+        artist = EXCLUDED.artist,
+        year = EXCLUDED.year,
+        genres = EXCLUDED.genres,
+        styles = EXCLUDED.styles,
+        album_thumbnail = EXCLUDED.album_thumbnail,
+        discogs_url = EXCLUDED.discogs_url,
+        date_added = EXCLUDED.date_added,
+        date_changed = EXCLUDED.date_changed,
+        track_count = EXCLUDED.track_count,
+        label = EXCLUDED.label,
+        catalog_number = EXCLUDED.catalog_number,
+        country = EXCLUDED.country,
+        format = EXCLUDED.format,
+        ${manualUpdateSql}
+        updated_at = current_timestamp
+      RETURNING *
+      `,
+      [
+        album.release_id,
+        album.friend_id,
+        album.title,
+        album.artist,
+        album.year,
+        album.genres,
+        album.styles,
+        album.album_thumbnail,
+        album.discogs_url,
+        album.date_added,
+        album.date_changed,
+        album.track_count,
+        album.label,
+        album.catalog_number,
+        album.country,
+        album.format,
+        album.album_notes ?? null,
+        album.album_rating ?? null,
+        album.purchase_price ?? null,
+        album.condition ?? null,
+        album.library_identifier ?? null,
+      ]
+    );
+
+    return result.rows[0] as Album;
   }
 
   async updateAlbumFields(

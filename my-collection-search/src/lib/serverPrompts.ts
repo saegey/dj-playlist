@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { Pool } from "pg";
+import { settingsRepository } from "@/services/settingsRepository";
 
 const PROMPT_PATH = path.join(
   process.cwd(),
@@ -29,20 +29,11 @@ export async function getTrackMetadataPromptForFriend(
   const defaultPrompt = getDefaultTrackMetadataPrompt();
   if (!friendId || Number.isNaN(friendId)) return defaultPrompt;
 
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   try {
-    const { rows } = await pool.query(
-      "SELECT prompt FROM ai_prompt_settings WHERE friend_id = $1",
-      [friendId]
-    );
-    if (rows.length > 0 && typeof rows[0].prompt === "string") {
-      return rows[0].prompt;
-    }
-    return defaultPrompt;
+    const prompt = await settingsRepository.findAiPromptByFriendId(friendId);
+    return typeof prompt === "string" ? prompt : defaultPrompt;
   } catch (err) {
     console.error("Failed to fetch AI prompt settings:", err);
     return defaultPrompt;
-  } finally {
-    await pool.end();
   }
 }

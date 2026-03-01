@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { dbPool } from "@/lib/serverDb";
 import { getManifestFiles, getAllTracksFromManifests } from "@/services/discogsManifestService";
 import { getOrCreateTracksIndex, configureMeiliIndex } from "@/services/meiliIndexService";
 import { upsertTracks } from "@/services/trackUpsertService";
@@ -25,7 +24,7 @@ export async function POST() {
     await configureMeiliIndex(index, meiliClient);
 
     // 3. Upsert into Postgres
-    const upserted = await upsertTracks(dbPool, allTracks);
+    const upserted = await upsertTracks(allTracks);
 
     // 4. Add to Meili
     await addTracksToMeili(index, upserted);

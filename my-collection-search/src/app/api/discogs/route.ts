@@ -314,7 +314,7 @@ export async function GET(request: NextRequest) {
               controller.enqueue(
                 encoder.encode(`Upserting tracks to Postgres...\n\n`)
               );
-              const upserted = await upsertTracks(dbPool, allTracks);
+              const upserted = await upsertTracks(allTracks);
               controller.enqueue(
                 encoder.encode(`Upserted ${upserted.length} tracks to Postgres\n\n`)
               );
@@ -351,7 +351,6 @@ export async function GET(request: NextRequest) {
                   encoder.encode(`Loading albums from new releases...\n`)
                 );
                 const allAlbums = await getAlbumsFromManifestReleases(
-                  dbPool,
                   username,
                   newReleases
                 );

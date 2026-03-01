@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
         library_identifier: album.library_identifier,
       };
 
-      const updatedAlbum = await upsertAlbum(client as never, albumToUpsert);
+      const updatedAlbum = await upsertAlbum(client, albumToUpsert);
 
       // Get existing track IDs for this album
       const existingTrackIds = new Set(

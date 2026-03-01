@@ -91,7 +91,7 @@ export async function POST() {
               };
 
               // Upsert album to database
-              await upsertAlbum(dbPool as never, albumRecord);
+              await upsertAlbum(dbPool, albumRecord);
 
               totalAlbums++;
               if (totalAlbums % 10 === 0) {

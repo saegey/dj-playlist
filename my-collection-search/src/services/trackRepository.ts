@@ -1,5 +1,5 @@
 import { dbQuery } from "@/lib/serverDb";
-import type { Track } from "@/types/track";
+import type { DiscogsTrack, Track } from "@/types/track";
 
 export type TrackLocalAudioRow = Pick<
   Track,
@@ -40,6 +40,13 @@ export type UpdateTrackInput = TrackRef & UpdatableTrackFields;
 
 export type TrackWithLibraryIdentifierRow = Track & {
   library_identifier?: string | null;
+};
+
+export type TrackWithAlbumMetadataRow = Track & {
+  album_country?: string | null;
+  album_label?: string | null;
+  album_genres?: string[] | null;
+  album_styles?: string[] | null;
 };
 
 export type TrackPlaylistMembershipRow = {
@@ -95,6 +102,71 @@ const UPDATABLE_COLUMNS = {
 } as const;
 
 export class TrackRepository {
+  async upsertDiscogsTrackByTrackIdUsername(
+    track: DiscogsTrack,
+    friendId: number
+  ): Promise<Track> {
+    const { rows } = await dbQuery<Track>(
+      `
+      INSERT INTO tracks (
+        track_id, title, artist, album, year,
+        styles, genres, duration, position,
+        discogs_url, album_thumbnail,
+        bpm, key, notes, local_tags,
+        apple_music_url, duration_seconds, username, friend_id, release_id
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,
+        $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20
+      )
+      ON CONFLICT (track_id, username)
+      DO UPDATE SET
+        title            = EXCLUDED.title,
+        artist           = EXCLUDED.artist,
+        album            = EXCLUDED.album,
+        year             = EXCLUDED.year,
+        styles           = EXCLUDED.styles,
+        genres           = EXCLUDED.genres,
+        duration         = EXCLUDED.duration,
+        position         = EXCLUDED.position,
+        discogs_url      = EXCLUDED.discogs_url,
+        album_thumbnail  = EXCLUDED.album_thumbnail,
+        duration_seconds = EXCLUDED.duration_seconds,
+        friend_id        = EXCLUDED.friend_id,
+        release_id       = EXCLUDED.release_id
+        -- URL fields are intentionally excluded from updates to preserve manually-added values.
+      RETURNING *
+      `,
+      [
+        track.track_id,
+        track.title,
+        track.artist,
+        track.album,
+        track.year,
+        track.styles,
+        track.genres,
+        track.duration,
+        track.position,
+        track.discogs_url,
+        track.album_thumbnail,
+        track.bpm,
+        track.key,
+        track.notes,
+        track.local_tags,
+        track.apple_music_url,
+        track.duration_seconds,
+        track.username,
+        friendId,
+        track.release_id,
+      ]
+    );
+    if (!rows[0]) {
+      throw new Error(
+        `Expected track upsert to return a row for ${track.track_id}@${track.username}`
+      );
+    }
+    return rows[0];
+  }
+
   async findTrackWithLocalAudio(
     trackId: string,
     friendId: number
@@ -452,6 +524,28 @@ export class TrackRepository {
   ): Promise<Track | null> {
     const { rows } = await dbQuery<Track>(
       "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2 LIMIT 1",
+      [trackId, friendId]
+    );
+    return rows[0] ?? null;
+  }
+
+  async findTrackWithAlbumMetadata(
+    trackId: string,
+    friendId: number
+  ): Promise<TrackWithAlbumMetadataRow | null> {
+    const { rows } = await dbQuery<TrackWithAlbumMetadataRow>(
+      `
+      SELECT
+        t.*,
+        a.country AS album_country,
+        a.label AS album_label,
+        a.genres AS album_genres,
+        a.styles AS album_styles
+      FROM tracks t
+      LEFT JOIN albums a ON t.release_id = a.release_id AND t.friend_id = a.friend_id
+      WHERE t.track_id = $1 AND t.friend_id = $2
+      LIMIT 1
+      `,
       [trackId, friendId]
     );
     return rows[0] ?? null;
