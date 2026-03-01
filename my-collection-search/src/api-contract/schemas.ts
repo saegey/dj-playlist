@@ -22,6 +22,46 @@ export const apiErrorSchema = z
   })
   .passthrough();
 
+export const discogsLookupQuerySchema = z.object({
+  track_id: z.string().min(1),
+  username: z.string().optional(),
+  friend_id: intFromInputSchema.optional(),
+});
+
+export const discogsLookupTrackSchema = z
+  .object({
+    position: z.string(),
+    title: z.string(),
+    duration: z.string(),
+    artists: z.array(z.object({ name: z.string() })).optional(),
+  })
+  .passthrough();
+
+export const discogsLookupReleaseSchema = z
+  .object({
+    id: z.union([z.string(), z.number()]).optional(),
+    title: z.string().optional(),
+    artists: z.array(z.object({ name: z.string() })).optional(),
+    artists_sort: z.string().optional(),
+    year: z.number().nullable().optional(),
+    styles: z.array(z.string()).optional(),
+    genres: z.array(z.string()).optional(),
+    uri: z.string().nullable().optional(),
+    thumb: z.string().nullable().optional(),
+    videos: z.array(z.object({}).passthrough()).optional(),
+    video: z.array(z.object({}).passthrough()).optional(),
+  })
+  .passthrough();
+
+export const discogsLookupResponseSchema = z
+  .object({
+    releaseId: z.string().optional(),
+    filePath: z.string().optional(),
+    release: discogsLookupReleaseSchema.nullable().optional(),
+    matchedTrack: discogsLookupTrackSchema.nullable().optional(),
+  })
+  .passthrough();
+
 export const playlistTrackRefSchema = z.object({
   track_id: z.string(),
   friend_id: z.number().int().nullable().optional(),

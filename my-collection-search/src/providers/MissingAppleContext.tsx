@@ -18,6 +18,7 @@ import type { TrackEditFormProps } from "@/components/track-edit/types";
 import { fetchAppleMusicAISearch } from "@/services/aiService";
 import { fetchMissingAppleTracks } from "@/services/trackService";
 import type { DiscogsLookupResult } from "@/types/discogs";
+import { lookupDiscogsRelease } from "@/services/internalApi/discogs";
 
 type AppleResultsMap = Record<string, AppleMusicResult[] | null | undefined>;
 
@@ -231,17 +232,18 @@ export function MissingAppleProvider({
         return discogsByTrack[id];
       }
 
-      const params = new URLSearchParams({ track_id: id });
-      if (selectedUsername)
-        params.set("friend_id", selectedUsername.id.toString());
-      const res = await fetch(`/api/ai/discogs?${params.toString()}`);
-      if (!res.ok) {
+      try {
+        const data = (await lookupDiscogsRelease({
+          track_id: id,
+          username: selectedUsername?.username,
+          friend_id: selectedUsername?.id,
+        })) as DiscogsLookupResult;
+        setDiscogsByTrack((prev) => ({ ...prev, [id]: data }));
+        return data;
+      } catch {
         setDiscogsByTrack((prev) => ({ ...prev, [id]: null }));
         return null;
       }
-      const data: DiscogsLookupResult = await res.json();
-      setDiscogsByTrack((prev) => ({ ...prev, [id]: data }));
-      return data;
     },
     [tracks, currentIndex, selectedUsername, discogsByTrack]
   );

@@ -1,3 +1,8 @@
+import { z } from "zod";
+import {
+  discogsLookupQuerySchema,
+  discogsLookupResponseSchema,
+} from "@/api-contract/schemas";
 import { http } from "../http";
 import { streamLines } from "../sse";
 
@@ -53,6 +58,9 @@ export type DeleteReleasesResponse = {
   deletedFromMeili: number;
 };
 
+export type DiscogsLookupQuery = z.input<typeof discogsLookupQuerySchema>;
+export type DiscogsLookupResponse = z.infer<typeof discogsLookupResponseSchema>;
+
 export function updateDiscogsIndex() {
   return http<IndexResult>("/api/discogs/update-index", { method: "POST" });
 }
@@ -85,4 +93,19 @@ export async function syncDiscogsStream(
     ? `/api/discogs?username=${encodeURIComponent(username)}`
     : "/api/discogs";
   await streamLines(url, { method: "GET" }, onLine);
+}
+
+export async function lookupDiscogsRelease(
+  query: DiscogsLookupQuery
+): Promise<DiscogsLookupResponse> {
+  const params = new URLSearchParams();
+  params.set("track_id", query.track_id);
+  if (query.username) params.set("username", query.username);
+  if (typeof query.friend_id === "number") {
+    params.set("friend_id", String(query.friend_id));
+  }
+  return await http<DiscogsLookupResponse>(`/api/ai/discogs?${params.toString()}`, {
+    method: "GET",
+    cache: "no-store",
+  });
 }

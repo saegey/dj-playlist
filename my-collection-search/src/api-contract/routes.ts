@@ -19,6 +19,8 @@ import {
   bulkNotesResponseSchema,
   coverArtBackfillBodySchema,
   coverArtBackfillResponseSchema,
+  discogsLookupQuerySchema,
+  discogsLookupResponseSchema,
   durationBackfillResponseSchema,
   embeddingPromptSettingsGetResponseSchema,
   embeddingPromptSettingsPutBodySchema,
@@ -2117,6 +2119,75 @@ export const apiContractRoutes: ApiContractRoute[] = [
         },
         "400": {
           description: "Invalid payload",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "lookupAiDiscogsRelease",
+    method: "get",
+    path: "/api/ai/discogs",
+    summary: "Lookup Discogs release and matched track by track_id",
+    tags: ["AI"],
+    querySchema: discogsLookupQuerySchema,
+    successSchema: discogsLookupResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "track_id",
+          in: "query",
+          required: true,
+          schema: { type: "string" },
+        },
+        {
+          name: "username",
+          in: "query",
+          required: false,
+          schema: { type: "string" },
+        },
+        {
+          name: "friend_id",
+          in: "query",
+          required: false,
+          schema: { type: "integer" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Discogs lookup result",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  releaseId: { type: "string" },
+                  filePath: { type: "string" },
+                  release: { type: "object", additionalProperties: true },
+                  matchedTrack: { type: "object", additionalProperties: true },
+                },
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Missing or invalid query parameter",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "404": {
+          description: "Discogs release file not found",
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
