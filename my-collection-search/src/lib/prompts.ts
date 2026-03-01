@@ -1,8 +1,18 @@
 export function buildTrackMetadataPrompt(
   args: {
-  title?: string;
-  artist?: string;
-  album?: string;
+    title?: string;
+    artist?: string;
+    album?: string;
+    year?: string | number | null;
+    duration?: string | null;
+    duration_seconds?: number | null;
+    isrc?: string | null;
+    release_id?: string | null;
+    discogs_url?: string | null;
+    apple_music_url?: string | null;
+    youtube_url?: string | null;
+    soundcloud_url?: string | null;
+    spotify_url?: string | null;
   },
   basePrompt: string
 ): string {
@@ -10,10 +20,41 @@ export function buildTrackMetadataPrompt(
   const artist = args.artist ?? "";
   const album = args.album ?? "";
   const preamble = basePrompt || "";
+  const rawYear =
+    args.year === null || args.year === undefined ? "" : String(args.year).trim();
+  const rawDuration = args.duration ? String(args.duration).trim() : "";
+  const rawDurationSeconds =
+    typeof args.duration_seconds === "number" && Number.isFinite(args.duration_seconds)
+      ? String(Math.round(args.duration_seconds))
+      : "";
+  const versionMarkers = [title, album]
+    .filter(Boolean)
+    .join(" ")
+    .match(/\(([^)]+)\)|\b(remix|mix|edit|version|live|instrumental|dub|radio)\b/gi);
+
+  const metadataLines = [
+    `Title: ${title}`,
+    `Artist: ${artist}`,
+    `Album: ${album}`,
+    rawYear ? `Year: ${rawYear}` : "",
+    rawDuration ? `Duration: ${rawDuration}` : "",
+    rawDurationSeconds ? `Duration Seconds: ${rawDurationSeconds}` : "",
+    args.isrc ? `ISRC: ${args.isrc}` : "",
+    args.release_id ? `Discogs Release ID: ${args.release_id}` : "",
+    args.discogs_url ? `Discogs URL: ${args.discogs_url}` : "",
+    args.apple_music_url ? `Apple Music URL: ${args.apple_music_url}` : "",
+    args.youtube_url ? `YouTube URL: ${args.youtube_url}` : "",
+    args.soundcloud_url ? `SoundCloud URL: ${args.soundcloud_url}` : "",
+    args.spotify_url ? `Spotify URL: ${args.spotify_url}` : "",
+    versionMarkers?.length
+      ? `Version Markers: ${versionMarkers.join(", ")}`
+      : "",
+  ].filter(Boolean);
+
   return (
     `${preamble}\n` +
-    `Return a JSON object with the fields: genre, notes.\n` +
-    `Title: ${title}\nArtist: ${artist}\nAlbum: ${album}`
+    `Return a JSON object with the fields: genre, notes, needs_search, artist_match_confidence.\n` +
+    `${metadataLines.join("\n")}`
   );
 }
 

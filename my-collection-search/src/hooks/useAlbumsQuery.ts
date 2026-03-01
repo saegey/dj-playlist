@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, InfiniteData } from "@tanstack/react-query";
 import {
   searchAlbums,
@@ -10,16 +11,16 @@ import {
 import { Album } from "@/types/track";
 import { AlbumSearchResponse } from "@/services/albumService";
 import { useTrackStore } from "@/stores/trackStore";
-import { useTracksCacheUpdater } from "@/hooks/useTracksCacheUpdater";
-import type { Track } from "@/types/track";
+import { useAlbumStore } from "@/stores/albumStore";
 
 /**
  * Hook for infinite scroll album search
  */
 export function useAlbumsInfiniteQuery(params: Omit<AlbumSearchParams, "offset">) {
   const limit = params.limit || 20;
+  const setAlbums = useAlbumStore((state) => state.setAlbums);
 
-  return useInfiniteQuery({
+  const query = useInfiniteQuery({
     queryKey: ["albums", "infinite", params],
     queryFn: async ({ pageParam = 0 }) => {
       return await searchAlbums({
@@ -37,14 +38,32 @@ export function useAlbumsInfiniteQuery(params: Omit<AlbumSearchParams, "offset">
     },
     initialPageParam: 0,
   });
+
+  useEffect(() => {
+    const albums = query.data?.pages.flatMap((p) => p.hits ?? []) ?? [];
+    if (albums.length > 0) {
+      setAlbums(albums);
+    }
+  }, [query.data, setAlbums]);
+
+  const albumRefs =
+    query.data?.pages.flatMap((page) =>
+      (page.hits ?? []).map((a) => ({
+        releaseId: a.release_id,
+        friendId: a.friend_id,
+      }))
+    ) ?? [];
+
+  return { ...query, albumRefs };
 }
 
 /**
  * Hook for single page album search (no infinite scroll)
  */
 export function useAlbumsQuery(params: AlbumSearchParams) {
+  const setAlbums = useAlbumStore((state) => state.setAlbums);
 
-  return useInfiniteQuery({
+  const query = useInfiniteQuery({
     queryKey: ["albums", params],
     queryFn: async () => {
       return await searchAlbums(params);
@@ -52,19 +71,60 @@ export function useAlbumsQuery(params: AlbumSearchParams) {
     getNextPageParam: () => undefined, // Disable pagination
     initialPageParam: 0,
   });
+
+  useEffect(() => {
+    const albums = query.data?.pages.flatMap((p) => p.hits ?? []) ?? [];
+    if (albums.length > 0) {
+      setAlbums(albums);
+    }
+  }, [query.data, setAlbums]);
+
+  const albumRefs =
+    query.data?.pages.flatMap((page) =>
+      (page.hits ?? []).map((a) => ({
+        releaseId: a.release_id,
+        friendId: a.friend_id,
+      }))
+    ) ?? [];
+
+  return { ...query, albumRefs };
 }
 
 /**
  * Hook for fetching a single album with its tracks
  */
 export function useAlbumDetailQuery(releaseId: string, friendId: number) {
-  return useQuery({
+  const setAlbum = useAlbumStore((state) => state.setAlbum);
+  const markAlbumHydrated = useAlbumStore((state) => state.markAlbumHydrated);
+  const { setTracks, markReleaseHydrated } = useTrackStore();
+
+  const query = useQuery({
     queryKey: ["album", releaseId, friendId],
     queryFn: async () => {
       return await getAlbumWithTracks(releaseId, friendId);
     },
     enabled: !!releaseId && !!friendId,
   });
+
+  useEffect(() => {
+    if (!query.data) return;
+    setAlbum(query.data.album);
+    if (query.data.tracks?.length) {
+      setTracks(query.data.tracks);
+    }
+    markAlbumHydrated(releaseId, friendId);
+    markReleaseHydrated(releaseId, friendId);
+  }, [
+    query.data,
+    releaseId,
+    friendId,
+    setAlbum,
+    setTracks,
+    markAlbumHydrated,
+    markReleaseHydrated,
+  ]);
+
+  return query;
 }
 
 /**
@@ -73,7 +133,7 @@ export function useAlbumDetailQuery(releaseId: string, friendId: number) {
 export function useUpdateAlbumMutation() {
   const queryClient = useQueryClient();
   const { updateTracksByRelease } = useTrackStore();
-  const { updateTracksInCache } = useTracksCacheUpdater();
+  const { setAlbum } = useAlbumStore();
 
   return useMutation({
     mutationFn: async (params: AlbumUpdateParams) => {
@@ -108,6 +168,7 @@ export function useUpdateAlbumMutation() {
           };
         }
       );
+      setAlbum(data.album);
 
       // If library_identifier was part of the update, sync tracks in store + cache
       if (variables?.library_identifier !== undefined) {
@@ -118,25 +179,6 @@ export function useUpdateAlbumMutation() {
           data.album.friend_id,
           { library_identifier: libraryIdentifier }
         );
-
-        // Also patch any track caches with the new library_identifier
-        const storeTracks = useTrackStore.getState().tracks;
-        const patches: Array<{ track_id: string } & Partial<Track>> = [];
-        for (const track of storeTracks.values()) {
-          if (
-            track.release_id === data.album.release_id &&
-            track.friend_id === data.album.friend_id
-          ) {
-            patches.push({
-              track_id: track.track_id,
-              friend_id: track.friend_id,
-              library_identifier: libraryIdentifier,
-            });
-          }
-        }
-        if (patches.length > 0) {
-          updateTracksInCache(patches);
-        }
       }
     },
   });

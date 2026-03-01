@@ -52,6 +52,8 @@ export const queryKeys = {
     mode?: string;
     page?: number;
   }) => ["tracks", args] as const,
+  trackById: (track_id: string, friend_id: number) =>
+    ["track", "by-id", track_id, friend_id] as const,
   // Root key helpers for prefix matching (invalidate/setQueriesData with exact:false)
   tracksRoot: () => ["tracks"] as const,
   playlistCounts: (ids: readonly string[]) => ["playlistCounts", ids] as const,

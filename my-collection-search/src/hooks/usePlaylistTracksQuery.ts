@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { fetchTracksByIds } from "@/services/trackService";
 import type { Track } from "@/types/track";
 import { queryKeys } from "@/lib/queryKeys";
@@ -11,7 +11,8 @@ export function usePlaylistTracksQuery(
   trackRefs: { track_id: string; friend_id: number }[],
   enabled = true
 ) {
-  const { setTracks } = useTrackStore();
+  const setTracks = useTrackStore((state) => state.setTracks);
+  const tracksMap = useTrackStore((state) => state.tracks);
   
   const query = useQuery<Track[], Error>({
     queryKey: queryKeys.playlistTracks(trackRefs),
@@ -28,7 +29,16 @@ export function usePlaylistTracksQuery(
       console.log('📋 usePlaylistTracksQuery calling setTracks');
       setTracks(query.data);
     }
-  }, [query.data, setTracks]); // Remove setTracks from dependencies - it's stable from Zustand
+  }, [query.data, setTracks]);
 
-  return { ...query, tracks: query.data ?? [] };
+  // Canonical entity read path: resolve ordered playlist tracks from Zustand.
+  const tracks = useMemo(
+    () =>
+      trackRefs
+        .map((ref) => tracksMap.get(`${ref.track_id}:${ref.friend_id}`))
+        .filter((track): track is Track => track !== undefined),
+    [tracksMap, trackRefs]
+  );
+
+  return { ...query, tracks };
 }

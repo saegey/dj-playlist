@@ -1,6 +1,6 @@
 import { getRedisConnection } from "@/lib/redis";
 import { v4 as uuidv4 } from "uuid";
-import { Pool } from "pg";
+import { settingsRepository } from "@/services/settingsRepository";
 
 export interface DownloadJobData {
   job_id: string;
@@ -64,7 +64,6 @@ export interface JobSummary {
 
 export class RedisJobService {
   private redis = getRedisConnection();
-  private pool = new Pool({ connectionString: process.env.DATABASE_URL });
   private readonly updatedIndexKey = "jobs:updated";
   private readonly activeJobTtlSeconds = parseInt(
     process.env.JOB_TTL_ACTIVE_SECONDS || "604800",
@@ -120,38 +119,51 @@ export class RedisJobService {
   /**
    * Fetch gamdl settings for a friend, creating defaults if not exists
    */
-  private async getGamdlSettings(friendId: number) {
+  private async getGamdlSettings(friendId: number): Promise<
+    Pick<
+      DownloadJobData,
+      | "quality"
+      | "format"
+      | "save_cover"
+      | "cover_format"
+      | "save_lyrics"
+      | "lyrics_format"
+      | "overwrite_existing"
+      | "skip_music_videos"
+      | "max_retries"
+    >
+  > {
     try {
-      // Ensure settings exist (create with defaults if not)
-      await this.pool.query(`
-        INSERT INTO gamdl_settings (friend_id)
-        VALUES ($1)
-        ON CONFLICT (friend_id) DO NOTHING
-      `, [friendId]);
+      await settingsRepository.ensureGamdlSettings(friendId);
+      const settings = await settingsRepository.findGamdlSettingsByFriendId(
+        friendId
+      );
+      if (!settings) return {};
 
-      // Get the settings
-      const result = await this.pool.query(`
-        SELECT audio_quality as quality, audio_format as format,
-               save_cover, cover_format, save_lyrics, lyrics_format,
-               overwrite_existing, skip_music_videos, max_retries
-        FROM gamdl_settings
-        WHERE friend_id = $1
-      `, [friendId]);
-
-      return result.rows[0] || {};
+      return {
+        quality: settings.audio_quality,
+        format: settings.audio_format,
+        save_cover: settings.save_cover,
+        cover_format: settings.cover_format,
+        save_lyrics: settings.save_lyrics,
+        lyrics_format: settings.lyrics_format,
+        overwrite_existing: settings.overwrite_existing,
+        skip_music_videos: settings.skip_music_videos,
+        max_retries: settings.max_retries,
+      };
     } catch (error) {
       console.error(`Failed to fetch gamdl settings for friend ${friendId}:`, error);
       // Return defaults if database fails
       return {
-        quality: 'best',
-        format: 'm4a',
+        quality: "best",
+        format: "m4a",
         save_cover: false,
-        cover_format: 'jpg',
+        cover_format: "jpg",
         save_lyrics: false,
-        lyrics_format: 'lrc',
+        lyrics_format: "lrc",
         overwrite_existing: false,
         skip_music_videos: true,
-        max_retries: 3
+        max_retries: 3,
       };
     }
   }

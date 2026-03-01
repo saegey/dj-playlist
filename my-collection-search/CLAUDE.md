@@ -1,5 +1,11 @@
 # My Collection Search — Project Brief (for Claude Code)
 
+## State Ownership
+- See `docs/state-ownership.md` for the canonical state model.
+- In short:
+  - Zustand owns `Track`/`Album` entities
+  - React Query owns request lifecycle, status, and lightweight query metadata
+
 ## Overview
 - Next.js app to browse, search, and manage a personal DJ track collection.
 - Data sources: PostgreSQL (with pgvector) + Meilisearch for fast search.
@@ -52,16 +58,11 @@
 - Single-page mode uses the same page shape (no pages array).
 
 ## Caching and optimistic updates
-- src/hooks/useTracksCacheUpdater.ts
-  - Updates every ["tracks", {…}] query (infinite or single) and ["playlist-tracks", …] arrays by merging partial Track patches by track_id.
-  - Merge ignores undefined fields; doesn’t wipe existing values.
-- src/hooks/useTracksQuery.ts
-  - saveTrack mutation with optimistic update:
-    - cancel queries for tracks & playlist-tracks
-    - snapshot matching caches, apply patch, rollback on error
-    - on success, merge server Track and lightly invalidate inactive queries
-- src/hooks/useBackfillStatusMutation.ts
-  - Patches status fields across ["tracks", {…}]
+- Refer to `docs/state-ownership.md` for current rules.
+- Summary:
+  - Query hooks fetch/hydrate into Zustand stores
+  - Entity reads render from Zustand
+  - React Query cache updates are for non-entity metadata/refs and invalidation
 
 ## UI notes
 - TrackResult renders star rating as controlled value (reflects cache updates).

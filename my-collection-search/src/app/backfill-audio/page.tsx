@@ -15,6 +15,7 @@ import { useBackfillStatusMutation } from "@/hooks/useBackfillStatusMutation";
 import { useVectorizeTrackMutation } from "@/hooks/useVectorizeTrackMutation";
 import { useAsyncAnalyzeTrackMutation } from "@/hooks/useAsyncAnalyzeTrackMutation";
 import PageContainer from "@/components/layout/PageContainer";
+import { useTrackStore } from "@/stores/trackStore";
 
 // BackfillTrack moved to components/backfill/types
 
@@ -54,7 +55,7 @@ export default function BackfillAudioPage() {
 
   // Use shared search hook in paginated mode with page size 1
   const {
-    results: tracks,
+    trackInfo,
     estimatedResults,
     loading,
     query,
@@ -71,8 +72,11 @@ export default function BackfillAudioPage() {
     setPage(1);
   }, [selectedFriend, query, showMissingAudio, showMissingVectors]);
 
-  // Derive page tracks with UI-only status fields (mutated optimistically)
-  const pageTracks = (tracks as BackfillTrack[]) || [];
+  const pageTracks = useTrackStore((state) =>
+    trackInfo
+      .map((ref) => state.tracks.get(`${ref.trackId}:${ref.friendId}`))
+      .filter((track): track is BackfillTrack => track !== undefined)
+  );
 
   const toggleSelect = (trackId: string) => {
     setSelected((prev) => {

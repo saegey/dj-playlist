@@ -1,5 +1,11 @@
 # my-collection-search
 
+## State Ownership
+
+- See [docs/state-ownership.md](docs/state-ownership.md) for the canonical data ownership model:
+  - Zustand owns `Track`/`Album` entities
+  - React Query owns request lifecycle and lightweight query metadata
+
 ## OpenAPI and Swagger docs
 
 - Swagger UI: `http://localhost:3000/api/docs`

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getJobStatus } from "@/services/jobService";
+import { getJobStatus } from "@/services/jobsService";
 
 export function useJobStatus(jobId: string | null, options?: {
   enabled?: boolean;

@@ -1,9 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
-import type { BackfillTrack } from "@/components/backfill/types";
 import { useTrackStore } from "@/stores/trackStore";
 
-type TrackStatus = BackfillTrack["status"];
+type TrackStatus = "pending" | "enqueued" | "analyzing" | "success" | "error";
 
 export type TrackStatusUpdate = {
   track_id: string;
@@ -27,9 +26,11 @@ export function useBackfillStatusMutation() {
 
       // Update tracks in Zustand store
       arr.forEach((update) => {
-        // Since BackfillTrack has status/errorMsg fields that Track doesn't,
-        // we need to be careful about what we update
-        const storeUpdate: Partial<BackfillTrack> = {};
+        const storeUpdate: {
+          status?: TrackStatus;
+          errorMsg?: string;
+          progress?: number;
+        } = {};
         if (update.status !== undefined) {
           storeUpdate.status = update.status;
         }
@@ -55,13 +56,7 @@ export function useBackfillStatusMutation() {
           }
         }
         if (typeof fid === "number") {
-          // updateTrack accepts Partial<Track>; BackfillTrack extends Track with extra fields.
-          // Type cast to Partial<unknown> then to Partial<Track> is safe for overlapping keys.
-          updateTrack(
-            update.track_id,
-            fid,
-            storeUpdate as unknown as Partial<import("@/types/track").Track>
-          );
+          updateTrack(update.track_id, fid, storeUpdate);
         }
       });
     },

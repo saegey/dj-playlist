@@ -19,6 +19,7 @@ import { SiDiscogs } from "react-icons/si";
 import { FiEdit } from "react-icons/fi";
 import { Album } from "@/types/track";
 import { useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
+import { useAlbum } from "@/hooks/useAlbum";
 
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
@@ -27,29 +28,36 @@ function formatDate(dateString?: string): string {
 }
 
 export type AlbumResultProps = {
-  album: Album;
+  album?: Album;
+  albumRef?: { release_id: string; friend_id: number };
   buttons?: React.ReactNode;
   showEditFields?: boolean;
 };
 
 export default function AlbumResult({
   album,
+  albumRef,
   buttons,
   showEditFields = false,
 }: AlbumResultProps) {
+  const releaseId = albumRef?.release_id ?? album?.release_id ?? "";
+  const friendId = albumRef?.friend_id ?? album?.friend_id ?? -1;
+  const albumFromStore = useAlbum(releaseId, friendId);
+  const resolvedAlbum = albumFromStore ?? album;
+
   const artworkSrc =
-    album.audio_file_album_art_url ||
-    album.album_thumbnail ||
+    resolvedAlbum?.audio_file_album_art_url ||
+    resolvedAlbum?.album_thumbnail ||
     "/images/placeholder-artwork.png";
   const [isEditing, setIsEditing] = useState(false);
-  const [rating, setRating] = useState(album.album_rating || 0);
-  const [notes, setNotes] = useState(album.album_notes || "");
+  const [rating, setRating] = useState(resolvedAlbum?.album_rating || 0);
+  const [notes, setNotes] = useState(resolvedAlbum?.album_notes || "");
   const [purchasePrice, setPurchasePrice] = useState(
-    album.purchase_price?.toString() || ""
+    resolvedAlbum?.purchase_price?.toString() || ""
   );
-  const [condition, setCondition] = useState(album.condition || "");
+  const [condition, setCondition] = useState(resolvedAlbum?.condition || "");
   const [libraryIdentifier, setLibraryIdentifier] = useState(
-    album.library_identifier || ""
+    resolvedAlbum?.library_identifier || ""
   );
   const mutedText = useColorModeValue("gray.600", "gray.300");
   const subtleText = useColorModeValue("gray.500", "gray.400");
@@ -59,10 +67,28 @@ export default function AlbumResult({
 
   const updateMutation = useUpdateAlbumMutation();
 
+  React.useEffect(() => {
+    if (isEditing || !resolvedAlbum) return;
+    setRating(resolvedAlbum.album_rating || 0);
+    setNotes(resolvedAlbum.album_notes || "");
+    setPurchasePrice(resolvedAlbum.purchase_price?.toString() || "");
+    setCondition(resolvedAlbum.condition || "");
+    setLibraryIdentifier(resolvedAlbum.library_identifier || "");
+  }, [
+    isEditing,
+    resolvedAlbum,
+    resolvedAlbum?.album_rating,
+    resolvedAlbum?.album_notes,
+    resolvedAlbum?.purchase_price,
+    resolvedAlbum?.condition,
+    resolvedAlbum?.library_identifier,
+  ]);
+
   const handleSave = async () => {
+    if (!resolvedAlbum) return;
     await updateMutation.mutateAsync({
-      release_id: album.release_id,
-      friend_id: album.friend_id,
+      release_id: resolvedAlbum.release_id,
+      friend_id: resolvedAlbum.friend_id,
       album_rating: rating,
       album_notes: notes,
       purchase_price: purchasePrice ? parseFloat(purchasePrice) : undefined,
@@ -72,15 +98,16 @@ export default function AlbumResult({
     setIsEditing(false);
   };
 
+  if (!resolvedAlbum) return null;
+
   return (
     <Box borderWidth="1px" borderRadius="md" p={{ base: 2, md: 4 }} mb={{ base: 2, md: 3 }} position="relative">
       <Flex gap={{ base: 2, md: 4 }} direction={{ base: "row", md: "row" }} flexWrap={{ base: "wrap", md: "nowrap" }}>
-        {/* Album artwork */}
         {artworkSrc && (
           <Box flexShrink={0}>
             <Image
               src={artworkSrc}
-              alt={album.title}
+              alt={resolvedAlbum.title}
               boxSize={{ base: "80px", md: "150px" }}
               objectFit="cover"
               borderRadius="md"
@@ -88,19 +115,17 @@ export default function AlbumResult({
           </Box>
         )}
 
-        {/* Album details */}
         <Flex flex="1" direction="column" gap={{ base: 1, md: 2 }} minW={0}>
-          {/* Title and Artist */}
           <Flex direction="column" gap={0.5}>
             <Flex alignItems="center" gap={1} flexWrap="wrap">
-              {album.library_identifier && (
+              {resolvedAlbum.library_identifier && (
                 <Badge colorPalette="blue" size={{ base: "sm", md: "md" }} variant="solid" fontWeight="bold">
-                  {album.library_identifier}
+                  {resolvedAlbum.library_identifier}
                 </Badge>
               )}
               <Link
                 as={NextLink}
-                href={`/albums/${album.release_id}?friend_id=${album.friend_id}`}
+                href={`/albums/${resolvedAlbum.release_id}?friend_id=${resolvedAlbum.friend_id}`}
                 _hover={{ textDecoration: "underline" }}
               >
                 <Text
@@ -110,13 +135,13 @@ export default function AlbumResult({
                   lineClamp={{ base: 2, md: 3 }}
                   lineHeight={{ base: "1.3", md: "1.4" }}
                 >
-                  {album.title}
+                  {resolvedAlbum.title}
                 </Text>
               </Link>
             </Flex>
             <Link
               as={NextLink}
-              href={`/albums?q=${encodeURIComponent(album.artist)}&friend_id=${album.friend_id}`}
+              href={`/albums?q=${encodeURIComponent(resolvedAlbum.artist)}&friend_id=${resolvedAlbum.friend_id}`}
               _hover={{ textDecoration: "underline" }}
             >
               <Text
@@ -124,22 +149,20 @@ export default function AlbumResult({
                 color={mutedText}
                 lineClamp={1}
               >
-                {album.artist}
+                {resolvedAlbum.artist}
               </Text>
             </Link>
           </Flex>
 
-          {/* Rating */}
           <Flex alignItems="center" gap={1}>
             <RatingGroup.Root
               value={rating}
               onValueChange={(details) => {
                 setRating(details.value);
                 if (!isEditing) {
-                  // Auto-save rating on change
                   updateMutation.mutate({
-                    release_id: album.release_id,
-                    friend_id: album.friend_id,
+                    release_id: resolvedAlbum.release_id,
+                    friend_id: resolvedAlbum.friend_id,
                     album_rating: details.value,
                   });
                 }
@@ -158,32 +181,30 @@ export default function AlbumResult({
             </Text>
           </Flex>
 
-          {/* Metadata */}
           <Flex gap={2} flexWrap="wrap" fontSize={{ base: "xs", md: "sm" }} color={mutedText}>
-            {album.username && (
+            {resolvedAlbum.username && (
               <Badge colorPalette="purple" variant="subtle">
-                {album.username}
+                {resolvedAlbum.username}
               </Badge>
             )}
-            {album.year && <Text>{album.year}</Text>}
-            {album.format && <Text display={{ base: "none", md: "block" }}>{album.format}</Text>}
-            {album.label && <Text display={{ base: "none", md: "block" }}>{album.label}</Text>}
-            {album.catalog_number && <Text display={{ base: "none", md: "block" }}>Cat: {album.catalog_number}</Text>}
-            {album.country && <Text display={{ base: "none", md: "block" }}>{album.country}</Text>}
-            {album.track_count && (
-              <Text>{album.track_count} track{album.track_count !== 1 ? 's' : ''}</Text>
+            {resolvedAlbum.year && <Text>{resolvedAlbum.year}</Text>}
+            {resolvedAlbum.format && <Text display={{ base: "none", md: "block" }}>{resolvedAlbum.format}</Text>}
+            {resolvedAlbum.label && <Text display={{ base: "none", md: "block" }}>{resolvedAlbum.label}</Text>}
+            {resolvedAlbum.catalog_number && <Text display={{ base: "none", md: "block" }}>Cat: {resolvedAlbum.catalog_number}</Text>}
+            {resolvedAlbum.country && <Text display={{ base: "none", md: "block" }}>{resolvedAlbum.country}</Text>}
+            {resolvedAlbum.track_count && (
+              <Text>{resolvedAlbum.track_count} track{resolvedAlbum.track_count !== 1 ? "s" : ""}</Text>
             )}
           </Flex>
 
-          {/* Genres and Styles */}
-          {(album.genres || album.styles) && (
+          {(resolvedAlbum.genres || resolvedAlbum.styles) && (
             <Flex gap={1} flexWrap="wrap" display={{ base: "none", md: "flex" }}>
-              {album.genres?.map((genre) => (
+              {resolvedAlbum.genres?.map((genre) => (
                 <Badge key={genre} colorScheme="blue" size="sm">
                   {genre}
                 </Badge>
               ))}
-              {album.styles?.map((style) => (
+              {resolvedAlbum.styles?.map((style) => (
                 <Badge key={style} colorScheme="purple" size="sm">
                   {style}
                 </Badge>
@@ -191,14 +212,12 @@ export default function AlbumResult({
             </Flex>
           )}
 
-          {/* Date added */}
-          {album.date_added && (
+          {resolvedAlbum.date_added && (
             <Text fontSize="sm" color={subtleText} display={{ base: "none", md: "block" }}>
-              Added: {formatDate(album.date_added)}
+              Added: {formatDate(resolvedAlbum.date_added)}
             </Text>
           )}
 
-          {/* Editable fields - Desktop only */}
           {showEditFields && isEditing && (
             <Box
               display={{ base: "none", md: "block" }}
@@ -272,10 +291,10 @@ export default function AlbumResult({
                     variant="ghost"
                     onClick={() => {
                       setIsEditing(false);
-                      setNotes(album.album_notes || "");
-                      setPurchasePrice(album.purchase_price?.toString() || "");
-                      setCondition(album.condition || "");
-                      setLibraryIdentifier(album.library_identifier || "");
+                      setNotes(resolvedAlbum.album_notes || "");
+                      setPurchasePrice(resolvedAlbum.purchase_price?.toString() || "");
+                      setCondition(resolvedAlbum.condition || "");
+                      setLibraryIdentifier(resolvedAlbum.library_identifier || "");
                     }}
                   >
                     Cancel
@@ -285,28 +304,24 @@ export default function AlbumResult({
             </Box>
           )}
 
-          {/* Notes display (when not editing) */}
-          {!isEditing && album.album_notes && (
+          {!isEditing && resolvedAlbum.album_notes && (
             <Box p={2} bg={panelBg} borderRadius="md" borderWidth="1px" borderColor={panelBorder}>
-              <Text fontSize="sm">{album.album_notes}</Text>
+              <Text fontSize="sm">{resolvedAlbum.album_notes}</Text>
             </Box>
           )}
 
-          {/* Purchase info display */}
-          {!isEditing && (album.purchase_price || album.condition) && (
+          {!isEditing && (resolvedAlbum.purchase_price || resolvedAlbum.condition) && (
             <Flex gap={3} fontSize="sm" color={mutedText}>
-              {album.purchase_price && (
-                <Text>Price: ${album.purchase_price}</Text>
+              {resolvedAlbum.purchase_price && (
+                <Text>Price: ${resolvedAlbum.purchase_price}</Text>
               )}
-              {album.condition && <Text>Condition: {album.condition}</Text>}
+              {resolvedAlbum.condition && <Text>Condition: {resolvedAlbum.condition}</Text>}
             </Flex>
           )}
 
-          {/* Action buttons */}
           <Flex gap={1} mt={{ base: 1, md: 2 }} alignItems="center" flexWrap="wrap">
-            {/* Discogs link */}
-            {album.discogs_url && (
-              <Link href={album.discogs_url} target="_blank" rel="noopener noreferrer">
+            {resolvedAlbum.discogs_url && (
+              <Link href={resolvedAlbum.discogs_url} target="_blank" rel="noopener noreferrer">
                 <Button size={{ base: "xs", md: "sm" }} variant="ghost" px={{ base: 2, md: 3 }}>
                   <Icon as={SiDiscogs} />
                   <Box display={{ base: "none", md: "inline" }} ml={2}>
@@ -316,7 +331,6 @@ export default function AlbumResult({
               </Link>
             )}
 
-            {/* Edit button */}
             {showEditFields && !isEditing && (
               <Button
                 size={{ base: "xs", md: "sm" }}
@@ -331,13 +345,11 @@ export default function AlbumResult({
               </Button>
             )}
 
-            {/* Custom action buttons */}
             {buttons}
           </Flex>
         </Flex>
       </Flex>
 
-      {/* Editable fields - Mobile only (full width) */}
       {showEditFields && isEditing && (
         <Box
           display={{ base: "block", md: "none" }}
@@ -411,10 +423,10 @@ export default function AlbumResult({
                 variant="ghost"
                 onClick={() => {
                   setIsEditing(false);
-                  setNotes(album.album_notes || "");
-                  setPurchasePrice(album.purchase_price?.toString() || "");
-                  setCondition(album.condition || "");
-                  setLibraryIdentifier(album.library_identifier || "");
+                  setNotes(resolvedAlbum.album_notes || "");
+                  setPurchasePrice(resolvedAlbum.purchase_price?.toString() || "");
+                  setCondition(resolvedAlbum.condition || "");
+                  setLibraryIdentifier(resolvedAlbum.library_identifier || "");
                 }}
               >
                 Cancel

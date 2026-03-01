@@ -20,7 +20,6 @@ import { analyzeTrackAsync, recalcTrackDuration, vectorizeTrack } from "@/servic
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
 import { useTrackStore } from "@/stores/trackStore";
-import { useTracksCacheUpdater } from "@/hooks/useTracksCacheUpdater";
 
 export interface PlaylistItemMenuProps {
   idx: number;
@@ -51,7 +50,6 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
   const [vectorizeLoading, setVectorizeLoading] = useState(false);
   const [durationLoading, setDurationLoading] = useState(false);
   const { updateTrack } = useTrackStore();
-  const { updateTracksInCache } = useTracksCacheUpdater();
 
   const canFetchAudio =
     !track.local_audio_url &&
@@ -123,7 +121,6 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
         hasVectors: true,
       };
       updateTrack(track.track_id, track.friend_id, patch);
-      updateTracksInCache(patch);
       toaster.create({
         title: "Track vectorized",
         type: "success",

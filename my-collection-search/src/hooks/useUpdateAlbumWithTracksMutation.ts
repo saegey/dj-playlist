@@ -1,5 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UpdateAlbumWithTracksParams } from "@/types/albumMetadata";
+import type { Album, Track } from "@/types/track";
+import { useAlbumStore } from "@/stores/albumStore";
+import { useTrackStore } from "@/stores/trackStore";
 
 async function updateAlbumWithTracks(params: UpdateAlbumWithTracksParams) {
   const formData = new FormData();
@@ -23,15 +26,24 @@ async function updateAlbumWithTracks(params: UpdateAlbumWithTracksParams) {
     throw new Error(error.error || 'Failed to update album');
   }
 
-  return response.json();
+  return response.json() as Promise<{ album: Album; tracks: Track[] }>;
 }
 
 export function useUpdateAlbumWithTracksMutation() {
   const queryClient = useQueryClient();
+  const setAlbum = useAlbumStore((state) => state.setAlbum);
+  const setTracks = useTrackStore((state) => state.setTracks);
 
   return useMutation({
     mutationFn: updateAlbumWithTracks,
     onSuccess: (data, variables) => {
+      if (data?.album) {
+        setAlbum(data.album);
+      }
+      if (Array.isArray(data?.tracks) && data.tracks.length > 0) {
+        setTracks(data.tracks);
+      }
+
       // Invalidate album detail query
       queryClient.invalidateQueries({
         queryKey: ['album', variables.release_id, variables.friend_id],

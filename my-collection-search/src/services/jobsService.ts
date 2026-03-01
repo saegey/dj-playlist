@@ -1,5 +1,31 @@
 import type { JobInfo } from "@/types/jobs";
 
+export type JobStatus = {
+  job_id: string;
+  status: "queued" | "processing" | "completed" | "failed";
+  progress: number;
+  created_at: number;
+  updated_at: number;
+  track_id: string;
+  friend_id: number;
+  error?: string;
+  result?: {
+    file_path?: string;
+    file_url?: string;
+    duration?: number;
+    format?: string;
+    success?: boolean;
+    local_audio_url?: string;
+    [key: string]: unknown;
+  };
+};
+
+export async function getJobStatus(jobId: string): Promise<JobStatus | null> {
+  const response = await fetch(`/api/jobs/${encodeURIComponent(jobId)}`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  return response.json();
+}
+
 export interface JobsResponse {
   jobs: JobInfo[];
   summary: {

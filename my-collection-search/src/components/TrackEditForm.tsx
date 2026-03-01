@@ -35,9 +35,15 @@ import type { DiscogsLookupVideo } from "@/types/discogs";
 
 export interface TrackEditFormProps {
   track_id: string; // Optional for new tracks
+  isrc?: string;
   title?: string;
   artist?: string;
   album?: string;
+  year?: string | number | null;
+  duration?: string;
+  discogs_url?: string;
+  spotify_url?: string;
+  release_id?: string;
   local_tags?: string | undefined;
   notes?: string | undefined | null;
   bpm?: number | null;
@@ -242,6 +248,19 @@ export default function TrackEditForm({
           title: form.title,
           artist: form.artist,
           album: form.album,
+          year: track?.year,
+          duration: track?.duration,
+          duration_seconds:
+            typeof form.duration_seconds === "number"
+              ? form.duration_seconds
+              : null,
+          isrc: track?.isrc,
+          release_id: track?.release_id,
+          discogs_url: track?.discogs_url,
+          apple_music_url: form.apple_music_url || null,
+          youtube_url: form.youtube_url || null,
+          soundcloud_url: form.soundcloud_url || null,
+          spotify_url: track?.spotify_url,
         },
         aiPrompt
       );

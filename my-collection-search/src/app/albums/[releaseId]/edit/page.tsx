@@ -6,6 +6,8 @@ import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { toaster } from "@/components/ui/toaster";
 import { useUpdateAlbumWithTracksMutation } from "@/hooks/useUpdateAlbumWithTracksMutation";
 import { useAlbumDetailQuery } from "@/hooks/useAlbumsQuery";
+import { useAlbum, useAlbumHydrated } from "@/hooks/useAlbum";
+import { useTracksByRelease, useTracksByReleaseHydrated } from "@/hooks/useTrack";
 import { useUsername } from "@/providers/UsernameProvider";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import AlbumForm, { AlbumFormData } from "@/components/AlbumForm";
@@ -24,7 +26,14 @@ function EditAlbumContent() {
   const releaseId = params.releaseId as string;
   const friendId = parseInt(searchParams.get("friend_id") || "0");
 
-  const { data, isLoading, error } = useAlbumDetailQuery(releaseId, friendId);
+  const { error } = useAlbumDetailQuery(releaseId, friendId);
+  const albumFromStore = useAlbum(releaseId, friendId);
+  const albumHydrated = useAlbumHydrated(releaseId, friendId);
+  const tracksHydrated = useTracksByReleaseHydrated(releaseId, friendId);
+  const tracksFromStore = useTracksByRelease(releaseId, friendId);
+  const album = albumFromStore;
+  const hydratedTracks = tracksFromStore;
+  const didHydrateRef = React.useRef(false);
 
   const [albumForm, setAlbumForm] = useState<AlbumFormData>({
     title: '',
@@ -46,53 +55,56 @@ function EditAlbumContent() {
   const [coverArt, setCoverArt] = useState<File | null>(null);
   const [tracks, setTracks] = useState<TrackFormData[]>([]);
 
+  useEffect(() => {
+    didHydrateRef.current = false;
+  }, [releaseId, friendId]);
+
   // Hydrate form when data loads
   useEffect(() => {
-    if (data?.album && data?.tracks) {
-      const { album, tracks: albumTracks } = data;
+    if (!album || hydratedTracks.length === 0 || didHydrateRef.current) return;
 
-      // Hydrate album form
-      setAlbumForm({
-        title: album.title || '',
-        artist: album.artist || '',
-        year: album.year || '',
-        genres: album.genres || [],
-        styles: album.styles || [],
-        album_notes: album.album_notes || '',
-        album_rating: album.album_rating || 0,
-        purchase_price: album.purchase_price?.toString() || '',
-        condition: album.condition || '',
-        label: album.label || '',
-        catalog_number: album.catalog_number || '',
-        country: album.country || '',
-        format: album.format || '',
-        library_identifier: album.library_identifier || '',
-      });
+    // Hydrate album form
+    setAlbumForm({
+      title: album.title || '',
+      artist: album.artist || '',
+      year: album.year || '',
+      genres: album.genres || [],
+      styles: album.styles || [],
+      album_notes: album.album_notes || '',
+      album_rating: album.album_rating || 0,
+      purchase_price: album.purchase_price?.toString() || '',
+      condition: album.condition || '',
+      label: album.label || '',
+      catalog_number: album.catalog_number || '',
+      country: album.country || '',
+      format: album.format || '',
+      library_identifier: album.library_identifier || '',
+    });
 
-      // Hydrate tracks
-      setTracks(
-        albumTracks.map((track) => ({
-          track_id: track.track_id,
-          title: track.title || '',
-          artist: track.artist || '',
-          position: track.position != null ? String(track.position) : '',
-          duration_seconds: track.duration_seconds || undefined,
-          bpm:
-            track.bpm != null && track.bpm !== ""
-              ? Number(track.bpm)
-              : undefined,
-          key: track.key || undefined,
-          notes: track.notes || '',
-          local_tags: track.local_tags || '',
-          star_rating: track.star_rating || 0,
-          apple_music_url: track.apple_music_url || '',
-          spotify_url: track.spotify_url || '',
-          youtube_url: track.youtube_url || '',
-          soundcloud_url: track.soundcloud_url || '',
-        }))
-      );
-    }
-  }, [data]);
+    // Hydrate tracks
+    setTracks(
+      hydratedTracks.map((track) => ({
+        track_id: track.track_id,
+        title: track.title || '',
+        artist: track.artist || '',
+        position: track.position != null ? String(track.position) : '',
+        duration_seconds: track.duration_seconds || undefined,
+        bpm:
+          track.bpm != null && track.bpm !== ""
+            ? Number(track.bpm)
+            : undefined,
+        key: track.key || undefined,
+        notes: track.notes || '',
+        local_tags: track.local_tags || '',
+        star_rating: track.star_rating || 0,
+        apple_music_url: track.apple_music_url || '',
+        spotify_url: track.spotify_url || '',
+        youtube_url: track.youtube_url || '',
+        soundcloud_url: track.soundcloud_url || '',
+      }))
+    );
+    didHydrateRef.current = true;
+  }, [album, hydratedTracks]);
 
   // Update track artists when album artist changes
   useEffect(() => {
@@ -233,7 +245,7 @@ function EditAlbumContent() {
     );
   }
 
-  if (isLoading) {
+  if ((!albumHydrated || !tracksHydrated) && !error) {
     return (
       <PageContainer size="standard" py={8}>
         <Flex justify="center" align="center" minH="400px">
@@ -243,7 +255,7 @@ function EditAlbumContent() {
     );
   }
 
-  if (error || !data) {
+  if (error || !album) {
     return (
       <PageContainer size="standard" py={8}>
         <Text color="red.500">

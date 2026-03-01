@@ -24,6 +24,8 @@ import { FiPlay, FiDownload, FiEdit, FiMoreVertical } from "react-icons/fi";
 import NextLink from "next/link";
 
 import { useAlbumDetailQuery, useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
+import { useAlbum, useAlbumHydrated } from "@/hooks/useAlbum";
+import { useTracksByRelease, useTracksByReleaseHydrated } from "@/hooks/useTrack";
 import AlbumTrackItem from "@/components/AlbumTrackItem";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
@@ -67,7 +69,11 @@ function AlbumDetailContent() {
   const releaseId = params.releaseId as string;
   const friendId = parseInt(searchParams.get("friend_id") || "0");
 
-  const { data, isLoading, error } = useAlbumDetailQuery(releaseId, friendId);
+  const { error } = useAlbumDetailQuery(releaseId, friendId);
+  const albumFromStore = useAlbum(releaseId, friendId);
+  const albumHydrated = useAlbumHydrated(releaseId, friendId);
+  const tracksHydrated = useTracksByReleaseHydrated(releaseId, friendId);
+  const tracksFromStore = useTracksByRelease(releaseId, friendId);
   const discogsRawQuery = useQuery({
     queryKey: ["album-discogs-raw", releaseId, friendId],
     queryFn: () => fetchDiscogsRawRelease(releaseId, friendId),
@@ -87,23 +93,25 @@ function AlbumDetailContent() {
   const panelBg = useColorModeValue("gray.50", "gray.800");
   const mutedText = useColorModeValue("gray.600", "gray.400");
   const subtleText = useColorModeValue("gray.500", "gray.500");
+  const album = albumFromStore;
+  const tracks = tracksFromStore;
 
   React.useEffect(() => {
-    if (data?.album) {
-      setRating(data.album.album_rating || 0);
-      setNotes(data.album.album_notes || "");
-      setPurchasePrice(data.album.purchase_price?.toString() || "");
-      setCondition(data.album.condition || "");
-      setLibraryIdentifier(data.album.library_identifier || "");
+    if (album) {
+      setRating(album.album_rating || 0);
+      setNotes(album.album_notes || "");
+      setPurchasePrice(album.purchase_price?.toString() || "");
+      setCondition(album.condition || "");
+      setLibraryIdentifier(album.library_identifier || "");
     }
-  }, [data]);
+  }, [album]);
 
   const handleSave = async () => {
-    if (!data?.album) return;
+    if (!album) return;
 
     await updateMutation.mutateAsync({
-      release_id: data.album.release_id,
-      friend_id: data.album.friend_id,
+      release_id: album.release_id,
+      friend_id: album.friend_id,
       album_rating: rating,
       album_notes: notes,
       purchase_price: purchasePrice ? parseFloat(purchasePrice) : undefined,
@@ -114,7 +122,7 @@ function AlbumDetailContent() {
   };
 
   const handleEnqueueAlbum = () => {
-    if (!data?.tracks || data.tracks.length === 0) {
+    if (tracks.length === 0 || !album) {
       toaster.create({
         title: "No Tracks",
         description: "This album has no tracks to play",
@@ -123,20 +131,20 @@ function AlbumDetailContent() {
       return;
     }
 
-    replacePlaylist(data.tracks, {
+    replacePlaylist(tracks, {
       autoplay: true,
       startIndex: 0,
     });
 
     toaster.create({
       title: "Album Enqueued",
-      description: `Playing ${data.album.title} by ${data.album.artist}`,
+      description: `Playing ${album.title} by ${album.artist}`,
       type: "success",
     });
   };
 
   const handleDownloadAlbum = async () => {
-    if (!data?.album) return;
+    if (!album) return;
 
     setIsDownloading(true);
     try {
@@ -184,7 +192,7 @@ function AlbumDetailContent() {
     );
   }
 
-  if (isLoading) {
+  if ((!albumHydrated || !tracksHydrated) && !error) {
     return (
       <PageContainer size="standard" py={8}>
         <Flex justify="center" align="center" minH="400px">
@@ -194,7 +202,7 @@ function AlbumDetailContent() {
     );
   }
 
-  if (error || !data) {
+  if (error || !album) {
     return (
       <PageContainer size="standard" py={8}>
         <Text color="red.500">
@@ -204,7 +212,6 @@ function AlbumDetailContent() {
     );
   }
 
-  const { album, tracks } = data;
   const albumArtwork =
     tracks.find((t) => t.audio_file_album_art_url)?.audio_file_album_art_url ||
     album.album_thumbnail;

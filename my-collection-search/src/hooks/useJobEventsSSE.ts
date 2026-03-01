@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTrackStore } from "@/stores/trackStore";
-import { useTracksCacheUpdater } from "@/hooks/useTracksCacheUpdater";
 import type { Track } from "@/types/track";
 
 interface JobCompletedEvent {
@@ -34,7 +33,6 @@ type JobEvent = JobCompletedEvent | JobErrorEvent;
 export function useJobEventsSSE(enabled: boolean = true) {
   const queryClient = useQueryClient();
   const updateTrack = useTrackStore((state) => state.updateTrack);
-  const { updateTracksInCache } = useTracksCacheUpdater();
   const eventSourceRef = useRef<EventSource | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -92,7 +90,6 @@ export function useJobEventsSSE(enabled: boolean = true) {
 
           if (Object.keys(updates).length > 0) {
             updateTrack(jobEvent.track_id, jobEvent.friend_id, updates);
-            updateTracksInCache({ track_id: jobEvent.track_id, friend_id: jobEvent.friend_id, ...updates });
           }
 
           // Invalidate tracks queries
@@ -123,7 +120,7 @@ export function useJobEventsSSE(enabled: boolean = true) {
       }
       setIsConnected(false);
     };
-  }, [enabled, queryClient, updateTrack, updateTracksInCache]);
+  }, [enabled, queryClient, updateTrack]);
 
   return isConnected;
 }
