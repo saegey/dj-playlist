@@ -248,3 +248,97 @@ export const manifestCleanupResponseSchema = z.object({
     totalKept: z.number().int(),
   }),
 });
+
+export const albumReleaseParamsSchema = z.object({
+  releaseId: z.string().min(1),
+});
+
+export const albumFriendQuerySchema = z.object({
+  friend_id: intFromInputSchema,
+});
+
+export const albumDiscogsRawResponseSchema = z.object({
+  friend_id: z.number().int(),
+  release_id: z.string(),
+  username: z.string(),
+  file_path: z.string(),
+  data: z.unknown(),
+});
+
+export const queueAlbumDownloadsResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  jobIds: z.array(z.string()),
+  tracksQueued: z.number().int(),
+});
+
+export const albumCleanupSampleSchema = z.object({
+  release_id: z.string(),
+  friend_id: z.number().int(),
+  title: z.string(),
+  artist: z.string(),
+  track_count: z.number().int().optional(),
+});
+
+export const albumsCleanupSummaryResponseSchema = z.object({
+  totalAlbumsToClean: z.number().int(),
+  emptyTrackCount: z.number().int(),
+  orphanedAlbums: z.number().int(),
+  sample: z.array(albumCleanupSampleSchema),
+});
+
+export const albumUpsertWithTracksResponseSchema = z.object({
+  album: z.object({}).passthrough(),
+  tracks: z.array(z.object({}).passthrough()),
+  deletedTracks: z.number().int(),
+});
+
+export const albumSearchQuerySchema = z.object({
+  q: z.string().optional().default(""),
+  sort: z.string().optional().default("date_added:desc"),
+  friend_id: intFromInputSchema.optional(),
+  limit: nonNegativeIntFromInputSchema.optional().default(20),
+  offset: nonNegativeIntFromInputSchema.optional().default(0),
+});
+
+export const albumSearchResponseSchema = z.object({
+  hits: z.array(z.object({}).passthrough()),
+  estimatedTotalHits: z.number().int(),
+  offset: z.number().int(),
+  limit: z.number().int(),
+  query: z.string(),
+  sort: z.string(),
+});
+
+export const albumDetailResponseSchema = z.object({
+  album: z.object({}).passthrough(),
+  tracks: z.array(z.object({}).passthrough()),
+});
+
+export const albumUpdateBodySchema = z
+  .object({
+    release_id: z.string().min(1),
+    friend_id: intFromInputSchema,
+    album_rating: z.number().optional(),
+    album_notes: z.string().optional(),
+    purchase_price: z.number().optional(),
+    condition: z.string().optional(),
+    library_identifier: z.string().max(50).nullable().optional(),
+  })
+  .refine(
+    (value) =>
+      value.album_rating !== undefined ||
+      value.album_notes !== undefined ||
+      value.purchase_price !== undefined ||
+      value.condition !== undefined ||
+      value.library_identifier !== undefined,
+    {
+      message: "No fields to update",
+    }
+  );
+
+export const albumUpdateResponseSchema = z.object({
+  success: z.boolean(),
+  album: z.object({}).passthrough(),
+  tracksUpdated: z.number().int().optional(),
+});

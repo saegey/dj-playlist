@@ -1,5 +1,15 @@
 import { z } from "zod";
 import {
+  albumDetailResponseSchema,
+  albumDiscogsRawResponseSchema,
+  albumFriendQuerySchema,
+  albumReleaseParamsSchema,
+  albumSearchQuerySchema,
+  albumSearchResponseSchema,
+  albumUpdateBodySchema,
+  albumUpdateResponseSchema,
+  albumsCleanupSummaryResponseSchema,
+  albumUpsertWithTracksResponseSchema,
   apiErrorSchema,
   manifestCleanupResponseSchema,
   manifestVerificationResponseSchema,
@@ -9,6 +19,7 @@ import {
   playlistDetailResponseSchema,
   playlistPatchBodySchema,
   playlistSchema,
+  queueAlbumDownloadsResponseSchema,
   recommendationsQuerySchema,
   recommendationsResponseSchema,
   trackSearchGetQuerySchema,
@@ -1659,6 +1670,462 @@ export const apiContractRoutes: ApiContractRoute[] = [
         },
         "404": {
           description: "Seed embeddings missing",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "searchAlbums",
+    method: "get",
+    path: "/api/albums",
+    summary: "Search and list albums",
+    tags: ["Albums"],
+    querySchema: albumSearchQuerySchema,
+    successSchema: albumSearchResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        { name: "q", in: "query", required: false, schema: { type: "string" } },
+        { name: "sort", in: "query", required: false, schema: { type: "string", default: "date_added:desc" } },
+        { name: "friend_id", in: "query", required: false, schema: { type: "integer" } },
+        { name: "limit", in: "query", required: false, schema: { type: "integer", default: 20 } },
+        { name: "offset", in: "query", required: false, schema: { type: "integer", default: 0 } },
+      ],
+      responses: {
+        "200": {
+          description: "Albums search result",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  hits: { type: "array", items: { type: "object", additionalProperties: true } },
+                  estimatedTotalHits: { type: "integer" },
+                  offset: { type: "integer" },
+                  limit: { type: "integer" },
+                  query: { type: "string" },
+                  sort: { type: "string" },
+                },
+                required: ["hits", "estimatedTotalHits", "offset", "limit", "query", "sort"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getAlbumDetail",
+    method: "get",
+    path: "/api/albums/{releaseId}",
+    summary: "Fetch album with tracks",
+    tags: ["Albums"],
+    paramsSchema: albumReleaseParamsSchema,
+    querySchema: albumFriendQuerySchema,
+    successSchema: albumDetailResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "releaseId",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+        },
+        {
+          name: "friend_id",
+          in: "query",
+          required: true,
+          schema: { type: "integer" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Album detail",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  album: { type: "object", additionalProperties: true },
+                  tracks: { type: "array", items: { type: "object", additionalProperties: true } },
+                },
+                required: ["album", "tracks"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid query parameter",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "404": {
+          description: "Album not found",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "updateAlbum",
+    method: "patch",
+    path: "/api/albums/update",
+    summary: "Update album metadata",
+    tags: ["Albums"],
+    bodySchema: albumUpdateBodySchema,
+    successSchema: albumUpdateResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                release_id: { type: "string" },
+                friend_id: { type: "integer" },
+                album_rating: { type: "number" },
+                album_notes: { type: "string" },
+                purchase_price: { type: "number" },
+                condition: { type: "string" },
+                library_identifier: { type: ["string", "null"] },
+              },
+              required: ["release_id", "friend_id"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Album updated",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean" },
+                  album: { type: "object", additionalProperties: true },
+                  tracksUpdated: { type: "integer" },
+                },
+                required: ["success", "album"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid payload",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "404": {
+          description: "Album not found",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "409": {
+          description: "Duplicate library identifier",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "upsertAlbumWithTracks",
+    method: "post",
+    path: "/api/albums/upsert",
+    summary: "Create or update album and tracks",
+    tags: ["Albums"],
+    successSchema: albumUpsertWithTracksResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "multipart/form-data": {
+            schema: {
+              type: "object",
+              properties: {
+                release_id: { type: "string" },
+                album: { type: "string", description: "JSON stringified album payload" },
+                tracks: { type: "string", description: "JSON stringified tracks payload" },
+                friend_id: { type: "string" },
+                cover_art: { type: "string", format: "binary" },
+              },
+              required: ["release_id", "album", "tracks", "friend_id"],
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Album upserted",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  album: { type: "object", additionalProperties: true },
+                  tracks: {
+                    type: "array",
+                    items: { type: "object", additionalProperties: true },
+                  },
+                  deletedTracks: { type: "integer" },
+                },
+                required: ["album", "tracks", "deletedTracks"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid payload",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "404": {
+          description: "Friend not found",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "413": {
+          description: "Uploaded cover art too large",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getAlbumsCleanupSummary",
+    method: "get",
+    path: "/api/albums/cleanup",
+    summary: "Preview album cleanup summary",
+    tags: ["Albums"],
+    successSchema: albumsCleanupSummaryResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Album cleanup summary",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  totalAlbumsToClean: { type: "integer" },
+                  emptyTrackCount: { type: "integer" },
+                  orphanedAlbums: { type: "integer" },
+                  sample: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        release_id: { type: "string" },
+                        friend_id: { type: "integer" },
+                        title: { type: "string" },
+                        artist: { type: "string" },
+                        track_count: { type: "integer" },
+                      },
+                      required: ["release_id", "friend_id", "title", "artist"],
+                    },
+                  },
+                },
+                required: ["totalAlbumsToClean", "emptyTrackCount", "orphanedAlbums", "sample"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "cleanupAlbums",
+    method: "post",
+    path: "/api/albums/cleanup",
+    summary: "Run album cleanup stream",
+    tags: ["Albums"],
+    successSchema: z.string(),
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Streaming cleanup log",
+          content: {
+            "text/event-stream": {
+              schema: { type: "string" },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getAlbumDiscogsRaw",
+    method: "get",
+    path: "/api/albums/{releaseId}/discogs-raw",
+    summary: "Get raw Discogs release payload for album",
+    tags: ["Albums"],
+    paramsSchema: albumReleaseParamsSchema,
+    querySchema: albumFriendQuerySchema,
+    successSchema: albumDiscogsRawResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "releaseId",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+        },
+        {
+          name: "friend_id",
+          in: "query",
+          required: true,
+          schema: { type: "integer" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Discogs raw payload",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  friend_id: { type: "integer" },
+                  release_id: { type: "string" },
+                  username: { type: "string" },
+                  file_path: { type: "string" },
+                  data: { type: "object", additionalProperties: true },
+                },
+                required: ["friend_id", "release_id", "username", "file_path", "data"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Missing required parameters",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "404": {
+          description: "Release or friend not found",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "queueAlbumDownloads",
+    method: "post",
+    path: "/api/albums/{releaseId}/download",
+    summary: "Queue missing-track downloads for album",
+    tags: ["Albums"],
+    paramsSchema: albumReleaseParamsSchema,
+    querySchema: albumFriendQuerySchema,
+    successSchema: queueAlbumDownloadsResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "releaseId",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+        },
+        {
+          name: "friend_id",
+          in: "query",
+          required: true,
+          schema: { type: "integer" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Downloads queued",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean" },
+                  message: { type: "string" },
+                  jobIds: { type: "array", items: { type: "string" } },
+                  tracksQueued: { type: "integer" },
+                },
+                required: ["success", "message", "jobIds", "tracksQueued"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Missing required parameters",
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },

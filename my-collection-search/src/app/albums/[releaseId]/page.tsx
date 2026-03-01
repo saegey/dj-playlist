@@ -32,34 +32,15 @@ import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { toaster } from "@/components/ui/toaster";
 import { useColorModeValue } from "@/components/ui/color-mode";
 import PageContainer from "@/components/layout/PageContainer";
+import {
+  fetchAlbumDiscogsRawRelease,
+  queueAlbumDownloads,
+} from "@/services/internalApi/albums";
 
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
   const date = new Date(dateString);
   return date.toLocaleDateString();
-}
-
-type DiscogsRawResponse = {
-  friend_id: number;
-  release_id: string;
-  username: string;
-  file_path: string;
-  data: unknown;
-};
-
-async function fetchDiscogsRawRelease(
-  releaseId: string,
-  friendId: number
-): Promise<DiscogsRawResponse> {
-  const res = await fetch(
-    `/api/albums/${encodeURIComponent(releaseId)}/discogs-raw?friend_id=${friendId}`,
-    { cache: "no-store" }
-  );
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data?.error || "Failed to load Discogs raw file");
-  }
-  return data as DiscogsRawResponse;
 }
 
 function AlbumDetailContent() {
@@ -76,7 +57,7 @@ function AlbumDetailContent() {
   const tracksFromStore = useTracksByRelease(releaseId, friendId);
   const discogsRawQuery = useQuery({
     queryKey: ["album-discogs-raw", releaseId, friendId],
-    queryFn: () => fetchDiscogsRawRelease(releaseId, friendId),
+    queryFn: () => fetchAlbumDiscogsRawRelease(releaseId, friendId),
     enabled: !!releaseId && !!friendId,
   });
   const updateMutation = useUpdateAlbumMutation();
@@ -148,16 +129,7 @@ function AlbumDetailContent() {
 
     setIsDownloading(true);
     try {
-      const response = await fetch(
-        `/api/albums/${releaseId}/download?friend_id=${friendId}`,
-        { method: "POST" }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Failed to enqueue downloads");
-      }
+      const result = await queueAlbumDownloads(releaseId, friendId);
 
       if (result.tracksQueued === 0) {
         toaster.create({
