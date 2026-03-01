@@ -76,8 +76,9 @@ export async function POST() {
       { status: 200 }
     );
   } catch (e) {
+    console.error('Error creating custom backup:', e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : String(e) }),
+      JSON.stringify({ error: 'Failed to create backup' }),
       { status: 500 }
     );
   }
