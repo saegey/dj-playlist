@@ -27,7 +27,7 @@ describe("calculateBpmBonus", () => {
     [128, 128, 0.5, 0.03, "0.5 confidence halves bonus"],
     [null, 128, 1.0, 0, "null seed BPM"],
     [128, null, 1.0, 0, "null candidate BPM"],
-  ] as const)("%s → %s at confidence %s === %s (%s)", (seed, candidate, confidence, expected) => {
+  ] as const)("%s → %s at confidence %s === %s (%s)", (seed, candidate, confidence, expected, _label) => {
     expect(calculateBpmBonus(seed, candidate, confidence)).toBeCloseTo(expected, 3);
   });
 });
@@ -65,7 +65,7 @@ describe("calculateKeyBonus", () => {
     ["C Major", "G Major", 1.0, 0.04, "adjacent key"],
     ["C Major", "A Minor", 1.0, 0.03, "relative major/minor"],
     ["C Major", "C Major", 0.5, 0.03, "0.5 confidence halves bonus"],
-  ] as const)("%s → %s at confidence %s === %s (%s)", (seed, candidate, confidence, expected) => {
+  ] as const)("%s → %s at confidence %s === %s (%s)", (seed, candidate, confidence, expected, _label) => {
     expect(calculateKeyBonus(seed, candidate, confidence)).toBeCloseTo(expected, 3);
   });
 });
@@ -78,7 +78,7 @@ describe("calculateJaccardOverlap", () => {
     [["A", "B"], ["a", "b"], 1.0, "case insensitive"],
     [[], [], 0.0, "empty arrays"],
     [["a"], [], 0.0, "one empty array"],
-  ] as const)("%s ∩ %s === %s (%s)", (a, b, expected) => {
+  ] as const)("%s ∩ %s === %s (%s)", (a, b, expected, _label) => {
     expect(calculateJaccardOverlap([...a], [...b])).toBeCloseTo(expected, 3);
   });
 });
@@ -106,7 +106,7 @@ describe("areErasAdjacent", () => {
     [null, "1990s", false, "null era"],
     ["1990s", null, false, "null era"],
     ["invalid", "1990s", false, "invalid era"],
-  ] as const)("areErasAdjacent(%s, %s) === %s (%s)", (a, b, expected) => {
+  ] as const)("areErasAdjacent(%s, %s) === %s (%s)", (a, b, expected, _label) => {
     expect(areErasAdjacent(a, b)).toBe(expected);
   });
 });
@@ -116,7 +116,7 @@ describe("calculateEraBonus", () => {
     ["1990s", "1990s", 0.02, "same era"],
     ["1990s", "2000s", 0.01, "adjacent era"],
     ["1990s", "2010s", 0.0, "non-adjacent era"],
-  ] as const)("calculateEraBonus(%s, %s) === %s (%s)", (a, b, expected) => {
+  ] as const)("calculateEraBonus(%s, %s) === %s (%s)", (a, b, expected, _label) => {
     expect(calculateEraBonus(a, b)).toBeCloseTo(expected, 3);
   });
 });
@@ -130,7 +130,7 @@ describe("calculateEnergyPenalty", () => {
     [0.2, 1.0, 0.027, "Δ=0.8"],
     [null, 0.5, 0, "null seed energy"],
     [0.5, null, 0, "null candidate energy"],
-  ] as const)("calculateEnergyPenalty(%s, %s) ≈ %s (%s)", (seed, candidate, expected) => {
+  ] as const)("calculateEnergyPenalty(%s, %s) ≈ %s (%s)", (seed, candidate, expected, _label) => {
     expect(calculateEnergyPenalty(seed, candidate)).toBeCloseTo(expected, 3);
   });
 });
