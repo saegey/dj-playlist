@@ -3,7 +3,7 @@ import {
   playlistDetailParamsSchema,
   playlistDetailResponseSchema,
 } from "@/api-contract/schemas";
-import { dbQuery } from "@/lib/serverDb";
+import { playlistManagementService } from "@/services/playlistManagementService";
 
 export async function GET(
   _request: Request,
@@ -20,38 +20,15 @@ export async function GET(
     }
     const id = parsedParams.data.id;
 
-    // Ensure playlist exists
-    const playlistRes = await dbQuery(
-      "SELECT * FROM playlists WHERE id = $1",
-      [id]
-    );
-    if (playlistRes.rowCount === 0) {
+    const result = await playlistManagementService.getPlaylistTrackDetails(id);
+    if (result.notFound) {
       return NextResponse.json(
         { error: "Playlist not found" },
         { status: 404 }
       );
     }
 
-    // Fetch ordered track ids for the playlist
-    const tracksRes = await dbQuery<{
-      track_id: string;
-      friend_id: number;
-      position: number;
-    }>(
-      "SELECT track_id, friend_id, position FROM playlist_tracks WHERE playlist_id = $1 ORDER BY position ASC",
-      [id]
-    );
-    const trackIds = tracksRes.rows.map((r) => ({
-      track_id: r.track_id,
-      friend_id: Number(r.friend_id), // Ensure it's a number
-      position: r.position,
-    }));
-    const response = {
-      playlist_id: id,
-      tracks: trackIds,
-      playlist_name: playlistRes.rows[0].name,
-    };
-    const validated = playlistDetailResponseSchema.parse(response);
+    const validated = playlistDetailResponseSchema.parse(result.detail);
     return NextResponse.json(validated);
   } catch (error) {
     console.error("Error fetching playlist tracks:", error);

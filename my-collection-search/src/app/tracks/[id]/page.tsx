@@ -93,6 +93,12 @@ type AudioVibeEmbeddingPreviewResponse = {
   };
 };
 
+type EmbeddingPreviewResponse = {
+  type: "identity" | "audio_vibe";
+  text: string;
+  data: unknown;
+};
+
 async function fetchTrackPlaylists(
   trackId: string,
   friendId: number
@@ -173,14 +179,18 @@ async function fetchIdentityEmbeddingPreview(
   friendId: number
 ): Promise<IdentityEmbeddingPreviewResponse> {
   const res = await fetch(
-    `/api/embeddings/identity-preview?track_id=${encodeURIComponent(trackId)}&friend_id=${friendId}`,
+    `/api/embeddings/preview?track_id=${encodeURIComponent(trackId)}&friend_id=${friendId}&type=identity`,
     { cache: "no-store" }
   );
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data?.error || "Failed to fetch identity embedding preview");
   }
-  return data as IdentityEmbeddingPreviewResponse;
+  const preview = data as EmbeddingPreviewResponse;
+  return {
+    identityText: preview.text,
+    identityData: preview.data as IdentityEmbeddingPreviewResponse["identityData"],
+  };
 }
 
 async function fetchAudioVibeEmbeddingPreview(
@@ -188,14 +198,18 @@ async function fetchAudioVibeEmbeddingPreview(
   friendId: number
 ): Promise<AudioVibeEmbeddingPreviewResponse> {
   const res = await fetch(
-    `/api/embeddings/audio-vibe-preview?track_id=${encodeURIComponent(trackId)}&friend_id=${friendId}`,
+    `/api/embeddings/preview?track_id=${encodeURIComponent(trackId)}&friend_id=${friendId}&type=audio_vibe`,
     { cache: "no-store" }
   );
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data?.error || "Failed to fetch audio vibe embedding preview");
   }
-  return data as AudioVibeEmbeddingPreviewResponse;
+  const preview = data as EmbeddingPreviewResponse;
+  return {
+    vibeText: preview.text,
+    vibeData: preview.data as AudioVibeEmbeddingPreviewResponse["vibeData"],
+  };
 }
 
 export default function TrackPage() {

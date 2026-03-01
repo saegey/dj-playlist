@@ -22,6 +22,33 @@ export function normalizePlaylistCreatedAt<T extends { created_at?: unknown }>(
 }
 
 export class PlaylistManagementService {
+  async getPlaylistTrackDetails(
+    playlistId: number
+  ): Promise<
+    | { notFound: true }
+    | {
+        notFound: false;
+        detail: {
+          playlist_id: number;
+          playlist_name?: string | null;
+          tracks: Array<{ track_id: string; friend_id: number; position: number }>;
+        };
+      }
+  > {
+    const playlist = await playlistRepository.findPlaylistHeaderById(playlistId);
+    if (!playlist) return { notFound: true };
+
+    const tracks = await playlistRepository.listTrackRefsForPlaylist(playlistId);
+    return {
+      notFound: false,
+      detail: {
+        playlist_id: playlistId,
+        playlist_name: playlist.name,
+        tracks,
+      },
+    };
+  }
+
   async getAllPlaylistsWithTracks(): Promise<
     Array<{ id: number; name: string; created_at: string; tracks: PlaylistTrackRow[] }>
   > {
