@@ -36,7 +36,9 @@
 - src/components — UI (e.g., SearchResults, TrackResult, PlaylistViewer)
 - src/hooks — data hooks, mutations, cache helpers
 - src/lib — queryKeys, helpers
-- src/services — HTTP services to /api (tracks, playlists, etc.)
+- src/server/repositories — backend DB access (*Repository.ts files)
+- src/server/services — backend-only services (DB, Redis, Meili, external APIs)
+- src/services — frontend-only: http.ts, aiService.ts, backupService.ts, internalApi/
 - src/providers - React context providers
 - src/types — domain types (Track, etc.)
 - migrations — node-pg-migrate scripts
@@ -173,7 +175,7 @@ Backups
 - POST /api/restore (multipart) → { message? }
 
 Meilisearch admin (server-side helper)
-- Tracks index: searchable/filterable fields and ranking rules in code (see services/meiliIndexService.ts)
+- Tracks index: searchable/filterable fields and ranking rules in code (see server/services/meiliIndexService.ts)
 
 Error shape & status codes
 - http<T>() throws Error(message) when !res.ok.

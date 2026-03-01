@@ -4,7 +4,7 @@ import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { writeEssentiaAnalysis } from "@/lib/essentia-storage";
-import { trackRepository } from "@/services/trackRepository";
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 export const runtime = "nodejs"; // Ensure Node.js runtime for file system access
 
@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
 
   // Trigger MPD database update so new file is available for playback
   try {
-    const { localPlaybackService } = await import("@/services/localPlaybackService");
+    const { localPlaybackService } = await import("@/server/services/localPlaybackService");
     if (localPlaybackService.isLocalPlaybackEnabled()) {
       await localPlaybackService.updateDatabase();
       console.log("MPD database update triggered after file upload");

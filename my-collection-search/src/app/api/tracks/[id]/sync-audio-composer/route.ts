@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { trackRepository } from "@/services/trackRepository";
-import { trackAudioMetadataService } from "@/services/trackAudioMetadataService";
+import { trackRepository } from "@/server/repositories/trackRepository";
+import { trackAudioMetadataService } from "@/server/services/trackAudioMetadataService";
 
 export async function POST(
   request: NextRequest,

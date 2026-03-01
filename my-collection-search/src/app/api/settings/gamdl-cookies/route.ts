@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { gamdlCookieService } from "@/services/gamdlCookieService";
+import { gamdlCookieService } from "@/server/services/gamdlCookieService";
 
 export const runtime = "nodejs";
 

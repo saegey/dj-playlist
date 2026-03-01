@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { trackRepository } from "@/services/trackRepository";
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 export async function GET() {
   try {

@@ -1,5 +1,5 @@
 import { getTrackEmbedding } from "@/lib/track-embedding";
-import { trackRepository } from "@/services/trackRepository";
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 export async function POST(request: Request) {
   try {

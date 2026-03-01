@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { settingsService } from "@/services/settingsService";
+import { settingsService } from "@/server/services/settingsService";
 
 export async function GET(request: NextRequest) {
   const friendIdParam = request.nextUrl.searchParams.get("friend_id");

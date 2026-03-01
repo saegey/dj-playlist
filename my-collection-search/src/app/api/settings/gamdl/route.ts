@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { settingsService } from "@/services/settingsService";
+import { settingsService } from "@/server/services/settingsService";
 import type { GamdlSettingsUpdate } from "@/types/gamdl";
 
 export const runtime = "nodejs";

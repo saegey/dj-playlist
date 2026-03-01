@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMeiliClient } from "@/lib/meili";
-import { albumRepository } from "@/services/albumRepository";
+import { albumRepository } from "@/server/repositories/albumRepository";
 
 /**
  * DELETE endpoint to clear all albums from both PostgreSQL and MeiliSearch

@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
-import { albumRepository } from "@/services/albumRepository";
+import { albumRepository } from "@/server/repositories/albumRepository";
 
 const execFileAsync = promisify(execFile);
 

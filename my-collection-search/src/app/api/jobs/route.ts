@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { jobsApiService } from "@/services/jobsApiService";
+import { jobsApiService } from "@/server/services/jobsApiService";
 
 export async function DELETE() {
   try {

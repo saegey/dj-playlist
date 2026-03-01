@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { trackOpsService } from "@/services/trackOpsService";
+import { trackOpsService } from "@/server/services/trackOpsService";
 
 export async function POST() {
   try {

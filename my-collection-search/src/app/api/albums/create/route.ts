@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withDbTransaction } from '@/lib/serverDb';
 import { generateLocalReleaseId, generateLocalTrackId } from '@/lib/localTrackHelpers';
 import { saveAlbumCover } from '@/lib/fileUpload';
-import { AlbumToUpsert, upsertAlbum } from '@/services/albumUpsertService';
-import { addTracksToMeili } from '@/services/meiliDocumentService';
-import { addAlbumsToMeili, configureAlbumsIndex, getOrCreateAlbumsIndex } from '@/services/albumMeiliService';
+import { AlbumToUpsert, upsertAlbum } from '@/server/services/albumUpsertService';
+import { addTracksToMeili } from '@/server/services/meiliDocumentService';
+import { addAlbumsToMeili, configureAlbumsIndex, getOrCreateAlbumsIndex } from '@/server/services/albumMeiliService';
 import { Track } from '@/types/track';
 import { AlbumMetadata, TrackMetadata } from '@/types/albumMetadata';
 import { getMeiliClient } from '@/lib/meili';
-import { albumRepository } from '@/services/albumRepository';
+import { albumRepository } from '@/server/repositories/albumRepository';
 
 const meiliClient = getMeiliClient();
 

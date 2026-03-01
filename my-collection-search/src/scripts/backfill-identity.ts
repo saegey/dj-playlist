@@ -12,7 +12,7 @@
 
 import { generateAndStoreIdentityEmbedding } from "../lib/identity-embedding";
 import { generateAndStoreAudioVibeEmbedding } from "../lib/audio-vibe-embedding";
-import { embeddingsRepository } from "../services/embeddingsRepository";
+import { embeddingsRepository } from "../server/repositories/embeddingsRepository";
 import type {
   EmbeddingBackfillOptions,
   EmbeddingType,

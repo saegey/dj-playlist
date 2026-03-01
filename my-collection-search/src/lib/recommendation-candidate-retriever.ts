@@ -11,8 +11,8 @@
 import {
   recommendationRepository,
   type RecommendationCandidateRow,
-} from "@/services/recommendationRepository";
-import { embeddingsRepository } from "@/services/embeddingsRepository";
+} from "@/server/repositories/recommendationRepository";
+import { embeddingsRepository } from "@/server/repositories/embeddingsRepository";
 
 /**
  * Options for candidate retrieval

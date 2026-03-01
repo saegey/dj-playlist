@@ -5,7 +5,7 @@ import {
   trackRepository,
   type TrackWithLibraryIdentifierRow,
   type UpdateTrackInput,
-} from "@/services/trackRepository";
+} from "@/server/repositories/trackRepository";
 
 export async function PATCH(req: Request) {
   const { getMeiliClient } = await import("@/lib/meili");

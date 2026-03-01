@@ -1,5 +1,5 @@
-import { friendRepository } from "@/services/friendRepository";
-import { trackRepository } from "@/services/trackRepository";
+import { friendRepository } from "@/server/repositories/friendRepository";
+import { trackRepository } from "@/server/repositories/trackRepository";
 import type { DiscogsTrack, Track } from "@/types/track";
 
 export async function upsertTracks(tracks: DiscogsTrack[]): Promise<Track[]> {

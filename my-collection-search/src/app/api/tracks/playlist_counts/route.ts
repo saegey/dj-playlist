@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { trackRepository } from "@/services/trackRepository";
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 // POST: { track_refs: { track_id: string; friend_id: number }[] }
 export async function POST(req: NextRequest) {

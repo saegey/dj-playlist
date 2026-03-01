@@ -3,8 +3,8 @@ import type { Album, DiscogsRelease } from "@/types/track";
 import {
   albumRepository,
   type AlbumUpsertInput,
-} from "@/services/albumRepository";
-import { friendRepository } from "@/services/friendRepository";
+} from "@/server/repositories/albumRepository";
+import { friendRepository } from "@/server/repositories/friendRepository";
 
 type Queryable = Pick<PoolClient, "query">;
 
@@ -94,7 +94,7 @@ export async function getAllAlbumsFromManifests(): Promise<AlbumToUpsert[]> {
     parseManifestFile,
     getReleasePath,
     loadAlbum,
-  } = await import("@/services/discogsManifestService");
+  } = await import("@/server/services/discogsManifestService");
 
   const manifestFiles = getManifestFiles();
   const albums: AlbumToUpsert[] = [];
@@ -123,7 +123,7 @@ export async function getAlbumsFromManifestReleases(
   releaseIds: string[]
 ): Promise<AlbumToUpsert[]> {
   const { getReleasePath, loadAlbum } = await import(
-    "@/services/discogsManifestService"
+    "@/server/services/discogsManifestService"
   );
 
   const friendId = await getFriendId(username);

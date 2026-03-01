@@ -3,7 +3,7 @@ import {
   playlistDetailParamsSchema,
   playlistDetailResponseSchema,
 } from "@/api-contract/schemas";
-import { playlistManagementService } from "@/services/playlistManagementService";
+import { playlistManagementService } from "@/server/services/playlistManagementService";
 
 export async function GET(
   _request: Request,

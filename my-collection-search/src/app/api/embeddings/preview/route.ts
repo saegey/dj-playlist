@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   embeddingsService,
   type EmbeddingPreviewType,
-} from "@/services/embeddingsService";
+} from "@/server/services/embeddingsService";
 
 function parsePreviewType(value: string | null): EmbeddingPreviewType | null {
   if (value === "identity" || value === "audio_vibe") return value;

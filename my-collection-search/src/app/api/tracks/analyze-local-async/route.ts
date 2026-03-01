@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { redisJobService } from "@/services/redisJobService";
-import { trackRepository } from "@/services/trackRepository";
+import { redisJobService } from "@/server/services/redisJobService";
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 export async function POST(request: Request) {
   try {

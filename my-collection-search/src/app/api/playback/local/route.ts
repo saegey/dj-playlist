@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { localPlaybackService } from '@/services/localPlaybackService';
+import { localPlaybackService } from '@/server/services/localPlaybackService';
 
 /**
  * POST /api/playback/local

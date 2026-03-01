@@ -8,9 +8,9 @@ import {
   parseManifestFile,
   getReleasePath,
   loadAlbum,
-} from "@/services/discogsManifestService";
-import { albumRepository } from "@/services/albumRepository";
-import { upsertAlbum } from "@/services/albumUpsertService";
+} from "@/server/services/discogsManifestService";
+import { albumRepository } from "@/server/repositories/albumRepository";
+import { upsertAlbum } from "@/server/services/albumUpsertService";
 
 export async function POST() {
   const encoder = new TextEncoder();

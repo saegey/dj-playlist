@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { settingsRepository } from "@/services/settingsRepository";
+import { settingsRepository } from "@/server/repositories/settingsRepository";
 
 const PROMPT_PATH = path.join(
   process.cwd(),

@@ -3,8 +3,8 @@ import path from "path";
 import fs from "fs";
 import { promisify } from "util";
 import { execFile } from "child_process";
-import { trackRepository } from "@/services/trackRepository";
-import { trackAudioMetadataService } from "@/services/trackAudioMetadataService";
+import { trackRepository } from "@/server/repositories/trackRepository";
+import { trackAudioMetadataService } from "@/server/services/trackAudioMetadataService";
 
 const execFileAsync = promisify(execFile);
 

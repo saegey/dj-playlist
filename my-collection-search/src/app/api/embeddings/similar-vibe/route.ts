@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { embeddingsService } from "@/services/embeddingsService";
+import { embeddingsService } from "@/server/services/embeddingsService";
 
 function parsePositiveInt(value: string | null, fallback: number): number {
   const parsed = Number.parseInt(value ?? "", 10);

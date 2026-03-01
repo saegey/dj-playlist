@@ -1,5 +1,5 @@
 import { getMeiliClient } from "@/lib/meili";
-import { friendRepository, type FriendRow } from "@/services/friendRepository";
+import { friendRepository, type FriendRow } from "@/server/repositories/friendRepository";
 
 type ProgressFn = (line: string) => void;
 
@@ -24,7 +24,7 @@ export class FriendService {
         getManifestReleaseIds,
         getReleasePath,
         DISCOGS_EXPORTS_DIR,
-      } = await import("@/services/discogsManifestService");
+      } = await import("@/server/services/discogsManifestService");
       const fs = await import("fs");
       const path = await import("path");
 

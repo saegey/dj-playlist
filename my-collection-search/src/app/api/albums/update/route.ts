@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMeiliClient } from "@/lib/meili";
 import { withDbTransaction } from "@/lib/serverDb";
-import { albumRepository } from "@/services/albumRepository";
+import { albumRepository } from "@/server/repositories/albumRepository";
 
 interface AlbumUpdateRequest {
   release_id: string;

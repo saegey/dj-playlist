@@ -3,8 +3,8 @@ import { getEssentiaAnalysisPath } from "@/lib/essentia-storage";
 import {
   trackRepository,
   type CoverArtBackfillCandidateRow,
-} from "@/services/trackRepository";
-import { redisJobService } from "@/services/redisJobService";
+} from "@/server/repositories/trackRepository";
+import { redisJobService } from "@/server/services/redisJobService";
 
 type TrackQueueError = { track_id: string; error: string };
 type TrackFriendQueueError = { track_id: string; friend_id: number; error: string };

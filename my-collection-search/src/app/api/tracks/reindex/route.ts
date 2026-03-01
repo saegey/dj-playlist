@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getMeiliClient } from "@/lib/meili";
-import { getOrCreateTracksIndex, configureMeiliIndex } from "@/services/meiliIndexService";
-import { addTracksToMeili } from "@/services/meiliDocumentService";
-import { trackRepository } from "@/services/trackRepository";
+import { getOrCreateTracksIndex, configureMeiliIndex } from "@/server/services/meiliIndexService";
+import { addTracksToMeili } from "@/server/services/meiliDocumentService";
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 export async function GET() {
   return NextResponse.json(

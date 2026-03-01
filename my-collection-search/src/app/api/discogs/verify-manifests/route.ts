@@ -5,7 +5,7 @@ import {
   getReleasePath,
   getManifestPath,
   saveManifest,
-} from "@/services/discogsManifestService";
+} from "@/server/services/discogsManifestService";
 import {
   manifestCleanupResponseSchema,
   manifestVerificationResponseSchema,

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getManifestFiles, getAllTracksFromManifests } from "@/services/discogsManifestService";
-import { getOrCreateTracksIndex, configureMeiliIndex } from "@/services/meiliIndexService";
-import { upsertTracks } from "@/services/trackUpsertService";
-import { addTracksToMeili } from "@/services/meiliDocumentService";
+import { getManifestFiles, getAllTracksFromManifests } from "@/server/services/discogsManifestService";
+import { getOrCreateTracksIndex, configureMeiliIndex } from "@/server/services/meiliIndexService";
+import { upsertTracks } from "@/server/services/trackUpsertService";
+import { addTracksToMeili } from "@/server/services/meiliDocumentService";
 
 export async function POST() {
   try {

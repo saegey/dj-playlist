@@ -1,8 +1,8 @@
 import { getMeiliClient } from "@/lib/meili";
-import { deleteAlbumsFromMeili } from "@/services/albumMeiliService";
-import { friendRepository } from "@/services/friendRepository";
-import { trackRepository } from "@/services/trackRepository";
-import { albumRepository } from "@/services/albumRepository";
+import { deleteAlbumsFromMeili } from "@/server/services/albumMeiliService";
+import { friendRepository } from "@/server/repositories/friendRepository";
+import { trackRepository } from "@/server/repositories/trackRepository";
+import { albumRepository } from "@/server/repositories/albumRepository";
 
 type CleanupResult = {
   friendId: number | null;

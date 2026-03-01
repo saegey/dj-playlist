@@ -1,6 +1,6 @@
 import { getRedisConnection } from "@/lib/redis";
 import { v4 as uuidv4 } from "uuid";
-import { settingsRepository } from "@/services/settingsRepository";
+import { settingsRepository } from "@/server/repositories/settingsRepository";
 
 export interface DownloadJobData {
   job_id: string;

@@ -3,7 +3,7 @@ import {
   buildTrackPrompt,
   getDefaultTrackEmbeddingTemplate,
 } from "@/lib/track-embedding";
-import { trackRepository } from "@/services/trackRepository";
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 export async function GET(
   request: NextRequest,

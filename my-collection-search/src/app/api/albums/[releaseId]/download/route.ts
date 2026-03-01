@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { redisJobService } from "@/services/redisJobService";
+import { redisJobService } from "@/server/services/redisJobService";
 import { getPostHogClient } from "@/lib/posthog-server";
-import { albumRepository } from "@/services/albumRepository";
+import { albumRepository } from "@/server/repositories/albumRepository";
 
 export async function POST(
   request: Request,

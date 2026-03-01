@@ -2,7 +2,7 @@
 // Supports sorting by date_added, year, title, album_rating
 // Example: /api/albums?q=jazz&sort=date_added:desc&friend_id=1&limit=20&offset=0
 import { NextRequest, NextResponse } from "next/server";
-import { albumApiService } from "@/services/albumApiService";
+import { albumApiService } from "@/server/services/albumApiService";
 
 export async function GET(request: NextRequest) {
   try {

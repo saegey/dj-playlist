@@ -1,9 +1,9 @@
-import { redisJobService, type JobStatus } from "@/services/redisJobService";
+import { redisJobService, type JobStatus } from "@/server/services/redisJobService";
 import {
   jobRepository,
   type JobTrackPair,
   type JobTrackRow,
-} from "@/services/jobRepository";
+} from "@/server/repositories/jobRepository";
 import type { JobInfo } from "@/types/jobs";
 
 export type JobsStateFilter = "all" | "waiting" | "active" | "completed" | "failed";

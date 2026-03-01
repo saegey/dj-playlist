@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getMeiliClient } from "@/lib/meili";
-import { getOrCreateAlbumsIndex, configureAlbumsIndex } from "@/services/albumMeiliService";
-import { albumRepository } from "@/services/albumRepository";
+import { getOrCreateAlbumsIndex, configureAlbumsIndex } from "@/server/services/albumMeiliService";
+import { albumRepository } from "@/server/repositories/albumRepository";
 
 export async function GET() {
   return NextResponse.json(

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { albumApiService } from "@/services/albumApiService";
+import { albumApiService } from "@/server/services/albumApiService";
 
 /**
  * GET /api/albums/[releaseId]?friend_id=X

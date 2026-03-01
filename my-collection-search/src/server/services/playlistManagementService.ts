@@ -1,7 +1,7 @@
 import {
   playlistRepository,
   type PlaylistTrackRow,
-} from "@/services/playlistRepository";
+} from "@/server/repositories/playlistRepository";
 import type { PlaylistTrackInput } from "@/api-contract/schemas";
 import { withDbTransaction } from "@/lib/serverDb";
 

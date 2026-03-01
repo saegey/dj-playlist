@@ -4,14 +4,14 @@ import { getMeiliClient } from "@/lib/meili";
 import {
   configureAlbumsIndex,
   getOrCreateAlbumsIndex,
-} from "@/services/albumMeiliService";
-import { albumRepository } from "@/services/albumRepository";
-import { addTracksToMeili } from "@/services/meiliDocumentService";
+} from "@/server/services/albumMeiliService";
+import { albumRepository } from "@/server/repositories/albumRepository";
+import { addTracksToMeili } from "@/server/services/meiliDocumentService";
 import {
   configureMeiliIndex,
   getOrCreateTracksIndex,
-} from "@/services/meiliIndexService";
-import { trackRepository } from "@/services/trackRepository";
+} from "@/server/services/meiliIndexService";
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 async function reindexMeiliSearch() {
   const meiliClient = getMeiliClient();

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { TextEncoder } from "util";
 import { getPostHogClient } from "@/lib/posthog-server";
-import { friendService } from "@/services/friendService";
+import { friendService } from "@/server/services/friendService";
 
 export async function GET() {
   try {

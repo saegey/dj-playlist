@@ -1,6 +1,6 @@
 import { getMeiliClient } from "@/lib/meili";
 import type { Album, Track } from "@/types/track";
-import { albumRepository } from "@/services/albumRepository";
+import { albumRepository } from "@/server/repositories/albumRepository";
 
 type AlbumSearchHit = Record<string, unknown>;
 

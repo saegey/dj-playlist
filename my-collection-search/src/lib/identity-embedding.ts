@@ -18,8 +18,8 @@ import {
 import {
   trackRepository,
   type TrackWithAlbumMetadataRow,
-} from "@/services/trackRepository";
-import { embeddingsRepository } from "@/services/embeddingsRepository";
+} from "@/server/repositories/trackRepository";
+import { embeddingsRepository } from "@/server/repositories/embeddingsRepository";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "My API Key",

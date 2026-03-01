@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { restoreDatabaseFromUpload } from "@/services/restoreService";
+import { restoreDatabaseFromUpload } from "@/server/services/restoreService";
 
 export async function POST(request: Request) {
   try {

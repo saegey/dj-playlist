@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { friendService } from "@/services/friendService";
+import { friendService } from "@/server/services/friendService";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;

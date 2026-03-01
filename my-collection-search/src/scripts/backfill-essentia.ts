@@ -8,7 +8,7 @@
  *   npm run backfill-essentia -- --force
  */
 
-import { trackOpsService } from "../services/trackOpsService";
+import { trackOpsService } from "../server/services/trackOpsService";
 
 type Options = {
   friend_id?: number;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { embeddingsService } from "@/services/embeddingsService";
+import { embeddingsService } from "@/server/services/embeddingsService";
 import type { SimilarityFilters } from "@/types/embeddings";
 
 function parsePositiveInt(value: string | null, fallback: number): number {

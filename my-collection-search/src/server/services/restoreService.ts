@@ -6,12 +6,12 @@ import { getMeiliClient } from "@/lib/meili";
 import {
   getOrCreateAlbumsIndex,
   configureAlbumsIndex,
-} from "@/services/albumMeiliService";
+} from "@/server/services/albumMeiliService";
 import {
   getOrCreateTracksIndex,
   configureMeiliIndex,
-} from "@/services/meiliIndexService";
-import { addTracksToMeili } from "@/services/meiliDocumentService";
+} from "@/server/services/meiliIndexService";
+import { addTracksToMeili } from "@/server/services/meiliDocumentService";
 import type { Track } from "@/types/track";
 
 type RestorePgConfig = {

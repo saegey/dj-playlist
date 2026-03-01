@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import {
   generateTrackMetadata,
   TrackMetadataError,
-} from "@/services/trackMetadataAiService";
+} from "@/server/services/trackMetadataAiService";
 
 export async function POST(req: Request) {
   try {

@@ -6,8 +6,8 @@ import {
   saveManifest,
   parseManifestFile,
   getManifestFiles,
-} from "@/services/discogsManifestService";
-import { cleanupDiscogsReleases } from "@/services/discogsCleanupService";
+} from "@/server/services/discogsManifestService";
+import { cleanupDiscogsReleases } from "@/server/services/discogsCleanupService";
 
 interface DeleteReleasesRequest {
   username: string;

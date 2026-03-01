@@ -9,8 +9,8 @@ import {
 import {
   normalizePlaylistCreatedAt,
   playlistManagementService,
-} from "@/services/playlistManagementService";
-import { playlistRepository } from "@/services/playlistRepository";
+} from "@/server/services/playlistManagementService";
+import { playlistRepository } from "@/server/repositories/playlistRepository";
 
 export async function DELETE(req: Request) {
   try {

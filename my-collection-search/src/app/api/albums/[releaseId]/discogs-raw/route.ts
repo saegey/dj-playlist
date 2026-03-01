@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getReleasePath, loadAlbum } from "@/services/discogsManifestService";
-import { albumRepository } from "@/services/albumRepository";
+import { getReleasePath, loadAlbum } from "@/server/services/discogsManifestService";
+import { albumRepository } from "@/server/repositories/albumRepository";
 
 export async function GET(
   request: NextRequest,

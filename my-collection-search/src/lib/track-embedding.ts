@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { Track } from "@/types/track";
-import { settingsRepository } from "@/services/settingsRepository";
+import { settingsRepository } from "@/server/repositories/settingsRepository";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY

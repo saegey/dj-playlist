@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getTrackEmbedding } from "@/lib/track-embedding";
-import { trackRepository } from "@/services/trackRepository";
+import { trackRepository } from "@/server/repositories/trackRepository";
 
 // POST: bulk update notes/genre
 export async function POST(request: Request) {

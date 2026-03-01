@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { embeddingsService } from "@/services/embeddingsService";
+import { embeddingsService } from "@/server/services/embeddingsService";
 import type { BackfillOptions } from "@/types/backfill";
 
 export const maxDuration = 300; // 5 minutes

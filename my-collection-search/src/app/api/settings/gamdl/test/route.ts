@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { gamdlConnectionTestService } from "@/services/gamdlConnectionTestService";
+import { gamdlConnectionTestService } from "@/server/services/gamdlConnectionTestService";
 import type { GamdlConnectionTestDetails } from "@/types/gamdl";
 
 export const runtime = "nodejs";

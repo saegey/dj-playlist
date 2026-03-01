@@ -7,16 +7,16 @@ import {
   createExportsDir,
   getManifestReleaseIds,
   getManifestPath,
-} from "@/services/discogsManifestService";
+} from "@/server/services/discogsManifestService";
 import fs from "fs";
 import { NextRequest } from "next/server";
 import {
   getCollectionPage,
   getReleaseDetails,
-} from "@/services/discogsApiClient";
+} from "@/server/services/discogsApiClient";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { dbPool } from "@/lib/serverDb";
-import { cleanupDiscogsReleases } from "@/services/discogsCleanupService";
+import { cleanupDiscogsReleases } from "@/server/services/discogsCleanupService";
 
 const DISCOGS_USER_TOKEN = process.env.DISCOGS_USER_TOKEN;
 // Username can be passed as a param or defaults to env
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
 
             // Delete local files first, then clean DB + Meili in one shared service
             try {
-              const { deleteRelease } = await import("@/services/discogsManifestService");
+              const { deleteRelease } = await import("@/server/services/discogsManifestService");
 
               let deletedFiles = 0;
               for (const releaseId of removedIds) {
@@ -278,17 +278,17 @@ export async function GET(request: NextRequest) {
 
             try {
               const { getTracksFromManifestReleases } = await import(
-                "@/services/discogsManifestService"
+                "@/server/services/discogsManifestService"
               );
               const {
                 getOrCreateTracksIndex,
                 configureMeiliIndex,
-              } = await import("@/services/meiliIndexService");
+              } = await import("@/server/services/meiliIndexService");
               const { upsertTracks } = await import(
-                "@/services/trackUpsertService"
+                "@/server/services/trackUpsertService"
               );
               const { addTracksToMeili } = await import(
-                "@/services/meiliDocumentService"
+                "@/server/services/meiliDocumentService"
               );
               const { getMeiliClient } = await import("@/lib/meili");
 
@@ -339,13 +339,13 @@ export async function GET(request: NextRequest) {
                   getAlbumsFromManifestReleases,
                   upsertAlbums,
                 } = await import(
-                  "@/services/albumUpsertService"
+                  "@/server/services/albumUpsertService"
                 );
                 const {
                   getOrCreateAlbumsIndex,
                   configureAlbumsIndex,
                   addAlbumsToMeili,
-                } = await import("@/services/albumMeiliService");
+                } = await import("@/server/services/albumMeiliService");
 
                 controller.enqueue(
                   encoder.encode(`Loading albums from new releases...\n`)

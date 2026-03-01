@@ -2,7 +2,7 @@ import { withDbClient } from "@/lib/serverDb";
 import { generateAndStoreIdentityEmbedding } from "@/lib/identity-embedding";
 import { getIdentityPreview } from "@/lib/identity-embedding";
 import { getAudioVibePreview } from "@/lib/audio-vibe-embedding";
-import { embeddingsRepository } from "@/services/embeddingsRepository";
+import { embeddingsRepository } from "@/server/repositories/embeddingsRepository";
 import type { BackfillOptions } from "@/types/backfill";
 import type {
   EmbeddingTrackRef,

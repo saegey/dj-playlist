@@ -4,7 +4,7 @@
 import { getMeiliClient } from "@/lib/meili";
 import { NextResponse } from "next/server";
 import { withDbTransaction } from "@/lib/serverDb";
-import { albumRepository, type AlbumCleanupRow } from "@/services/albumRepository";
+import { albumRepository, type AlbumCleanupRow } from "@/server/repositories/albumRepository";
 
 function buildAlbumsToDelete(
   emptyCountAlbums: AlbumCleanupRow[],

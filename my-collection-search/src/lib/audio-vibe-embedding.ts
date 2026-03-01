@@ -23,8 +23,8 @@ import {
 } from "./audio-vibe-normalization";
 import { Track } from "@/types/track";
 import { readEssentiaAnalysis } from "./essentia-storage";
-import { trackRepository } from "@/services/trackRepository";
-import { embeddingsRepository } from "@/services/embeddingsRepository";
+import { trackRepository } from "@/server/repositories/trackRepository";
+import { embeddingsRepository } from "@/server/repositories/embeddingsRepository";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "My API Key",

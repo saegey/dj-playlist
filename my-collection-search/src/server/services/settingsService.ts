@@ -4,7 +4,7 @@ import {
   invalidateTrackEmbeddingTemplateCache,
 } from "@/lib/track-embedding";
 import type { GamdlSettings, GamdlSettingsUpdate } from "@/types/gamdl";
-import { settingsRepository } from "@/services/settingsRepository";
+import { settingsRepository } from "@/server/repositories/settingsRepository";
 
 export class SettingsService {
   async getAiPrompt(friendId?: number): Promise<{
