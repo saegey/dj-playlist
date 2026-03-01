@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   fetchPlaylistTrackIds,
   type PlaylistTrackIdsResponse,
-} from "@/services/playlistService";
+} from "@/services/internalApi/playlists";
 import { usePlaylistTracksQuery } from "@/hooks/usePlaylistTracksQuery";
 import { queryKeys } from "@/lib/queryKeys";
 

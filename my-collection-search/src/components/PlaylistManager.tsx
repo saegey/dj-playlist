@@ -25,7 +25,7 @@ import AppleMusicXmlImport from "@/components/AppleMusicXmlImport";
 import { FiHeadphones, FiTrash, FiMoreVertical } from "react-icons/fi";
 import { TbFileImport } from "react-icons/tb";
 import { usePlaylists } from "@/providers/PlaylistsProvider";
-import { importPlaylist, PlaylistTrackPayload } from "@/services/playlistService";
+import { importPlaylist, PlaylistTrackPayload } from "@/services/internalApi/playlists";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { FaPlay } from "react-icons/fa";
 import { fetchTracksByIds } from "@/services/trackService";
@@ -159,20 +159,16 @@ export default function PlaylistManager({
       }
 
       // Import directly
-      const res = await importPlaylist(name, tracks);
-      if (res.ok) {
-        notify({ title: `Imported '${name}'`, type: "success" });
-        fetchPlaylists();
+      await importPlaylist(name, tracks);
+      notify({ title: `Imported '${name}'`, type: "success" });
+      fetchPlaylists();
 
-        // PostHog: Track playlist import
-        posthog.capture("playlist_imported", {
-          playlist_name: name,
-          track_count: tracks.length,
-          import_format: "json",
-        });
-      } else {
-        notify({ title: "Failed to import playlist", type: "error" });
-      }
+      // PostHog: Track playlist import
+      posthog.capture("playlist_imported", {
+        playlist_name: name,
+        track_count: tracks.length,
+        import_format: "json",
+      });
     } catch (err) {
       console.error("Import error:", err);
       notify({ title: "Error importing playlist", type: "error" });
@@ -185,13 +181,9 @@ export default function PlaylistManager({
   const handleConfirmImport = async () => {
     if (!importedTracks.length || !importedName.trim()) return;
     try {
-      const res = await importPlaylist(importedName, importedTracks);
-      if (res.ok) {
-        notify({ title: `Imported '${importedName}'`, type: "success" });
-        fetchPlaylists();
-      } else {
-        notify({ title: "Failed to import playlist", type: "error" });
-      }
+      await importPlaylist(importedName, importedTracks);
+      notify({ title: `Imported '${importedName}'`, type: "success" });
+      fetchPlaylists();
     } catch {
       notify({ title: "Error importing playlist", type: "error" });
     } finally {
@@ -211,20 +203,16 @@ export default function PlaylistManager({
         friend_id: selectedFriendId,
       }));
 
-      const res = await importPlaylist(pendingImport.name, tracks);
-      if (res.ok) {
-        notify({ title: `Imported '${pendingImport.name}'`, type: "success" });
-        fetchPlaylists();
+      await importPlaylist(pendingImport.name, tracks);
+      notify({ title: `Imported '${pendingImport.name}'`, type: "success" });
+      fetchPlaylists();
 
-        // PostHog: Track playlist import
-        posthog.capture("playlist_imported", {
-          playlist_name: pendingImport.name,
-          track_count: tracks.length,
-          import_format: "json",
-        });
-      } else {
-        notify({ title: "Failed to import playlist", type: "error" });
-      }
+      // PostHog: Track playlist import
+      posthog.capture("playlist_imported", {
+        playlist_name: pendingImport.name,
+        track_count: tracks.length,
+        import_format: "json",
+      });
     } catch {
       notify({ title: "Error importing playlist", type: "error" });
     } finally {

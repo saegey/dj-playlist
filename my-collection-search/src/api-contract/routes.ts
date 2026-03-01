@@ -17,6 +17,8 @@ import {
   playlistDeleteQuerySchema,
   playlistDetailParamsSchema,
   playlistDetailResponseSchema,
+  playlistGeneticBodySchema,
+  playlistGeneticResponseSchema,
   playlistPatchBodySchema,
   playlistSchema,
   queueAlbumDownloadsResponseSchema,
@@ -1491,6 +1493,122 @@ export const apiContractRoutes: ApiContractRoute[] = [
         },
         "404": {
           description: "Not found",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "generateGeneticPlaylist",
+    method: "post",
+    path: "/api/playlists/genetic",
+    summary: "Generate genetic ordering for playlist tracks",
+    tags: ["Playlists"],
+    bodySchema: playlistGeneticBodySchema,
+    successSchema: playlistGeneticResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                playlist: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      track_id: { type: "string" },
+                      friend_id: { type: "integer" },
+                      bpm: { type: ["number", "string", "null"] },
+                      embedding: {
+                        oneOf: [
+                          { type: "string" },
+                          { type: "array", items: { type: "number" } },
+                          { type: "null" },
+                        ],
+                      },
+                      _vectors: {
+                        type: "object",
+                        properties: {
+                          default: { type: "array", items: { type: "number" } },
+                        },
+                        additionalProperties: true,
+                      },
+                    },
+                    required: ["track_id"],
+                    additionalProperties: true,
+                  },
+                  minItems: 1,
+                },
+              },
+              required: ["playlist"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Genetic ordering result",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  result: {
+                    oneOf: [
+                      {
+                        type: "array",
+                        items: { type: "object", additionalProperties: true },
+                      },
+                      {
+                        type: "object",
+                        additionalProperties: { type: "object", additionalProperties: true },
+                      },
+                    ],
+                  },
+                },
+                required: ["result"],
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid track data for optimization",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  error: { type: "string" },
+                  invalid: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        track_id: { type: "string" },
+                        reason: { type: "string" },
+                      },
+                      required: ["reason"],
+                      additionalProperties: false,
+                    },
+                  },
+                  invalid_count: { type: "integer" },
+                },
+                required: ["error", "invalid", "invalid_count"],
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },

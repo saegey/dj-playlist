@@ -4,7 +4,7 @@ import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { toaster } from "@/components/ui/toaster";
-import { importPlaylist, updatePlaylist } from "@/services/playlistService";
+import { importPlaylist, updatePlaylist } from "@/services/internalApi/playlists";
 import { queryKeys } from "@/lib/queryKeys";
 
 /**
@@ -65,10 +65,8 @@ export function usePlaylistSaveDialog(playlistId?: number, onSaved?: () => void)
       }
 
       try {
-        let res;
-
         if (playlistId) {
-          res = await updatePlaylist(playlistId, {
+          await updatePlaylist(playlistId, {
             tracks: tracksWithFriendId,
           });
           toaster.create({
@@ -85,14 +83,12 @@ export function usePlaylistSaveDialog(playlistId?: number, onSaved?: () => void)
             return;
           }
           // Create new playlist with tracks that have friend_id
-          res = await importPlaylist(finalName.trim(), tracksWithFriendId);
+          await importPlaylist(finalName.trim(), tracksWithFriendId);
           toaster.create({
             title: "Playlist created successfully",
             type: "success",
           });
         }
-
-        if (!res.ok) throw new Error("Failed to save playlist");
 
         setOpen(false);
         setPlaylistName("");

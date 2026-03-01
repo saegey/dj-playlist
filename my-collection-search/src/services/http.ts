@@ -22,7 +22,13 @@ export async function http<T>(
       (errorObj.error as string) ||
       (errorObj.message as string) ||
       `HTTP ${res.status}`;
-    throw new Error(message);
+    const error = new Error(message) as Error & {
+      status?: number;
+      data?: unknown;
+    };
+    error.status = res.status;
+    error.data = data;
+    throw error;
   }
   return data as T;
 }

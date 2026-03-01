@@ -106,6 +106,50 @@ export const playlistDetailResponseSchema = z.object({
   tracks: z.array(playlistTrackRefSchema),
 });
 
+export const playlistGeneticTrackSchema = z
+  .object({
+    track_id: z.string().min(1),
+    friend_id: z.number().int().optional(),
+    bpm: z.union([z.number(), z.string()]).nullable().optional(),
+    embedding: z.union([z.string(), z.array(z.number())]).nullable().optional(),
+    _vectors: z
+      .object({
+        default: z.array(z.number()).optional(),
+      })
+      .optional(),
+  })
+  .passthrough();
+
+export const playlistGeneticBodySchema = z.object({
+  playlist: z.array(playlistGeneticTrackSchema).min(1),
+});
+
+export const playlistGeneticResultTrackSchema = z
+  .object({
+    track_id: z.string().min(1),
+  })
+  .passthrough();
+
+export const playlistGeneticResponseSchema = z
+  .object({
+    result: z.union([
+      z.array(playlistGeneticResultTrackSchema),
+      z.record(playlistGeneticResultTrackSchema),
+    ]),
+  })
+  .passthrough();
+
+export const playlistGeneticInvalidItemSchema = z.object({
+  track_id: z.string().optional(),
+  reason: z.string(),
+});
+
+export const playlistGeneticValidationErrorSchema = z.object({
+  error: z.string(),
+  invalid: z.array(playlistGeneticInvalidItemSchema),
+  invalid_count: z.number().int(),
+});
+
 export const trackSearchGetQuerySchema = z.object({
   q: z.string().optional().default(""),
   limit: nonNegativeIntFromInputSchema.optional().default(20),

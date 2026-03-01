@@ -14,7 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { FiPlus, FiSearch } from "react-icons/fi";
 import { useQuery } from "@tanstack/react-query";
-import { fetchPlaylists } from "@/services/playlistService";
+import { fetchPlaylists } from "@/services/internalApi/playlists";
 import { queryKeys } from "@/lib/queryKeys";
 import type { Playlist } from "@/types/track";
 

@@ -35,7 +35,7 @@ import {
   importPlaylist,
   updatePlaylist,
   type PlaylistTrackPayload,
-} from "@/services/playlistService";
+} from "@/services/internalApi/playlists";
 import { analyzeTrackAsync } from "@/services/trackService";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { queryKeys } from "@/lib/queryKeys";
@@ -135,17 +135,12 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
         ...newTracks,
       ];
 
-      const res = await updatePlaylist(playlistId, { tracks: combinedTracks });
-
-      if (res.ok) {
-        toaster.create({
-          title: `Appended ${newTracks.length} tracks to playlist`,
-          type: "success",
-        });
-        refetchTrackIds();
-      } else {
-        toaster.create({ title: "Failed to append tracks", type: "error" });
-      }
+      await updatePlaylist(playlistId, { tracks: combinedTracks });
+      toaster.create({
+        title: `Appended ${newTracks.length} tracks to playlist`,
+        type: "success",
+      });
+      refetchTrackIds();
     } catch (err) {
       console.error("Append error:", err);
       toaster.create({ title: "Error appending tracks", type: "error" });
@@ -247,14 +242,13 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
       return;
     }
     try {
-      const res = await importPlaylist(
+      await importPlaylist(
         finalName,
         tracksPlaylist.map(({ track_id, friend_id }) => ({
           track_id,
           friend_id,
         }))
       );
-      if (!res.ok) throw new Error("Failed to duplicate playlist");
       toaster.create({
         title: `Duplicated playlist as "${finalName}"`,
         type: "success",
@@ -278,8 +272,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
       return;
     }
     try {
-      const res = await updatePlaylist(playlistId, { name: finalName });
-      if (!res.ok) throw new Error("Failed to rename playlist");
+      await updatePlaylist(playlistId, { name: finalName });
       toaster.create({
         title: "Playlist renamed",
         type: "success",

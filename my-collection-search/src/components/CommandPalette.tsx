@@ -7,7 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useUsername } from "@/providers/UsernameProvider";
 import { usePlaylistsQuery } from "@/hooks/usePlaylistsQuery";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
-import { importPlaylist } from "@/services/playlistService";
+import { importPlaylist } from "@/services/internalApi/playlists";
 import type { Track } from "@/types/track";
 import { toaster } from "@/components/ui/toaster";
 import styles from "./CommandPalette.module.css";
@@ -150,9 +150,7 @@ export default function CommandPalette() {
     }
 
     try {
-      const res = await importPlaylist(name.trim(), tracks);
-      if (!res.ok) throw new Error("Failed to create playlist");
-      const created = await res.json();
+      const created = await importPlaylist(name.trim(), tracks);
       toaster.create({
         title: "Playlist created",
         description: name.trim(),
