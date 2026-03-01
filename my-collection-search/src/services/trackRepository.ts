@@ -195,7 +195,10 @@ export class TrackRepository {
     return rows;
   }
 
-  async findTracksForEssentiaBackfill(friendId: number | null): Promise<TrackLocalAudioRow[]> {
+  async findTracksForEssentiaBackfill(
+    friendId: number | null,
+    limit?: number
+  ): Promise<TrackLocalAudioRow[]> {
     const query = `
       SELECT track_id, friend_id, local_audio_url
       FROM tracks
@@ -203,11 +206,18 @@ export class TrackRepository {
         AND local_audio_url <> ''
         ${friendId !== null ? "AND friend_id = $1" : ""}
       ORDER BY friend_id, track_id
+      ${limit ? `LIMIT $${friendId !== null ? 2 : 1}` : ""}
     `;
 
     const { rows } = await dbQuery<TrackLocalAudioRow>(
       query,
-      friendId !== null ? [friendId] : []
+      friendId !== null
+        ? limit
+          ? [friendId, limit]
+          : [friendId]
+        : limit
+        ? [limit]
+        : []
     );
     return rows;
   }

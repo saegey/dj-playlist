@@ -10,18 +10,7 @@ type MeiliTrackSource = (DiscogsTrack | Track) & {
 export async function addTracksToMeili(index: Index, tracks: MeiliTrackSource[]) {
   const documents = tracks.map((t) => {
     const { embedding, ...rest } = t;
-    let vectorArr: number[] | null = null;
-    if (Array.isArray(embedding)) vectorArr = embedding;
-    else if (typeof embedding === "string") {
-      try {
-        vectorArr = JSON.parse(embedding);
-      } catch {}
-    }
-    return {
-      ...rest,
-      _vectors: { default: vectorArr },
-      hasVectors: !!vectorArr,
-    };
+    return rest;
   });
 
   // Process in batches to avoid payload size limits

@@ -10,27 +10,6 @@ export async function getOrCreateTracksIndex(meiliClient: MeiliSearch): Promise<
 }
 
 export async function configureMeiliIndex(index: Index, meiliClient: MeiliSearch) {
-  // Configure embedders and fail fast if vector settings are rejected.
-  const embedderResp = await fetch(
-    `${meiliClient.config.host}/indexes/tracks/settings/embedders`,
-    {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${meiliClient.config.apiKey ?? ""}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        default: { source: "userProvided", dimensions: 1536 },
-      }),
-    }
-  );
-  if (!embedderResp.ok) {
-    const details = await embedderResp.text();
-    throw new Error(
-      `Failed to configure Meili embedders (${embedderResp.status}): ${details}`
-    );
-  }
-
   await index.updateSearchableAttributes([
     "local_tags",
     "artist",
@@ -53,7 +32,6 @@ export async function configureMeiliIndex(index: Index, meiliClient: MeiliSearch
     "styles",
     "local_audio_url",
     "apple_music_url",
-    "hasVectors",
     "youtube_url",
     "spotify_url",
     "soundcloud_url",

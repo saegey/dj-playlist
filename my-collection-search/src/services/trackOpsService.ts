@@ -81,6 +81,7 @@ export class TrackOpsService {
   async queueEssentiaBackfillJobs(params: {
     friend_id: number | null;
     force: boolean;
+    limit?: number;
   }): Promise<{
     queued: number;
     skipped_existing: number;
@@ -89,7 +90,10 @@ export class TrackOpsService {
     jobIds: string[];
     errors: TrackFriendQueueError[];
   }> {
-    const rows = await trackRepository.findTracksForEssentiaBackfill(params.friend_id);
+    const rows = await trackRepository.findTracksForEssentiaBackfill(
+      params.friend_id,
+      params.limit
+    );
 
     const jobIds: string[] = [];
     const errors: TrackFriendQueueError[] = [];

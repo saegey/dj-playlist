@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
 import { dbQuery } from "@/lib/serverDb";
-import type { BackfillOptions } from "@/types/backfill";
+import type { BackfillOptions, EmbeddingBackfillOptions } from "@/types/backfill";
 import type {
   EmbeddingTrackRef,
   SimilarIdentityTrack,
@@ -19,42 +19,81 @@ type SimilarVibeTrackRow = Omit<SimilarVibeTrack, "distance"> & {
 };
 
 export class EmbeddingsRepository {
-  async listTracksNeedingIdentityEmbeddings(
-    options: BackfillOptions
+  async listTracksForBackfill(
+    options: EmbeddingBackfillOptions
   ): Promise<EmbeddingTrackRef[]> {
-    const { friend_id, force, limit } = options;
+    const { type, friend_id, force, limit } = options;
     const params: Array<number> = [];
     let query = "";
 
     if (force) {
-      query = `
-        SELECT track_id, friend_id
-        FROM tracks
-        ${friend_id ? "WHERE friend_id = $1" : ""}
-        ORDER BY friend_id, track_id
-        ${limit ? `LIMIT $${friend_id ? 2 : 1}` : ""}
-      `;
+      if (type === "audio_vibe") {
+        query = `
+          SELECT track_id, friend_id
+          FROM tracks
+          WHERE (bpm IS NOT NULL OR key IS NOT NULL OR danceability IS NOT NULL
+                 OR mood_happy IS NOT NULL OR mood_sad IS NOT NULL
+                 OR mood_relaxed IS NOT NULL OR mood_aggressive IS NOT NULL)
+          ${friend_id ? "AND friend_id = $1" : ""}
+          ORDER BY friend_id, track_id
+          ${limit ? `LIMIT $${friend_id ? 2 : 1}` : ""}
+        `;
+      } else {
+        query = `
+          SELECT track_id, friend_id
+          FROM tracks
+          ${friend_id ? "WHERE friend_id = $1" : ""}
+          ORDER BY friend_id, track_id
+          ${limit ? `LIMIT $${friend_id ? 2 : 1}` : ""}
+        `;
+      }
+
       if (friend_id) params.push(friend_id);
       if (limit) params.push(limit);
     } else {
-      query = `
-        SELECT t.track_id, t.friend_id
-        FROM tracks t
-        LEFT JOIN track_embeddings te
-          ON t.track_id = te.track_id
-          AND t.friend_id = te.friend_id
-          AND te.embedding_type = 'identity'
-        WHERE te.id IS NULL
-        ${friend_id ? "AND t.friend_id = $1" : ""}
-        ORDER BY t.friend_id, t.track_id
-        ${limit ? `LIMIT $${friend_id ? 2 : 1}` : ""}
-      `;
+      if (type === "audio_vibe") {
+        query = `
+          SELECT t.track_id, t.friend_id
+          FROM tracks t
+          LEFT JOIN track_embeddings te
+            ON t.track_id = te.track_id
+            AND t.friend_id = te.friend_id
+            AND te.embedding_type = 'audio_vibe'
+          WHERE te.id IS NULL
+            AND (t.bpm IS NOT NULL OR t.key IS NOT NULL OR t.danceability IS NOT NULL
+                 OR t.mood_happy IS NOT NULL OR t.mood_sad IS NOT NULL
+                 OR t.mood_relaxed IS NOT NULL OR t.mood_aggressive IS NOT NULL)
+          ${friend_id ? "AND t.friend_id = $1" : ""}
+          ORDER BY t.friend_id, t.track_id
+          ${limit ? `LIMIT $${friend_id ? 2 : 1}` : ""}
+        `;
+      } else {
+        query = `
+          SELECT t.track_id, t.friend_id
+          FROM tracks t
+          LEFT JOIN track_embeddings te
+            ON t.track_id = te.track_id
+            AND t.friend_id = te.friend_id
+            AND te.embedding_type = 'identity'
+          WHERE te.id IS NULL
+          ${friend_id ? "AND t.friend_id = $1" : ""}
+          ORDER BY t.friend_id, t.track_id
+          ${limit ? `LIMIT $${friend_id ? 2 : 1}` : ""}
+        `;
+      }
+
       if (friend_id) params.push(friend_id);
       if (limit) params.push(limit);
     }
 
     const result = await dbQuery<EmbeddingTrackRef>(query, params);
     return result.rows;
+  }
+
+  async listTracksNeedingIdentityEmbeddings(
+    options: BackfillOptions
+  ): Promise<EmbeddingTrackRef[]> {
+    return this.listTracksForBackfill({ ...options, type: "identity" });
   }
 
   async setIvfflatProbes(client: Queryable, probes: number): Promise<void> {

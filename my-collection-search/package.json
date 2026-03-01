@@ -17,7 +17,8 @@
     "backfill-identity": "tsx src/scripts/backfill-identity.ts",
     "backfill-audio-vibe": "tsx src/scripts/backfill-identity.ts -- --type=audio_vibe",
     "backfill-essentia": "tsx src/scripts/backfill-essentia.ts",
-    "openapi:check": "node --import tsx/esm scripts/check-openapi.ts"
+    "openapi:check": "node --import tsx/esm scripts/check-openapi.ts",
+    "reindex:meili": "tsx src/scripts/reindex-meilisearch.ts"
   },
   "dependencies": {
     "@chakra-ui/icons": "^2.2.4",

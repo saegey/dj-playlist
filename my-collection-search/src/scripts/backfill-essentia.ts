@@ -8,21 +8,12 @@
  *   npm run backfill-essentia -- --force
  */
 
-import fs from "fs";
-import { Pool } from "pg";
-import { getEssentiaAnalysisPath } from "../lib/essentia-storage";
-import { redisJobService } from "../services/redisJobService";
+import { trackOpsService } from "../services/trackOpsService";
 
 type Options = {
   friend_id?: number;
   force?: boolean;
   limit?: number;
-};
-
-type TrackRow = {
-  track_id: string;
-  friend_id: number;
-  local_audio_url: string | null;
 };
 
 function parseArgs(): Options {
@@ -65,71 +56,31 @@ Options:
 
 async function main() {
   const opts = parseArgs();
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
   console.log("Starting Essentia backfill queue...");
   console.log("Options:", opts);
 
-  try {
-    const params: (number | string)[] = [];
-    const where = ["local_audio_url IS NOT NULL", "local_audio_url <> ''"];
-    if (opts.friend_id) {
-      where.push(`friend_id = $${params.length + 1}`);
-      params.push(opts.friend_id);
-    }
+  const result = await trackOpsService.queueEssentiaBackfillJobs({
+    friend_id: opts.friend_id ?? null,
+    force: Boolean(opts.force),
+    limit: opts.limit,
+  });
 
-    const limitClause = opts.limit ? `LIMIT ${opts.limit}` : "";
-    const query = `
-      SELECT track_id, friend_id, local_audio_url
-      FROM tracks
-      WHERE ${where.join(" AND ")}
-      ORDER BY friend_id, track_id
-      ${limitClause}
-    `;
+  console.log("Done.");
+  console.log({
+    total_candidates: result.total_candidates,
+    queued: result.queued,
+    skipped_existing: result.skipped_existing,
+    errors: result.errors.length,
+    force: result.force,
+  });
 
-    const { rows } = await pool.query<TrackRow>(query, params);
-
-    let queued = 0;
-    let skipped_existing = 0;
-    let errors = 0;
-
-    for (const row of rows) {
-      try {
-        if (!row.local_audio_url) continue;
-
-        if (!opts.force) {
-          const analysisPath = getEssentiaAnalysisPath(row.track_id, row.friend_id);
-          if (fs.existsSync(analysisPath)) {
-            skipped_existing += 1;
-            continue;
-          }
-        }
-
-        await redisJobService.createAnalyzeLocalJob({
-          track_id: row.track_id,
-          friend_id: row.friend_id,
-          local_audio_url: row.local_audio_url,
-        });
-        queued += 1;
-      } catch (err) {
-        errors += 1;
-        console.error(
-          `Failed to queue ${row.track_id}:${row.friend_id}`,
-          err instanceof Error ? err.message : String(err)
-        );
-      }
-    }
-
-    console.log("Done.");
-    console.log({
-      total_candidates: rows.length,
-      queued,
-      skipped_existing,
-      errors,
-      force: Boolean(opts.force),
+  if (result.errors.length > 0) {
+    result.errors.slice(0, 10).forEach((error) => {
+      console.error(
+        `Failed to queue ${error.track_id}:${error.friend_id} ${error.error}`
+      );
     });
-  } finally {
-    await pool.end();
   }
 }
 
