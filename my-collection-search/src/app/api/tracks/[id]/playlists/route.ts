@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { trackRepository } from "@/services/trackRepository";
 
 export async function GET(
   request: NextRequest,
@@ -26,19 +24,7 @@ export async function GET(
       );
     }
 
-    const { rows } = await pool.query(
-      `
-      SELECT
-        p.id,
-        p.name,
-        pt.position
-      FROM playlist_tracks pt
-      JOIN playlists p ON p.id = pt.playlist_id
-      WHERE pt.track_id = $1 AND pt.friend_id = $2
-      ORDER BY p.name ASC, pt.position ASC
-      `,
-      [track_id, friend_id]
-    );
+    const rows = await trackRepository.listPlaylistsForTrack(track_id, friend_id);
 
     return NextResponse.json({ playlists: rows });
   } catch (error) {

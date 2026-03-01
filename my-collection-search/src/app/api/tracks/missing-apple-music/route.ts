@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { trackRepository } from "@/services/trackRepository";
 
 export async function GET(request: Request) {
   try {
@@ -12,27 +10,12 @@ export async function GET(request: Request) {
     const offset = (page - 1) * pageSize;
     const friendId = searchParams.get("friendId");
 
-    // Build WHERE clause: missing apple_music_url AND missing youtube_url AND missing soundcloud_url
-    let where =
-      "(apple_music_url IS NULL OR apple_music_url = '') AND (youtube_url IS NULL OR youtube_url = '') AND (soundcloud_url IS NULL OR soundcloud_url = '')";
-    let params: (string | number)[] = [pageSize, offset];
-    if (friendId) {
-      where += " AND friend_id = $3";
-      params = [pageSize, offset, friendId];
-    }
-
-    // Get total count for pagination
-    const countQuery = `SELECT COUNT(*) FROM tracks WHERE ${where}`;
-    const countParams = friendId ? [friendId] : [];
-    const countResult = await pool.query(
-      countQuery.replace(/\$3/g, "$1"), // $1 for count param if username
-      countParams
-    );
-    const total = parseInt(countResult.rows[0].count, 10);
-
-    // Get paginated results
-    const selectQuery = `SELECT * FROM tracks WHERE ${where} ORDER BY id DESC LIMIT $1 OFFSET $2`;
-    const { rows } = await pool.query(selectQuery, params);
+    const { tracks: rows, total } =
+      await trackRepository.findMissingMusicUrlTracksPaginated({
+        pageSize,
+        offset,
+        friendId,
+      });
 
     return NextResponse.json({
       tracks: rows,

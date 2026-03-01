@@ -1,13 +1,15 @@
 import { Index } from "meilisearch";
-import { DiscogsTrack } from "@/types/track";
+import type { DiscogsTrack, Track } from "@/types/track";
 
 const BATCH_SIZE = 1000; // Meilisearch recommends batches of 1000 documents
 
-export async function addTracksToMeili(index: Index, tracks: DiscogsTrack[]) {
+type MeiliTrackSource = (DiscogsTrack | Track) & {
+  embedding?: number[] | string | null;
+};
+
+export async function addTracksToMeili(index: Index, tracks: MeiliTrackSource[]) {
   const documents = tracks.map((t) => {
-    const { embedding, ...rest } = t as DiscogsTrack & {
-      embedding?: number[] | string;
-    };
+    const { embedding, ...rest } = t;
     let vectorArr: number[] | null = null;
     if (Array.isArray(embedding)) vectorArr = embedding;
     else if (typeof embedding === "string") {

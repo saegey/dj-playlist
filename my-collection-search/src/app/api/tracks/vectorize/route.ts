@@ -1,21 +1,5 @@
-import { Pool } from "pg";
 import { getTrackEmbedding } from "@/lib/track-embedding";
-import { Track } from "@/types/track";
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
-async function getTrack(
-  track_id: string,
-  friend_id: number
-): Promise<Track | null> {
-  const res = await pool.query(
-    "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2",
-    [track_id, friend_id]
-  );
-  return res.rows[0] || null;
-}
+import { trackRepository } from "@/services/trackRepository";
 
 export async function POST(request: Request) {
   try {
@@ -31,7 +15,10 @@ export async function POST(request: Request) {
         status: 400,
       });
     }
-    const track = await getTrack(track_id, friend_id);
+    const track = await trackRepository.findTrackByTrackIdAndFriendIdRaw(
+      track_id,
+      friend_id
+    );
     if (!track) {
       return new Response(JSON.stringify({ error: "Track not found" }), {
         status: 404,
@@ -39,12 +26,7 @@ export async function POST(request: Request) {
     }
 
     const embedding = await getTrackEmbedding(track);
-    // Convert JS array to Postgres vector format: [0.1,0.2,...]
-    const pgVector = `[${embedding.join(",")}]`;
-    await pool.query(
-      "UPDATE tracks SET embedding = $1 WHERE track_id = $2 AND friend_id = $3",
-      [pgVector, track_id, friend_id]
-    );
+    await trackRepository.updateTrackEmbedding(track_id, friend_id, embedding);
 
     // Update MeiliSearch index with new embedding
     try {

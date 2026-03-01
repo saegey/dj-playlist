@@ -51,6 +51,17 @@ export type TrackPlaylistMembershipRow = {
   position: number;
 };
 
+export type OrderedTrackRow = TrackWithLibraryIdentifierRow & {
+  ord: number;
+};
+
+export type MissingMusicUrlPageResult = {
+  tracks: Track[];
+  total: number;
+};
+
+export type TrackReindexRow = TrackWithLibraryIdentifierRow;
+
 const UPDATABLE_COLUMNS = {
   title: "title",
   artist: "artist",
@@ -203,6 +214,74 @@ export class TrackRepository {
     return result;
   }
 
+  async findTracksByRefsPreservingOrder(
+    tracks: TrackRef[]
+  ): Promise<OrderedTrackRow[]> {
+    if (tracks.length === 0) return [];
+
+    const values: string[] = [];
+    const params: Array<string | number> = [];
+    let p = 1;
+    for (let i = 0; i < tracks.length; i++) {
+      const t = tracks[i];
+      values.push(`($${p++}::text,$${p++}::int,$${p++}::int)`);
+      params.push(t.track_id, t.friend_id, i);
+    }
+
+    const { rows } = await dbQuery<OrderedTrackRow>(
+      `
+      SELECT
+        t.*,
+        COALESCE(a.library_identifier, t.library_identifier) AS library_identifier,
+        v.ord
+      FROM (VALUES ${values.join(",")}) AS v(track_id, friend_id, ord)
+      JOIN tracks t
+        ON t.track_id = v.track_id AND t.friend_id = v.friend_id
+      LEFT JOIN albums a
+        ON t.release_id = a.release_id AND t.friend_id = a.friend_id
+      ORDER BY v.ord
+      `,
+      params
+    );
+    return rows;
+  }
+
+  async findMissingMusicUrlTracksPaginated(params: {
+    pageSize: number;
+    offset: number;
+    friendId?: string | null;
+  }): Promise<MissingMusicUrlPageResult> {
+    const { pageSize, offset, friendId } = params;
+    const whereBase =
+      "(apple_music_url IS NULL OR apple_music_url = '') AND (youtube_url IS NULL OR youtube_url = '') AND (soundcloud_url IS NULL OR soundcloud_url = '')";
+
+    const where = friendId ? `${whereBase} AND friend_id = $1` : whereBase;
+    const countValues: Array<string | number> = friendId ? [friendId] : [];
+    const tracksValues: Array<string | number> = friendId
+      ? [friendId, pageSize, offset]
+      : [pageSize, offset];
+
+    const countQuery = `SELECT COUNT(*) FROM tracks WHERE ${where}`;
+    const tracksQuery = `
+      SELECT *
+      FROM tracks
+      WHERE ${where}
+      ORDER BY id DESC
+      LIMIT $${friendId ? 2 : 1}
+      OFFSET $${friendId ? 3 : 2}
+    `;
+
+    const [countResult, tracksResult] = await Promise.all([
+      dbQuery<{ count: string }>(countQuery, countValues),
+      dbQuery<Track>(tracksQuery, tracksValues),
+    ]);
+
+    return {
+      tracks: tracksResult.rows,
+      total: parseInt(countResult.rows[0]?.count ?? "0", 10),
+    };
+  }
+
   async findTrackByTrackIdAndFriendId(
     trackId: string,
     friendId: number
@@ -314,6 +393,34 @@ export class TrackRepository {
       "UPDATE tracks SET embedding = $1 WHERE track_id = $2 AND friend_id = $3",
       [pgVector, trackId, friendId]
     );
+  }
+
+  async findTrackByTrackIdAndFriendIdRaw(
+    trackId: string,
+    friendId: number
+  ): Promise<Track | null> {
+    const { rows } = await dbQuery<Track>(
+      "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2 LIMIT 1",
+      [trackId, friendId]
+    );
+    return rows[0] ?? null;
+  }
+
+  async listTracksForReindex(): Promise<TrackReindexRow[]> {
+    const { rows } = await dbQuery<TrackReindexRow>(
+      `
+      SELECT
+        t.*,
+        a.library_identifier,
+        COALESCE(f.username, t.username) AS username
+      FROM tracks t
+      LEFT JOIN albums a
+        ON t.release_id = a.release_id AND t.friend_id = a.friend_id
+      LEFT JOIN friends f
+        ON t.friend_id = f.id
+      `
+    );
+    return rows;
   }
 }
 

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { trackRepository } from "@/services/trackRepository";
 
 export async function GET(
   request: NextRequest,
@@ -9,9 +7,9 @@ export async function GET(
 ) {
   try {
     const track_id = (await params).id;
-    const friend_id = request.nextUrl.searchParams.get("friend_id")?.trim();
+    const friendIdRaw = request.nextUrl.searchParams.get("friend_id")?.trim();
 
-    if (!track_id || !friend_id) {
+    if (!track_id || !friendIdRaw) {
       return NextResponse.json(
         {
           error: "Missing required parameters: track_id and friend_id ",
@@ -20,20 +18,15 @@ export async function GET(
       );
     }
 
-    const { rows } = await pool.query(
-      `
-      SELECT
-        t.*,
-        COALESCE(a.library_identifier, t.library_identifier) AS library_identifier
-      FROM tracks t
-      LEFT JOIN albums a
-        ON t.release_id = a.release_id AND t.friend_id = a.friend_id
-      WHERE t.track_id = $1 AND t.friend_id = $2
-      LIMIT 1
-      `,
-      [track_id, friend_id]
+    const friend_id = Number(friendIdRaw);
+    if (!Number.isFinite(friend_id)) {
+      return NextResponse.json({ error: "friend_id must be a number" }, { status: 400 });
+    }
+
+    const track = await trackRepository.findTrackByTrackIdAndFriendIdWithLibraryFallback(
+      track_id,
+      friend_id
     );
-    const track = rows[0] || null;
 
     if (!track) {
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
