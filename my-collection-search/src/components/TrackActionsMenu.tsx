@@ -12,7 +12,7 @@ import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
 import PlaylistRecommendations from "./PlaylistRecommendations";
 import SimilarTracks from "./SimilarTracks";
 import SimilarVibeTracks from "./SimilarVibeTracks";
-import { analyzeLocalAudioAsync, analyzeTrackAsync, recalcTrackDuration, syncTrackYearFromAudio } from "@/services/trackService";
+import { analyzeLocalAudioAsync, analyzeTrackAsync, recalcTrackDuration, syncTrackYearFromAudio } from "@/services/internalApi/tracks";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
 import posthog from "posthog-js";

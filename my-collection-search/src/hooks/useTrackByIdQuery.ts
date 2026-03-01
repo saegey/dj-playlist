@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchTrackById } from "@/services/trackService";
+import { fetchTrackById } from "@/services/internalApi/tracks";
 import type { Track } from "@/types/track";
 import { queryKeys } from "@/lib/queryKeys";
 

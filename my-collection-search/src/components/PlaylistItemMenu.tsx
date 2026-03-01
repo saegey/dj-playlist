@@ -16,7 +16,7 @@ import {
 import type { Track } from "@/types/track";
 import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
 import PlaylistRecommendations from "./PlaylistRecommendations";
-import { analyzeTrackAsync, recalcTrackDuration, vectorizeTrack } from "@/services/trackService";
+import { analyzeTrackAsync, recalcTrackDuration, vectorizeTrack } from "@/services/internalApi/tracks";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
 import { useTrackStore } from "@/stores/trackStore";

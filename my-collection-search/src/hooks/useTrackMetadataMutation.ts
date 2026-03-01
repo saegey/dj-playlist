@@ -5,7 +5,7 @@ import {
   fetchTrackMetadata,
   type TrackMetadataArgs,
   type TrackMetadataResponse,
-} from "@/services/trackService";
+} from "@/services/internalApi/tracks";
 
 export function useTrackMetadataMutation() {
   return useMutation<TrackMetadataResponse, Error, TrackMetadataArgs>({

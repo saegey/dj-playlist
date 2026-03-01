@@ -36,7 +36,7 @@ import {
   updatePlaylist,
   type PlaylistTrackPayload,
 } from "@/services/internalApi/playlists";
-import { analyzeTrackAsync } from "@/services/trackService";
+import { analyzeTrackAsync } from "@/services/internalApi/tracks";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { queryKeys } from "@/lib/queryKeys";
 

@@ -1,8 +1,9 @@
 "use client";
 import { useMutation } from "@tanstack/react-query";
 
-import { saveTrack } from "@/services/trackService";
+import { saveTrack } from "@/services/internalApi/tracks";
 import type { TrackEditFormProps } from "@/components/track-edit/types";
+import type { Track } from "@/types/track";
 import { useTrackStore } from "@/stores/trackStore";
 
 // Shape returned by saveTrack is void; customize if API starts returning a Track

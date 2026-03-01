@@ -8,7 +8,11 @@ import {
 import type { Friend, Track } from "@/types/track";
 import { useUsername } from "@/providers/UsernameProvider";
 import { queryKeys } from "@/lib/queryKeys";
-import { fetchPlaylistCounts } from "@/services/trackService";
+import {
+  fetchPlaylistCounts,
+  searchTracks,
+  type TrackSearchResponse,
+} from "@/services/internalApi/tracks";
 import { useTrackStore } from "@/stores/trackStore";
 
 interface UseSearchResultsOptions {
@@ -22,12 +26,7 @@ interface UseSearchResultsOptions {
   page?: number;
 }
 
-type SearchPage = {
-  hits: Track[];
-  estimatedTotalHits: number;
-  offset: number;
-  limit: number;
-};
+type SearchPage = TrackSearchResponse;
 
 const DEFAULT_LIMIT = 20;
 
@@ -88,22 +87,12 @@ export function useSearchResults({
     queryFn: async (context): Promise<SearchPage> => {
       const pageParam =
         typeof context.pageParam === "number" ? context.pageParam : 0;
-      const params = new URLSearchParams({
+      const res = await searchTracks({
         q: query || "",
-        limit: String(limit),
-        offset: String(pageParam),
+        limit,
+        offset: pageParam,
+        filter: normalizedFilter,
       });
-      if (normalizedFilter) {
-        params.set("filter", normalizedFilter);
-      }
-      const response = await fetch(`/api/tracks/search?${params.toString()}`, {
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err?.error || "Track search failed");
-      }
-      const res = (await response.json()) as SearchPage;
       // Safety net: enforce friend scoping client-side too in case index/filter drifted.
       const scopedHits = scopeHits(res.hits ?? []);
       return {
@@ -111,6 +100,7 @@ export function useSearchResults({
         estimatedTotalHits: res.estimatedTotalHits || 0,
         offset: pageParam,
         limit,
+        processingTimeMs: res.processingTimeMs ?? 0,
       };
     },
     getNextPageParam: (last: SearchPage) => {
@@ -135,22 +125,12 @@ export function useSearchResults({
     queryFn: async (): Promise<SearchPage> => {
       const currentPage = Math.max(1, page ?? 1);
       const offset = (currentPage - 1) * limit;
-      const params = new URLSearchParams({
+      const res = await searchTracks({
         q: query || "",
-        limit: String(limit),
-        offset: String(offset),
+        limit,
+        offset,
+        filter: normalizedFilter,
       });
-      if (normalizedFilter) {
-        params.set("filter", normalizedFilter);
-      }
-      const response = await fetch(`/api/tracks/search?${params.toString()}`, {
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err?.error || "Track search failed");
-      }
-      const res = (await response.json()) as SearchPage;
       // Safety net: enforce friend scoping client-side too in case index/filter drifted.
       const scopedHits = scopeHits(res.hits ?? []);
       return {
@@ -158,6 +138,7 @@ export function useSearchResults({
         estimatedTotalHits: res.estimatedTotalHits || 0,
         offset,
         limit,
+        processingTimeMs: res.processingTimeMs ?? 0,
       };
     },
     staleTime: 10_000,

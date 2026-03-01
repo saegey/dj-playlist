@@ -2,7 +2,8 @@ import { z } from "zod";
 import {
   similarVibeQuerySchema,
   similarVibeResponseSchema,
-  similarVibeTrackSchema,
+  trackPlaylistCountsBodySchema,
+  trackPlaylistCountsResponseSchema,
   trackSearchGetQuerySchema,
   trackSearchGetResponseSchema,
   audioVibeEmbeddingDataSchema,
@@ -29,6 +30,7 @@ import {
 } from "@/api-contract/schemas";
 import { http } from "@/services/http";
 import type { Track } from "@/types/track";
+import type { TrackEditFormProps } from "@/components/track-edit/types";
 
 export type TrackPlaylistMembership = z.infer<typeof trackPlaylistMembershipSchema>;
 type TrackPlaylistsApiResponse = z.infer<typeof trackPlaylistsResponseSchema>;
@@ -54,9 +56,23 @@ export type AudioVibeEmbeddingPreviewResponse = z.infer<
 export type DurationBackfillResponse = z.infer<
   typeof durationBackfillResponseSchema
 >;
+export type TrackBatchRef = {
+  friend_id: number;
+  track_id: string;
+};
+export type TrackPlaylistCountRef = z.input<typeof trackPlaylistCountsBodySchema>["track_refs"][number];
+export type TrackPlaylistCountsResponse = z.infer<
+  typeof trackPlaylistCountsResponseSchema
+>;
 export type SimilarVibeTracksOptions = z.input<typeof similarVibeQuerySchema>;
-export type SimilarVibeTrack = z.infer<typeof similarVibeTrackSchema>;
-export type SimilarVibeTracksResponse = z.infer<typeof similarVibeResponseSchema>;
+type SimilarVibeTracksResponseApi = z.infer<typeof similarVibeResponseSchema>;
+export type SimilarVibeTrack = Track & {
+  distance: number;
+  identity_text: string;
+};
+export type SimilarVibeTracksResponse = Omit<SimilarVibeTracksResponseApi, "tracks"> & {
+  tracks: SimilarVibeTrack[];
+};
 export type TrackSearchQuery = z.input<typeof trackSearchGetQuerySchema>;
 type TrackSearchApiResponse = z.infer<typeof trackSearchGetResponseSchema>;
 export type TrackSearchResponse = Omit<TrackSearchApiResponse, "hits"> & {
@@ -75,6 +91,160 @@ export type EssentiaBackfillBody = z.input<typeof essentiaBackfillBodySchema>;
 export type EssentiaBackfillResponse = z.infer<
   typeof essentiaBackfillResponseSchema
 >;
+export type AnalyzeArgs = {
+  track_id: string;
+  friend_id: number;
+  apple_music_url?: string | null;
+  youtube_url?: string | null;
+  soundcloud_url?: string | null;
+};
+export type AnalyzeResponse = {
+  rhythm?: { bpm?: number; danceability?: number };
+  tonal?: { key_edma?: { key?: string; scale?: string } };
+  metadata?: { audio_properties?: { length: number } };
+  [k: string]: unknown;
+};
+export type AsyncAnalyzeResponse = {
+  success: boolean;
+  jobId: string;
+  message: string;
+};
+export type UploadTrackAudioArgs = {
+  file: File;
+  track_id: string;
+};
+export type UploadTrackAudioResponse = {
+  analysis: AnalyzeResponse;
+  [k: string]: unknown;
+};
+export type TrackMetadataArgs = { prompt: string; friend_id?: number };
+export type TrackMetadataResponse = { genre?: string; notes?: string } & Record<
+  string,
+  unknown
+>;
+export type MissingAppleTracksArgs = {
+  page: number;
+  pageSize: number;
+  friendId?: number | null;
+};
+export type MissingAppleTracksResponse = {
+  tracks: Track[];
+  total: number;
+};
+
+export async function fetchTracksByIds(tracks: TrackBatchRef[]): Promise<Track[]> {
+  if (!tracks || tracks.length === 0) return [];
+  return await http<Track[]>("/api/tracks/batch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tracks }),
+  });
+}
+
+export async function saveTrack(data: TrackEditFormProps): Promise<Track> {
+  return await http<Track>("/api/tracks/update", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function vectorizeTrack(args: {
+  track_id: string;
+  friend_id: number;
+}): Promise<{ embedding: number[] }> {
+  return await http<{ embedding: number[] }>("/api/tracks/vectorize", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+}
+
+export async function recalcTrackDuration(args: {
+  track_id: string;
+  friend_id: number;
+}): Promise<{ jobId: string }> {
+  return await http<{ jobId: string }>("/api/tracks/fix-duration", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+}
+
+export async function analyzeTrackAsync(
+  args: AnalyzeArgs & { title?: string; artist?: string }
+): Promise<AsyncAnalyzeResponse> {
+  return await http<AsyncAnalyzeResponse>("/api/tracks/analyze-async", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+}
+
+export async function analyzeLocalAudioAsync(args: {
+  track_id: string;
+  friend_id: number;
+  local_audio_url?: string | null;
+}): Promise<AsyncAnalyzeResponse> {
+  return await http<AsyncAnalyzeResponse>("/api/tracks/analyze-local-async", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+}
+
+export async function syncTrackYearFromAudio(args: {
+  track_id: string;
+  friend_id: number;
+}): Promise<{
+  success: boolean;
+  year: string;
+  previous_year?: string | number | null;
+  message: string;
+}> {
+  return await http<{
+    success: boolean;
+    year: string;
+    previous_year?: string | number | null;
+    message: string;
+  }>(`/api/tracks/${encodeURIComponent(args.track_id)}/sync-audio-year`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ friend_id: args.friend_id }),
+  });
+}
+
+export async function uploadTrackAudio(
+  args: UploadTrackAudioArgs
+): Promise<UploadTrackAudioResponse> {
+  const formData = new FormData();
+  formData.append("file", args.file);
+  formData.append("track_id", args.track_id);
+  return await http<UploadTrackAudioResponse>("/api/tracks/upload", {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function fetchTrackMetadata(
+  args: TrackMetadataArgs
+): Promise<TrackMetadataResponse> {
+  return await http<TrackMetadataResponse>("/api/ai/track-metadata", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+}
+
+export async function fetchTrackById(params: {
+  track_id: string;
+  friend_id: number;
+}): Promise<Track> {
+  const url = `/api/tracks/${encodeURIComponent(
+    params.track_id
+  )}?friend_id=${encodeURIComponent(params.friend_id)}`;
+  return await http<Track>(url, { method: "GET", cache: "no-store" });
+}
 
 export async function fetchTrackPlaylists(
   trackId: string,
@@ -226,6 +396,18 @@ export async function searchTracks(
   });
 }
 
+export async function fetchPlaylistCounts(
+  track_refs: TrackPlaylistCountRef[]
+): Promise<TrackPlaylistCountsResponse> {
+  if (!track_refs || track_refs.length === 0) return {};
+  const body: z.input<typeof trackPlaylistCountsBodySchema> = { track_refs };
+  return await http<TrackPlaylistCountsResponse>("/api/tracks/playlist_counts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 export async function bulkUpdateTrackNotes(
   updates: BulkNotesUpdate[]
 ): Promise<BulkNotesResponse> {
@@ -255,4 +437,20 @@ export async function queueBackfillEssentia(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+export async function fetchMissingAppleTracks(
+  args: MissingAppleTracksArgs
+): Promise<MissingAppleTracksResponse> {
+  let url = `/api/tracks/missing-apple-music?page=${args.page}&pageSize=${args.pageSize}`;
+  if (args.friendId) url += `&friendId=${encodeURIComponent(args.friendId)}`;
+  const raw = await http<unknown>(url, { method: "GET", cache: "no-store" });
+  if (Array.isArray(raw)) {
+    const tracks = raw as Track[];
+    return { tracks, total: tracks.length };
+  }
+  const obj = raw as { tracks?: Track[]; total?: number };
+  const tracks = Array.isArray(obj.tracks) ? obj.tracks : [];
+  const total = typeof obj.total === "number" ? obj.total : tracks.length;
+  return { tracks, total };
 }

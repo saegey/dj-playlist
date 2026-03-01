@@ -2,45 +2,19 @@ import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Track } from "@/types/track";
 import { useUsername } from "@/providers/UsernameProvider";
+import { fetchRecommendationCandidates } from "@/services/internalApi/recommendations";
 
 export type TrackWithEmbedding = Track;
-
-type RecommendationCandidate = {
-  trackId: string;
-  friendId: number;
-  metadata?: {
-    title?: string;
-    artist?: string;
-    album?: string;
-    year?: string | null;
-    bpm?: number | null;
-    key?: string | null;
-    genres?: string[];
-    styles?: string[];
-  };
-};
-
-type RecommendationCandidatesResponse = {
-  candidates?: RecommendationCandidate[];
-};
 
 async function fetchRecommendationsFromApi(
   seeds: Array<{ track_id: string; friend_id: number }>,
   limit: number
 ): Promise<Track[]> {
-  const response = await fetch("/api/recommendations/candidates", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      tracks: seeds,
-      limit_identity: limit,
-      limit_audio: limit,
-    }),
+  const payload = await fetchRecommendationCandidates({
+    tracks: seeds,
+    limit_identity: limit,
+    limit_audio: limit,
   });
-  if (!response.ok) {
-    throw new Error("Failed to fetch recommendation candidates");
-  }
-  const payload = (await response.json()) as RecommendationCandidatesResponse;
   const candidates = payload.candidates ?? [];
   return candidates.map((candidate) => {
     const metadata = candidate.metadata ?? {};

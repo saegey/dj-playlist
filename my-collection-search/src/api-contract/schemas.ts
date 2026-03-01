@@ -272,6 +272,17 @@ export const trackSearchPostResponseSchema = meiliSearchMetaSchema.extend({
   tracks: z.array(z.unknown()),
 });
 
+export const trackPlaylistCountRefSchema = z.object({
+  track_id: z.string().min(1),
+  friend_id: z.number().int(),
+});
+
+export const trackPlaylistCountsBodySchema = z.object({
+  track_refs: z.array(trackPlaylistCountRefSchema),
+});
+
+export const trackPlaylistCountsResponseSchema = z.record(z.number().int());
+
 export const trackPlaylistMembershipSchema = z.object({
   id: z.number().int(),
   name: z.string(),

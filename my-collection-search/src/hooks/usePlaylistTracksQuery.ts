@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import { fetchTracksByIds } from "@/services/trackService";
+import { fetchTracksByIds } from "@/services/internalApi/tracks";
 import type { Track } from "@/types/track";
 import { queryKeys } from "@/lib/queryKeys";
 import { useTrackStore } from "@/stores/trackStore";

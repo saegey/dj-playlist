@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Box, Heading, Text, Button, VStack, Input, Spinner } from "@chakra-ui/react";
 import { TransitionTester } from "@/components/TransitionTester/TransitionTester";
 import type { Track } from "@/types/track";
-import { fetchTracksByIds } from "@/services/trackService";
+import { fetchTracksByIds } from "@/services/internalApi/tracks";
 import PageContainer from "@/components/layout/PageContainer";
 
 export default function TransitionTestPage() {

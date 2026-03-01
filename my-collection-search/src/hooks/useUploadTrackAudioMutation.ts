@@ -5,7 +5,7 @@ import {
   uploadTrackAudio,
   type UploadTrackAudioArgs,
   type UploadTrackAudioResponse,
-} from "@/services/trackService";
+} from "@/services/internalApi/tracks";
 
 export function useUploadTrackAudioMutation() {
   return useMutation<UploadTrackAudioResponse, Error, UploadTrackAudioArgs>({

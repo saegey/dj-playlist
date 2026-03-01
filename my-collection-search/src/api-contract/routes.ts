@@ -45,6 +45,7 @@ import {
   playlistSchema,
   queueAlbumDownloadsResponseSchema,
   recommendationsQuerySchema,
+  recommendationsBatchBodySchema,
   recommendationsResponseSchema,
   similarVibeQuerySchema,
   similarVibeResponseSchema,
@@ -2057,6 +2058,88 @@ export const apiContractRoutes: ApiContractRoute[] = [
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
+        },
+      },
+    },
+  },
+  {
+    operationId: "recommendationCandidatesBatch",
+    method: "post",
+    path: "/api/recommendations/candidates",
+    summary: "Get recommendation candidates from multiple seed tracks",
+    tags: ["Recommendations"],
+    bodySchema: recommendationsBatchBodySchema,
+    successSchema: recommendationsResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                tracks: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      track_id: { type: "string" },
+                      friend_id: { type: "integer" },
+                    },
+                    required: ["track_id", "friend_id"],
+                  },
+                  minItems: 1,
+                  maxItems: 100,
+                },
+                limit_identity: { type: "integer", default: 200 },
+                limit_audio: { type: "integer", default: 200 },
+                ivfflat_probes: { type: "integer", default: 10 },
+              },
+              required: ["tracks"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Recommendation candidates",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  seedTrackId: { type: "string" },
+                  seedFriendId: { type: "integer" },
+                  seedEmbeddings: {
+                    type: "object",
+                    properties: {
+                      identity: { type: "boolean" },
+                      audio: { type: "boolean" },
+                    },
+                    required: ["identity", "audio"],
+                  },
+                  candidates: { type: "array", items: recommendationCandidateSchemaObject },
+                  stats: { type: "object", additionalProperties: true },
+                },
+                required: ["seedTrackId", "seedFriendId", "seedEmbeddings", "candidates", "stats"],
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid body",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "404": {
+          description: "Seed embeddings missing",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
         },
       },
     },
