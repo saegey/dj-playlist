@@ -1,5 +1,3 @@
-import type { AnalysisResult } from "@/types/analysis";
-
 export type JobData = {
   track_id: string;
   friend_id: number;
@@ -26,7 +24,7 @@ export interface JobInfo {
   state: string;
   progress: number;
   data: JobData;
-  returnvalue?: AnalysisResult;
+  returnvalue?: unknown;
   finishedOn?: number;
   failedReason?: string;
   attemptsMade: number;

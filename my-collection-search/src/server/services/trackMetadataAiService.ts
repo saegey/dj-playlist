@@ -52,16 +52,22 @@ export class TrackMetadataError extends Error {
   }
 }
 
+type ParseableResponse = {
+  output_text?: string;
+  output?: Array<{ type: string; content?: Array<{ type: string; text?: string }> }>;
+};
+
 function parseMetadataFromResponse(
   response: Awaited<ReturnType<typeof openai.responses.create>>
 ): MetadataResult {
+  const res = response as ParseableResponse;
   const candidates: string[] = [];
 
-  if (typeof response.output_text === "string" && response.output_text.trim()) {
-    candidates.push(response.output_text.trim());
+  if (typeof res.output_text === "string" && res.output_text.trim()) {
+    candidates.push(res.output_text.trim());
   }
 
-  for (const item of response.output ?? []) {
+  for (const item of res.output ?? []) {
     if (item.type !== "message") continue;
     for (const content of item.content ?? []) {
       if (content.type !== "output_text") continue;

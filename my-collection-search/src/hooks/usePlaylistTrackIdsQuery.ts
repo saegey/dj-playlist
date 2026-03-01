@@ -31,13 +31,19 @@ export function usePlaylistTrackIdsQuery(
     refetchOnWindowFocus: false,
   });
 
+  const rawTracks = Array.isArray(query.data)
+    ? query.data
+    : query.data?.tracks ?? [];
+  const tracks = rawTracks.filter(
+    (t): t is { track_id: string; friend_id: number; position?: number } =>
+      typeof t.friend_id === "number"
+  );
+
   return {
     ...query,
     // Guard against "enabled: false" being treated as pending
     isPending: query.isPending && query.fetchStatus !== "idle",
-    tracks: Array.isArray(query.data)
-      ? query.data
-      : query.data?.tracks ?? [],
+    tracks,
     playlistName: Array.isArray(query.data)
       ? null
       : query.data?.playlist_name ?? null,

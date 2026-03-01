@@ -76,7 +76,7 @@ export const useAlbumStore = create<AlbumStore>((set, get) => ({
         if (existing) {
           const preserved: Partial<AlbumEntity> = {};
           for (const field of get()._preserveFields) {
-            preserved[field] = existing[field];
+            (preserved as Record<string, unknown>)[field] = existing[field];
           }
           merged = { ...album, ...preserved };
           const diff = diffObjectKeys(
