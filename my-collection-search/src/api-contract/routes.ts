@@ -20,6 +20,10 @@ import {
   coverArtBackfillBodySchema,
   coverArtBackfillResponseSchema,
   durationBackfillResponseSchema,
+  embeddingPromptSettingsGetResponseSchema,
+  embeddingPromptSettingsPutBodySchema,
+  embeddingPromptSettingsPutResponseSchema,
+  embeddingPromptSettingsQuerySchema,
   essentiaBackfillBodySchema,
   essentiaBackfillResponseSchema,
   manifestCleanupResponseSchema,
@@ -2000,6 +2004,113 @@ export const apiContractRoutes: ApiContractRoute[] = [
                   isDefault: { type: "boolean" },
                 },
                 required: ["prompt", "isDefault"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid payload",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getEmbeddingPromptSettings",
+    method: "get",
+    path: "/api/settings/embedding-prompt",
+    summary: "Get track embedding prompt settings",
+    tags: ["Settings"],
+    querySchema: embeddingPromptSettingsQuerySchema,
+    successSchema: embeddingPromptSettingsGetResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "friend_id",
+          in: "query",
+          required: false,
+          schema: { type: "integer" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Embedding prompt settings",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  template: { type: "string" },
+                  defaultTemplate: { type: "string" },
+                  isDefault: { type: "boolean" },
+                },
+                required: ["template", "defaultTemplate", "isDefault"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid query parameter",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "updateEmbeddingPromptSettings",
+    method: "put",
+    path: "/api/settings/embedding-prompt",
+    summary: "Update track embedding prompt settings",
+    tags: ["Settings"],
+    bodySchema: embeddingPromptSettingsPutBodySchema,
+    successSchema: embeddingPromptSettingsPutResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                friend_id: { type: "integer" },
+                template: { type: "string" },
+              },
+              required: ["friend_id"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Embedding prompt updated",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  template: { type: "string" },
+                  isDefault: { type: "boolean" },
+                },
+                required: ["template", "isDefault"],
               },
             },
           },

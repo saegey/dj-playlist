@@ -500,6 +500,26 @@ export const aiPromptSettingsPutResponseSchema = z.object({
   isDefault: z.boolean(),
 });
 
+export const embeddingPromptSettingsQuerySchema = z.object({
+  friend_id: intFromInputSchema.optional(),
+});
+
+export const embeddingPromptSettingsPutBodySchema = z.object({
+  friend_id: intFromInputSchema,
+  template: z.string().optional().default(""),
+});
+
+export const embeddingPromptSettingsGetResponseSchema = z.object({
+  template: z.string(),
+  defaultTemplate: z.string(),
+  isDefault: z.boolean(),
+});
+
+export const embeddingPromptSettingsPutResponseSchema = z.object({
+  template: z.string(),
+  isDefault: z.boolean(),
+});
+
 export const albumReleaseParamsSchema = z.object({
   releaseId: z.string().min(1),
 });
