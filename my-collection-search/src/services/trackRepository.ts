@@ -226,6 +226,34 @@ export class TrackRepository {
     return result;
   }
 
+  async listTrackIdsByFriendAndReleaseIds(
+    friendId: number,
+    releaseIds: string[]
+  ): Promise<string[]> {
+    if (releaseIds.length === 0) return [];
+    const { rows } = await dbQuery<{ track_id: string }>(
+      `
+      SELECT track_id
+      FROM tracks
+      WHERE friend_id = $1 AND release_id = ANY($2::text[])
+      `,
+      [friendId, releaseIds]
+    );
+    return rows.map((row) => row.track_id);
+  }
+
+  async deleteTracksByFriendAndReleaseIds(
+    friendId: number,
+    releaseIds: string[]
+  ): Promise<number> {
+    if (releaseIds.length === 0) return 0;
+    const result = await dbQuery(
+      "DELETE FROM tracks WHERE friend_id = $1 AND release_id = ANY($2::text[])",
+      [friendId, releaseIds]
+    );
+    return result.rowCount ?? 0;
+  }
+
   async findTracksByRefsPreservingOrder(
     tracks: TrackRef[]
   ): Promise<OrderedTrackRow[]> {

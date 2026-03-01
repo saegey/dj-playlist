@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { Pool } from "pg";
+import { dbPool } from "@/lib/serverDb";
 import { getManifestFiles, getAllTracksFromManifests } from "@/services/discogsManifestService";
 import { getOrCreateTracksIndex, configureMeiliIndex } from "@/services/meiliIndexService";
 import { upsertTracks } from "@/services/trackUpsertService";
 import { addTracksToMeili } from "@/services/meiliDocumentService";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function POST() {
   try {
@@ -27,7 +25,7 @@ export async function POST() {
     await configureMeiliIndex(index, meiliClient);
 
     // 3. Upsert into Postgres
-    const upserted = await upsertTracks(pool, allTracks);
+    const upserted = await upsertTracks(dbPool, allTracks);
 
     // 4. Add to Meili
     await addTracksToMeili(index, upserted);

@@ -33,7 +33,7 @@ type JobEvent = JobCompletedEvent | JobErrorEvent;
 
 export function useJobEventsSSE(enabled: boolean = true) {
   const queryClient = useQueryClient();
-  const { updateTrack } = useTrackStore();
+  const updateTrack = useTrackStore((state) => state.updateTrack);
   const { updateTracksInCache } = useTracksCacheUpdater();
   const eventSourceRef = useRef<EventSource | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -44,10 +44,16 @@ export function useJobEventsSSE(enabled: boolean = true) {
       return;
     }
 
-    // Create SSE connection
-    eventSourceRef.current = new EventSource("/api/jobs/events");
+    // Avoid duplicate connections if the effect re-runs while still connected.
+    if (eventSourceRef.current) {
+      return;
+    }
 
-    eventSourceRef.current.onmessage = (event) => {
+    // Create SSE connection
+    const eventSource = new EventSource("/api/jobs/events");
+    eventSourceRef.current = eventSource;
+
+    eventSource.onmessage = (event) => {
       try {
         if (event.data === "connected") {
           console.log("Job events SSE connected");
@@ -104,15 +110,15 @@ export function useJobEventsSSE(enabled: boolean = true) {
       }
     };
 
-    eventSourceRef.current.onerror = (error) => {
+    eventSource.onerror = (error) => {
       console.error("Job events SSE connection error:", error);
       setIsConnected(false);
     };
 
     // Cleanup on unmount
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
+      eventSource.close();
+      if (eventSourceRef.current === eventSource) {
         eventSourceRef.current = null;
       }
       setIsConnected(false);

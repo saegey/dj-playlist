@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { InfiniteData as RQInfiniteData } from "@tanstack/react-query";
 import type { Track } from "@/types/track";
@@ -30,7 +31,7 @@ function applyPatchToHits(hits: Track[], patches: TrackPatch[]): Track[] {
 export function useTracksCacheUpdater() {
   const qc = useQueryClient();
 
-  const updateTracksInCache = (patch: TrackPatch | TrackPatch[]) => {
+  const updateTracksInCache = useCallback((patch: TrackPatch | TrackPatch[]) => {
     const patches = Array.isArray(patch) ? patch : [patch];
     // Debug: list keys we're about to touch
     // console.table(
@@ -127,7 +128,7 @@ export function useTracksCacheUpdater() {
         });
       }
     );
-  };
+  }, [qc]);
 
   return { updateTracksInCache };
 }

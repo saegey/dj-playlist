@@ -15,6 +15,8 @@ import {
   getReleaseDetails,
 } from "@/services/discogsApiClient";
 import { getPostHogClient } from "@/lib/posthog-server";
+import { dbPool } from "@/lib/serverDb";
+import { cleanupDiscogsReleases } from "@/services/discogsCleanupService";
 
 const DISCOGS_USER_TOKEN = process.env.DISCOGS_USER_TOKEN;
 // Username can be passed as a param or defaults to env
@@ -143,82 +145,38 @@ export async function GET(request: NextRequest) {
               )
             );
 
-            // Delete from database and search index
+            // Delete local files first, then clean DB + Meili in one shared service
             try {
-              const { Pool } = await import("pg");
-              const { getMeiliClient } = await import("@/lib/meili");
               const { deleteRelease } = await import("@/services/discogsManifestService");
 
-              const pool = new Pool({
-                connectionString: process.env.DATABASE_URL,
-              });
-              const meiliClient = getMeiliClient();
-
-              // Get friend_id for this username
-              const friendResult = await pool.query(
-                "SELECT id FROM friends WHERE username = $1",
-                [username]
-              );
-              const friendId = friendResult.rows[0]?.id;
-
-              if (friendId) {
-                let deletedCount = 0;
-
-                for (const releaseId of removedIds) {
-                  // Delete from albums table
-                  await pool.query(
-                    "DELETE FROM albums WHERE release_id = $1 AND friend_id = $2",
-                    [releaseId, friendId]
-                  );
-
-                  // Delete from tracks table
-                  await pool.query(
-                    "DELETE FROM tracks WHERE release_id = $1 AND friend_id = $2",
-                    [releaseId, friendId]
-                  );
-
-                  // Delete from MeiliSearch albums index
-                  try {
-                    const albumsIndex = meiliClient.index("albums");
-                    await albumsIndex.deleteDocument(`${releaseId}_${friendId}`);
-                  } catch (meiliError) {
-                    console.warn(`[Discogs Sync] MeiliSearch album delete warning for ${releaseId}:`, meiliError);
-                  }
-
-                  // Delete from MeiliSearch tracks index
-                  try {
-                    const tracksIndex = meiliClient.index("tracks");
-                    // Delete all tracks for this release
-                    await tracksIndex.deleteDocuments({
-                      filter: `release_id = "${releaseId}" AND friend_id = ${friendId}`
-                    });
-                  } catch (meiliError) {
-                    console.warn(`[Discogs Sync] MeiliSearch track delete warning for ${releaseId}:`, meiliError);
-                  }
-
-                  // Delete local JSON file
-                  deleteRelease(username, releaseId);
-
-                  deletedCount++;
-                  if (deletedCount % 10 === 0) {
-                    controller.enqueue(
-                      encoder.encode(`Deleted ${deletedCount}/${removedIds.length} releases...\n\n`)
-                    );
-                  }
+              let deletedFiles = 0;
+              for (const releaseId of removedIds) {
+                if (deleteRelease(username, releaseId)) {
+                  deletedFiles += 1;
                 }
+                if (deletedFiles > 0 && deletedFiles % 10 === 0) {
+                  controller.enqueue(
+                    encoder.encode(
+                      `Deleted local files ${deletedFiles}/${removedIds.length}...\n\n`
+                    )
+                  );
+                }
+              }
 
+              const cleanup = await cleanupDiscogsReleases(username, removedIds);
+              if (!cleanup.friendId) {
                 controller.enqueue(
                   encoder.encode(
-                    `✅ Deleted ${deletedCount} releases from database and search index\n\n`
+                    `⚠️  Could not find friend_id for ${username}, skipped DB/search deletion\n\n`
                   )
                 );
               } else {
                 controller.enqueue(
-                  encoder.encode(`⚠️  Could not find friend_id for ${username}, skipping deletions\n\n`)
+                  encoder.encode(
+                    `✅ Deleted ${cleanup.deletedTracksCount} tracks and ${cleanup.deletedAlbumsCount} albums for removed releases\n\n`
+                  )
                 );
               }
-
-              await pool.end();
             } catch (deleteError) {
               const errorMessage = deleteError instanceof Error ? deleteError.message : String(deleteError);
               controller.enqueue(
@@ -319,7 +277,6 @@ export async function GET(request: NextRequest) {
             );
 
             try {
-              const { Pool } = await import("pg");
               const { getTracksFromManifestReleases } = await import(
                 "@/services/discogsManifestService"
               );
@@ -335,9 +292,6 @@ export async function GET(request: NextRequest) {
               );
               const { getMeiliClient } = await import("@/lib/meili");
 
-              const pool = new Pool({
-                connectionString: process.env.DATABASE_URL,
-              });
               const meiliClient = getMeiliClient();
 
               controller.enqueue(
@@ -360,7 +314,7 @@ export async function GET(request: NextRequest) {
               controller.enqueue(
                 encoder.encode(`Upserting tracks to Postgres...\n\n`)
               );
-              const upserted = await upsertTracks(pool, allTracks);
+              const upserted = await upsertTracks(dbPool, allTracks);
               controller.enqueue(
                 encoder.encode(`Upserted ${upserted.length} tracks to Postgres\n\n`)
               );
@@ -397,7 +351,7 @@ export async function GET(request: NextRequest) {
                   encoder.encode(`Loading albums from new releases...\n`)
                 );
                 const allAlbums = await getAlbumsFromManifestReleases(
-                  pool,
+                  dbPool,
                   username,
                   newReleases
                 );
@@ -408,7 +362,7 @@ export async function GET(request: NextRequest) {
                 controller.enqueue(
                   encoder.encode(`Upserting albums to Postgres...\n`)
                 );
-                const upsertedAlbums = await upsertAlbums(pool, allAlbums, {
+                const upsertedAlbums = await upsertAlbums(dbPool, allAlbums, {
                   preserveManualFields: true,
                 });
                 controller.enqueue(
@@ -444,8 +398,6 @@ export async function GET(request: NextRequest) {
               controller.enqueue(
                 encoder.encode(`\n✅ Auto-ingest complete!\n\n`)
               );
-
-              await pool.end();
             } catch (e) {
               const errorMessage = e instanceof Error ? e.message : String(e);
               controller.enqueue(

@@ -431,6 +431,18 @@ export class AlbumRepository {
     );
   }
 
+  async deleteAlbumsByFriendAndReleaseIds(
+    friendId: number,
+    releaseIds: string[]
+  ): Promise<number> {
+    if (releaseIds.length === 0) return 0;
+    const result = await dbQuery(
+      "DELETE FROM albums WHERE friend_id = $1 AND release_id = ANY($2::text[])",
+      [friendId, releaseIds]
+    );
+    return result.rowCount ?? 0;
+  }
+
   async listAlbumsForReindex(): Promise<Array<Record<string, unknown>>> {
     const { rows } = await dbQuery(
       `
