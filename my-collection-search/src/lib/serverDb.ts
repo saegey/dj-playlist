@@ -6,7 +6,11 @@ declare global {
 }
 
 function createPool(): Pool {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString =
+    process.env.DATABASE_URL ||
+    (process.env.NODE_ENV === "test"
+      ? "postgresql://localhost:5432/mcs_test"
+      : undefined);
   if (!connectionString) {
     throw new Error("DATABASE_URL is not configured");
   }

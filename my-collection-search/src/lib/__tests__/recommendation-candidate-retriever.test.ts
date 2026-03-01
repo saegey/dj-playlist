@@ -6,6 +6,13 @@
 
 import { retrieveCandidates, hasEmbeddings } from "../recommendation-candidate-retriever";
 
+if (process.env.RUN_DB_TESTS !== "1") {
+  console.log(
+    "Skipping recommendation-candidate-retriever.test.ts (set RUN_DB_TESTS=1 to enable DB integration tests)"
+  );
+  process.exit(0);
+}
+
 // Test utilities
 function assert(condition: boolean, message: string) {
   if (!condition) {

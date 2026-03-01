@@ -1,4 +1,8 @@
-import { describe, it, expect } from "@jest/globals";
+/**
+ * Tests for audio-vibe-normalization
+ * Run with: npx tsx src/lib/__tests__/audio-vibe-normalization.test.ts
+ */
+
 import {
   normalizeBpmRange,
   normalizeBpmValue,
@@ -15,217 +19,171 @@ import {
   normalizePartyMood,
 } from "../audio-vibe-normalization";
 
-describe("audio-vibe-normalization", () => {
-  describe("normalizeBpmRange", () => {
-    it("should categorize BPM into ranges", () => {
-      expect(normalizeBpmRange(80)).toBe("very slow");
-      expect(normalizeBpmRange(100)).toBe("slow");
-      expect(normalizeBpmRange(120)).toBe("moderate");
-      expect(normalizeBpmRange(130)).toBe("upbeat");
-      expect(normalizeBpmRange(145)).toBe("fast");
-      expect(normalizeBpmRange(160)).toBe("very fast");
-      expect(normalizeBpmRange(180)).toBe("extremely fast");
-    });
+let passed = 0;
+let failed = 0;
 
-    it("should handle string input", () => {
-      expect(normalizeBpmRange("128")).toBe("upbeat");
-    });
+function assert(condition: boolean, message: string) {
+  if (condition) passed++;
+  else {
+    failed++;
+    console.error(`✗ ${message}`);
+  }
+}
 
-    it("should handle null/undefined", () => {
-      expect(normalizeBpmRange(null)).toBe("unknown");
-      expect(normalizeBpmRange(undefined)).toBe("unknown");
-    });
+function assertEqual<T>(actual: T, expected: T, message: string) {
+  const ok = JSON.stringify(actual) === JSON.stringify(expected);
+  assert(ok, message);
+  if (!ok) {
+    console.error(`  expected=${JSON.stringify(expected)} actual=${JSON.stringify(actual)}`);
+  }
+}
+
+function assertContains(haystack: string, needle: string, message: string) {
+  assert(haystack.includes(needle), message);
+}
+
+function assertNotContains(haystack: string, needle: string, message: string) {
+  assert(!haystack.includes(needle), message);
+}
+
+function run() {
+  assertEqual(normalizeBpmRange(80), "very slow", "normalizeBpmRange: 80");
+  assertEqual(normalizeBpmRange(100), "slow", "normalizeBpmRange: 100");
+  assertEqual(normalizeBpmRange(120), "moderate", "normalizeBpmRange: 120");
+  assertEqual(normalizeBpmRange(130), "upbeat", "normalizeBpmRange: 130");
+  assertEqual(normalizeBpmRange(145), "fast", "normalizeBpmRange: 145");
+  assertEqual(normalizeBpmRange(160), "very fast", "normalizeBpmRange: 160");
+  assertEqual(normalizeBpmRange(180), "extremely fast", "normalizeBpmRange: 180");
+  assertEqual(normalizeBpmRange("128"), "upbeat", "normalizeBpmRange: string");
+  assertEqual(normalizeBpmRange(null), "unknown", "normalizeBpmRange: null");
+  assertEqual(normalizeBpmRange(undefined), "unknown", "normalizeBpmRange: undefined");
+
+  assertEqual(normalizeBpmValue(127.8), "128", "normalizeBpmValue: round number");
+  assertEqual(normalizeBpmValue("127.3"), "127", "normalizeBpmValue: round string");
+  assertEqual(normalizeBpmValue(null), "unknown", "normalizeBpmValue: null");
+  assertEqual(normalizeBpmValue(undefined), "unknown", "normalizeBpmValue: undefined");
+
+  assertEqual(normalizeKey("  C Major  "), "C Major", "normalizeKey: trim");
+  assertEqual(normalizeKey("A Minor"), "A Minor", "normalizeKey: keep");
+  assertEqual(normalizeKey(null), "unknown", "normalizeKey: null");
+  assertEqual(normalizeKey(undefined), "unknown", "normalizeKey: undefined");
+
+  assertEqual(getCamelotCode("C Major"), "8B", "getCamelotCode: C Major");
+  assertEqual(getCamelotCode("A Minor"), "8A", "getCamelotCode: A Minor");
+  assertEqual(getCamelotCode("D Major"), "10B", "getCamelotCode: D Major");
+  assertEqual(getCamelotCode("B Minor"), "10A", "getCamelotCode: B Minor");
+  assertEqual(getCamelotCode("Unknown Key"), "", "getCamelotCode: unknown");
+  assertEqual(getCamelotCode(null), "", "getCamelotCode: null");
+
+  assertEqual(normalizeDanceability(0.1), "very low", "normalizeDanceability: 0.1");
+  assertEqual(normalizeDanceability(0.3), "low", "normalizeDanceability: 0.3");
+  assertEqual(normalizeDanceability(0.5), "moderate", "normalizeDanceability: 0.5");
+  assertEqual(normalizeDanceability(0.7), "high", "normalizeDanceability: 0.7");
+  assertEqual(normalizeDanceability(0.9), "very high", "normalizeDanceability: 0.9");
+  assertEqual(normalizeDanceability("0.75"), "high", "normalizeDanceability: string");
+  assertEqual(normalizeDanceability(null), "unknown", "normalizeDanceability: null");
+  assertEqual(normalizeDanceability(undefined), "unknown", "normalizeDanceability: undefined");
+
+  assertEqual(calculateEnergy(0.8, 0.2), "moderate", "calculateEnergy: moderate");
+  assertEqual(calculateEnergy(0.9, 0.9), "very high", "calculateEnergy: high");
+  assertEqual(calculateEnergy(0.1, 0.1), "very low", "calculateEnergy: low");
+  assertEqual(calculateEnergy(null, null), "very low", "calculateEnergy: nulls");
+  assertEqual(calculateEnergy(0.5, null), "low", "calculateEnergy: partial");
+
+  assertEqual(
+    getDominantMood({ happy: 0.8, sad: 0.2, relaxed: 0.1, aggressive: 0.1 }),
+    "happy",
+    "getDominantMood: happy"
+  );
+  assertEqual(
+    getDominantMood({ happy: 0.1, sad: 0.7, relaxed: 0.2, aggressive: 0.1 }),
+    "sad",
+    "getDominantMood: sad"
+  );
+  assertEqual(
+    getDominantMood({ happy: 0.1, sad: 0.1, relaxed: 0.8, aggressive: 0.2 }),
+    "relaxed",
+    "getDominantMood: relaxed"
+  );
+  assertEqual(
+    getDominantMood({ happy: 0.1, sad: 0.1, relaxed: 0.2, aggressive: 0.9 }),
+    "aggressive",
+    "getDominantMood: aggressive"
+  );
+  assertEqual(
+    getDominantMood({ happy: 0.2, sad: 0.2, relaxed: 0.2, aggressive: 0.2 }),
+    "neutral",
+    "getDominantMood: neutral"
+  );
+  assertEqual(getDominantMood({}), "neutral", "getDominantMood: empty");
+
+  const descriptors1 = getVibeDescriptors(95, "high", "happy");
+  assert(descriptors1.includes("downtempo"), "getVibeDescriptors: downtempo");
+  assert(descriptors1.includes("energetic"), "getVibeDescriptors: energetic");
+  assert(descriptors1.includes("uplifting"), "getVibeDescriptors: uplifting");
+
+  assertEqual(
+    getVibeDescriptors(120, "moderate", "neutral"),
+    ["balanced"],
+    "getVibeDescriptors: balanced"
+  );
+
+  const descriptors2 = getVibeDescriptors(150, "very high", "aggressive");
+  assert(descriptors2.includes("high-energy"), "getVibeDescriptors: high-energy");
+  assert(descriptors2.includes("energetic"), "getVibeDescriptors: energetic 2");
+  assert(descriptors2.includes("driving"), "getVibeDescriptors: driving");
+
+  const profile = formatMoodProfile({
+    happy: 0.75,
+    sad: 0.25,
+    relaxed: 0.5,
+    aggressive: 0.1,
   });
+  assertContains(profile, "Happy (0.75)", "formatMoodProfile: happy");
+  assertContains(profile, "Sad (0.25)", "formatMoodProfile: sad");
+  assertContains(profile, "Relaxed (0.50)", "formatMoodProfile: relaxed");
+  assertContains(profile, "Aggressive (0.10)", "formatMoodProfile: aggressive");
 
-  describe("normalizeBpmValue", () => {
-    it("should round BPM to nearest integer", () => {
-      expect(normalizeBpmValue(127.8)).toBe("128");
-      expect(normalizeBpmValue("127.3")).toBe("127");
-    });
-
-    it("should handle null/undefined", () => {
-      expect(normalizeBpmValue(null)).toBe("unknown");
-      expect(normalizeBpmValue(undefined)).toBe("unknown");
-    });
+  const profile2 = formatMoodProfile({
+    happy: 0.8,
+    sad: null,
+    relaxed: undefined,
+    aggressive: 0,
   });
+  assertContains(profile2, "Happy (0.80)", "formatMoodProfile: happy only");
+  assertNotContains(profile2, "Sad", "formatMoodProfile: omit sad");
+  assertNotContains(profile2, "Relaxed", "formatMoodProfile: omit relaxed");
+  assertNotContains(profile2, "Aggressive", "formatMoodProfile: omit aggressive zero");
+  assertEqual(formatMoodProfile({}), "none", "formatMoodProfile: none");
 
-  describe("normalizeKey", () => {
-    it("should trim key strings", () => {
-      expect(normalizeKey("  C Major  ")).toBe("C Major");
-      expect(normalizeKey("A Minor")).toBe("A Minor");
-    });
+  assertEqual(normalizeAcousticElectronic(0.9, 0.1), "very acoustic", "normalizeAcousticElectronic: very acoustic");
+  assertEqual(normalizeAcousticElectronic(0.6, 0.3), "acoustic", "normalizeAcousticElectronic: acoustic");
+  assertEqual(normalizeAcousticElectronic(0.5, 0.5), "balanced", "normalizeAcousticElectronic: balanced");
+  assertEqual(normalizeAcousticElectronic(0.3, 0.6), "electronic", "normalizeAcousticElectronic: electronic");
+  assertEqual(normalizeAcousticElectronic(0.1, 0.9), "very electronic", "normalizeAcousticElectronic: very electronic");
+  assertEqual(normalizeAcousticElectronic(0.2, 0.2), "ambiguous", "normalizeAcousticElectronic: ambiguous");
+  assertEqual(normalizeAcousticElectronic(undefined, undefined), "unknown", "normalizeAcousticElectronic: unknown");
 
-    it("should handle null/undefined", () => {
-      expect(normalizeKey(null)).toBe("unknown");
-      expect(normalizeKey(undefined)).toBe("unknown");
-    });
-  });
+  assertEqual(normalizeVocalPresence(0.9, 0.1), "instrumental", "normalizeVocalPresence: instrumental");
+  assertEqual(normalizeVocalPresence(0.7, 0.25), "light vocals", "normalizeVocalPresence: light");
+  assertEqual(normalizeVocalPresence(0.5, 0.5), "moderate vocals", "normalizeVocalPresence: moderate");
+  assertEqual(normalizeVocalPresence(0.2, 0.8), "heavy vocals", "normalizeVocalPresence: heavy");
+  assertEqual(normalizeVocalPresence(undefined, undefined), "unknown", "normalizeVocalPresence: unknown");
 
-  describe("getCamelotCode", () => {
-    it("should map common keys to Camelot codes", () => {
-      expect(getCamelotCode("C Major")).toBe("8B");
-      expect(getCamelotCode("A Minor")).toBe("8A");
-      expect(getCamelotCode("D Major")).toBe("10B");
-      expect(getCamelotCode("B Minor")).toBe("10A");
-    });
+  assertEqual(normalizePercussiveness(1.5), "sparse", "normalizePercussiveness: sparse");
+  assertEqual(normalizePercussiveness(3), "moderate", "normalizePercussiveness: moderate");
+  assertEqual(normalizePercussiveness(5), "rhythmic", "normalizePercussiveness: rhythmic");
+  assertEqual(normalizePercussiveness(8), "very rhythmic", "normalizePercussiveness: very rhythmic");
+  assertEqual(normalizePercussiveness(undefined), "unknown", "normalizePercussiveness: unknown");
 
-    it("should return empty string for unknown keys", () => {
-      expect(getCamelotCode("Unknown Key")).toBe("");
-      expect(getCamelotCode(null)).toBe("");
-    });
-  });
+  assertEqual(normalizePartyMood(0.1), "low", "normalizePartyMood: low");
+  assertEqual(normalizePartyMood(0.3), "moderate", "normalizePartyMood: moderate");
+  assertEqual(normalizePartyMood(0.5), "high", "normalizePartyMood: high");
+  assertEqual(normalizePartyMood(0.8), "very high", "normalizePartyMood: very high");
+  assertEqual(normalizePartyMood(undefined), "unknown", "normalizePartyMood: unknown");
 
-  describe("normalizeDanceability", () => {
-    it("should categorize danceability scores", () => {
-      expect(normalizeDanceability(0.1)).toBe("very low");
-      expect(normalizeDanceability(0.3)).toBe("low");
-      expect(normalizeDanceability(0.5)).toBe("moderate");
-      expect(normalizeDanceability(0.7)).toBe("high");
-      expect(normalizeDanceability(0.9)).toBe("very high");
-    });
+  console.log(`audio-vibe-normalization: passed=${passed} failed=${failed}`);
+  if (failed > 0) process.exit(1);
+}
 
-    it("should handle string input", () => {
-      expect(normalizeDanceability("0.75")).toBe("high");
-    });
-
-    it("should handle null/undefined", () => {
-      expect(normalizeDanceability(null)).toBe("unknown");
-      expect(normalizeDanceability(undefined)).toBe("unknown");
-    });
-  });
-
-  describe("calculateEnergy", () => {
-    it("should calculate energy from danceability and aggressiveness", () => {
-      expect(calculateEnergy(0.8, 0.2)).toBe("moderate"); // 0.8*0.6 + 0.2*0.4 = 0.56
-      expect(calculateEnergy(0.9, 0.9)).toBe("very high"); // 0.9*0.6 + 0.9*0.4 = 0.9
-      expect(calculateEnergy(0.1, 0.1)).toBe("very low"); // 0.1*0.6 + 0.1*0.4 = 0.1
-    });
-
-    it("should handle null/undefined inputs", () => {
-      expect(calculateEnergy(null, null)).toBe("very low"); // Treats as 0
-      expect(calculateEnergy(0.5, null)).toBe("low"); // 0.5*0.6 + 0*0.4 = 0.3
-    });
-  });
-
-  describe("getDominantMood", () => {
-    it("should identify dominant mood", () => {
-      expect(getDominantMood({ happy: 0.8, sad: 0.2, relaxed: 0.1, aggressive: 0.1 })).toBe("happy");
-      expect(getDominantMood({ happy: 0.1, sad: 0.7, relaxed: 0.2, aggressive: 0.1 })).toBe("sad");
-      expect(getDominantMood({ happy: 0.1, sad: 0.1, relaxed: 0.8, aggressive: 0.2 })).toBe("relaxed");
-      expect(getDominantMood({ happy: 0.1, sad: 0.1, relaxed: 0.2, aggressive: 0.9 })).toBe("aggressive");
-    });
-
-    it("should return neutral for low scores", () => {
-      expect(getDominantMood({ happy: 0.2, sad: 0.2, relaxed: 0.2, aggressive: 0.2 })).toBe("neutral");
-    });
-
-    it("should handle null/undefined", () => {
-      expect(getDominantMood({})).toBe("neutral");
-    });
-  });
-
-  describe("getVibeDescriptors", () => {
-    it("should generate descriptors based on BPM, energy, and mood", () => {
-      const descriptors = getVibeDescriptors(95, "high", "happy");
-      expect(descriptors).toContain("downtempo");
-      expect(descriptors).toContain("energetic");
-      expect(descriptors).toContain("uplifting");
-    });
-
-    it("should return balanced for neutral conditions", () => {
-      const descriptors = getVibeDescriptors(120, "moderate", "neutral");
-      expect(descriptors).toEqual(["balanced"]);
-    });
-
-    it("should handle high BPM", () => {
-      const descriptors = getVibeDescriptors(150, "very high", "aggressive");
-      expect(descriptors).toContain("high-energy");
-      expect(descriptors).toContain("energetic");
-      expect(descriptors).toContain("driving");
-    });
-  });
-
-  describe("formatMoodProfile", () => {
-    it("should format mood scores", () => {
-      const profile = formatMoodProfile({
-        happy: 0.75,
-        sad: 0.25,
-        relaxed: 0.50,
-        aggressive: 0.10,
-      });
-      expect(profile).toContain("Happy (0.75)");
-      expect(profile).toContain("Sad (0.25)");
-      expect(profile).toContain("Relaxed (0.50)");
-      expect(profile).toContain("Aggressive (0.10)");
-    });
-
-    it("should omit null/undefined moods", () => {
-      const profile = formatMoodProfile({ happy: 0.8, sad: null, relaxed: undefined, aggressive: 0 });
-      expect(profile).toContain("Happy (0.80)");
-      expect(profile).not.toContain("Sad");
-      expect(profile).not.toContain("Relaxed");
-      expect(profile).not.toContain("Aggressive");
-    });
-
-    it("should return 'none' for empty moods", () => {
-      expect(formatMoodProfile({})).toBe("none");
-    });
-  });
-
-  describe("normalizeAcousticElectronic", () => {
-    it("should categorize acoustic/electronic balance", () => {
-      expect(normalizeAcousticElectronic(0.9, 0.1)).toBe("very acoustic");
-      expect(normalizeAcousticElectronic(0.6, 0.3)).toBe("acoustic");
-      expect(normalizeAcousticElectronic(0.5, 0.5)).toBe("balanced");
-      expect(normalizeAcousticElectronic(0.3, 0.6)).toBe("electronic");
-      expect(normalizeAcousticElectronic(0.1, 0.9)).toBe("very electronic");
-    });
-
-    it("should handle ambiguous cases", () => {
-      expect(normalizeAcousticElectronic(0.2, 0.2)).toBe("ambiguous");
-    });
-
-    it("should handle null/undefined", () => {
-      expect(normalizeAcousticElectronic(undefined, undefined)).toBe("unknown");
-    });
-  });
-
-  describe("normalizeVocalPresence", () => {
-    it("should categorize vocal presence", () => {
-      expect(normalizeVocalPresence(0.9, 0.1)).toBe("instrumental");
-      expect(normalizeVocalPresence(0.7, 0.25)).toBe("light vocals");
-      expect(normalizeVocalPresence(0.5, 0.5)).toBe("moderate vocals");
-      expect(normalizeVocalPresence(0.2, 0.8)).toBe("heavy vocals");
-    });
-
-    it("should handle null/undefined", () => {
-      expect(normalizeVocalPresence(undefined, undefined)).toBe("unknown");
-    });
-  });
-
-  describe("normalizePercussiveness", () => {
-    it("should categorize onset rate", () => {
-      expect(normalizePercussiveness(1.5)).toBe("sparse");
-      expect(normalizePercussiveness(3)).toBe("moderate");
-      expect(normalizePercussiveness(5)).toBe("rhythmic");
-      expect(normalizePercussiveness(8)).toBe("very rhythmic");
-    });
-
-    it("should handle undefined", () => {
-      expect(normalizePercussiveness(undefined)).toBe("unknown");
-    });
-  });
-
-  describe("normalizePartyMood", () => {
-    it("should categorize party mood", () => {
-      expect(normalizePartyMood(0.1)).toBe("low");
-      expect(normalizePartyMood(0.3)).toBe("moderate");
-      expect(normalizePartyMood(0.5)).toBe("high");
-      expect(normalizePartyMood(0.8)).toBe("very high");
-    });
-
-    it("should handle undefined", () => {
-      expect(normalizePartyMood(undefined)).toBe("unknown");
-    });
-  });
-});
+run();
