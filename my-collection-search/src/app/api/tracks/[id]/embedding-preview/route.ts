@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
-import type { Track } from "@/types/track";
 import {
   buildTrackPrompt,
   getDefaultTrackEmbeddingTemplate,
 } from "@/lib/track-embedding";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { trackRepository } from "@/services/trackRepository";
 
 export async function GET(
   request: NextRequest,
@@ -23,25 +20,18 @@ export async function GET(
       );
     }
 
-    const trackRes = await pool.query(
-      "SELECT * FROM tracks WHERE track_id = $1 AND friend_id = $2 LIMIT 1",
-      [trackId, friendId]
+    const track = await trackRepository.findTrackByTrackIdAndFriendIdRaw(
+      trackId,
+      friendId
     );
-    const track = trackRes.rows[0] as Track | undefined;
     if (!track) {
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
 
     const defaultTemplate = getDefaultTrackEmbeddingTemplate();
-    const templateRes = await pool.query(
-      "SELECT prompt_template FROM embedding_prompt_settings WHERE friend_id = $1",
-      [friendId]
-    );
     const template =
-      templateRes.rows.length > 0 &&
-      typeof templateRes.rows[0].prompt_template === "string"
-        ? templateRes.rows[0].prompt_template
-        : defaultTemplate;
+      (await trackRepository.findEmbeddingPromptTemplateByFriendId(friendId)) ??
+      defaultTemplate;
 
     const prompt = buildTrackPrompt(track, template);
 

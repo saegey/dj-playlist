@@ -598,26 +598,6 @@ const remainingTracksContracts: ApiContractRoute[] = [
       },
     }
   ),
-  makeTrackRoute("post", "/api/tracks/backfill-embeddings", "Backfill track embeddings", {
-    responses: {
-      "200": {
-        description: "Embedding backfill completed",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                updated: { type: "integer" },
-                failed: { type: "array", items: { type: "string" } },
-              },
-              required: ["updated", "failed"],
-            },
-          },
-        },
-      },
-      "500": { description: "Backfill error", content: { "application/json": { schema: errorResponseSchemaObject } } },
-    },
-  }),
   makeTrackRoute("post", "/api/tracks/backfill-essentia", "Backfill essentia analysis", {
     requestBody: {
       required: false,
@@ -656,39 +636,6 @@ const remainingTracksContracts: ApiContractRoute[] = [
       },
       "400": { description: "Invalid request", content: { "application/json": { schema: errorResponseSchemaObject } } },
       "500": { description: "Queueing error", content: { "application/json": { schema: errorResponseSchemaObject } } },
-    },
-  }),
-  makeTrackRoute("get", "/api/tracks/backfill-release-id", "Get backfill release-id status", {
-    responses: {
-      "200": {
-        description: "Backfill preview",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                totalToFix: { type: "integer" },
-                sample: { type: "array", items: { type: "object", additionalProperties: true } },
-              },
-              required: ["totalToFix", "sample"],
-            },
-          },
-        },
-      },
-      "500": { description: "Preview error", content: { "application/json": { schema: errorResponseSchemaObject } } },
-    },
-  }),
-  makeTrackRoute("post", "/api/tracks/backfill-release-id", "Run backfill release-id", {
-    responses: {
-      "200": {
-        description: "Streaming progress output",
-        content: {
-          "text/event-stream": {
-            schema: { type: "string" },
-          },
-        },
-      },
-      "500": { description: "Backfill error", content: { "text/event-stream": { schema: { type: "string" } } } },
     },
   }),
   makeTrackRoute("post", "/api/tracks/batch", "Fetch ordered batch of tracks", {

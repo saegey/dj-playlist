@@ -13,7 +13,7 @@ import {
   useDeleteReleases,
 } from "@/hooks/useDiscogsQuery";
 import { useBackupsQuery } from "@/hooks/useBackupsQuery";
-import { useCleanupAlbums, useBackfillReleaseId } from "@/hooks/useAlbumsQuery";
+import { useCleanupAlbums } from "@/hooks/useAlbumsQuery";
 import ManifestVerificationDialog from "@/components/settings/dialogs/ManifestVerificationDialog";
 import RemovedReleasesDialog from "@/components/settings/dialogs/RemovedReleasesDialog";
 import type { VerificationResult } from "@/services/internalApi/discogs";
@@ -37,7 +37,6 @@ export default function ActionsGrid() {
   const cleanupManifests = useCleanupManifests();
   const { addBackup, addBackupLoading } = useBackupsQuery();
   const cleanupAlbums = useCleanupAlbums();
-  const backfillReleaseId = useBackfillReleaseId();
   const [durationFixLoading, setDurationFixLoading] = useState(false);
   const [coverArtBackfillLoading, setCoverArtBackfillLoading] = useState(false);
   const [essentiaBackfillLoading, setEssentiaBackfillLoading] = useState(false);
@@ -52,8 +51,7 @@ export default function ActionsGrid() {
     discogsSync.isPending ||
     addBackupLoading ||
     verifyManifests.isPending ||
-    cleanupAlbums.isPending ||
-    backfillReleaseId.isPending;
+    cleanupAlbums.isPending;
 
   const handleFixMissingDurations = async () => {
     setDurationFixLoading(true);
@@ -308,30 +306,6 @@ export default function ActionsGrid() {
               </Menu.Item>
 
               <Menu.Separator />
-
-              <Menu.Item
-                value="fix-links"
-                onClick={() =>
-                  backfillReleaseId.mutate(undefined, {
-                    onSuccess: () => {
-                      toaster.create({
-                        title: "Backfill Complete",
-                        type: "success",
-                        description: "Fixed tracks missing release_id",
-                      });
-                    },
-                    onError: (e: Error) =>
-                      toaster.create({
-                        title: "Backfill Failed",
-                        type: "error",
-                        description: e.message,
-                      }),
-                  })
-                }
-                disabled={disableAll || backfillReleaseId.isPending}
-              >
-                <FiDatabase /> Fix Track Links
-              </Menu.Item>
 
               <Menu.Item
                 value="cleanup-albums"

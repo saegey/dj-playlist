@@ -1,15 +1,12 @@
 import { dbQuery } from "@/lib/serverDb";
 import type { Track } from "@/types/track";
 
-export type TrackLocalAudioRow = {
-  track_id: string;
-  friend_id: number;
-  local_audio_url: string | null;
-};
+export type TrackLocalAudioRow = Pick<
+  Track,
+  "track_id" | "friend_id" | "local_audio_url"
+>;
 
-export type CoverArtBackfillCandidateRow = {
-  track_id: string;
-  friend_id: number;
+export type CoverArtBackfillCandidateRow = TrackRef & {
   release_id: string | null;
   missing_tracks: string | number;
 };
@@ -61,13 +58,21 @@ export type MissingMusicUrlPageResult = {
 };
 
 export type TrackReindexRow = TrackWithLibraryIdentifierRow;
-export type TrackAnalysisBulkUpdate = {
-  local_audio_url?: string;
+export type TrackAnalysisBulkUpdate = Pick<Track, "local_audio_url"> & {
   bpm?: number | null;
   key?: string | null;
   danceability?: number | null;
   duration_seconds?: number | null;
 };
+export type TrackAudioMetadataRow = Pick<
+  Track,
+  | "track_id"
+  | "friend_id"
+  | "local_audio_url"
+  | "audio_file_album_art_url"
+  | "year"
+  | "composer"
+>;
 
 const UPDATABLE_COLUMNS = {
   title: "title",
@@ -424,6 +429,40 @@ export class TrackRepository {
     return rows[0] ?? null;
   }
 
+  async findTrackAudioMetadata(
+    trackId: string,
+    friendId: number
+  ): Promise<TrackAudioMetadataRow | null> {
+    const { rows } = await dbQuery<TrackAudioMetadataRow>(
+      `
+      SELECT track_id, friend_id, local_audio_url, audio_file_album_art_url, year, composer
+      FROM tracks
+      WHERE track_id = $1 AND friend_id = $2
+      LIMIT 1
+      `,
+      [trackId, friendId]
+    );
+    return rows[0] ?? null;
+  }
+
+  async findEmbeddingPromptTemplateByFriendId(
+    friendId: number
+  ): Promise<string | null> {
+    const { rows } = await dbQuery<{ prompt_template: string | null }>(
+      `
+      SELECT prompt_template
+      FROM embedding_prompt_settings
+      WHERE friend_id = $1
+      LIMIT 1
+      `,
+      [friendId]
+    );
+
+    return typeof rows[0]?.prompt_template === "string"
+      ? rows[0].prompt_template
+      : null;
+  }
+
   async findTracksByTrackId(trackId: string): Promise<Track[]> {
     const { rows } = await dbQuery<Track>(
       "SELECT * FROM tracks WHERE track_id = $1",
@@ -490,6 +529,51 @@ export class TrackRepository {
     await dbQuery(
       `UPDATE tracks SET local_tags = $1, notes = $2 WHERE track_id = $3`,
       [localTags, notes, trackId]
+    );
+  }
+
+  async updateTrackAudioFileAlbumArtUrl(
+    trackId: string,
+    friendId: number,
+    audioFileAlbumArtUrl: string
+  ): Promise<void> {
+    await dbQuery(
+      `
+      UPDATE tracks
+      SET audio_file_album_art_url = $1
+      WHERE track_id = $2 AND friend_id = $3
+      `,
+      [audioFileAlbumArtUrl, trackId, friendId]
+    );
+  }
+
+  async updateTrackYear(
+    trackId: string,
+    friendId: number,
+    year: string
+  ): Promise<void> {
+    await dbQuery(
+      `
+      UPDATE tracks
+      SET year = $1
+      WHERE track_id = $2 AND friend_id = $3
+      `,
+      [year, trackId, friendId]
+    );
+  }
+
+  async updateTrackComposer(
+    trackId: string,
+    friendId: number,
+    composer: string
+  ): Promise<void> {
+    await dbQuery(
+      `
+      UPDATE tracks
+      SET composer = $1
+      WHERE track_id = $2 AND friend_id = $3
+      `,
+      [composer, trackId, friendId]
     );
   }
 
