@@ -122,15 +122,14 @@ export default function PlaylistManager({
 
       if (!tracksData.length) throw new Error("No valid tracks found");
 
-      // Fetch friends to resolve usernames
-      const friendsRes = await fetch("/api/friends");
-      const friendsData = await friendsRes.json();
-      const friends = friendsData.results || [];
+      // Resolve usernames using already-loaded friends list.
+      const availableFriends = friends || [];
 
       // Check if we can resolve all usernames to friend_ids
       const hasUsernames = tracksData.some((t) => t.username);
       const canResolveAll = hasUsernames && tracksData.every((t) =>
-        !t.username || friends.some((f: { username: string }) => f.username === t.username)
+        !t.username ||
+        availableFriends.some((f) => f.username === t.username)
       );
 
       if (!hasUsernames || !canResolveAll) {
@@ -141,7 +140,7 @@ export default function PlaylistManager({
       }
 
       // Resolve usernames to friend_ids
-      const friendMap = new Map(friends.map((f: { id: number; username: string }) => [f.username, f.id]));
+      const friendMap = new Map(availableFriends.map((f) => [f.username, f.id]));
       const tracks: PlaylistTrackPayload[] = tracksData
         .map((t) => {
           const friendId = t.username ? friendMap.get(t.username) : undefined;

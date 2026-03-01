@@ -4,6 +4,7 @@ import {
   aiPromptSettingsPutBodySchema,
   aiPromptSettingsPutResponseSchema,
   aiPromptSettingsQuerySchema,
+  albumCreateResponseSchema,
   albumDetailResponseSchema,
   albumDiscogsRawResponseSchema,
   albumFriendQuerySchema,
@@ -2380,6 +2381,105 @@ export const apiContractRoutes: ApiContractRoute[] = [
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
+        },
+      },
+    },
+  },
+  {
+    operationId: "createAlbum",
+    method: "post",
+    path: "/api/albums/create",
+    summary: "Create a local album with tracks",
+    tags: ["Albums"],
+    successSchema: albumCreateResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "multipart/form-data": {
+            schema: {
+              type: "object",
+              properties: {
+                album: { type: "string", description: "JSON stringified album payload" },
+                tracks: { type: "string", description: "JSON stringified tracks payload" },
+                friend_id: { type: "string" },
+                cover_art: { type: "string", format: "binary" },
+              },
+              required: ["album", "tracks", "friend_id"],
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Album created",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  album: {
+                    type: "object",
+                    properties: {
+                      release_id: { type: "string" },
+                      friend_id: { type: "integer" },
+                      title: { type: "string" },
+                      artist: { type: "string" },
+                      year: { type: ["string", "number", "null"] },
+                      genres: { type: "array", items: { type: "string" } },
+                      styles: { type: "array", items: { type: "string" } },
+                      album_thumbnail: { type: ["string", "null"] },
+                      track_count: { type: "integer" },
+                      date_added: { type: "string" },
+                      date_changed: { type: "string" },
+                      library_identifier: { type: ["string", "null"] },
+                    },
+                    required: ["release_id", "friend_id", "title", "artist"],
+                    additionalProperties: true,
+                  },
+                  tracks: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        track_id: { type: "string" },
+                        friend_id: { type: "integer" },
+                        title: { type: "string" },
+                        artist: { type: "string" },
+                        album: { type: "string" },
+                        year: { type: ["string", "number", "null"] },
+                        duration: { type: "string" },
+                        duration_seconds: { type: ["number", "null"] },
+                        position: { type: ["string", "number"] },
+                        release_id: { type: ["string", "null"] },
+                        library_identifier: { type: ["string", "null"] },
+                      },
+                      required: ["track_id", "friend_id", "title", "artist", "album"],
+                      additionalProperties: true,
+                    },
+                  },
+                },
+                required: ["album", "tracks"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid payload",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "404": {
+          description: "Friend not found",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "413": {
+          description: "Uploaded cover art too large",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
         },
       },
     },

@@ -576,6 +576,44 @@ export const albumDiscogsRawResponseSchema = z.object({
   data: z.unknown(),
 });
 
+export const albumEntitySchema = z
+  .object({
+    release_id: z.string(),
+    friend_id: z.number().int(),
+    title: z.string(),
+    artist: z.string(),
+    year: z.union([z.string(), z.number()]).nullable().optional(),
+    genres: z.array(z.string()).optional(),
+    styles: z.array(z.string()).optional(),
+    album_thumbnail: z.string().nullable().optional(),
+    track_count: z.number().int().optional(),
+    date_added: z.string().optional(),
+    date_changed: z.string().optional(),
+    library_identifier: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export const trackEntitySchema = z
+  .object({
+    track_id: z.string(),
+    friend_id: z.number().int(),
+    title: z.string(),
+    artist: z.string(),
+    album: z.string(),
+    year: z.union([z.string(), z.number()]).nullable().optional(),
+    duration: z.string().optional(),
+    duration_seconds: z.number().nullable().optional(),
+    position: z.union([z.string(), z.number()]).optional(),
+    release_id: z.string().nullable().optional(),
+    library_identifier: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export const albumCreateResponseSchema = z.object({
+  album: albumEntitySchema,
+  tracks: z.array(trackEntitySchema),
+});
+
 export const queueAlbumDownloadsResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),

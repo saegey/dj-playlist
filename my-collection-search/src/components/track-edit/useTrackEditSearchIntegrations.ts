@@ -8,6 +8,7 @@ import { useTrackMetadataMutation } from "@/hooks/useTrackMetadataMutation";
 import { useYouTubeMusicSearchMutation } from "@/hooks/useYouTubeMusicSearchMutation";
 import { toaster } from "@/components/ui/toaster";
 import { lookupDiscogsVideos, extractDiscogsVideos } from "@/services/discogsService";
+import { fetchAiPromptSettings } from "@/services/internalApi/settings";
 import type { DiscogsLookupVideo } from "@/types/discogs";
 import type {
   TrackForSearch,
@@ -55,11 +56,8 @@ export function useTrackEditSearchIntegrations({
     if (!friendId) return;
     const run = async () => {
       try {
-        const res = await fetch(
-          `/api/settings/ai-prompt?friend_id=${encodeURIComponent(friendId)}`
-        );
-        const data = await res.json();
-        if (res.ok && typeof data.prompt === "string") {
+        const data = await fetchAiPromptSettings({ friend_id: friendId });
+        if (typeof data.prompt === "string") {
           setAiPrompt(data.prompt);
         }
       } catch (err) {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  albumCreateResponseSchema,
   albumDetailResponseSchema,
   albumDiscogsRawResponseSchema,
   albumSearchQuerySchema,
@@ -10,7 +11,10 @@ import {
   albumUpsertWithTracksResponseSchema,
   queueAlbumDownloadsResponseSchema,
 } from "@/api-contract/schemas";
-import type { UpdateAlbumWithTracksParams } from "@/types/albumMetadata";
+import type {
+  CreateAlbumRequest,
+  UpdateAlbumWithTracksParams,
+} from "@/types/albumMetadata";
 import type { Album, Track } from "@/types/track";
 import { http } from "@/services/http";
 import { streamLines } from "@/services/sse";
@@ -18,6 +22,11 @@ import { streamLines } from "@/services/sse";
 export type AlbumDiscogsRawResponse = z.infer<
   typeof albumDiscogsRawResponseSchema
 >;
+export type CreateAlbumApiResponse = z.infer<typeof albumCreateResponseSchema>;
+export type CreateAlbumResponse = Omit<CreateAlbumApiResponse, "album" | "tracks"> & {
+  album: Album;
+  tracks: Track[];
+};
 export type AlbumSearchParams = z.input<typeof albumSearchQuerySchema>;
 export type AlbumSearchApiResponse = z.infer<typeof albumSearchResponseSchema>;
 export type AlbumSearchResponse = Omit<AlbumSearchApiResponse, "hits"> & {
@@ -61,6 +70,23 @@ export async function fetchAlbumDiscogsRawRelease(
       cache: "no-store",
     }
   );
+}
+
+export async function createAlbum(
+  data: CreateAlbumRequest
+): Promise<CreateAlbumResponse> {
+  const formData = new FormData();
+  formData.append("album", JSON.stringify(data.album));
+  formData.append("tracks", JSON.stringify(data.tracks));
+  formData.append("friend_id", data.friend_id.toString());
+  if (data.coverArt) {
+    formData.append("cover_art", data.coverArt);
+  }
+
+  return await http<CreateAlbumResponse>("/api/albums/create", {
+    method: "POST",
+    body: formData,
+  });
 }
 
 export async function searchAlbums(
