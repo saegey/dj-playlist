@@ -42,6 +42,8 @@ import {
   queueAlbumDownloadsResponseSchema,
   recommendationsQuerySchema,
   recommendationsResponseSchema,
+  similarVibeQuerySchema,
+  similarVibeResponseSchema,
   trackSearchGetQuerySchema,
   trackSearchGetResponseSchema,
   trackSearchPostBodySchema,
@@ -1915,6 +1917,55 @@ export const apiContractRoutes: ApiContractRoute[] = [
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
+        },
+      },
+    },
+  },
+  {
+    operationId: "findSimilarVibeTracks",
+    method: "get",
+    path: "/api/embeddings/similar-vibe",
+    summary: "Find similar tracks by audio vibe embedding",
+    tags: ["Embeddings"],
+    querySchema: similarVibeQuerySchema,
+    successSchema: similarVibeResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        { name: "track_id", in: "query", required: true, schema: { type: "string" } },
+        { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
+        { name: "limit", in: "query", required: false, schema: { type: "integer", default: 50 } },
+        { name: "ivfflat_probes", in: "query", required: false, schema: { type: "integer", default: 10 } },
+      ],
+      responses: {
+        "200": {
+          description: "Similar vibe tracks",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  source_track_id: { type: "string" },
+                  source_friend_id: { type: "integer" },
+                  count: { type: "integer" },
+                  tracks: { type: "array", items: { type: "object", additionalProperties: true } },
+                },
+                required: ["source_track_id", "source_friend_id", "count", "tracks"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Missing or invalid query",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "404": {
+          description: "Audio vibe embedding not found",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
         },
       },
     },

@@ -1,5 +1,8 @@
 import { z } from "zod";
 import {
+  similarVibeQuerySchema,
+  similarVibeResponseSchema,
+  similarVibeTrackSchema,
   trackSearchGetQuerySchema,
   trackSearchGetResponseSchema,
   audioVibeEmbeddingDataSchema,
@@ -51,6 +54,9 @@ export type AudioVibeEmbeddingPreviewResponse = z.infer<
 export type DurationBackfillResponse = z.infer<
   typeof durationBackfillResponseSchema
 >;
+export type SimilarVibeTracksOptions = z.input<typeof similarVibeQuerySchema>;
+export type SimilarVibeTrack = z.infer<typeof similarVibeTrackSchema>;
+export type SimilarVibeTracksResponse = z.infer<typeof similarVibeResponseSchema>;
 export type TrackSearchQuery = z.input<typeof trackSearchGetQuerySchema>;
 type TrackSearchApiResponse = z.infer<typeof trackSearchGetResponseSchema>;
 export type TrackSearchResponse = Omit<TrackSearchApiResponse, "hits"> & {
@@ -180,6 +186,27 @@ export async function queueFixMissingDurations(): Promise<DurationBackfillRespon
   return await http<DurationBackfillResponse>("/api/tracks/fix-missing-durations", {
     method: "POST",
   });
+}
+
+export async function fetchSimilarVibeTracks(
+  options: SimilarVibeTracksOptions
+): Promise<SimilarVibeTracksResponse> {
+  const params = new URLSearchParams({
+    track_id: options.track_id,
+    friend_id: String(options.friend_id),
+  });
+  if (typeof options.limit === "number") params.set("limit", String(options.limit));
+  if (typeof options.ivfflat_probes === "number") {
+    params.set("ivfflat_probes", String(options.ivfflat_probes));
+  }
+
+  return await http<SimilarVibeTracksResponse>(
+    `/api/embeddings/similar-vibe?${params.toString()}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
 }
 
 export async function searchTracks(

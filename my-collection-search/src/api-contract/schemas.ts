@@ -609,6 +609,30 @@ export const trackEntitySchema = z
   })
   .passthrough();
 
+export const similarVibeQuerySchema = z.object({
+  track_id: z.string().min(1),
+  friend_id: intFromInputSchema,
+  limit: intFromInputSchema.optional().default(50),
+  ivfflat_probes: intFromInputSchema.optional().default(10),
+});
+
+export const similarVibeTrackSchema = trackEntitySchema.extend({
+  distance: z.number(),
+  identity_text: z.string(),
+  danceability: z.union([z.number(), z.string()]).nullable().optional(),
+  mood_happy: z.number().nullable().optional(),
+  mood_sad: z.number().nullable().optional(),
+  mood_relaxed: z.number().nullable().optional(),
+  mood_aggressive: z.number().nullable().optional(),
+});
+
+export const similarVibeResponseSchema = z.object({
+  source_track_id: z.string(),
+  source_friend_id: z.number().int(),
+  count: z.number().int(),
+  tracks: z.array(similarVibeTrackSchema),
+});
+
 export const albumCreateResponseSchema = z.object({
   album: albumEntitySchema,
   tracks: z.array(trackEntitySchema),
