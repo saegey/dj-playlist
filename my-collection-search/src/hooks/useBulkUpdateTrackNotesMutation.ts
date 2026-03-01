@@ -5,7 +5,7 @@ import {
   bulkUpdateTrackNotes,
   type BulkNotesUpdate,
   type BulkNotesResponse,
-} from "@/services/trackService";
+} from "@/services/internalApi/tracks";
 import { useTrackStore } from "@/stores/trackStore";
 
 export function useBulkUpdateTrackNotesMutation() {

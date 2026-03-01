@@ -187,6 +187,26 @@ export const trackSearchPostResponseSchema = meiliSearchMetaSchema.extend({
   tracks: z.array(z.unknown()),
 });
 
+export const bulkNotesUpdateSchema = z
+  .object({
+    track_id: z.string().min(1),
+    local_tags: z.string().optional(),
+    notes: z.string().optional(),
+  })
+  .passthrough();
+
+export const bulkNotesBodySchema = z.object({
+  updates: z.array(bulkNotesUpdateSchema),
+});
+
+export const bulkNotesResponseSchema = z
+  .object({
+    success: z.boolean(),
+    updated: z.number().int().optional(),
+    tracks: z.array(z.object({}).passthrough()).optional(),
+  })
+  .passthrough();
+
 export const recommendationsQuerySchema = z.object({
   track_id: z.string().min(1),
   friend_id: intFromInputSchema,
@@ -257,6 +277,56 @@ export const recommendationsResponseSchema = z.object({
       total: z.number().int(),
     }),
   }),
+});
+
+export const durationBackfillQueueErrorSchema = z.object({
+  track_id: z.string(),
+  error: z.string(),
+});
+
+export const durationBackfillResponseSchema = z.object({
+  queued: z.number().int(),
+  jobIds: z.array(z.string()),
+  errors: z.array(durationBackfillQueueErrorSchema),
+});
+
+export const coverArtBackfillBodySchema = z.object({
+  friend_id: intFromInputSchema.nullable().optional(),
+});
+
+export const coverArtBackfillQueueErrorSchema = z.object({
+  track_id: z.string(),
+  friend_id: z.number().int(),
+  release_id: z.string().nullable(),
+  error: z.string(),
+});
+
+export const coverArtBackfillResponseSchema = z.object({
+  queued: z.number().int(),
+  queuedAlbums: z.number().int(),
+  tracksImpacted: z.number().int(),
+  jobIds: z.array(z.string()),
+  errors: z.array(coverArtBackfillQueueErrorSchema),
+});
+
+export const essentiaBackfillBodySchema = z.object({
+  friend_id: intFromInputSchema.nullable().optional(),
+  force: z.boolean().optional().default(false),
+});
+
+export const essentiaBackfillQueueErrorSchema = z.object({
+  track_id: z.string(),
+  friend_id: z.number().int(),
+  error: z.string(),
+});
+
+export const essentiaBackfillResponseSchema = z.object({
+  queued: z.number().int(),
+  skipped_existing: z.number().int(),
+  total_candidates: z.number().int(),
+  force: z.boolean(),
+  jobIds: z.array(z.string()),
+  errors: z.array(essentiaBackfillQueueErrorSchema),
 });
 
 export const manifestVerificationResultSchema = z.object({

@@ -15,6 +15,13 @@ import {
   albumsCleanupSummaryResponseSchema,
   albumUpsertWithTracksResponseSchema,
   apiErrorSchema,
+  bulkNotesBodySchema,
+  bulkNotesResponseSchema,
+  coverArtBackfillBodySchema,
+  coverArtBackfillResponseSchema,
+  durationBackfillResponseSchema,
+  essentiaBackfillBodySchema,
+  essentiaBackfillResponseSchema,
   manifestCleanupResponseSchema,
   manifestVerificationResponseSchema,
   playlistCreateBodySchema,
@@ -615,46 +622,80 @@ const remainingTracksContracts: ApiContractRoute[] = [
       },
     }
   ),
-  makeTrackRoute("post", "/api/tracks/backfill-essentia", "Backfill essentia analysis", {
-    requestBody: {
-      required: false,
-      content: {
-        "application/json": {
-          schema: {
-            type: "object",
-            properties: {
-              friend_id: { type: "integer" },
-              force: { type: "boolean" },
-            },
-            additionalProperties: false,
-          },
-        },
-      },
-    },
-    responses: {
-      "200": {
-        description: "Essentia jobs queued",
+  {
+    operationId: "backfillTrackEssentia",
+    method: "post",
+    path: "/api/tracks/backfill-essentia",
+    summary: "Backfill essentia analysis",
+    tags: ["Tracks"],
+    bodySchema: essentiaBackfillBodySchema,
+    successSchema: essentiaBackfillResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: false,
         content: {
           "application/json": {
             schema: {
               type: "object",
               properties: {
-                queued: { type: "integer" },
-                skipped_existing: { type: "integer" },
-                total_candidates: { type: "integer" },
-                force: { type: "boolean" },
-                jobIds: { type: "array", items: { type: "string" } },
-                errors: { type: "array", items: { type: "object", additionalProperties: true } },
+                friend_id: { type: ["integer", "null"] },
+                force: { type: "boolean", default: false },
               },
-              required: ["queued", "skipped_existing", "total_candidates", "force", "jobIds", "errors"],
+              additionalProperties: false,
             },
           },
         },
       },
-      "400": { description: "Invalid request", content: { "application/json": { schema: errorResponseSchemaObject } } },
-      "500": { description: "Queueing error", content: { "application/json": { schema: errorResponseSchemaObject } } },
+      responses: {
+        "200": {
+          description: "Essentia jobs queued",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  queued: { type: "integer" },
+                  skipped_existing: { type: "integer" },
+                  total_candidates: { type: "integer" },
+                  force: { type: "boolean" },
+                  jobIds: { type: "array", items: { type: "string" } },
+                  errors: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        track_id: { type: "string" },
+                        friend_id: { type: "integer" },
+                        error: { type: "string" },
+                      },
+                      required: ["track_id", "friend_id", "error"],
+                    },
+                  },
+                },
+                required: [
+                  "queued",
+                  "skipped_existing",
+                  "total_candidates",
+                  "force",
+                  "jobIds",
+                  "errors",
+                ],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid request",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Queueing error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
     },
-  }),
+  },
   makeTrackRoute("post", "/api/tracks/batch", "Fetch ordered batch of tracks", {
     requestBody: {
       required: true,
@@ -696,59 +737,82 @@ const remainingTracksContracts: ApiContractRoute[] = [
       "500": { description: "Batch query error", content: { "application/json": { schema: errorResponseSchemaObject } } },
     },
   }),
-  makeTrackRoute("post", "/api/tracks/bulk-notes", "Bulk update track notes", {
-    requestBody: {
-      required: true,
-      content: {
-        "application/json": {
-          schema: {
-            type: "object",
-            properties: {
-              updates: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    track_id: { type: "string" },
-                    local_tags: { type: "string" },
-                    notes: { type: "string" },
-                  },
-                  required: ["track_id"],
-                  additionalProperties: true,
-                },
-              },
-            },
-            required: ["updates"],
-          },
-        },
-      },
-    },
-    responses: {
-      "200": {
-        description: "Bulk update result",
+  {
+    operationId: "bulkUpdateTrackNotes",
+    method: "post",
+    path: "/api/tracks/bulk-notes",
+    summary: "Bulk update track notes",
+    tags: ["Tracks"],
+    bodySchema: bulkNotesBodySchema,
+    successSchema: bulkNotesResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
         content: {
           "application/json": {
             schema: {
               type: "object",
               properties: {
-                success: { type: "boolean" },
-                updated: { type: "integer" },
-                tracks: { type: "array", items: trackEntitySchemaObject },
+                updates: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      track_id: { type: "string" },
+                      local_tags: { type: "string" },
+                      notes: { type: "string" },
+                    },
+                    required: ["track_id"],
+                    additionalProperties: true,
+                  },
+                },
               },
-              required: ["success", "updated", "tracks"],
+              required: ["updates"],
+              additionalProperties: false,
             },
           },
         },
       },
-      "400": { description: "Invalid input", content: { "application/json": { schema: errorResponseSchemaObject } } },
-      "500": { description: "Bulk update error", content: { "application/json": { schema: errorResponseSchemaObject } } },
+      responses: {
+        "200": {
+          description: "Bulk update result",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean" },
+                  updated: { type: "integer" },
+                  tracks: { type: "array", items: trackEntitySchemaObject },
+                },
+                required: ["success"],
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid input",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Bulk update error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
     },
-  }),
-  makeTrackRoute(
-    "post",
-    "/api/tracks/extract-missing-cover-art",
-    "Extract missing cover art",
-    {
+  },
+  {
+    operationId: "extractMissingTrackCoverArt",
+    method: "post",
+    path: "/api/tracks/extract-missing-cover-art",
+    summary: "Extract missing cover art",
+    tags: ["Tracks"],
+    bodySchema: coverArtBackfillBodySchema,
+    successSchema: coverArtBackfillResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
       requestBody: {
         required: false,
         content: {
@@ -756,8 +820,9 @@ const remainingTracksContracts: ApiContractRoute[] = [
             schema: {
               type: "object",
               properties: {
-                friend_id: { type: "integer" },
+                friend_id: { type: ["integer", "null"] },
               },
+              additionalProperties: false,
             },
           },
         },
@@ -774,17 +839,36 @@ const remainingTracksContracts: ApiContractRoute[] = [
                   queuedAlbums: { type: "integer" },
                   tracksImpacted: { type: "integer" },
                   jobIds: { type: "array", items: { type: "string" } },
-                  errors: { type: "array", items: { type: "object", additionalProperties: true } },
+                  errors: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        track_id: { type: "string" },
+                        friend_id: { type: "integer" },
+                        release_id: { type: ["string", "null"] },
+                        error: { type: "string" },
+                      },
+                      required: ["track_id", "friend_id", "release_id", "error"],
+                    },
+                  },
                 },
                 required: ["queued", "queuedAlbums", "tracksImpacted", "jobIds", "errors"],
               },
             },
           },
         },
-        "400": { description: "Invalid request", content: { "application/json": { schema: errorResponseSchemaObject } } },
+        "400": {
+          description: "Invalid request",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Queueing error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
       },
-    }
-  ),
+    },
+  },
   makeTrackRoute("post", "/api/tracks/fix-duration", "Fix track duration", {
     requestBody: {
       required: true,
@@ -822,26 +906,49 @@ const remainingTracksContracts: ApiContractRoute[] = [
       "500": { description: "Queueing error", content: { "application/json": { schema: errorResponseSchemaObject } } },
     },
   }),
-  makeTrackRoute("post", "/api/tracks/fix-missing-durations", "Fix missing durations", {
-    responses: {
-      "200": {
-        description: "Bulk duration jobs queued",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                queued: { type: "integer" },
-                jobIds: { type: "array", items: { type: "string" } },
-                errors: { type: "array", items: { type: "object", additionalProperties: true } },
+  {
+    operationId: "fixTracksMissingDuration",
+    method: "post",
+    path: "/api/tracks/fix-missing-durations",
+    summary: "Fix missing durations",
+    tags: ["Tracks"],
+    successSchema: durationBackfillResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Bulk duration jobs queued",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  queued: { type: "integer" },
+                  jobIds: { type: "array", items: { type: "string" } },
+                  errors: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        track_id: { type: "string" },
+                        error: { type: "string" },
+                      },
+                      required: ["track_id", "error"],
+                    },
+                  },
+                },
+                required: ["queued", "jobIds", "errors"],
               },
-              required: ["queued", "jobIds", "errors"],
             },
           },
         },
+        "500": {
+          description: "Queueing error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
       },
     },
-  }),
+  },
   makeTrackRoute("get", "/api/tracks/job-events/{jobId}", "Stream track job events", {
     parameters: [
       { name: "jobId", in: "path", required: true, schema: { type: "string" } },

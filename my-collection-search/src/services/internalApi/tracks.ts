@@ -1,4 +1,16 @@
+import { z } from "zod";
+import {
+  bulkNotesBodySchema,
+  bulkNotesResponseSchema,
+  bulkNotesUpdateSchema,
+  coverArtBackfillBodySchema,
+  coverArtBackfillResponseSchema,
+  durationBackfillResponseSchema,
+  essentiaBackfillBodySchema,
+  essentiaBackfillResponseSchema,
+} from "@/api-contract/schemas";
 import { http } from "@/services/http";
+import type { Track } from "@/types/track";
 
 export type TrackPlaylistMembership = {
   id: number;
@@ -82,6 +94,23 @@ export type AudioVibeEmbeddingPreviewResponse = {
   vibeText: string;
   vibeData: AudioVibeEmbeddingData;
 };
+
+export type DurationBackfillResponse = z.infer<
+  typeof durationBackfillResponseSchema
+>;
+export type BulkNotesUpdate = z.input<typeof bulkNotesUpdateSchema>;
+type BulkNotesApiResponse = z.infer<typeof bulkNotesResponseSchema>;
+export type BulkNotesResponse = Omit<BulkNotesApiResponse, "tracks"> & {
+  tracks?: Track[];
+};
+export type CoverArtBackfillBody = z.input<typeof coverArtBackfillBodySchema>;
+export type CoverArtBackfillResponse = z.infer<
+  typeof coverArtBackfillResponseSchema
+>;
+export type EssentiaBackfillBody = z.input<typeof essentiaBackfillBodySchema>;
+export type EssentiaBackfillResponse = z.infer<
+  typeof essentiaBackfillResponseSchema
+>;
 
 export async function fetchTrackPlaylists(
   trackId: string,
@@ -187,4 +216,41 @@ export async function fetchAudioVibeEmbeddingPreview(
     vibeText: preview.text,
     vibeData: preview.data as AudioVibeEmbeddingData,
   };
+}
+
+export async function queueFixMissingDurations(): Promise<DurationBackfillResponse> {
+  return await http<DurationBackfillResponse>("/api/tracks/fix-missing-durations", {
+    method: "POST",
+  });
+}
+
+export async function bulkUpdateTrackNotes(
+  updates: BulkNotesUpdate[]
+): Promise<BulkNotesResponse> {
+  const body: z.input<typeof bulkNotesBodySchema> = { updates };
+  return await http<BulkNotesResponse>("/api/tracks/bulk-notes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function queueExtractMissingCoverArt(
+  body: CoverArtBackfillBody = {}
+): Promise<CoverArtBackfillResponse> {
+  return await http<CoverArtBackfillResponse>("/api/tracks/extract-missing-cover-art", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function queueBackfillEssentia(
+  body: EssentiaBackfillBody = {}
+): Promise<EssentiaBackfillResponse> {
+  return await http<EssentiaBackfillResponse>("/api/tracks/backfill-essentia", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }

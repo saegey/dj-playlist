@@ -17,6 +17,11 @@ import { useCleanupAlbums } from "@/hooks/useAlbumsQuery";
 import ManifestVerificationDialog from "@/components/settings/dialogs/ManifestVerificationDialog";
 import RemovedReleasesDialog from "@/components/settings/dialogs/RemovedReleasesDialog";
 import type { VerificationResult } from "@/services/internalApi/discogs";
+import {
+  queueBackfillEssentia,
+  queueExtractMissingCoverArt,
+  queueFixMissingDurations,
+} from "@/services/internalApi/tracks";
 
 export default function ActionsGrid() {
   const [removedReleasesOpen, setRemovedReleasesOpen] = useState(false);
@@ -56,11 +61,7 @@ export default function ActionsGrid() {
   const handleFixMissingDurations = async () => {
     setDurationFixLoading(true);
     try {
-      const res = await fetch("/api/tracks/fix-missing-durations", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to fix durations");
-      }
+      const data = await queueFixMissingDurations();
       toaster.create({
         title: "Duration backfill queued",
         description: `Queued ${data.queued} tracks${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,
@@ -81,11 +82,7 @@ export default function ActionsGrid() {
   const handleExtractMissingCoverArt = async () => {
     setCoverArtBackfillLoading(true);
     try {
-      const res = await fetch("/api/tracks/extract-missing-cover-art", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to queue embedded cover extraction");
-      }
+      const data = await queueExtractMissingCoverArt();
       toaster.create({
         title: "Embedded cover extraction queued",
         description: `Queued ${data.queuedAlbums ?? data.queued} albums for ${data.tracksImpacted ?? 0} tracks${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,
@@ -106,11 +103,7 @@ export default function ActionsGrid() {
   const handleBackfillEssentia = async () => {
     setEssentiaBackfillLoading(true);
     try {
-      const res = await fetch("/api/tracks/backfill-essentia", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || "Failed to queue Essentia backfill");
-      }
+      const data = await queueBackfillEssentia();
       toaster.create({
         title: "Essentia backfill queued",
         description: `Queued ${data.queued} tracks, skipped ${data.skipped_existing} existing analyses${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,

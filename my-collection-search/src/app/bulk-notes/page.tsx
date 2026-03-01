@@ -21,9 +21,10 @@ import { FiCheck, FiCopy, FiUpload } from "react-icons/fi";
 import { useUsername } from "@/providers/UsernameProvider";
 import UsernameSelect from "@/components/UsernameSelect";
 import { useBulkUpdateTrackNotesMutation } from "@/hooks/useBulkUpdateTrackNotesMutation";
-import type { BulkNotesUpdate } from "@/services/trackService";
+import type { BulkNotesUpdate } from "@/services/internalApi/tracks";
 import { buildBulkTrackMetadataPrompt } from "@/lib/prompts";
 import PageContainer from "@/components/layout/PageContainer";
+import { fetchAiPromptSettings } from "@/services/internalApi/settings";
 
 export default function BulkNotesPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -41,13 +42,8 @@ export default function BulkNotesPage() {
   React.useEffect(() => {
     const run = async () => {
       try {
-        const friendId = friend?.id;
-        const url = friendId
-          ? `/api/settings/ai-prompt?friend_id=${encodeURIComponent(friendId)}`
-          : "/api/settings/ai-prompt";
-        const res = await fetch(url);
-        const data = await res.json();
-        if (res.ok && typeof data.prompt === "string") {
+        const data = await fetchAiPromptSettings({ friend_id: friend?.id });
+        if (typeof data.prompt === "string") {
           setAiPrompt(data.prompt);
         }
       } catch (err) {
