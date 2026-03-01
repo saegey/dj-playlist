@@ -5,6 +5,7 @@
 - See [docs/state-ownership.md](docs/state-ownership.md) for the canonical data ownership model:
   - Zustand owns `Track`/`Album` entities
   - React Query owns request lifecycle and lightweight query metadata
+- See [docs/frontend-api-pattern.md](docs/frontend-api-pattern.md) for the frontend API contract + internalApi pattern (Zod/OpenAPI/http helpers, no inline fetch).
 
 ## OpenAPI and Swagger docs
 

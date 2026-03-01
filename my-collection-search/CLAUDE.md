@@ -5,6 +5,7 @@
 - In short:
   - Zustand owns `Track`/`Album` entities
   - React Query owns request lifecycle, status, and lightweight query metadata
+- See `docs/frontend-api-pattern.md` for the frontend API pattern (Zod/OpenAPI route contracts, typed `internalApi/*`, and shared `http` helpers instead of inline `fetch`).
 
 ## Overview
 - Next.js app to browse, search, and manage a personal DJ track collection.
