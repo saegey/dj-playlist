@@ -8,6 +8,7 @@ import { useUsername } from "@/providers/UsernameProvider";
 import { usePlaylistsQuery } from "@/hooks/usePlaylistsQuery";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { importPlaylist } from "@/services/internalApi/playlists";
+import { searchTracks } from "@/services/internalApi/tracks";
 import type { Track } from "@/types/track";
 import { toaster } from "@/components/ui/toaster";
 import styles from "./CommandPalette.module.css";
@@ -87,19 +88,15 @@ export default function CommandPalette() {
       }
       setLoadingTracks(true);
       try {
-        const params = new URLSearchParams({
+        const params: Parameters<typeof searchTracks>[0] = {
           q,
-          limit: "8",
-          offset: "0",
-        });
+          limit: 8,
+          offset: 0,
+        };
         if (friend?.id) {
-          params.set("filter", `friend_id = ${friend.id}`);
+          params.filter = `friend_id = ${friend.id}`;
         }
-        const response = await fetch(`/api/tracks/search?${params.toString()}`, {
-          cache: "no-store",
-        });
-        if (!response.ok) throw new Error("Command palette search failed");
-        const res = (await response.json()) as { hits?: TrackHit[] };
+        const res = await searchTracks(params);
         if (cancelled) return;
         setTrackHits(res.hits ?? []);
       } catch (err) {

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import {
+  trackSearchGetQuerySchema,
+  trackSearchGetResponseSchema,
   audioVibeEmbeddingDataSchema,
   audioVibeEmbeddingPreviewResponseSchema,
   bulkNotesBodySchema,
@@ -49,6 +51,11 @@ export type AudioVibeEmbeddingPreviewResponse = z.infer<
 export type DurationBackfillResponse = z.infer<
   typeof durationBackfillResponseSchema
 >;
+export type TrackSearchQuery = z.input<typeof trackSearchGetQuerySchema>;
+type TrackSearchApiResponse = z.infer<typeof trackSearchGetResponseSchema>;
+export type TrackSearchResponse = Omit<TrackSearchApiResponse, "hits"> & {
+  hits: Track[];
+};
 export type BulkNotesUpdate = z.input<typeof bulkNotesUpdateSchema>;
 type BulkNotesApiResponse = z.infer<typeof bulkNotesResponseSchema>;
 export type BulkNotesResponse = Omit<BulkNotesApiResponse, "tracks"> & {
@@ -172,6 +179,23 @@ export async function fetchAudioVibeEmbeddingPreview(
 export async function queueFixMissingDurations(): Promise<DurationBackfillResponse> {
   return await http<DurationBackfillResponse>("/api/tracks/fix-missing-durations", {
     method: "POST",
+  });
+}
+
+export async function searchTracks(
+  query: TrackSearchQuery
+): Promise<TrackSearchResponse> {
+  const params = new URLSearchParams();
+  if (query.q) params.set("q", query.q);
+  if (typeof query.limit === "number") params.set("limit", String(query.limit));
+  if (typeof query.offset === "number") params.set("offset", String(query.offset));
+  if (query.filter) params.set("filter", query.filter);
+
+  const search = params.toString();
+  const path = search ? `/api/tracks/search?${search}` : "/api/tracks/search";
+  return await http<TrackSearchResponse>(path, {
+    method: "GET",
+    cache: "no-store",
   });
 }
 
