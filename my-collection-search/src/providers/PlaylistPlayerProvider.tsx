@@ -20,6 +20,7 @@ import {
   useMediaSession,
   type MediaSessionLike,
 } from "@/providers/playlist-player/useMediaSession";
+import { usePlaybackMode } from "@/hooks/usePlaybackMode";
 
 type PlaylistPlayerContextValue = {
   isPlaying: boolean;
@@ -73,6 +74,7 @@ export function PlaylistPlayerProvider({
   initial?: Track[];
 }) {
   const STORAGE_KEY = "mcs:player";
+  const { mode } = usePlaybackMode();
   const getMediaSession = React.useCallback((): MediaSessionLike | null => {
     if (typeof navigator === "undefined") return null;
     const nav = navigator as unknown as { mediaSession?: MediaSessionLike };
@@ -227,6 +229,7 @@ export function PlaylistPlayerProvider({
   );
 
   useMediaSession({
+    enabled: mode === "browser",
     getMediaSession,
     currentTrack,
     isPlaying,

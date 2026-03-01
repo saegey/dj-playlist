@@ -29,6 +29,7 @@ export type MediaSessionLike = {
 };
 
 type UseMediaSessionArgs = {
+  enabled?: boolean;
   getMediaSession: () => MediaSessionLike | null;
   currentTrack: Track | null;
   isPlaying: boolean;
@@ -44,6 +45,7 @@ type UseMediaSessionArgs = {
 };
 
 export function useMediaSession({
+  enabled = true,
   getMediaSession,
   currentTrack,
   isPlaying,
@@ -58,6 +60,7 @@ export function useMediaSession({
   seek,
 }: UseMediaSessionArgs) {
   useEffect(() => {
+    if (!enabled) return;
     const mediaSession = getMediaSession();
     if (!mediaSession) return;
 
@@ -129,6 +132,7 @@ export function useMediaSession({
       } catch {}
     };
   }, [
+    enabled,
     audioRef,
     currentTrack,
     getMediaSession,
@@ -141,14 +145,16 @@ export function useMediaSession({
   ]);
 
   useEffect(() => {
+    if (!enabled) return;
     const mediaSession = getMediaSession();
     if (!mediaSession) return;
     try {
       mediaSession.playbackState = isPlaying ? "playing" : "paused";
     } catch {}
-  }, [getMediaSession, isPlaying]);
+  }, [enabled, getMediaSession, isPlaying]);
 
   useEffect(() => {
+    if (!enabled) return;
     const mediaSession = getMediaSession();
     if (!mediaSession || typeof mediaSession.setPositionState !== "function")
       return;
@@ -161,5 +167,5 @@ export function useMediaSession({
         });
       }
     } catch {}
-  }, [currentTime, duration, getMediaSession]);
+  }, [enabled, currentTime, duration, getMediaSession]);
 }

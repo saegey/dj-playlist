@@ -2,6 +2,11 @@ import { useState, useCallback, useEffect } from 'react';
 import type { PlaybackMode } from '@/components/PlaybackModeSelector';
 
 const STORAGE_KEY = 'mcs:playbackMode';
+const MODE_CHANGED_EVENT = 'mcs:playbackModeChanged';
+
+function isPlaybackMode(value: string | null): value is PlaybackMode {
+  return value === 'browser' || value === 'local-dac';
+}
 
 /**
  * Hook to manage playback mode selection (browser vs local DAC)
@@ -14,7 +19,7 @@ export function usePlaybackMode() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === 'browser' || saved === 'local-dac') {
+      if (isPlaybackMode(saved)) {
         setModeState(saved);
       }
     } catch (error) {
@@ -22,11 +27,42 @@ export function usePlaybackMode() {
     }
   }, []);
 
+  // Keep multiple hook instances in sync within the same tab and across tabs
+  useEffect(() => {
+    const onModeChanged = (event: Event) => {
+      const detail = (event as CustomEvent<{ mode?: PlaybackMode }>).detail;
+      if (detail?.mode && isPlaybackMode(detail.mode)) {
+        setModeState(detail.mode);
+      }
+    };
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY) return;
+      if (isPlaybackMode(event.newValue)) {
+        setModeState(event.newValue);
+      }
+    };
+
+    window.addEventListener(MODE_CHANGED_EVENT, onModeChanged as EventListener);
+    window.addEventListener('storage', onStorage);
+
+    return () => {
+      window.removeEventListener(
+        MODE_CHANGED_EVENT,
+        onModeChanged as EventListener
+      );
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
   // Save to localStorage when changed
   const setMode = useCallback((newMode: PlaybackMode) => {
     setModeState(newMode);
     try {
       localStorage.setItem(STORAGE_KEY, newMode);
+      window.dispatchEvent(
+        new CustomEvent(MODE_CHANGED_EVENT, { detail: { mode: newMode } })
+      );
     } catch (error) {
       console.error('Failed to save playback mode to localStorage:', error);
     }
