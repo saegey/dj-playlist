@@ -1,39 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Pool } from "pg";
-import { getDefaultTrackMetadataPrompt } from "@/lib/serverPrompts";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { settingsService } from "@/services/settingsService";
 
 export async function GET(request: NextRequest) {
   const friendIdParam = request.nextUrl.searchParams.get("friend_id");
   const friendId = friendIdParam ? Number(friendIdParam) : undefined;
-  const defaultPrompt = getDefaultTrackMetadataPrompt();
-
-  if (!friendId || Number.isNaN(friendId)) {
-    return NextResponse.json({
-      prompt: defaultPrompt,
-      defaultPrompt,
-      isDefault: true,
-    });
-  }
 
   try {
-    const { rows } = await pool.query(
-      "SELECT prompt FROM ai_prompt_settings WHERE friend_id = $1",
-      [friendId]
-    );
-    if (rows.length > 0 && typeof rows[0].prompt === "string") {
-      return NextResponse.json({
-        prompt: rows[0].prompt,
-        defaultPrompt,
-        isDefault: false,
-      });
+    if (friendIdParam && (!friendId || Number.isNaN(friendId))) {
+      return NextResponse.json(
+        { error: "friend_id must be a number" },
+        { status: 400 }
+      );
     }
-    return NextResponse.json({
-      prompt: defaultPrompt,
-      defaultPrompt,
-      isDefault: true,
-    });
+
+    const result = await settingsService.getAiPrompt(friendId);
+    return NextResponse.json(result);
   } catch (err) {
     console.error("Failed to load AI prompt settings:", err);
     return NextResponse.json(
@@ -47,7 +28,7 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const friendId = Number(body?.friend_id);
-    const prompt = String(body?.prompt ?? "").trim();
+    const prompt = String(body?.prompt ?? "");
 
     if (!friendId || Number.isNaN(friendId)) {
       return NextResponse.json(
@@ -56,31 +37,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (!prompt) {
-      await pool.query("DELETE FROM ai_prompt_settings WHERE friend_id = $1", [
-        friendId,
-      ]);
-      return NextResponse.json({
-        prompt: getDefaultTrackMetadataPrompt(),
-        isDefault: true,
-      });
-    }
-
-    const { rows } = await pool.query(
-      `
-      INSERT INTO ai_prompt_settings (friend_id, prompt, updated_at)
-      VALUES ($1, $2, current_timestamp)
-      ON CONFLICT (friend_id)
-      DO UPDATE SET prompt = EXCLUDED.prompt, updated_at = current_timestamp
-      RETURNING prompt
-      `,
-      [friendId, prompt]
-    );
-
-    return NextResponse.json({
-      prompt: rows[0]?.prompt ?? prompt,
-      isDefault: false,
-    });
+    const result = await settingsService.updateAiPrompt(friendId, prompt);
+    return NextResponse.json(result);
   } catch (err) {
     console.error("Failed to update AI prompt settings:", err);
     return NextResponse.json(

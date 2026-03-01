@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCookieStatus, uploadCookieFile, deleteCookieFile, UploadCookieResponse } from "@/services/cookieService";
-import { CookieFileInfo } from "@/lib/cookieUtils";
+import type { CookieFileInfo } from "@/types/gamdl";
 
 const COOKIE_QUERY_KEY = ["gamdl-cookies"];
 

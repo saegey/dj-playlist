@@ -1,47 +1,9 @@
 import {
   playlistRepository,
   type PlaylistTrackRow,
-  type Queryable,
 } from "@/services/playlistRepository";
-
-export type PlaylistTrackInput = {
-  track_id: string;
-  friend_id?: number;
-  username?: string | null;
-  title?: string | null;
-  artist?: string | null;
-  album?: string | null;
-  year?: string | number | null;
-  styles?: string[] | null;
-  genres?: string[] | null;
-  duration?: string | null;
-  duration_seconds?: number | null;
-  position?: number | null;
-  discogs_url?: string | null;
-  apple_music_url?: string | null;
-  youtube_url?: string | null;
-  spotify_url?: string | null;
-  soundcloud_url?: string | null;
-  album_thumbnail?: string | null;
-  local_tags?: string | null;
-  bpm?: number | string | null;
-  key?: string | null;
-  danceability?: number | null;
-  notes?: string | null;
-  star_rating?: number | null;
-  release_id?: string | null;
-  mood_happy?: number | null;
-  mood_sad?: number | null;
-  mood_relaxed?: number | null;
-  mood_aggressive?: number | null;
-  local_audio_url?: string | null;
-};
-
-function normalizeStringArray(arr?: unknown): string[] | null {
-  if (!arr) return null;
-  if (Array.isArray(arr)) return arr.map(String);
-  return null;
-}
+import type { PlaylistTrackInput } from "@/api-contract/schemas";
+import { withDbTransaction } from "@/lib/serverDb";
 
 export function normalizePlaylistCreatedAt<T extends { created_at?: unknown }>(
   playlist: T
@@ -93,11 +55,7 @@ export class PlaylistManagementService {
     created_at: string;
     tracks: Array<{ track_id: string; friend_id?: number; position?: number | null }>;
   }> {
-    const playlist = await playlistRepository.createPlaylist(data.name);
     const tracks = data.tracks || [];
-    if (tracks.length === 0) {
-      return { ...playlist, tracks: [] };
-    }
 
     const resolvedTracks = await Promise.all(
       tracks.map(async (track, i) => {
@@ -113,22 +71,23 @@ export class PlaylistManagementService {
       })
     );
 
-    const client = await playlistRepository.connect();
-    try {
-      await this.upsertTracksWithMetadata(resolvedTracks, client);
-      await playlistRepository.insertPlaylistTracks(
-        client,
-        playlist.id,
-        resolvedTracks.map((track) => ({
-          track_id: track.track_id,
-          friend_id: track.friend_id!,
-          position: track.position ?? 0,
-        })),
-        true
-      );
-    } finally {
-      client.release();
-    }
+    const playlist = await withDbTransaction(async (client) => {
+      const created = await playlistRepository.createPlaylistWithClient(client, data.name);
+      if (resolvedTracks.length > 0) {
+        await playlistRepository.upsertTracksWithMetadata(resolvedTracks, client);
+        await playlistRepository.insertPlaylistTracks(
+          client,
+          created.id,
+          resolvedTracks.map((track) => ({
+            track_id: track.track_id,
+            friend_id: track.friend_id!,
+            position: track.position ?? 0,
+          })),
+          true
+        );
+      }
+      return created;
+    });
 
     return {
       ...playlist,
@@ -157,13 +116,13 @@ export class PlaylistManagementService {
         };
       }
   > {
-    const client = await playlistRepository.connect();
-    try {
-      await client.query("BEGIN");
-      const exists = await playlistRepository.findPlaylistHeaderById(data.id);
+    const notFound = await withDbTransaction(async (client) => {
+      const exists = await playlistRepository.findPlaylistHeaderByIdWithClient(
+        client,
+        data.id
+      );
       if (!exists) {
-        await client.query("ROLLBACK");
-        return { notFound: true };
+        return true;
       }
 
       if (data.name !== undefined) {
@@ -203,7 +162,7 @@ export class PlaylistManagementService {
             })
           );
 
-          await this.upsertTracksWithMetadata(resolvedTracks, client);
+          await playlistRepository.upsertTracksWithMetadata(resolvedTracks, client);
           await playlistRepository.insertPlaylistTracks(
             client,
             data.id,
@@ -215,14 +174,9 @@ export class PlaylistManagementService {
           );
         }
       }
-
-      await client.query("COMMIT");
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
-    }
+      return false;
+    });
+    if (notFound) return { notFound: true };
 
     const playlist = await playlistRepository.findPlaylistById(data.id);
     const tracks = await playlistRepository.listTrackRefsForPlaylist(data.id);
@@ -248,154 +202,6 @@ export class PlaylistManagementService {
     const ownerId = await playlistRepository.findAnyFriendIdForTrack(trackId);
     if (ownerId) return ownerId;
     return playlistRepository.getDefaultFriendId();
-  }
-
-  private async upsertTracksWithMetadata(
-    tracks: PlaylistTrackInput[],
-    db: Queryable
-  ): Promise<void> {
-    if (!tracks.length) return;
-
-    const columns = [
-      "title",
-      "artist",
-      "album",
-      "year",
-      "styles",
-      "genres",
-      "duration",
-      "discogs_url",
-      "apple_music_url",
-      "youtube_url",
-      "soundcloud_url",
-      "album_thumbnail",
-      "local_tags",
-      "bpm",
-      "key",
-      "danceability",
-      "duration_seconds",
-      "notes",
-      "local_audio_url",
-      "star_rating",
-      "release_id",
-      "mood_happy",
-      "mood_sad",
-      "mood_relaxed",
-      "mood_aggressive",
-      "username",
-    ] as const;
-
-    for (const rawTrack of tracks) {
-      if (!rawTrack.track_id || !rawTrack.friend_id) continue;
-      const title =
-        typeof rawTrack.title === "string" && rawTrack.title.trim().length > 0
-          ? rawTrack.title.trim()
-          : null;
-      const artist =
-        typeof rawTrack.artist === "string" && rawTrack.artist.trim().length > 0
-          ? rawTrack.artist.trim()
-          : null;
-
-      const bpmNumber =
-        typeof rawTrack.bpm === "number"
-          ? rawTrack.bpm
-          : typeof rawTrack.bpm === "string"
-          ? Number(rawTrack.bpm)
-          : null;
-      const durationSecondsNumber =
-        typeof rawTrack.duration_seconds === "number"
-          ? rawTrack.duration_seconds
-          : typeof rawTrack.duration_seconds === "string"
-          ? Number(rawTrack.duration_seconds)
-          : null;
-      const starRatingNumber =
-        typeof rawTrack.star_rating === "number"
-          ? rawTrack.star_rating
-          : typeof rawTrack.star_rating === "string"
-          ? Number(rawTrack.star_rating)
-          : null;
-
-      const updateValues: Record<(typeof columns)[number], unknown> = {
-        title,
-        artist,
-        album: rawTrack.album ?? null,
-        year:
-          typeof rawTrack.year === "number" || typeof rawTrack.year === "string"
-            ? rawTrack.year
-            : null,
-        styles: normalizeStringArray(rawTrack.styles),
-        genres: normalizeStringArray(rawTrack.genres),
-        duration: rawTrack.duration ?? null,
-        discogs_url: rawTrack.discogs_url ?? null,
-        apple_music_url: rawTrack.apple_music_url ?? null,
-        youtube_url: rawTrack.youtube_url ?? null,
-        soundcloud_url: rawTrack.soundcloud_url ?? null,
-        album_thumbnail: rawTrack.album_thumbnail ?? null,
-        local_tags: rawTrack.local_tags ?? null,
-        bpm: Number.isFinite(bpmNumber) ? bpmNumber : null,
-        key: rawTrack.key ?? null,
-        danceability: rawTrack.danceability ?? null,
-        duration_seconds: Number.isFinite(durationSecondsNumber)
-          ? durationSecondsNumber
-          : null,
-        notes: rawTrack.notes ?? null,
-        local_audio_url: rawTrack.local_audio_url ?? null,
-        star_rating: Number.isFinite(starRatingNumber) ? starRatingNumber : null,
-        release_id: rawTrack.release_id ?? null,
-        mood_happy: rawTrack.mood_happy ?? null,
-        mood_sad: rawTrack.mood_sad ?? null,
-        mood_relaxed: rawTrack.mood_relaxed ?? null,
-        mood_aggressive: rawTrack.mood_aggressive ?? null,
-        username: rawTrack.username ?? null,
-      };
-
-      const updateParams: unknown[] = [];
-      const setClauses: string[] = [];
-      let idx = 1;
-      for (const col of columns) {
-        setClauses.push(`${col} = COALESCE($${idx}, ${col})`);
-        updateParams.push(updateValues[col]);
-        idx += 1;
-      }
-      updateParams.push(rawTrack.track_id, rawTrack.friend_id);
-
-      const updateSql = `
-        UPDATE tracks
-        SET ${setClauses.join(", ")}
-        WHERE track_id = $${idx} AND friend_id = $${idx + 1}
-        RETURNING track_id;
-      `;
-      const updateRes = await db.query(updateSql, updateParams);
-      if ((updateRes as { rowCount?: number }).rowCount) continue;
-
-      const insertTitle = title ?? rawTrack.track_id;
-      const insertArtist = artist ?? "Unknown Artist";
-      let username = rawTrack.username;
-      if (!username) {
-        username = await playlistRepository.findFriendUsernameById(rawTrack.friend_id);
-      }
-
-      if (!username) {
-        throw new Error(
-          `Cannot insert track ${rawTrack.track_id}: username is required but not found for friend_id ${rawTrack.friend_id}`
-        );
-      }
-
-      const insertValues = { ...updateValues, title: insertTitle, artist: insertArtist, username };
-      const insertColumns = ["track_id", "friend_id", ...columns] as const;
-      const insertParams: unknown[] = [
-        rawTrack.track_id,
-        rawTrack.friend_id,
-        ...columns.map((col) => insertValues[col]),
-      ];
-      const placeholders = insertColumns.map((_, i) => `$${i + 1}`).join(", ");
-      const insertSql = `
-        INSERT INTO tracks (${insertColumns.join(", ")})
-        VALUES (${placeholders})
-        ON CONFLICT (track_id) DO NOTHING;
-      `;
-      await db.query(insertSql, insertParams);
-    }
   }
 }
 

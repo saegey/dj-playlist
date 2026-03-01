@@ -1,4 +1,4 @@
-import { CookieFileInfo } from "@/lib/cookieUtils";
+import type { CookieFileInfo } from "@/types/gamdl";
 
 const API_BASE = "/api/settings/gamdl-cookies";
 

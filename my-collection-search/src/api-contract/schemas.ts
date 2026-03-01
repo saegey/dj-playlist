@@ -62,6 +62,7 @@ export const playlistTrackInputSchema = z
     local_audio_url: z.string().nullable().optional(),
   })
   .passthrough();
+export type PlaylistTrackInput = z.infer<typeof playlistTrackInputSchema>;
 
 export const playlistSchema = z
   .object({

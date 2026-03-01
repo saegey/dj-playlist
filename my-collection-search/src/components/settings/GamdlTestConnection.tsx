@@ -20,21 +20,18 @@ import { LuPlay, LuCheck, LuX, LuClock } from "react-icons/lu";
 import { FiMoreVertical } from "react-icons/fi";
 import { toaster } from "@/components/ui/toaster";
 import { useMutation } from "@tanstack/react-query";
+import type {
+  GamdlConnectionTestDetails,
+  GamdlConnectionTestResult,
+} from "@/types/gamdl";
 
 interface TestResult {
   success: boolean;
   message: string;
-  details?: {
-    gamdl_available: boolean;
-    cookie_file_exists: boolean;
-    cookie_file_valid: boolean;
-    test_download_attempted?: boolean;
-    test_download_success?: boolean;
-    error_type?: string;
-  };
+  details?: GamdlConnectionTestDetails;
 }
 
-async function testGamdlConnection(): Promise<TestResult> {
+async function testGamdlConnection(): Promise<GamdlConnectionTestResult> {
   const response = await fetch("/api/settings/gamdl/test", {
     method: "POST",
   });

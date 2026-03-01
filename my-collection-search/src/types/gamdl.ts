@@ -14,6 +14,34 @@ export interface GamdlSettings {
   updated_at: string;
 }
 
+export interface CookieFileInfo {
+  exists: boolean;
+  filename?: string;
+  size?: number;
+  lastModified?: Date;
+  domains?: string[];
+  cookieCount?: number;
+  hasAppleMusic?: boolean;
+  expiryDates?: Date[];
+  isValid?: boolean;
+  validationErrors?: string[];
+}
+
+export interface GamdlConnectionTestDetails {
+  gamdl_available: boolean;
+  cookie_file_exists: boolean;
+  cookie_file_valid: boolean;
+  test_download_attempted: boolean;
+  test_download_success: boolean;
+  error_type?: string;
+}
+
+export interface GamdlConnectionTestResult {
+  success: boolean;
+  message: string;
+  details: GamdlConnectionTestDetails;
+}
+
 export interface GamdlSettingsUpdate {
   audio_quality?: 'best' | 'high' | 'standard' | 'lossless';
   audio_format?: 'm4a' | 'mp3' | 'aac' | 'flac';
