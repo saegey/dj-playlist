@@ -13,7 +13,7 @@
 - Features: full-text search with infinite scroll, playlist views, track editing (rating, notes, links), audio analysis, AI helpers.
 
 ## Tech stack
-- Framework: Next.js 15, React 19, TypeScript
+- Framework: Next.js 16, React 19, TypeScript
 - UI: Chakra UI v3
 - Data: TanStack Query v5, Meilisearch
 - DB: Postgres (pgvector), migrations via node-pg-migrate
@@ -25,9 +25,9 @@
   - npm run build / npm start — production build/run
   - npm run migrate — run DB migrations (requires DATABASE_URL)
 - Docker (recommended for DB + Meili + app):
-  - docker-compose up -d db meili
-  - docker-compose run --rm migrate
-  - docker-compose up app
+  - docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db meili
+  - docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm migrate
+  - docker compose -f docker-compose.yml -f docker-compose.dev.yml up app
 - Key env vars (see docker-compose.yml and .env):
   - DATABASE_URL, MEILISEARCH_HOST, MEILISEARCH_API_KEY
   - Apple/Spotify/Discogs/OpenAI credentials as needed

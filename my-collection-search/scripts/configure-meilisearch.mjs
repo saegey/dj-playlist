@@ -9,9 +9,15 @@
 
 import { MeiliSearch } from 'meilisearch';
 
+const meiliApiKey = process.env.MEILISEARCH_API_KEY;
+if (!meiliApiKey) {
+  console.error('Missing MEILISEARCH_API_KEY');
+  process.exit(1);
+}
+
 const meiliClient = new MeiliSearch({
   host: process.env.MEILISEARCH_HOST || 'http://localhost:7700',
-  apiKey: process.env.MEILISEARCH_API_KEY || 'mysupersecretkey',
+  apiKey: meiliApiKey,
 });
 
 async function configureMeiliSearch() {
