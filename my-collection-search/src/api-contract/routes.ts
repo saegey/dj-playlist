@@ -511,43 +511,6 @@ const remainingTracksContracts: ApiContractRoute[] = [
       "500": { description: "Vectorization error", content: { "application/json": { schema: errorResponseSchemaObject } } },
     },
   }),
-  makeTrackRoute("post", "/api/tracks/analyze", "Analyze track metadata", {
-    requestBody: {
-      required: true,
-      content: {
-        "application/json": {
-          schema: {
-            type: "object",
-            properties: {
-              track_id: { type: "string" },
-              friend_id: { type: "integer" },
-              apple_music_url: { type: "string" },
-              spotify_url: { type: "string" },
-              youtube_url: { type: "string" },
-              soundcloud_url: { type: "string" },
-            },
-            required: ["track_id", "friend_id"],
-            additionalProperties: true,
-          },
-        },
-      },
-    },
-    responses: {
-      "200": {
-        description: "Analysis complete",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: { local_audio_url: { type: "string" } },
-              required: ["local_audio_url"],
-            },
-          },
-        },
-      },
-      "500": { description: "Analysis error", content: { "application/json": { schema: errorResponseSchemaObject } } },
-    },
-  }),
   makeTrackRoute("post", "/api/tracks/analyze-async", "Queue async track analysis", {
     requestBody: {
       required: true,

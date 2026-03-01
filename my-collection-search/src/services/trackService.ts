@@ -68,16 +68,6 @@ export type AnalyzeResponse = {
   [k: string]: unknown;
 };
 
-export async function analyzeTrack(
-  args: AnalyzeArgs
-): Promise<AnalyzeResponse> {
-  return await http<AnalyzeResponse>("/api/tracks/analyze", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(args),
-  });
-}
-
 export type AsyncAnalyzeResponse = {
   success: boolean;
   jobId: string;

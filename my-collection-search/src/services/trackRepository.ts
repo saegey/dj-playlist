@@ -61,6 +61,13 @@ export type MissingMusicUrlPageResult = {
 };
 
 export type TrackReindexRow = TrackWithLibraryIdentifierRow;
+export type TrackAnalysisBulkUpdate = {
+  local_audio_url?: string;
+  bpm?: number | null;
+  key?: string | null;
+  danceability?: number | null;
+  duration_seconds?: number | null;
+};
 
 const UPDATABLE_COLUMNS = {
   title: "title",
@@ -395,6 +402,17 @@ export class TrackRepository {
     );
   }
 
+  async updateTrackLocalAudioUrl(
+    trackId: string,
+    friendId: number,
+    localAudioUrl: string
+  ): Promise<void> {
+    await dbQuery(
+      "UPDATE tracks SET local_audio_url = $1 WHERE track_id = $2 AND friend_id = $3",
+      [localAudioUrl, trackId, friendId]
+    );
+  }
+
   async findTrackByTrackIdAndFriendIdRaw(
     trackId: string,
     friendId: number
@@ -404,6 +422,87 @@ export class TrackRepository {
       [trackId, friendId]
     );
     return rows[0] ?? null;
+  }
+
+  async findTracksByTrackId(trackId: string): Promise<Track[]> {
+    const { rows } = await dbQuery<Track>(
+      "SELECT * FROM tracks WHERE track_id = $1",
+      [trackId]
+    );
+    return rows;
+  }
+
+  async updateTrackAnalysisByTrackId(
+    trackId: string,
+    updates: TrackAnalysisBulkUpdate
+  ): Promise<void> {
+    const sets: string[] = [];
+    const vals: unknown[] = [];
+    let i = 1;
+
+    if (typeof updates.local_audio_url === "string") {
+      sets.push(`local_audio_url = $${i++}`);
+      vals.push(updates.local_audio_url);
+    }
+    if (typeof updates.bpm === "number") {
+      sets.push(`bpm = $${i++}`);
+      vals.push(updates.bpm);
+    } else if (updates.bpm === null) {
+      sets.push(`bpm = $${i++}`);
+      vals.push(null);
+    }
+    if (typeof updates.key === "string") {
+      sets.push(`key = $${i++}`);
+      vals.push(updates.key);
+    } else if (updates.key === null) {
+      sets.push(`key = $${i++}`);
+      vals.push(null);
+    }
+    if (typeof updates.danceability === "number") {
+      sets.push(`danceability = $${i++}`);
+      vals.push(updates.danceability);
+    } else if (updates.danceability === null) {
+      sets.push(`danceability = $${i++}`);
+      vals.push(null);
+    }
+    if (typeof updates.duration_seconds === "number") {
+      sets.push(`duration_seconds = $${i++}`);
+      vals.push(updates.duration_seconds);
+    } else if (updates.duration_seconds === null) {
+      sets.push(`duration_seconds = $${i++}`);
+      vals.push(null);
+    }
+
+    if (sets.length === 0) return;
+
+    vals.push(trackId);
+    await dbQuery(
+      `UPDATE tracks SET ${sets.join(", ")} WHERE track_id = $${i}`,
+      vals
+    );
+  }
+
+  async updateTrackNotesAndTagsByTrackId(
+    trackId: string,
+    localTags: string,
+    notes: string
+  ): Promise<void> {
+    await dbQuery(
+      `UPDATE tracks SET local_tags = $1, notes = $2 WHERE track_id = $3`,
+      [localTags, notes, trackId]
+    );
+  }
+
+  async updateTrackEmbeddingByTrackIdAndUsername(
+    trackId: string,
+    username: string,
+    embedding: number[]
+  ): Promise<void> {
+    const pgVector = `[${embedding.join(",")}]`;
+    await dbQuery(
+      "UPDATE tracks SET embedding = $1 WHERE track_id = $2 AND username = $3",
+      [pgVector, trackId, username]
+    );
   }
 
   async listTracksForReindex(): Promise<TrackReindexRow[]> {

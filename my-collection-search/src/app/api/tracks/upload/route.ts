@@ -3,8 +3,8 @@ import { promises as fs } from "fs";
 import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
-import type { Pool } from "pg";
 import { writeEssentiaAnalysis } from "@/lib/essentia-storage";
+import { trackRepository } from "@/services/trackRepository";
 
 export const runtime = "nodejs"; // Ensure Node.js runtime for file system access
 
@@ -18,7 +18,6 @@ type AnalysisResult = {
 
 // Helper function to update database and MeiliSearch
 async function processAudioFile(
-  pool: Pool,
   local_audio_url: string,
   track_id: string,
   analysisResult: AnalysisResult
@@ -37,16 +36,16 @@ async function processAudioFile(
     ? Math.round(analysisResult.metadata.audio_properties.length)
     : null;
 
-  await pool.query(
-    `UPDATE tracks SET local_audio_url = $1, bpm = $2, key = $3, danceability = $4, duration_seconds = $5 WHERE track_id = $6`,
-    [local_audio_url, bpm, key, danceability, duration_seconds, track_id]
-  );
+  await trackRepository.updateTrackAnalysisByTrackId(track_id, {
+    local_audio_url,
+    bpm,
+    key,
+    danceability,
+    duration_seconds,
+  });
 
   // Fetch updated track
-  const { rows } = await pool.query(
-    "SELECT * FROM tracks WHERE track_id = $1",
-    [track_id]
-  );
+  const rows = await trackRepository.findTracksByTrackId(track_id);
   if (rows && rows[0]) {
     try {
       const { getMeiliClient } = await import("@/lib/meili");
@@ -195,9 +194,7 @@ export async function POST(req: NextRequest) {
 
   // Update database and MeiliSearch
   try {
-    const { Pool } = await import("pg");
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await processAudioFile(pool, local_audio_url, track_id, analysisResult);
+    await processAudioFile(local_audio_url, track_id, analysisResult);
   } catch (err) {
     console.warn(
       "Could not update track with local_audio_url or MeiliSearch:",
