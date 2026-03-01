@@ -14,7 +14,6 @@ import { useRestoreDatabaseMutation } from "@/hooks/useRestoreDatabaseMutation";
 
 const DatabaseRestore: React.FC = () => {
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
-  const [restoring, setRestoring] = useState(false);
   const [restoreResult, setRestoreResult] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const { mutateAsync: restoreMutation, isPending: isRestoring } =
@@ -29,19 +28,17 @@ const DatabaseRestore: React.FC = () => {
       setRestoreResult((data?.message as string) || "Restore complete");
     } catch (e) {
       setRestoreError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setRestoring(false);
     }
   };
 
   return (
     <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
       <Heading size="md" mb={2}>
-        Restore Database from SQL File
+        Restore Full Database
       </Heading>
       <Text mb={2}>
-        Upload a SQL backup file to restore your database. This will overwrite
-        all current data.
+        Upload a PostgreSQL backup file (`.sql` or `.dump`) to fully restore
+        schema and data. This will overwrite the current database.
       </Text>
       {restoreError && (
         <Alert.Root status="error" title="Error" mb={4}>
@@ -75,13 +72,13 @@ const DatabaseRestore: React.FC = () => {
       )}
       <HStack mb={4}>
         <FileUpload.Root
-          accept=".sql"
+          accept=".sql,.dump,.backup"
           onChange={(event) => {
             const input = event.target as HTMLInputElement;
             const fileList = input.files;
             if (fileList && fileList[0]) setRestoreFile(fileList[0]);
           }}
-          disabled={restoring}
+          disabled={isRestoring}
         >
           <FileUpload.HiddenInput />
           <FileUpload.Trigger asChild>
