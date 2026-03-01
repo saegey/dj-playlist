@@ -10,7 +10,7 @@ export function getManifestPath(username: string): string {
     assertWithinExportsDir(p);
     return p;
   }
-  const p = path.join(DISCOGS_EXPORTS_DIR, `manifest_${safePart(username)}.json`);
+  const p = path.join(DISCOGS_EXPORTS_DIR, `manifest_${path.basename(safePart(username))}.json`);
   assertWithinExportsDir(p);
   return p;
 }
@@ -71,8 +71,8 @@ export function getReleasePath(
   username: string,
   releaseId: string
 ): string | null {
-  const safeUsername = safePart(username);
-  const safeReleaseId = safePart(releaseId);
+  const safeUsername = path.basename(safePart(username));
+  const safeReleaseId = path.basename(safePart(releaseId));
   // For friends, prioritize their specific release file
   if (
     username &&
@@ -106,8 +106,8 @@ export function getReleaseWritePath(
   username: string,
   releaseId: string
 ): string {
-  const safeUsername = safePart(username);
-  const safeReleaseId = safePart(releaseId);
+  const safeUsername = path.basename(safePart(username));
+  const safeReleaseId = path.basename(safePart(releaseId));
   // For writing new releases, determine the path based on username
   if (
     username &&

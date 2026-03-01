@@ -17,24 +17,38 @@ function createPool(): Pool {
   return new Pool({ connectionString });
 }
 
-export const dbPool: Pool =
-  globalThis.__mcsDbPool ?? createPool();
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis.__mcsDbPool = dbPool;
+function getPool(): Pool {
+  if (!globalThis.__mcsDbPool) {
+    const pool = createPool();
+    if (process.env.NODE_ENV !== "production") {
+      globalThis.__mcsDbPool = pool;
+    }
+    return pool;
+  }
+  return globalThis.__mcsDbPool;
 }
+
+// Lazy proxy — pool is only created on first actual use, not at module load time.
+// This prevents build-time failures when DATABASE_URL is not available.
+export const dbPool: Pool = new Proxy({} as Pool, {
+  get(_target, prop, receiver) {
+    const pool = getPool();
+    const value = Reflect.get(pool, prop, receiver);
+    return typeof value === "function" ? value.bind(pool) : value;
+  },
+});
 
 export async function dbQuery<T extends QueryResultRow = QueryResultRow>(
   text: string,
   values?: unknown[]
 ): Promise<QueryResult<T>> {
-  return dbPool.query<T>(text, values);
+  return getPool().query<T>(text, values);
 }
 
 export async function withDbClient<T>(
   fn: (client: PoolClient) => Promise<T>
 ): Promise<T> {
-  const client = await dbPool.connect();
+  const client = await getPool().connect();
   try {
     return await fn(client);
   } finally {
