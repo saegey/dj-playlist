@@ -1,132 +1,115 @@
 # Groovenet MCP Server
 
-Model Context Protocol (MCP) server for the Groovenet DJ Playlist System. This server allows Claude to interact with your music collection through natural language.
+Model Context Protocol (MCP) server for the Groovenet DJ Playlist System. Allows Claude to interact with your music collection through natural language.
 
-## Features
+Uses the shared [`@groovenet/client`](../packages/groovenet-client) typed API client.
 
-### Track Management
-- **search_tracks** - Search your collection by title, artist, genre, BPM, key, or rating
-- **get_track_details** - Get detailed track info including audio analysis
-- **update_track** - Update track metadata (ratings, notes, tags, URLs)
-- **get_missing_apple_music** - Find tracks without Apple Music URLs
+## Tools
 
-### Playlist Management
-- **list_playlists** - View all your playlists
-- **get_playlist** - Get playlist details and tracks
-- **create_playlist** - Create new playlists
-- **generate_ai_playlist** - Generate optimized DJ playlists using genetic algorithm
+### Tracks
+| Tool | Description |
+|---|---|
+| `search_tracks` | Search by title, artist, genre, BPM, key, or rating |
+| `get_track_details` | Full track info including audio analysis and mood scores |
+| `update_track` | Update rating, notes, tags, or platform URLs |
+| `get_missing_apple_music` | Find tracks without Apple Music URLs |
 
-### Music Platform Search
-- **search_apple_music** - Search Apple Music for tracks
-- **search_spotify** - Search Spotify for tracks
-- **search_youtube** - Search YouTube Music for tracks
+### Albums
+| Tool | Description |
+|---|---|
+| `search_albums` | Search/list albums (sort by date, year, title, rating) |
+| `get_album` | Album details + full track list |
+| `update_album` | Update rating, notes, condition, purchase price, library ID |
+| `download_album` | Queue all missing tracks for download |
 
-### Social Features
-- **get_friends** - List friends and shared collections
-- **add_friend** - Add friends to share music with
+### Playlists
+| Tool | Description |
+|---|---|
+| `list_playlists` | List all playlists |
+| `get_playlist` | Playlist tracks with full metadata |
+| `create_playlist` | Create a new playlist |
+| `generate_ai_playlist` | Optimized DJ playlist via genetic algorithm |
+| `get_playlist_tracks` | Raw track IDs for a playlist |
 
-### Analytics
-- **collection_stats** - Get statistics about your collection
+### Friends
+| Tool | Description |
+|---|---|
+| `get_friends` | List friends and their IDs |
+| `add_friend` | Add a friend by username |
+
+### External Search
+| Tool | Description |
+|---|---|
+| `search_apple_music` | Search Apple Music by title/artist/album/ISRC |
+| `search_youtube` | Search YouTube Music by title/artist |
 
 ## Setup
 
-1. Install dependencies:
+From the repo root, install all workspace dependencies and build:
+
 ```bash
-cd mcp-server
 npm install
+make build-packages
 ```
 
-2. Create `.env` file:
+Or build only the MCP server:
+
 ```bash
-cp .env.example .env
+npm run build --workspace=mcp-server
 ```
 
-3. Edit `.env` and set your API base URL:
+Configure the API URL (create `mcp-server/.env`):
+
 ```
 API_BASE=http://localhost:3000/api
-```
-
-4. Build the server:
-```bash
-npm run build
+# API_KEY=your-key-if-needed
 ```
 
 ## Usage with Claude Code
 
-Add the server to Claude Code:
-
 ```bash
 claude mcp add --transport stdio --scope project groovenet \
-  -- node /Users/saegey/Projects/dj-playlist/mcp-server/build/index.js
+  -- node /path/to/dj-playlist/mcp-server/build/index.js
 ```
 
-Verify it was added:
+For remote access over Tailscale, set `API_BASE` to point at your server:
 
+```bash
+claude mcp add --transport stdio --scope user groovenet \
+  -- env API_BASE=http://groovenet.tail1234.ts.net/api \
+     node /path/to/dj-playlist/mcp-server/build/index.js
+```
+
+Verify:
 ```bash
 claude mcp list
 ```
 
 ## Example Queries
 
-Once configured, you can ask Claude things like:
-
-- "Search for all techno tracks between 128-132 BPM"
-- "Show me details about track ID abc123"
-- "Create a playlist called 'Deep House Sunday' with my top rated deep house tracks"
-- "Generate an AI playlist starting with these tracks: [track1, track2, track3]"
+- "Search for techno tracks between 128-132 BPM in A minor"
+- "Show me my highest rated albums"
+- "What albums were added most recently?"
+- "Download all missing tracks for album 1234567"
+- "Create a playlist called 'Deep House Sunday' with my top rated tracks"
+- "Generate an AI playlist starting with these tracks"
 - "What tracks am I missing Apple Music URLs for?"
-- "Update track abc123 with 5 stars and add note 'perfect for peak time'"
 - "Search Apple Music for 'Plastikman - Spastik'"
-- "List all my playlists"
-- "Who are my friends?"
-
-## Development
-
-Watch mode (rebuilds on changes):
-```bash
-npm run watch
-```
-
-Test the server:
-```bash
-npm run dev
-```
 
 ## Architecture
 
-The MCP server acts as a bridge between Claude and your Next.js API:
-
 ```
-Claude Code → MCP Server → Next.js API → PostgreSQL/MeiliSearch/Services
+Claude Code → MCP Server → @groovenet/client → Next.js API → PostgreSQL / MeiliSearch
 ```
 
-All tools call your existing `/api/*` endpoints, so no database logic is duplicated.
+All tools delegate to `GroovenetClient` methods — no API logic is duplicated in the MCP server.
 
 ## Adding New Tools
 
-To add a new tool:
-
-1. Add tool definition to the `tools` array in `src/index.ts`
-2. Add handler case in `handleToolCall()` function
-3. Rebuild: `npm run build`
-4. Tool is automatically available in Claude Code (no restart needed)
-
-## Troubleshooting
-
-**Server not found:**
-- Make sure you built the server: `npm run build`
-- Check the path in `claude mcp add` command is correct
-- Verify with `claude mcp list`
-
-**API errors:**
-- Make sure your Next.js app is running on the correct port
-- Check API_BASE in `.env` matches your Next.js server
-- Verify endpoints exist in your Next.js app
-
-**Tool not working:**
-- Check the API endpoint exists and returns expected data
-- Look at error messages in Claude Code output
-- Test the endpoint directly with curl/Postman
+1. Add the method to `packages/groovenet-client/src/client.ts`
+2. Rebuild the client: `npm run build --workspace=packages/groovenet-client`
+3. Add the tool definition and handler case in `mcp-server/src/index.ts`
+4. Rebuild: `npm run build --workspace=mcp-server`
 
 ## License
 
