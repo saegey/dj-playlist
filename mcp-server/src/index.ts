@@ -12,6 +12,7 @@ dotenv.config();
 
 const API_BASE = process.env.API_BASE || "http://localhost:3000/api";
 const API_KEY = process.env.API_KEY;
+const DEFAULT_FRIEND_ID = process.env.DEFAULT_FRIEND_ID ? parseInt(process.env.DEFAULT_FRIEND_ID, 10) : 1;
 
 const client = new GroovenetClient({ baseUrl: API_BASE, apiKey: API_KEY });
 
@@ -227,6 +228,48 @@ const tools = [
       },
     },
   },
+  {
+    name: "get_recommendations",
+    description: "Get combined recommendations for a track using both identity (genre/style/era) and audio vibe (BPM/mood/danceability) embeddings. Returns a ranked union of candidates from both indexes — the best tool for finding tracks to play next.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        track_id: { type: "string", description: "The source track ID" },
+        friend_id: { type: "number", description: "Friend ID (owner of the source track, uses default if omitted)" },
+        limit: { type: "number", description: "Number of candidates from each index (default: 20)" },
+      },
+      required: ["track_id"],
+    },
+  },
+  {
+    name: "find_similar_identity",
+    description: "Find tracks with similar identity (genre, era, country, style, tags) using vector embeddings. Great for finding stylistically related music.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        track_id: { type: "string", description: "The source track ID" },
+        friend_id: { type: "number", description: "Friend ID (owner of the source track)" },
+        limit: { type: "number", description: "Number of results to return (default: 10)" },
+        era: { type: "string", description: "Filter by era (e.g. '1970s', '1980s')" },
+        country: { type: "string", description: "Filter by country of origin" },
+        tags: { type: "string", description: "Comma-separated tags to filter by" },
+      },
+      required: ["track_id", "friend_id"],
+    },
+  },
+  {
+    name: "find_similar_vibe",
+    description: "Find tracks with similar audio vibe (BPM, mood, danceability, key) using audio analysis vectors. Great for building cohesive DJ sets.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        track_id: { type: "string", description: "The source track ID" },
+        friend_id: { type: "number", description: "Friend ID (owner of the source track)" },
+        limit: { type: "number", description: "Number of results to return (default: 10)" },
+      },
+      required: ["track_id", "friend_id"],
+    },
+  },
 ];
 
 interface ToolArgs {
@@ -268,6 +311,10 @@ interface ToolArgs {
   artist?: string;
   album?: string;
   isrc?: string;
+  // similarity
+  era?: string;
+  country?: string;
+  tags?: string;
 }
 
 function formatDuration(seconds: number): string {
@@ -471,13 +518,13 @@ ${track.soundcloud_url ? `- SoundCloud: ${track.soundcloud_url}` : ""}
     }
 
     case "get_playlist": {
-      const trackIds = await client.getPlaylistTracks(args.playlist_id!);
+      const { track_refs } = await client.getPlaylistTracks(args.playlist_id!);
 
-      if (!trackIds.track_ids || trackIds.track_ids.length === 0) {
+      if (!track_refs || track_refs.length === 0) {
         return { content: [{ type: "text", text: "Playlist is empty." }] };
       }
 
-      const tracks = await client.batchGetTracks(trackIds.track_ids);
+      const tracks = await client.batchGetTracks(track_refs);
       const list = tracks
         .map((t, i) => `${i + 1}. ${t.title} - ${t.artist}${t.bpm ? ` (${t.bpm} BPM)` : ""}`)
         .join("\n");
@@ -509,9 +556,9 @@ ${track.soundcloud_url ? `- SoundCloud: ${track.soundcloud_url}` : ""}
     }
 
     case "get_playlist_tracks": {
-      const result = await client.getPlaylistTracks(args.playlist_id!);
+      const { track_refs } = await client.getPlaylistTracks(args.playlist_id!);
       return {
-        content: [{ type: "text", text: `Playlist track IDs:\n${result.track_ids.join("\n")}` }],
+        content: [{ type: "text", text: `Playlist track IDs:\n${track_refs.map((r) => r.track_id).join("\n")}` }],
       };
     }
 
@@ -571,6 +618,80 @@ ${track.soundcloud_url ? `- SoundCloud: ${track.soundcloud_url}` : ""}
         .join("\n");
 
       return { content: [{ type: "text", text: `YouTube results:\n\n${list}` }] };
+    }
+
+    case "get_recommendations": {
+      const result = await client.getRecommendationCandidates(
+        args.track_id!,
+        args.friend_id ?? DEFAULT_FRIEND_ID,
+        { limit_identity: args.limit ?? 20, limit_audio: args.limit ?? 20 }
+      );
+
+      if (!result.candidates || result.candidates.length === 0) {
+        return { content: [{ type: "text", text: "No recommendations found." }] };
+      }
+
+      const list = result.candidates
+        .map((c) => {
+          const identity = c.simIdentity != null ? ` id:${c.simIdentity.toFixed(3)}` : "";
+          const audio = c.simAudio != null ? ` vibe:${c.simAudio.toFixed(3)}` : "";
+          return `• ${c.trackId}  ${c.metadata.title} — ${c.metadata.artist}${c.metadata.bpm ? ` (${c.metadata.bpm} BPM)` : ""}${c.metadata.key ? `, ${c.metadata.key}` : ""}${identity}${audio}`;
+        })
+        .join("\n");
+
+      const { stats } = result;
+      return {
+        content: [{
+          type: "text",
+          text: `Recommendations (${result.candidates.length} candidates, identity:${stats.identityCount} vibe:${stats.audioCount} union:${stats.unionCount}):\n\n${list}`,
+        }],
+      };
+    }
+
+    case "find_similar_identity": {
+      const result = await client.findSimilarIdentity(
+        args.track_id!,
+        args.friend_id ?? DEFAULT_FRIEND_ID,
+        { limit: args.limit, era: args.era, country: args.country, tags: args.tags }
+      );
+
+      if (!result.tracks || result.tracks.length === 0) {
+        return { content: [{ type: "text", text: "No similar tracks found." }] };
+      }
+
+      const list = result.tracks
+        .map((t) => `• ${t.title} — ${t.artist} (${t.album})${t.bpm ? ` BPM:${t.bpm}` : ""}${t.key ? `, ${t.key}` : ""} [dist: ${Number(t.distance).toFixed(4)}]`)
+        .join("\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `Similar identity tracks (${result.count} found):\n\n${list}`,
+        }],
+      };
+    }
+
+    case "find_similar_vibe": {
+      const result = await client.findSimilarVibe(
+        args.track_id!,
+        args.friend_id ?? DEFAULT_FRIEND_ID,
+        { limit: args.limit }
+      );
+
+      if (!result.tracks || result.tracks.length === 0) {
+        return { content: [{ type: "text", text: "No similar tracks found." }] };
+      }
+
+      const list = result.tracks
+        .map((t) => `• ${t.title} — ${t.artist} (${t.album})${t.bpm ? ` BPM:${t.bpm}` : ""}${t.key ? `, ${t.key}` : ""}${t.danceability ? `, dance:${t.danceability}` : ""} [dist: ${Number(t.distance).toFixed(4)}]`)
+        .join("\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `Similar vibe tracks (${result.count} found):\n\n${list}`,
+        }],
+      };
     }
 
     default:

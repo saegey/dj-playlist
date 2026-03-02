@@ -13,6 +13,12 @@ import type {
   TrackSearchResponse,
   TrackUpdate,
   PlaybackStatus,
+  SimilarIdentityResponse,
+  SimilarVibeResponse,
+  IdentitySimilarityQuery,
+  SimilarityQuery,
+  RecommendationCandidatesResponse,
+  RecommendationCandidatesQuery,
 } from "./types.js";
 
 export interface GroovenetClientConfig {
@@ -70,10 +76,8 @@ export class GroovenetClient {
     });
   }
 
-  async getTrack(trackId: string, username?: string): Promise<Track> {
-    const params: Record<string, string> = {};
-    if (username) params.username = username;
-    return this.request<Track>("GET", `/tracks/${trackId}`, undefined, params);
+  async getTrack(trackId: string, friendId: number): Promise<Track> {
+    return this.request<Track>("GET", `/tracks/${trackId}`, undefined, { friend_id: friendId });
   }
 
   async updateTrack(trackId: string, updates: TrackUpdate): Promise<Track> {
@@ -98,10 +102,10 @@ export class GroovenetClient {
     );
   }
 
-  async batchGetTracks(trackIds: string[]): Promise<Track[]> {
-    return this.request<Track[]>("POST", "/tracks/batch", {
-      track_ids: trackIds,
-    });
+  async batchGetTracks(
+    refs: { track_id: string; friend_id: number; position?: number }[]
+  ): Promise<Track[]> {
+    return this.request<Track[]>("POST", "/tracks/batch", { tracks: refs });
   }
 
   // ── Albums ──────────────────────────────────────────────────────────────────
@@ -155,11 +159,19 @@ export class GroovenetClient {
 
   async getPlaylistTracks(
     playlistId: number | string
-  ): Promise<{ track_ids: string[] }> {
-    return this.request<{ track_ids: string[] }>(
-      "GET",
-      `/playlists/${playlistId}/tracks`
-    );
+  ): Promise<{ track_refs: { track_id: string; friend_id: number; position?: number }[] }> {
+    const result = await this.request<{
+      playlist_id: number;
+      playlist_name?: string | null;
+      tracks: { track_id: string; friend_id?: number | null; position?: number }[];
+    }>("GET", `/playlists/${playlistId}/tracks`);
+    return {
+      track_refs: result.tracks.map((t) => ({
+        track_id: t.track_id,
+        friend_id: t.friend_id ?? 1,
+        position: t.position,
+      })),
+    };
   }
 
   async createPlaylist(name: string, tracks: string[] = []): Promise<Playlist> {
@@ -243,6 +255,69 @@ export class GroovenetClient {
       "POST",
       "/ai/youtube-music-search",
       opts
+    );
+  }
+
+  // ── Similarity / Recommendations ─────────────────────────────────────────────
+
+  async findSimilarIdentity(
+    trackId: string,
+    friendId: number,
+    opts?: IdentitySimilarityQuery
+  ): Promise<SimilarIdentityResponse> {
+    const params: Record<string, string | number> = {
+      track_id: trackId,
+      friend_id: friendId,
+    };
+    if (opts?.limit != null) params.limit = opts.limit;
+    if (opts?.ivfflat_probes != null) params.ivfflat_probes = opts.ivfflat_probes;
+    if (opts?.era) params.era = opts.era;
+    if (opts?.country) params.country = opts.country;
+    if (opts?.tags) params.tags = opts.tags;
+    return this.request<SimilarIdentityResponse>(
+      "GET",
+      "/embeddings/similar",
+      undefined,
+      params
+    );
+  }
+
+  async getRecommendationCandidates(
+    trackId: string,
+    friendId: number,
+    opts?: RecommendationCandidatesQuery
+  ): Promise<RecommendationCandidatesResponse> {
+    const params: Record<string, string | number> = {
+      track_id: trackId,
+      friend_id: friendId,
+    };
+    if (opts?.limit_identity != null) params.limit_identity = opts.limit_identity;
+    if (opts?.limit_audio != null) params.limit_audio = opts.limit_audio;
+    if (opts?.ivfflat_probes != null) params.ivfflat_probes = opts.ivfflat_probes;
+    return this.request<RecommendationCandidatesResponse>(
+      "GET",
+      "/recommendations/candidates",
+      undefined,
+      params
+    );
+  }
+
+  async findSimilarVibe(
+    trackId: string,
+    friendId: number,
+    opts?: SimilarityQuery
+  ): Promise<SimilarVibeResponse> {
+    const params: Record<string, string | number> = {
+      track_id: trackId,
+      friend_id: friendId,
+    };
+    if (opts?.limit != null) params.limit = opts.limit;
+    if (opts?.ivfflat_probes != null) params.ivfflat_probes = opts.ivfflat_probes;
+    return this.request<SimilarVibeResponse>(
+      "GET",
+      "/embeddings/similar-vibe",
+      undefined,
+      params
     );
   }
 }

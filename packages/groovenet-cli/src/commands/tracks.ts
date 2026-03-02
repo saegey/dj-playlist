@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { GroovenetClient, loadConfig } from "@groovenet/client";
+import type { SimilarTrack, RecommendationCandidate } from "@groovenet/client";
 import {
   printTracks,
   printTrack,
@@ -7,6 +8,7 @@ import {
   printSuccess,
   printError,
 } from "../output.js";
+import chalk from "chalk";
 
 function makeClient(): GroovenetClient {
   const cfg = loadConfig();
@@ -72,12 +74,13 @@ export function addTracksCommands(program: Command): void {
   tracks
     .command("show <id>")
     .description("Show details for a track")
-    .option("--username <u>", "Username")
+    .option("--friend-id <n>", "Friend ID (defaults to config default_friend_id)", parseInt)
     .option("--json", "Output as JSON")
-    .action(async (id: string, opts: { username?: string; json?: boolean }) => {
+    .action(async (id: string, opts: { friendId?: number; json?: boolean }) => {
       try {
+        const cfg = loadConfig();
         const client = makeClient();
-        const track = await client.getTrack(id, opts.username);
+        const track = await client.getTrack(id, opts.friendId ?? cfg.default_friend_id);
         printTrack(track, opts.json ?? false);
       } catch (err: unknown) {
         printError(err instanceof Error ? err.message : String(err));
@@ -168,4 +171,132 @@ export function addTracksCommands(program: Command): void {
         }
       }
     );
+
+  tracks
+    .command("recommend <id>")
+    .description("Get combined recommendations using both identity and audio vibe embeddings")
+    .option("--limit <n>", "Number of candidates to return", parseInt, 20)
+    .option("--json", "Output as JSON")
+    .action(async (id: string, opts: { limit: number; json?: boolean }) => {
+      try {
+        const cfg = loadConfig();
+        const client = makeClient();
+        const result = await client.getRecommendationCandidates(id, cfg.default_friend_id, {
+          limit_identity: opts.limit,
+          limit_audio: opts.limit,
+        });
+        if (opts.json) {
+          printJson(result);
+        } else {
+          console.log(
+            `Recommendations for ${chalk.cyan(id)} — ${result.candidates.length} candidates` +
+            chalk.dim(` (identity:${result.stats.identityCount} vibe:${result.stats.audioCount} union:${result.stats.unionCount})`)
+          );
+          printRecommendationCandidates(result.candidates);
+        }
+      } catch (err: unknown) {
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+    });
+
+  tracks
+    .command("similar-identity <id>")
+    .description("Find tracks with similar identity (genre, era, style, tags)")
+    .option("--limit <n>", "Number of results", parseInt, 10)
+    .option("--era <era>", "Filter by era (e.g. '1970s')")
+    .option("--country <country>", "Filter by country")
+    .option("--tags <tags>", "Comma-separated tags to filter by")
+    .option("--json", "Output as JSON")
+    .action(
+      async (
+        id: string,
+        opts: {
+          limit: number;
+          era?: string;
+          country?: string;
+          tags?: string;
+          json?: boolean;
+        }
+      ) => {
+        try {
+          const cfg = loadConfig();
+          const client = makeClient();
+          const result = await client.findSimilarIdentity(id, cfg.default_friend_id, {
+            limit: opts.limit,
+            era: opts.era,
+            country: opts.country,
+            tags: opts.tags,
+          });
+          if (opts.json) {
+            printJson(result);
+          } else {
+            console.log(
+              `Similar identity tracks for ${chalk.cyan(id)} (${result.count} results):`
+            );
+            printSimilarTracks(result.tracks);
+          }
+        } catch (err: unknown) {
+          printError(err instanceof Error ? err.message : String(err));
+          process.exit(1);
+        }
+      }
+    );
+
+  tracks
+    .command("similar-vibe <id>")
+    .description("Find tracks with similar audio vibe (BPM, mood, danceability)")
+    .option("--limit <n>", "Number of results", parseInt, 10)
+    .option("--json", "Output as JSON")
+    .action(
+      async (
+        id: string,
+        opts: {
+          limit: number;
+          json?: boolean;
+        }
+      ) => {
+        try {
+          const cfg = loadConfig();
+          const client = makeClient();
+          const result = await client.findSimilarVibe(id, cfg.default_friend_id, {
+            limit: opts.limit,
+          });
+          if (opts.json) {
+            printJson(result);
+          } else {
+            console.log(
+              `Similar vibe tracks for ${chalk.cyan(id)} (${result.count} results):`
+            );
+            printSimilarTracks(result.tracks);
+          }
+        } catch (err: unknown) {
+          printError(err instanceof Error ? err.message : String(err));
+          process.exit(1);
+        }
+      }
+    );
+}
+
+function printRecommendationCandidates(candidates: RecommendationCandidate[]): void {
+  for (const c of candidates) {
+    const bpm = c.metadata.bpm ? chalk.dim(` BPM:${c.metadata.bpm}`) : "";
+    const key = c.metadata.key ? chalk.dim(` Key:${c.metadata.key}`) : "";
+    const identity = c.simIdentity != null ? chalk.green(` id:${c.simIdentity.toFixed(3)}`) : "";
+    const audio = c.simAudio != null ? chalk.blue(` vibe:${c.simAudio.toFixed(3)}`) : "";
+    console.log(
+      `  ${chalk.cyan(c.trackId)}  ${chalk.bold(c.metadata.title)} ${chalk.dim("—")} ${c.metadata.artist} ${chalk.dim("(" + c.metadata.album + ")")}${bpm}${key}${identity}${audio}`
+    );
+  }
+}
+
+function printSimilarTracks(tracks: SimilarTrack[]): void {
+  for (const t of tracks) {
+    const bpm = t.bpm ? chalk.dim(` BPM:${t.bpm}`) : "";
+    const key = t.key ? chalk.dim(` Key:${t.key}`) : "";
+    const dist = chalk.yellow(` [dist: ${Number(t.distance).toFixed(4)}]`);
+    console.log(
+      `  ${chalk.cyan(t.track_id)}  ${chalk.bold(t.title)} ${chalk.dim("—")} ${t.artist} ${chalk.dim("(" + t.album + ")")}${bpm}${key}${dist}`
+    );
+  }
 }

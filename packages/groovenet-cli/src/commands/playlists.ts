@@ -32,12 +32,12 @@ export function addPlaylistsCommands(program: Command): void {
     .action(async (id: string, opts: { json?: boolean }) => {
       try {
         const client = makeClient();
-        const { track_ids } = await client.getPlaylistTracks(id);
-        if (track_ids.length === 0) {
+        const { track_refs } = await client.getPlaylistTracks(id);
+        if (track_refs.length === 0) {
           console.log("Playlist is empty.");
           return;
         }
-        const tracks = await client.batchGetTracks(track_ids);
+        const tracks = await client.batchGetTracks(track_refs);
         if (opts.json) {
           printJson(tracks);
         } else {
@@ -71,12 +71,12 @@ export function addPlaylistsCommands(program: Command): void {
     .action(async (id: string, opts: { json?: boolean }) => {
       try {
         const client = makeClient();
-        const { track_ids } = await client.getPlaylistTracks(id);
-        if (track_ids.length === 0) {
+        const { track_refs } = await client.getPlaylistTracks(id);
+        if (track_refs.length === 0) {
           printError("Playlist is empty — nothing to generate from.");
           process.exit(1);
         }
-        const seedTracks = await client.batchGetTracks(track_ids);
+        const seedTracks = await client.batchGetTracks(track_refs);
         const optimized = await client.generatePlaylist(seedTracks);
         if (opts.json) {
           printJson(optimized);

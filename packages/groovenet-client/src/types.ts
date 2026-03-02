@@ -173,3 +173,90 @@ export interface AlbumDownloadResult {
   jobIds: string[];
   tracksQueued: number;
 }
+
+export interface SimilarTrack extends Record<string, unknown> {
+  track_id: string;
+  friend_id: number;
+  title: string;
+  artist: string;
+  album: string;
+  distance: number;
+  identity_text?: string;
+  bpm?: string | number | null;
+  key?: string | null;
+  danceability?: string | number | null;
+  mood_happy?: number | null;
+  mood_sad?: number | null;
+  mood_relaxed?: number | null;
+  mood_aggressive?: number | null;
+}
+
+export interface SimilarIdentityResponse {
+  source_track_id: string;
+  source_friend_id: number;
+  filters: { era?: string; country?: string; tags?: string[] };
+  count: number;
+  tracks: SimilarTrack[];
+}
+
+export interface SimilarVibeResponse {
+  source_track_id: string;
+  source_friend_id: number;
+  count: number;
+  tracks: SimilarTrack[];
+}
+
+export interface SimilarityQuery {
+  limit?: number;
+  ivfflat_probes?: number;
+}
+
+export interface IdentitySimilarityQuery extends SimilarityQuery {
+  era?: string;
+  country?: string;
+  tags?: string;
+}
+
+export interface RecommendationCandidate {
+  trackId: string;
+  friendId: number;
+  simIdentity: number | null;
+  simAudio: number | null;
+  metadata: {
+    title: string;
+    artist: string;
+    album: string;
+    year?: string | null;
+    bpm?: number | null;
+    key?: string | null;
+    danceability?: number | null;
+    energy?: number | null;
+    tags: string[];
+    styles: string[];
+    genres: string[];
+    starRating?: number | null;
+    moodHappy?: number | null;
+    moodSad?: number | null;
+    moodRelaxed?: number | null;
+    moodAggressive?: number | null;
+  };
+}
+
+export interface RecommendationCandidatesResponse {
+  seedTrackId: string;
+  seedFriendId: number;
+  seedEmbeddings: { identity: boolean; audio: boolean };
+  candidates: RecommendationCandidate[];
+  stats: {
+    identityCount: number;
+    audioCount: number;
+    unionCount: number;
+    timingMs: { identityQuery: number; audioQuery: number; total: number };
+  };
+}
+
+export interface RecommendationCandidatesQuery {
+  limit_identity?: number;
+  limit_audio?: number;
+  ivfflat_probes?: number;
+}

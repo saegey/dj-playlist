@@ -11,11 +11,12 @@ export function addPlayCommands(program: Command): void {
   program
     .command("play <track-id>")
     .description("Play a track via MPD on the server (resolves local_audio_url, sends to MPD)")
-    .option("--username <u>", "Username")
-    .action(async (trackId: string, opts: { username?: string }) => {
+    .option("--friend-id <n>", "Friend ID (defaults to config default_friend_id)", parseInt)
+    .action(async (trackId: string, opts: { friendId?: number }) => {
       try {
+        const cfg = loadConfig();
         const client = makeClient();
-        const track = await client.getTrack(trackId, opts.username);
+        const track = await client.getTrack(trackId, opts.friendId ?? cfg.default_friend_id);
         if (!track.local_audio_url) {
           printError(`Track "${track.title}" has no local audio file. Download it first.`);
           process.exit(1);
