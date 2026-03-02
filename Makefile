@@ -16,7 +16,7 @@ TAG_TIME := $(shell date -u +%Y%m%dT%H%M%SZ)
 TAG ?= $(TAG_PREFIX)$(TAG_TIME)
 
 .PHONY: tag tag-push compose-dev compose-prod compose-down compose-logs compose-dev-mac compose-dev-reset
-.PHONY: build-app build-essentia build-ga-service build-download-worker build-all
+.PHONY: build-app build-essentia build-ga-service build-download-worker build-all build-packages
 .PHONY: migrate-up migrate-down migrate-create configure-meili reindex-meili
 .PHONY: push-images deploy-prod-local deploy-prod-remote deploy-prod-remote-localbuild release release-localbuild
 .PHONY: check-compose
@@ -76,6 +76,11 @@ build-download-worker:
 	$(BUILDKIT_ENV) docker buildx build -t ghcr.io/saegey/download-worker:$(TAG) -f $(COMPOSE_DIR)/Dockerfile.download-worker $(COMPOSE_DIR)
 
 build-all: build-app build-essentia build-ga-service build-download-worker
+
+build-packages:
+	npm run build --workspace=packages/groovenet-client
+	npm run build --workspace=packages/groovenet-cli
+	npm run build --workspace=mcp-server
 
 # Build and push all runtime images for a tag
 push-images:

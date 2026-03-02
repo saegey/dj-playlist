@@ -23,25 +23,23 @@ A full-stack Next.js app for managing, analyzing, and syncing vinyl music collec
 dj-playlist/
 ├── my-collection-search/        # Main Next.js application
 │   ├── src/
-│   │   ├── app/                 # Next.js 15 app router pages
-│   │   ├── components/          # React components (SearchResults, TrackResult, etc.)
+│   │   ├── app/                 # Next.js 15 app router pages + API routes
+│   │   ├── components/          # React components
 │   │   ├── hooks/               # React Query hooks and cache management
-│   │   ├── lib/                 # Query keys, utilities
-│   │   ├── providers/           # React context providers
-│   │   ├── services/            # API clients (tracks, playlists, MeiliSearch)
+│   │   ├── server/              # Backend-only: repositories, services
+│   │   ├── services/            # Frontend API clients
 │   │   ├── types/               # TypeScript type definitions
-│   │   └── workers/             # Background job workers
+│   │   └── api-contract/        # Zod schemas shared across routes
 │   ├── migrations/              # PostgreSQL migration scripts (node-pg-migrate)
-│   ├── public/                  # Static assets
 │   └── .env.example             # Environment variable template
+├── packages/
+│   ├── groovenet-client/        # Shared typed API client (@groovenet/client)
+│   └── groovenet-cli/           # CLI tool (@groovenet/cli, bin: groovenet)
+├── mcp-server/                  # MCP server for Claude Code integration
 ├── essentia-api/                # Python FastAPI audio analysis microservice
-│   ├── app/                     # FastAPI application
-│   ├── requirements.txt         # Python dependencies
-│   └── Dockerfile               # Container definition
-├── audio/                       # Uploaded and processed audio files (volume mount)
-├── dumps/                       # Database backup files (volume mount)
+├── ga-service/                  # Python genetic algorithm playlist generator
 ├── docker-compose.yml           # Base Docker Compose (local builds)
-├── docker-compose.dev.yml       # Development overrides (hot reload, etc.)
+├── docker-compose.dev.yml       # Development overrides (hot reload)
 └── docker-compose.prod.yml      # Production with pre-built images (x86_64 only)
 ```
 
@@ -773,6 +771,110 @@ curl http://localhost:8000/health
 - Spotify Web API
 - YouTube Data API v3
 - OpenAI API (GPT-4 and embeddings)
+
+## CLI (`groovenet`)
+
+A terminal client for your collection, usable from any machine on your network (e.g. over Tailscale). All commands support `--json` for scripting.
+
+### Install
+
+```bash
+npm install -g @groovenet/cli
+```
+
+Or from source:
+
+```bash
+npm install          # from repo root
+make build-packages
+cd packages/groovenet-cli && npm link
+```
+
+### Configure
+
+```bash
+groovenet config set api_base http://groovenet.tail1234.ts.net/api
+groovenet config set api_key your-key-if-needed   # optional
+groovenet config show
+```
+
+Config is stored in `~/.groovenet/config.json`.
+
+### Commands
+
+**Tracks**
+```bash
+groovenet tracks search "acid house" --bpm-min 120 --bpm-max 135 --limit 20
+groovenet tracks show <track-id>
+groovenet tracks update <track-id> --rating 5 --notes "peak time" --tags "acid,classic"
+groovenet tracks missing-apple-music --page 1
+```
+
+**Albums**
+```bash
+groovenet albums list                              # recently added (default)
+groovenet albums list "blue note" --sort year:desc
+groovenet albums show <release-id>
+groovenet albums update <release-id> --rating 5 --condition "NM" --library-id LP042
+groovenet albums download <release-id>            # queues missing tracks for download
+```
+
+**Playlists**
+```bash
+groovenet playlists list
+groovenet playlists show <id>
+groovenet playlists create "Friday Night"
+groovenet playlists generate <id>                 # re-optimizes via genetic algorithm
+```
+
+**Playback** (routes through server → MPD)
+```bash
+groovenet play <track-id>
+groovenet pause
+groovenet stop
+groovenet now-playing
+```
+
+**Other**
+```bash
+groovenet friends list
+groovenet friends add <username>
+```
+
+---
+
+## MCP Server (Claude Code Integration)
+
+Allows Claude to browse and manage your collection through natural language.
+
+### Setup
+
+```bash
+npm install && make build-packages
+
+# Register with Claude Code (local)
+claude mcp add --transport stdio --scope project groovenet \
+  -- node /path/to/dj-playlist/mcp-server/build/index.js
+
+# Or for remote access over Tailscale
+claude mcp add --transport stdio --scope user groovenet \
+  -- env API_BASE=http://groovenet.tail1234.ts.net/api \
+     node /path/to/dj-playlist/mcp-server/build/index.js
+```
+
+### Available Tools
+
+| Category | Tools |
+|---|---|
+| Tracks | `search_tracks`, `get_track_details`, `update_track`, `get_missing_apple_music` |
+| Albums | `search_albums`, `get_album`, `update_album`, `download_album` |
+| Playlists | `list_playlists`, `get_playlist`, `create_playlist`, `generate_ai_playlist`, `get_playlist_tracks` |
+| Friends | `get_friends`, `add_friend` |
+| External search | `search_apple_music`, `search_youtube` |
+
+See [`mcp-server/README.md`](mcp-server/README.md) for full documentation.
+
+---
 
 ## Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.

@@ -108,6 +108,30 @@ Multi-service vinyl collection management system combining a Next.js web app wit
   - Generates optimized playlist flow
 - **Image**: `ghcr.io/saegey/ga-service:v1.0.78` (prod)
 
+#### 8. Shared Client Package (`packages/groovenet-client`)
+- **Package name**: `@groovenet/client`
+- **Purpose**: Single typed API client shared by the MCP server and CLI
+- **Key exports**: `GroovenetClient`, `loadConfig`/`saveConfig`, domain types (`Track`, `Album`, `Playlist`, `Friend`), Zod schemas
+- **Important**: Types are copied from `my-collection-search/src/types/track.ts` — the Next.js app remains the source of truth
+- **Build**: `npm run build --workspace=packages/groovenet-client`
+
+#### 9. CLI (`packages/groovenet-cli`)
+- **Package name**: `@groovenet/cli` — published to npm, globally installable
+- **Binary**: `groovenet`
+- **Config**: `~/.groovenet/config.json` (set via `groovenet config set api_base <url>`)
+- **Commands**: `tracks`, `albums`, `playlists`, `play/pause/stop/now-playing`, `friends`, `config`
+- **All commands support `--json`** for machine-readable output
+- **Build**: `npm run build --workspace=packages/groovenet-cli`
+- **Publish**: `npm publish` inside both `packages/groovenet-client` and `packages/groovenet-cli`
+
+#### 10. MCP Server (`mcp-server/`)
+- **Purpose**: Exposes collection tools to Claude Code via Model Context Protocol
+- **Config**: `API_BASE` and `API_KEY` env vars (no `~/.groovenet/config.json` — daemon mode)
+- **Uses**: `GroovenetClient` from `@groovenet/client` — no bespoke API calls
+- **Tools**: tracks (search/details/update/missing-apple-music), albums (search/get/update/download), playlists, friends, Apple Music search, YouTube search
+- **Build**: `npm run build --workspace=mcp-server`
+- **Register**: `claude mcp add --transport stdio --scope project groovenet -- node /path/to/mcp-server/build/index.js`
+
 ## Data Flow
 
 ### Collection Import Flow
@@ -448,9 +472,14 @@ When working across services:
 4. Document new environment variables in `.env.example`
 5. Add migrations for schema changes
 6. Update both CLAUDE.md files (root + my-collection-search/) if relevant
+7. When adding new API endpoints: add the method to `packages/groovenet-client/src/client.ts`, then wire into CLI and/or MCP server — types in `my-collection-search/src/types/track.ts` are the source of truth, copy to `packages/groovenet-client/src/types.ts` if they change
+8. Build order matters: client → cli → mcp-server (`make build-packages`)
 
 ## See Also
 
 - `my-collection-search/CLAUDE.md` — Deep dive into Next.js app architecture
+- `mcp-server/README.md` — MCP server tool reference and setup
+- `packages/groovenet-client/` — Shared typed API client source
+- `packages/groovenet-cli/` — CLI source
 - `README.md` — User-facing documentation and setup guide
 - `my-collection-search/.env.example` — Complete environment variable reference
