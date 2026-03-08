@@ -188,9 +188,7 @@ const tools = [
     description: "List all friends and their shared collections",
     inputSchema: {
       type: "object",
-      properties: {
-        showCurrentUser: { type: "boolean", description: "Include current user in results", default: false },
-      },
+      properties: {},
     },
   },
   {
@@ -304,8 +302,6 @@ interface ToolArgs {
   name?: string;
   tracks?: string[];
   playlist?: Track[];
-  // friends
-  showCurrentUser?: boolean;
   // ai search
   title?: string;
   artist?: string;
@@ -343,7 +339,7 @@ async function handleToolCall(name: string, args: ToolArgs) {
       }
 
       const list = result.tracks
-        .map((t) => `• ${t.title} - ${t.artist}${t.bpm ? ` (${t.bpm} BPM)` : ""}${t.key ? `, ${t.key}` : ""}${t.star_rating ? ` [★${t.star_rating}]` : ""}`)
+        .map((t) => `• ${t.title} - ${t.artist}${t.bpm ? ` (${t.bpm} BPM)` : ""}${t.key ? `, ${t.key}` : ""}${t.star_rating != null ? ` [★${t.star_rating}]` : ""}`)
         .join("\n");
 
       return {

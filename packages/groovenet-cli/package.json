@@ -7,7 +7,7 @@
     "groovenet": "build/bin/groovenet.js"
   },
   "scripts": {
-    "build": "tsc && chmod +x build/bin/groovenet.js",
+    "build": "tsc",
     "dev": "tsc --watch",
     "start": "node build/bin/groovenet.js"
   },

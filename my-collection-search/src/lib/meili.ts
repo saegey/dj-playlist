@@ -17,9 +17,10 @@ function resolveMeiliHost(): string {
 export function getMeiliClient() {
   const host = resolveMeiliHost();
   const apiKey = process.env.MEILISEARCH_API_KEY;
-  // if (!apiKey) {
-  //   throw new Error("Missing MEILISEARCH_API_KEY");
-  // }
+  const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+  if (!apiKey && !isLocal) {
+    throw new Error("Missing MEILISEARCH_API_KEY (required for non-local hosts)");
+  }
 
   return new MeiliSearch({ host, apiKey });
 }
