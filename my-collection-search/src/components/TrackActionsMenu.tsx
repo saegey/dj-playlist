@@ -24,7 +24,7 @@ type Props = {
 export default function TrackActionsMenu({ track }: Props) {
   const { openTrackEditor } = useTrackEditor();
   const { appendToQueue } = usePlaylistPlayer();
-  const { openForTrack, PlaylistDialog, NameDialog } = useAddToPlaylistDialog();
+  const { openForTrack, playlistDialog, nameDialog } = useAddToPlaylistDialog();
 
   const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false);
   const [recommendationsTrackSnapshot, setRecommendationsTrackSnapshot] = useState<Track[]>([]);
@@ -330,8 +330,8 @@ export default function TrackActionsMenu({ track }: Props) {
       </Menu.Root>
 
       {/* Dialog components */}
-      <PlaylistDialog />
-      <NameDialog />
+      {playlistDialog}
+      {nameDialog}
 
       {/* AI Recommendations Modal */}
       <Dialog.Root
