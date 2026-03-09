@@ -20,6 +20,13 @@ export function useAddToPlaylistDialog() {
   const [playlistName, setPlaylistName] = React.useState("");
   const [currentTrack, setCurrentTrack] = React.useState<Track | null>(null);
 
+  const resetState = React.useCallback(() => {
+    setIsPlaylistDialogOpen(false);
+    setIsNameDialogOpen(false);
+    setPlaylistName("");
+    setCurrentTrack(null);
+  }, []);
+
   // Mutation for adding track to existing playlist
   const addToPlaylistMutation = useMutation({
     mutationFn: async ({ playlist, track }: { playlist: Playlist; track: Track }) => {
@@ -59,12 +66,14 @@ export function useAddToPlaylistDialog() {
         playlist_name: playlist.name,
         is_new_playlist: false,
       });
+      resetState();
     },
     onError: (error) => {
       toaster.create({
         title: error.message || "Failed to add track to playlist",
         type: "error",
       });
+      resetState();
     },
   });
 
@@ -90,31 +99,37 @@ export function useAddToPlaylistDialog() {
         playlist_name: name,
         is_new_playlist: true,
       });
+      resetState();
     },
     onError: (error) => {
       toaster.create({
         title: error.message || "Failed to create playlist",
         type: "error",
       });
+      resetState();
     },
   });
 
   // Open dialog for track
   const openForTrack = React.useCallback((track: Track) => {
+    if (addToPlaylistMutation.isPending || createPlaylistMutation.isPending) return;
     setCurrentTrack(track);
+    setIsNameDialogOpen(false);
+    setPlaylistName("");
     setIsPlaylistDialogOpen(true);
-  }, []);
+  }, [addToPlaylistMutation.isPending, createPlaylistMutation.isPending]);
 
   // Handle playlist selection
   const handlePlaylistSelect = React.useCallback((playlist: Playlist) => {
-    if (currentTrack) {
+    if (!addToPlaylistMutation.isPending && !createPlaylistMutation.isPending && currentTrack) {
       addToPlaylistMutation.mutate({ playlist, track: currentTrack });
     }
     setIsPlaylistDialogOpen(false);
-  }, [currentTrack, addToPlaylistMutation]);
+  }, [currentTrack, addToPlaylistMutation, addToPlaylistMutation.isPending, createPlaylistMutation.isPending]);
 
   // Handle create new playlist
   const handleCreateNew = React.useCallback((name?: string) => {
+    if (addToPlaylistMutation.isPending || createPlaylistMutation.isPending) return;
     setIsPlaylistDialogOpen(false);
     if (name?.trim()) {
       // If name provided, create immediately
@@ -125,40 +140,44 @@ export function useAddToPlaylistDialog() {
       // Otherwise show name dialog
       setIsNameDialogOpen(true);
     }
-  }, [currentTrack, createPlaylistMutation]);
+  }, [currentTrack, createPlaylistMutation, addToPlaylistMutation.isPending, createPlaylistMutation.isPending]);
 
   // Handle new playlist name confirmation
   const handleNameConfirm = React.useCallback((name: string) => {
-    if (currentTrack && name.trim()) {
+    if (!addToPlaylistMutation.isPending && !createPlaylistMutation.isPending && currentTrack && name.trim()) {
       createPlaylistMutation.mutate({ name: name.trim(), track: currentTrack });
     }
     setIsNameDialogOpen(false);
     setPlaylistName("");
-  }, [currentTrack, createPlaylistMutation]);
+  }, [currentTrack, createPlaylistMutation, addToPlaylistMutation.isPending, createPlaylistMutation.isPending]);
 
   // Handle dialog close
   const handleClose = React.useCallback(() => {
     setIsPlaylistDialogOpen(false);
-    setCurrentTrack(null);
-  }, []);
+    if (!isNameDialogOpen) {
+      setCurrentTrack(null);
+    }
+  }, [isNameDialogOpen]);
 
   const handleNameCancel = React.useCallback(() => {
-    setIsNameDialogOpen(false);
-    setPlaylistName("");
-  }, []);
+    resetState();
+  }, [resetState]);
 
-  // Dialog components
-  const PlaylistDialog = React.useCallback(() => (
+  const isSubmitting = addToPlaylistMutation.isPending || createPlaylistMutation.isPending;
+
+  // Stable dialog nodes (avoid remount churn from callback-component identity changes)
+  const playlistDialog = (
     <PlaylistSelectionDialog
       open={isPlaylistDialogOpen}
       onClose={handleClose}
       onPlaylistSelect={handlePlaylistSelect}
       onCreateNew={handleCreateNew}
+      isSubmitting={isSubmitting}
       title={currentTrack ? `Add "${currentTrack.title}" to Playlist` : "Add to Playlist"}
     />
-  ), [isPlaylistDialogOpen, currentTrack, handleClose, handlePlaylistSelect, handleCreateNew]);
+  );
 
-  const NameDialog = React.useCallback(() => (
+  const nameDialog = (
     <NamePlaylistDialog
       open={isNameDialogOpen}
       name={playlistName}
@@ -168,12 +187,12 @@ export function useAddToPlaylistDialog() {
       onCancel={handleNameCancel}
       confirmLabel="Create Playlist"
     />
-  ), [isNameDialogOpen, playlistName, handleNameConfirm, handleNameCancel]);
+  );
 
   return {
     openForTrack,
-    PlaylistDialog,
-    NameDialog,
-    isLoading: addToPlaylistMutation.isPending || createPlaylistMutation.isPending,
+    playlistDialog,
+    nameDialog,
+    isLoading: isSubmitting,
   } as const;
 }

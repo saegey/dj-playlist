@@ -23,6 +23,7 @@ interface PlaylistSelectionDialogProps {
   onClose: () => void;
   onPlaylistSelect: (playlist: Playlist) => void;
   onCreateNew: (name?: string) => void;
+  isSubmitting?: boolean;
   title?: string;
 }
 
@@ -31,6 +32,7 @@ export default function PlaylistSelectionDialog({
   onClose,
   onPlaylistSelect,
   onCreateNew,
+  isSubmitting = false,
   title = "Add to Playlist",
 }: PlaylistSelectionDialogProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -73,11 +75,12 @@ export default function PlaylistSelectionDialog({
   }, [open]);
 
   const handlePlaylistClick = (playlist: Playlist) => {
+    if (isSubmitting) return;
     onPlaylistSelect(playlist);
-    onClose();
   };
 
   const handleCreateNew = () => {
+    if (isSubmitting) return;
     // If there's text in search, use it as the playlist name
     const playlistName = searchQuery.trim();
     if (playlistName) {
@@ -85,7 +88,6 @@ export default function PlaylistSelectionDialog({
     } else {
       onCreateNew();
     }
-    onClose();
   };
 
   return (
@@ -157,6 +159,7 @@ export default function PlaylistSelectionDialog({
                         <Button
                           key={playlist.id}
                           variant="ghost"
+                          disabled={isSubmitting}
                           onClick={() => handlePlaylistClick(playlist)}
                           justifyContent="flex-start"
                           p={3}
@@ -181,6 +184,7 @@ export default function PlaylistSelectionDialog({
                   <Button
                     onClick={handleCreateNew}
                     variant="outline"
+                    disabled={isSubmitting}
                     width="full"
                   >
                     <FiPlus />

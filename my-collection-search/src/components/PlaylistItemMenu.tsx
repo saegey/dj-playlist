@@ -40,7 +40,7 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
   openTrackEditor,
   size = "xs",
 }) => {
-  const { openForTrack, PlaylistDialog } = useAddToPlaylistDialog();
+  const { openForTrack, playlistDialog } = useAddToPlaylistDialog();
   const isFirst = idx === 0;
   const isLast = idx === total - 1;
 
@@ -246,7 +246,7 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
           </Menu.Content>
         </Menu.Positioner>
       </Menu.Root>
-      <PlaylistDialog />
+      {playlistDialog}
 
       {/* AI Recommendations Modal */}
       <Dialog.Root
