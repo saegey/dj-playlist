@@ -4,6 +4,8 @@ all_tracks_cleaned.json
 data.ms/
 meilisearch
 node_modules/
+packages/*/build/
+mcp-server/build/
 discogs_exports/
 .env
 .DS_Store

@@ -5,38 +5,16 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import axios from "axios";
+import { GroovenetClient, type Track } from "@groovenet/client";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const API_BASE = process.env.API_BASE || "http://localhost:3000/api";
 const API_KEY = process.env.API_KEY;
+const DEFAULT_FRIEND_ID = process.env.DEFAULT_FRIEND_ID ? parseInt(process.env.DEFAULT_FRIEND_ID, 10) : 1;
 
-// Helper to call Next.js API
-async function apiCall(endpoint: string, method = "GET", data?: any) {
-  try {
-    const headers: any = {
-      "Content-Type": "application/json",
-    };
-
-    // Add API key if configured (for production access)
-    if (API_KEY) {
-      headers["Authorization"] = `Bearer ${API_KEY}`;
-    }
-
-    const response = await axios({
-      method,
-      url: `${API_BASE}${endpoint}`,
-      data,
-      headers,
-    });
-    return response.data;
-  } catch (error: any) {
-    const message = error.response?.data?.error || error.response?.data?.message || error.message;
-    throw new Error(`API Error: ${message}`);
-  }
-}
+const client = new GroovenetClient({ baseUrl: API_BASE, apiKey: API_KEY });
 
 // Define tool schemas
 const tools = [
@@ -46,31 +24,12 @@ const tools = [
     inputSchema: {
       type: "object",
       properties: {
-        query: {
-          type: "string",
-          description: "Search query (title, artist, album, genre, or tag)",
-        },
-        bpm_min: {
-          type: "number",
-          description: "Minimum BPM",
-        },
-        bpm_max: {
-          type: "number",
-          description: "Maximum BPM",
-        },
-        key: {
-          type: "string",
-          description: "Musical key (e.g., 'A minor', 'C major')",
-        },
-        star_rating: {
-          type: "number",
-          description: "Filter by star rating (0-5)",
-        },
-        limit: {
-          type: "number",
-          description: "Number of results to return",
-          default: 10,
-        },
+        query: { type: "string", description: "Search query (title, artist, album, genre, or tag)" },
+        bpm_min: { type: "number", description: "Minimum BPM" },
+        bpm_max: { type: "number", description: "Maximum BPM" },
+        key: { type: "string", description: "Musical key (e.g., 'A minor', 'C major')" },
+        star_rating: { type: "number", description: "Filter by star rating (0-5)" },
+        limit: { type: "number", description: "Number of results to return", default: 10 },
       },
       required: ["query"],
     },
@@ -81,195 +40,10 @@ const tools = [
     inputSchema: {
       type: "object",
       properties: {
-        track_id: {
-          type: "string",
-          description: "The track ID",
-        },
-        username: {
-          type: "string",
-          description: "Username (optional, uses default if not provided)",
-        },
+        track_id: { type: "string", description: "The track ID" },
+        username: { type: "string", description: "Username (optional, uses default if not provided)" },
       },
       required: ["track_id"],
-    },
-  },
-  {
-    name: "list_playlists",
-    description: "List all playlists in your collection",
-    inputSchema: {
-      type: "object",
-      properties: {},
-    },
-  },
-  {
-    name: "get_playlist",
-    description: "Get details about a specific playlist including all tracks",
-    inputSchema: {
-      type: "object",
-      properties: {
-        playlist_id: {
-          type: "string",
-          description: "The playlist ID",
-        },
-      },
-      required: ["playlist_id"],
-    },
-  },
-  {
-    name: "create_playlist",
-    description: "Create a new playlist with optional tracks",
-    inputSchema: {
-      type: "object",
-      properties: {
-        name: {
-          type: "string",
-          description: "Playlist name",
-        },
-        tracks: {
-          type: "array",
-          items: {
-            type: "string",
-          },
-          description: "Array of track IDs to add to playlist",
-        },
-      },
-      required: ["name"],
-    },
-  },
-  {
-    name: "generate_ai_playlist",
-    description: "Generate an optimized DJ playlist using genetic algorithm based on seed tracks. Creates smooth transitions based on BPM, key compatibility, and mood progression.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        playlist: {
-          type: "array",
-          items: {
-            type: "object",
-          },
-          description: "Array of seed track objects to base the playlist on",
-        },
-      },
-      required: ["playlist"],
-    },
-  },
-  {
-    name: "get_playlist_tracks",
-    description: "Get all track IDs in a playlist",
-    inputSchema: {
-      type: "object",
-      properties: {
-        playlist_id: {
-          type: "string",
-          description: "The playlist ID",
-        },
-      },
-      required: ["playlist_id"],
-    },
-  },
-  {
-    name: "collection_stats",
-    description: "Get statistics about your music collection including total tracks, genre distribution, BPM ranges, and more",
-    inputSchema: {
-      type: "object",
-      properties: {
-        username: {
-          type: "string",
-          description: "Username (optional)",
-        },
-      },
-    },
-  },
-  {
-    name: "get_friends",
-    description: "List all friends and their shared collections",
-    inputSchema: {
-      type: "object",
-      properties: {
-        showCurrentUser: {
-          type: "boolean",
-          description: "Include current user in results",
-          default: false,
-        },
-        showSpotifyUsernames: {
-          type: "boolean",
-          description: "Include Spotify usernames",
-          default: false,
-        },
-      },
-    },
-  },
-  {
-    name: "add_friend",
-    description: "Add a friend to share collections with",
-    inputSchema: {
-      type: "object",
-      properties: {
-        username: {
-          type: "string",
-          description: "Friend's username",
-        },
-      },
-      required: ["username"],
-    },
-  },
-  {
-    name: "search_apple_music",
-    description: "Search for tracks on Apple Music to enrich track metadata",
-    inputSchema: {
-      type: "object",
-      properties: {
-        title: {
-          type: "string",
-          description: "Track title",
-        },
-        artist: {
-          type: "string",
-          description: "Artist name",
-        },
-        album: {
-          type: "string",
-          description: "Album name",
-        },
-        isrc: {
-          type: "string",
-          description: "ISRC code",
-        },
-      },
-    },
-  },
-  {
-    name: "search_spotify",
-    description: "Search for tracks on Spotify",
-    inputSchema: {
-      type: "object",
-      properties: {
-        title: {
-          type: "string",
-          description: "Track title",
-        },
-        artist: {
-          type: "string",
-          description: "Artist name",
-        },
-      },
-    },
-  },
-  {
-    name: "search_youtube",
-    description: "Search for tracks on YouTube Music",
-    inputSchema: {
-      type: "object",
-      properties: {
-        title: {
-          type: "string",
-          description: "Track title",
-        },
-        artist: {
-          type: "string",
-          description: "Artist name",
-        },
-      },
     },
   },
   {
@@ -278,38 +52,14 @@ const tools = [
     inputSchema: {
       type: "object",
       properties: {
-        track_id: {
-          type: "string",
-          description: "Track ID",
-        },
-        star_rating: {
-          type: "number",
-          description: "Star rating (0-5)",
-        },
-        notes: {
-          type: "string",
-          description: "Track notes",
-        },
-        local_tags: {
-          type: "string",
-          description: "Comma-separated tags",
-        },
-        apple_music_url: {
-          type: "string",
-          description: "Apple Music URL",
-        },
-        spotify_url: {
-          type: "string",
-          description: "Spotify URL",
-        },
-        youtube_url: {
-          type: "string",
-          description: "YouTube URL",
-        },
-        soundcloud_url: {
-          type: "string",
-          description: "SoundCloud URL",
-        },
+        track_id: { type: "string", description: "Track ID" },
+        star_rating: { type: "number", description: "Star rating (0-5)" },
+        notes: { type: "string", description: "Track notes" },
+        local_tags: { type: "string", description: "Comma-separated tags" },
+        apple_music_url: { type: "string", description: "Apple Music URL" },
+        spotify_url: { type: "string", description: "Spotify URL" },
+        youtube_url: { type: "string", description: "YouTube URL" },
+        soundcloud_url: { type: "string", description: "SoundCloud URL" },
       },
       required: ["track_id"],
     },
@@ -320,98 +70,310 @@ const tools = [
     inputSchema: {
       type: "object",
       properties: {
-        page: {
-          type: "number",
-          description: "Page number",
-          default: 1,
-        },
-        pageSize: {
-          type: "number",
-          description: "Number of tracks per page",
-          default: 50,
-        },
-        username: {
-          type: "string",
-          description: "Username (optional)",
-        },
+        page: { type: "number", description: "Page number", default: 1 },
+        pageSize: { type: "number", description: "Number of tracks per page", default: 50 },
+        username: { type: "string", description: "Username (optional)" },
       },
+    },
+  },
+  {
+    name: "search_albums",
+    description: "Search or list albums in the collection. Supports sorting by date_added, year, title, or album_rating.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Search query (title, artist, genre)" },
+        sort: {
+          type: "string",
+          description: "Sort order: date_added:desc (default), date_added:asc, year:desc, year:asc, title:asc, album_rating:desc",
+        },
+        limit: { type: "number", description: "Number of results to return", default: 20 },
+        friend_id: { type: "number", description: "Filter by friend ID" },
+      },
+    },
+  },
+  {
+    name: "get_album",
+    description: "Get details about a specific album including its full track list",
+    inputSchema: {
+      type: "object",
+      properties: {
+        release_id: { type: "string", description: "The Discogs release ID" },
+        friend_id: { type: "number", description: "Friend ID (owner of the album)" },
+      },
+      required: ["release_id", "friend_id"],
+    },
+  },
+  {
+    name: "update_album",
+    description: "Update album metadata (rating, notes, purchase price, condition, library identifier)",
+    inputSchema: {
+      type: "object",
+      properties: {
+        release_id: { type: "string", description: "The Discogs release ID" },
+        friend_id: { type: "number", description: "Friend ID" },
+        album_rating: { type: "number", description: "Album rating (0-5)" },
+        album_notes: { type: "string", description: "Album notes" },
+        purchase_price: { type: "number", description: "Purchase price" },
+        condition: { type: "string", description: "Record condition (e.g. VG+, NM)" },
+        library_identifier: { type: "string", description: "Library identifier (e.g. LP001)" },
+      },
+      required: ["release_id", "friend_id"],
+    },
+  },
+  {
+    name: "download_album",
+    description: "Queue all missing tracks in an album for download via the background worker",
+    inputSchema: {
+      type: "object",
+      properties: {
+        release_id: { type: "string", description: "The Discogs release ID" },
+        friend_id: { type: "number", description: "Friend ID" },
+      },
+      required: ["release_id", "friend_id"],
+    },
+  },
+  {
+    name: "list_playlists",
+    description: "List all playlists in your collection",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "get_playlist",
+    description: "Get details about a specific playlist including all tracks",
+    inputSchema: {
+      type: "object",
+      properties: {
+        playlist_id: { type: "string", description: "The playlist ID" },
+      },
+      required: ["playlist_id"],
+    },
+  },
+  {
+    name: "create_playlist",
+    description: "Create a new playlist with optional tracks",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Playlist name" },
+        tracks: { type: "array", items: { type: "string" }, description: "Array of track IDs to add to playlist" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "generate_ai_playlist",
+    description: "Generate an optimized DJ playlist using genetic algorithm based on seed tracks. Creates smooth transitions based on BPM, key compatibility, and mood progression.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        playlist: { type: "array", items: { type: "object" }, description: "Array of seed track objects" },
+      },
+      required: ["playlist"],
+    },
+  },
+  {
+    name: "get_playlist_tracks",
+    description: "Get all track IDs in a playlist",
+    inputSchema: {
+      type: "object",
+      properties: {
+        playlist_id: { type: "string", description: "The playlist ID" },
+      },
+      required: ["playlist_id"],
+    },
+  },
+  {
+    name: "get_friends",
+    description: "List all friends and their shared collections",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "add_friend",
+    description: "Add a friend to share collections with",
+    inputSchema: {
+      type: "object",
+      properties: {
+        username: { type: "string", description: "Friend's username" },
+      },
+      required: ["username"],
+    },
+  },
+  {
+    name: "search_apple_music",
+    description: "Search for tracks on Apple Music to enrich track metadata",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Track title" },
+        artist: { type: "string", description: "Artist name" },
+        album: { type: "string", description: "Album name" },
+        isrc: { type: "string", description: "ISRC code" },
+      },
+    },
+  },
+  {
+    name: "search_youtube",
+    description: "Search for tracks on YouTube Music",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Track title" },
+        artist: { type: "string", description: "Artist name" },
+      },
+    },
+  },
+  {
+    name: "get_recommendations",
+    description: "Get combined recommendations for a track using both identity (genre/style/era) and audio vibe (BPM/mood/danceability) embeddings. Returns a ranked union of candidates from both indexes — the best tool for finding tracks to play next.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        track_id: { type: "string", description: "The source track ID" },
+        friend_id: { type: "number", description: "Friend ID (owner of the source track, uses default if omitted)" },
+        limit: { type: "number", description: "Number of candidates from each index (default: 20)" },
+      },
+      required: ["track_id"],
+    },
+  },
+  {
+    name: "find_similar_identity",
+    description: "Find tracks with similar identity (genre, era, country, style, tags) using vector embeddings. Great for finding stylistically related music.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        track_id: { type: "string", description: "The source track ID" },
+        friend_id: { type: "number", description: "Friend ID (owner of the source track)" },
+        limit: { type: "number", description: "Number of results to return (default: 10)" },
+        era: { type: "string", description: "Filter by era (e.g. '1970s', '1980s')" },
+        country: { type: "string", description: "Filter by country of origin" },
+        tags: { type: "string", description: "Comma-separated tags to filter by" },
+      },
+      required: ["track_id", "friend_id"],
+    },
+  },
+  {
+    name: "find_similar_vibe",
+    description: "Find tracks with similar audio vibe (BPM, mood, danceability, key) using audio analysis vectors. Great for building cohesive DJ sets.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        track_id: { type: "string", description: "The source track ID" },
+        friend_id: { type: "number", description: "Friend ID (owner of the source track)" },
+        limit: { type: "number", description: "Number of results to return (default: 10)" },
+      },
+      required: ["track_id", "friend_id"],
     },
   },
 ];
 
-// Tool handlers
-async function handleToolCall(name: string, args: any) {
+interface ToolArgs {
+  // tracks
+  query?: string;
+  bpm_min?: number;
+  bpm_max?: number;
+  key?: string;
+  star_rating?: number;
+  limit?: number;
+  track_id?: string;
+  username?: string;
+  notes?: string;
+  local_tags?: string;
+  apple_music_url?: string;
+  spotify_url?: string;
+  youtube_url?: string;
+  soundcloud_url?: string;
+  page?: number;
+  pageSize?: number;
+  // albums
+  release_id?: string;
+  friend_id?: number;
+  sort?: string;
+  album_rating?: number;
+  album_notes?: string;
+  purchase_price?: number;
+  condition?: string;
+  library_identifier?: string;
+  // playlists
+  playlist_id?: string;
+  name?: string;
+  tracks?: string[];
+  playlist?: Track[];
+  // ai search
+  title?: string;
+  artist?: string;
+  album?: string;
+  isrc?: string;
+  // similarity
+  era?: string;
+  country?: string;
+  tags?: string;
+}
+
+function formatDuration(seconds: number): string {
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+async function handleToolCall(name: string, args: ToolArgs) {
   switch (name) {
     case "search_tracks": {
-      // Build filters object
-      const filters: any = {};
-      if (args.bpm_min) filters.bpm_min = args.bpm_min;
-      if (args.bpm_max) filters.bpm_max = args.bpm_max;
+      const filters: Record<string, number | string> = {};
+      if (args.bpm_min != null) filters.bpm_min = args.bpm_min;
+      if (args.bpm_max != null) filters.bpm_max = args.bpm_max;
       if (args.key) filters.key = args.key;
-      if (args.star_rating) filters.star_rating = args.star_rating;
+      if (args.star_rating != null) filters.star_rating = args.star_rating;
 
-      // Call the search API
-      const result = await apiCall("/tracks/search", "POST", {
-        query: args.query,
-        limit: args.limit || 10,
-        offset: 0,
+      const result = await client.searchTracks({
+        query: args.query ?? "",
+        limit: args.limit ?? 10,
         filters: Object.keys(filters).length > 0 ? filters : undefined,
       });
 
-      if (!result || !result.tracks || result.tracks.length === 0) {
+      if (!result.tracks || result.tracks.length === 0) {
         return {
-          content: [
-            {
-              type: "text",
-              text: `No tracks found matching "${args.query}". Try a different search term.`,
-            },
-          ],
+          content: [{ type: "text", text: `No tracks found matching "${args.query ?? ""}".` }],
         };
       }
 
-      const tracksList = result.tracks
-        .map(
-          (t: any) =>
-            `• ${t.title} - ${t.artist}${t.bpm ? ` (${t.bpm} BPM)` : ""}${t.key ? `, ${t.key}` : ""}${t.star_rating ? ` [★${t.star_rating}]` : ""}`
-        )
+      const list = result.tracks
+        .map((t) => `• ${t.title} - ${t.artist}${t.bpm ? ` (${t.bpm} BPM)` : ""}${t.key ? `, ${t.key}` : ""}${t.star_rating != null ? ` [★${t.star_rating}]` : ""}`)
         .join("\n");
 
       return {
-        content: [
-          {
-            type: "text",
-            text: `Found ${result.tracks.length} tracks${result.estimatedTotalHits > result.tracks.length ? ` (${result.estimatedTotalHits} total)` : ""}:\n\n${tracksList}`,
-          },
-        ],
+        content: [{
+          type: "text",
+          text: `Found ${result.tracks.length} tracks${result.estimatedTotalHits > result.tracks.length ? ` (${result.estimatedTotalHits} total)` : ""}:\n\n${list}`,
+        }],
       };
     }
 
     case "get_track_details": {
-      const queryParams = args.username ? `?username=${args.username}` : "";
-      const track = await apiCall(`/tracks/${args.track_id}${queryParams}`);
-
+      const track = await client.getTrack(args.track_id!, args.username);
       const details = `
 **${track.title}** by ${track.artist}
 ${track.album ? `Album: ${track.album}` : ""}
 ${track.year ? `Year: ${track.year}` : ""}
 
 **Audio Analysis:**
-- BPM: ${track.bpm || "Not analyzed"}
-- Key: ${track.key || "Not analyzed"}
-- Danceability: ${track.danceability || "N/A"}
-- Duration: ${track.duration_seconds ? `${Math.floor(track.duration_seconds / 60)}:${String(track.duration_seconds % 60).padStart(2, "0")}` : track.duration || "N/A"}
+- BPM: ${track.bpm ?? "Not analyzed"}
+- Key: ${track.key ?? "Not analyzed"}
+- Danceability: ${track.danceability ?? "N/A"}
+- Duration: ${track.duration_seconds ? formatDuration(track.duration_seconds) : (track.duration ?? "N/A")}
 
 **Mood:**
-- Happy: ${track.mood_happy || 0}
-- Sad: ${track.mood_sad || 0}
-- Aggressive: ${track.mood_aggressive || 0}
-- Relaxed: ${track.mood_relaxed || 0}
+- Happy: ${track.mood_happy ?? 0}
+- Sad: ${track.mood_sad ?? 0}
+- Aggressive: ${track.mood_aggressive ?? 0}
+- Relaxed: ${track.mood_relaxed ?? 0}
 
 **Metadata:**
 - Star Rating: ${track.star_rating !== undefined ? `★${track.star_rating}/5` : "Not rated"}
-- Genres: ${track.genres?.join(", ") || "N/A"}
-- Styles: ${track.styles?.join(", ") || "N/A"}
-- Tags: ${track.local_tags || "None"}
+- Genres: ${track.genres?.join(", ") ?? "N/A"}
+- Styles: ${track.styles?.join(", ") ?? "N/A"}
+- Tags: ${track.local_tags ?? "None"}
 ${track.notes ? `- Notes: ${track.notes}` : ""}
 
 **Platform URLs:**
@@ -421,165 +383,203 @@ ${track.apple_music_url ? `- Apple Music: ${track.apple_music_url}` : ""}
 ${track.youtube_url ? `- YouTube: ${track.youtube_url}` : ""}
 ${track.soundcloud_url ? `- SoundCloud: ${track.soundcloud_url}` : ""}
       `.trim();
+      return { content: [{ type: "text", text: details }] };
+    }
+
+    case "update_track": {
+      await client.updateTrack(args.track_id!, {
+        star_rating: args.star_rating,
+        notes: args.notes,
+        local_tags: args.local_tags,
+        apple_music_url: args.apple_music_url,
+        spotify_url: args.spotify_url,
+        youtube_url: args.youtube_url,
+        soundcloud_url: args.soundcloud_url,
+      });
+      return { content: [{ type: "text", text: "✓ Track updated successfully!" }] };
+    }
+
+    case "get_missing_apple_music": {
+      const result = await client.getMissingAppleMusic(
+        args.page ?? 1,
+        args.pageSize ?? 50,
+        args.username
+      );
+
+      if (!result.tracks || result.tracks.length === 0) {
+        return { content: [{ type: "text", text: "All tracks have Apple Music URLs!" }] };
+      }
+
+      const list = result.tracks
+        .slice(0, 10)
+        .map((t) => `• ${t.title} - ${t.artist}`)
+        .join("\n");
 
       return {
-        content: [{ type: "text", text: details }],
+        content: [{
+          type: "text",
+          text: `Tracks missing Apple Music URLs (${result.total} total, showing first 10):\n\n${list}`,
+        }],
+      };
+    }
+
+    case "search_albums": {
+      const result = await client.searchAlbums({
+        q: args.query ?? "",
+        sort: args.sort,
+        limit: args.limit ?? 20,
+        friend_id: args.friend_id,
+      });
+
+      if (!result.hits || result.hits.length === 0) {
+        return { content: [{ type: "text", text: "No albums found." }] };
+      }
+
+      const list = result.hits
+        .map((a) => `• ${a.title} — ${a.artist}${a.year ? ` (${a.year})` : ""} [${a.release_id}]${a.album_rating != null ? ` ★${a.album_rating}` : ""}`)
+        .join("\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `Found ${result.hits.length} albums${result.estimatedTotalHits > result.hits.length ? ` (${result.estimatedTotalHits} total)` : ""}:\n\n${list}`,
+        }],
+      };
+    }
+
+    case "get_album": {
+      const detail = await client.getAlbum(args.release_id!, args.friend_id!);
+      const a = detail.album;
+
+      const albumInfo = [
+        `**${a.title}** by ${a.artist}`,
+        a.year ? `Year: ${a.year}` : "",
+        a.genres?.length ? `Genres: ${a.genres.join(", ")}` : "",
+        a.styles?.length ? `Styles: ${a.styles.join(", ")}` : "",
+        a.album_rating != null ? `Rating: ★${a.album_rating}/5` : "",
+        a.condition ? `Condition: ${a.condition}` : "",
+        a.purchase_price != null ? `Purchase price: $${a.purchase_price}` : "",
+        a.library_identifier ? `Library ID: ${a.library_identifier}` : "",
+        a.album_notes ? `Notes: ${a.album_notes}` : "",
+      ].filter(Boolean).join("\n");
+
+      const trackList = detail.tracks
+        .map((t, i) => `${i + 1}. ${t.title}${t.bpm ? ` (${t.bpm} BPM)` : ""}${t.local_audio_url ? " ✓" : ""}`)
+        .join("\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `${albumInfo}\n\nTracks (${detail.tracks.length}):\n${trackList}`,
+        }],
+      };
+    }
+
+    case "update_album": {
+      await client.updateAlbum(args.release_id!, args.friend_id!, {
+        album_rating: args.album_rating,
+        album_notes: args.album_notes,
+        purchase_price: args.purchase_price,
+        condition: args.condition,
+        library_identifier: args.library_identifier,
+      });
+      return { content: [{ type: "text", text: "✓ Album updated successfully!" }] };
+    }
+
+    case "download_album": {
+      const result = await client.downloadAlbum(args.release_id!, args.friend_id!);
+      return {
+        content: [{
+          type: "text",
+          text: result.tracksQueued === 0
+            ? "No tracks need downloading (all already have audio files)."
+            : `✓ Queued ${result.tracksQueued} track(s) for download.`,
+        }],
       };
     }
 
     case "list_playlists": {
-      const playlists = await apiCall("/playlists");
+      const playlists = await client.listPlaylists();
 
       if (!playlists || playlists.length === 0) {
-        return {
-          content: [{ type: "text", text: "No playlists found." }],
-        };
+        return { content: [{ type: "text", text: "No playlists found." }] };
       }
 
-      const playlistList = playlists
-        .map((p: any) => `• ${p.name} (ID: ${p.id})`)
-        .join("\n");
-
       return {
-        content: [
-          {
-            type: "text",
-            text: `Your playlists:\n\n${playlistList}`,
-          },
-        ],
+        content: [{
+          type: "text",
+          text: `Your playlists:\n\n${playlists.map((p) => `• ${p.name} (ID: ${p.id})`).join("\n")}`,
+        }],
       };
     }
 
     case "get_playlist": {
-      const trackIds = await apiCall(`/playlists/${args.playlist_id}/tracks`);
+      const { track_refs } = await client.getPlaylistTracks(args.playlist_id!);
 
-      if (!trackIds || !trackIds.track_ids || trackIds.track_ids.length === 0) {
-        return {
-          content: [{ type: "text", text: "Playlist is empty." }],
-        };
+      if (!track_refs || track_refs.length === 0) {
+        return { content: [{ type: "text", text: "Playlist is empty." }] };
       }
 
-      // Fetch track details
-      const tracks = await apiCall("/tracks/batch", "POST", {
-        track_ids: trackIds.track_ids,
-      });
-
-      const tracksInfo = tracks
-        .map((t: any, idx: number) => `${idx + 1}. ${t.title} - ${t.artist}${t.bpm ? ` (${t.bpm} BPM)` : ""}`)
+      const tracks = await client.batchGetTracks(track_refs);
+      const list = tracks
+        .map((t, i) => `${i + 1}. ${t.title} - ${t.artist}${t.bpm ? ` (${t.bpm} BPM)` : ""}`)
         .join("\n");
 
       return {
-        content: [
-          {
-            type: "text",
-            text: `Playlist tracks (${tracks.length} total):\n\n${tracksInfo}`,
-          },
-        ],
+        content: [{ type: "text", text: `Playlist tracks (${tracks.length} total):\n\n${list}` }],
       };
     }
 
     case "create_playlist": {
-      await apiCall("/playlists", "POST", {
-        name: args.name,
-        tracks: args.tracks || [],
-      });
-
+      await client.createPlaylist(args.name!, args.tracks ?? []);
       return {
-        content: [
-          {
-            type: "text",
-            text: `✓ Playlist "${args.name}" created successfully!${args.tracks?.length ? ` Added ${args.tracks.length} tracks.` : ""}`,
-          },
-        ],
+        content: [{
+          type: "text",
+          text: `✓ Playlist "${args.name}" created!${args.tracks?.length ? ` Added ${args.tracks.length} tracks.` : ""}`,
+        }],
       };
     }
 
     case "generate_ai_playlist": {
-      const result = await apiCall("/playlists/genetic", "POST", {
-        playlist: args.playlist,
-      });
-
-      // The API returns { result: Track[] } and we need to normalize it
-      const tracks = result.result || result;
-
-      const tracksInfo = tracks
-        .map((t: any, idx: number) => `${idx + 1}. ${t.title} - ${t.artist} (${t.bpm} BPM, ${t.key})`)
+      const tracks = await client.generatePlaylist(args.playlist ?? []);
+      const list = tracks
+        .map((t, i) => `${i + 1}. ${t.title} - ${t.artist} (${t.bpm ?? "?"} BPM, ${t.key ?? "?"})`)
         .join("\n");
 
       return {
-        content: [
-          {
-            type: "text",
-            text: `✓ AI-generated playlist (${tracks.length} tracks):\n\n${tracksInfo}`,
-          },
-        ],
+        content: [{ type: "text", text: `✓ AI-generated playlist (${tracks.length} tracks):\n\n${list}` }],
       };
     }
 
     case "get_playlist_tracks": {
-      const result = await apiCall(`/playlists/${args.playlist_id}/tracks`);
-
+      const { track_refs } = await client.getPlaylistTracks(args.playlist_id!);
       return {
-        content: [
-          {
-            type: "text",
-            text: `Playlist track IDs:\n${result.track_ids.join("\n")}`,
-          },
-        ],
-      };
-    }
-
-    case "collection_stats": {
-      // This would require a custom endpoint or database query
-      // For now, return a placeholder
-      return {
-        content: [
-          {
-            type: "text",
-            text: "Collection statistics endpoint not yet implemented. Consider adding /api/tracks/stats endpoint.",
-          },
-        ],
+        content: [{ type: "text", text: `Playlist track IDs:\n${track_refs.map((r) => r.track_id).join("\n")}` }],
       };
     }
 
     case "get_friends": {
-      const queryParams = new URLSearchParams();
-      if (args.showCurrentUser) queryParams.append("showCurrentUser", "true");
-      if (args.showSpotifyUsernames) queryParams.append("showSpotifyUsernames", "true");
+      const friends = await client.getFriends();
 
-      const result = await apiCall(`/friends?${queryParams.toString()}`);
-
-      if (!result.friends || result.friends.length === 0) {
-        return {
-          content: [{ type: "text", text: "No friends added yet." }],
-        };
+      if (friends.length === 0) {
+        return { content: [{ type: "text", text: "No friends added yet." }] };
       }
 
       return {
-        content: [
-          {
-            type: "text",
-            text: `Your friends:\n${result.friends.join("\n")}`,
-          },
-        ],
+        content: [{
+          type: "text",
+          text: `Your friends:\n${friends.map((f) => `• ${f.username} (ID: ${f.id})`).join("\n")}`,
+        }],
       };
     }
 
     case "add_friend": {
-      await apiCall("/friends", "POST", { username: args.username });
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `✓ Added ${args.username} as a friend!`,
-          },
-        ],
-      };
+      await client.addFriend(args.username!);
+      return { content: [{ type: "text", text: `✓ Added ${args.username} as a friend!` }] };
     }
 
     case "search_apple_music": {
-      const result = await apiCall("/ai/apple-music-search", "POST", {
+      const result = await client.searchAppleMusic({
         title: args.title,
         artist: args.artist,
         album: args.album,
@@ -587,125 +587,106 @@ ${track.soundcloud_url ? `- SoundCloud: ${track.soundcloud_url}` : ""}
       });
 
       if (!result.results || result.results.length === 0) {
-        return {
-          content: [{ type: "text", text: "No results found on Apple Music." }],
-        };
+        return { content: [{ type: "text", text: "No results found on Apple Music." }] };
       }
 
-      const resultsList = result.results
+      const list = (result.results as Array<Record<string, string>>)
         .slice(0, 5)
-        .map((r: any) => `• ${r.trackName} - ${r.artistName} (${r.collectionName})`)
+        .map((r) => `• ${r.trackName ?? r.title} - ${r.artistName ?? r.artist} (${r.collectionName ?? r.album})`)
         .join("\n");
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Apple Music results:\n\n${resultsList}`,
-          },
-        ],
-      };
-    }
-
-    case "search_spotify": {
-      const result = await apiCall("/ai/spotify-track-search", "POST", {
-        title: args.title,
-        artist: args.artist,
-      });
-
-      if (!result.results || result.results.length === 0) {
-        return {
-          content: [{ type: "text", text: "No results found on Spotify." }],
-        };
-      }
-
-      const resultsList = result.results
-        .slice(0, 5)
-        .map((r: any) => `• ${r.name} - ${r.artists?.join(", ")}`)
-        .join("\n");
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Spotify results:\n\n${resultsList}`,
-          },
-        ],
-      };
+      return { content: [{ type: "text", text: `Apple Music results:\n\n${list}` }] };
     }
 
     case "search_youtube": {
-      const result = await apiCall("/ai/youtube-music-search", "POST", {
+      const result = await client.searchYoutube({
         title: args.title,
         artist: args.artist,
       });
 
       if (!result.results || result.results.length === 0) {
-        return {
-          content: [{ type: "text", text: "No results found on YouTube." }],
-        };
+        return { content: [{ type: "text", text: "No results found on YouTube." }] };
       }
 
-      const resultsList = result.results
+      const list = (result.results as Array<Record<string, string>>)
         .slice(0, 5)
-        .map((r: any) => `• ${r.title} - ${r.channel}`)
+        .map((r) => `• ${r.title} - ${r.channel}`)
         .join("\n");
 
+      return { content: [{ type: "text", text: `YouTube results:\n\n${list}` }] };
+    }
+
+    case "get_recommendations": {
+      const result = await client.getRecommendationCandidates(
+        args.track_id!,
+        args.friend_id ?? DEFAULT_FRIEND_ID,
+        { limit_identity: args.limit ?? 20, limit_audio: args.limit ?? 20 }
+      );
+
+      if (!result.candidates || result.candidates.length === 0) {
+        return { content: [{ type: "text", text: "No recommendations found." }] };
+      }
+
+      const list = result.candidates
+        .map((c) => {
+          const identity = c.simIdentity != null ? ` id:${c.simIdentity.toFixed(3)}` : "";
+          const audio = c.simAudio != null ? ` vibe:${c.simAudio.toFixed(3)}` : "";
+          return `• ${c.trackId}  ${c.metadata.title} — ${c.metadata.artist}${c.metadata.bpm ? ` (${c.metadata.bpm} BPM)` : ""}${c.metadata.key ? `, ${c.metadata.key}` : ""}${identity}${audio}`;
+        })
+        .join("\n");
+
+      const { stats } = result;
       return {
-        content: [
-          {
-            type: "text",
-            text: `YouTube results:\n\n${resultsList}`,
-          },
-        ],
+        content: [{
+          type: "text",
+          text: `Recommendations (${result.candidates.length} candidates, identity:${stats.identityCount} vibe:${stats.audioCount} union:${stats.unionCount}):\n\n${list}`,
+        }],
       };
     }
 
-    case "update_track": {
-      const { track_id, ...updates } = args;
-      await apiCall("/tracks/update", "PATCH", { track_id, ...updates });
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `✓ Track updated successfully!`,
-          },
-        ],
-      };
-    }
-
-    case "get_missing_apple_music": {
-      const queryParams = new URLSearchParams();
-      if (args.page) queryParams.append("page", args.page.toString());
-      if (args.pageSize) queryParams.append("pageSize", args.pageSize.toString());
-      if (args.username) queryParams.append("username", args.username);
-
-      const result = await apiCall(`/tracks/missing-apple-music?${queryParams.toString()}`);
+    case "find_similar_identity": {
+      const result = await client.findSimilarIdentity(
+        args.track_id!,
+        args.friend_id ?? DEFAULT_FRIEND_ID,
+        { limit: args.limit, era: args.era, country: args.country, tags: args.tags }
+      );
 
       if (!result.tracks || result.tracks.length === 0) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "All tracks have Apple Music URLs!",
-            },
-          ],
-        };
+        return { content: [{ type: "text", text: "No similar tracks found." }] };
       }
 
-      const tracksList = result.tracks
-        .slice(0, 10)
-        .map((t: any) => `• ${t.title} - ${t.artist}`)
+      const list = result.tracks
+        .map((t) => `• ${t.title} — ${t.artist} (${t.album})${t.bpm ? ` BPM:${t.bpm}` : ""}${t.key ? `, ${t.key}` : ""} [dist: ${Number(t.distance).toFixed(4)}]`)
         .join("\n");
 
       return {
-        content: [
-          {
-            type: "text",
-            text: `Tracks missing Apple Music URLs (${result.total} total, showing first 10):\n\n${tracksList}`,
-          },
-        ],
+        content: [{
+          type: "text",
+          text: `Similar identity tracks (${result.count} found):\n\n${list}`,
+        }],
+      };
+    }
+
+    case "find_similar_vibe": {
+      const result = await client.findSimilarVibe(
+        args.track_id!,
+        args.friend_id ?? DEFAULT_FRIEND_ID,
+        { limit: args.limit }
+      );
+
+      if (!result.tracks || result.tracks.length === 0) {
+        return { content: [{ type: "text", text: "No similar tracks found." }] };
+      }
+
+      const list = result.tracks
+        .map((t) => `• ${t.title} — ${t.artist} (${t.album})${t.bpm ? ` BPM:${t.bpm}` : ""}${t.key ? `, ${t.key}` : ""}${t.danceability ? `, dance:${t.danceability}` : ""} [dist: ${Number(t.distance).toFixed(4)}]`)
+        .join("\n");
+
+      return {
+        content: [{
+          type: "text",
+          text: `Similar vibe tracks (${result.count} found):\n\n${list}`,
+        }],
       };
     }
 
@@ -716,48 +697,36 @@ ${track.soundcloud_url ? `- SoundCloud: ${track.soundcloud_url}` : ""}
 
 // Create and start server
 const server = new Server(
-  {
-    name: "groovenet-dj",
-    version: "1.0.0",
-  },
-  {
-    capabilities: {
-      tools: {},
-    },
-  }
+  { name: "groovenet-dj", version: "1.0.0" },
+  { capabilities: { tools: {} } }
 );
 
-// List tools handler
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return { tools };
-});
+server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 
-// Call tool handler
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
-    const result = await handleToolCall(request.params.name, request.params.arguments);
-    return result;
-  } catch (error: any) {
+    return await handleToolCall(
+      request.params.name,
+      (request.params.arguments ?? {}) as ToolArgs
+    );
+  } catch (error: unknown) {
     return {
-      content: [
-        {
-          type: "text",
-          text: `Error: ${error.message}`,
-        },
-      ],
+      content: [{
+        type: "text",
+        text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+      }],
       isError: true,
     };
   }
 });
 
-// Start the server
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("Groovenet MCP Server running on stdio");
 }
 
-main().catch((error) => {
+main().catch((error: unknown) => {
   console.error("Fatal error in main():", error);
   process.exit(1);
 });

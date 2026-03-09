@@ -1,0 +1,6 @@
+{
+  "name": "dj-playlist",
+  "private": true,
+  "workspaces": ["packages/*", "mcp-server"],
+  "engines": { "node": ">=20" }
+}
