@@ -555,7 +555,6 @@ DATABASE_URL=postgres://djplaylist:djplaylist@localhost:5432/djplaylist
 # MeiliSearch
 MEILISEARCH_API_KEY=mysupersecretkey
 MEILISEARCH_HOST=http://meili:7700
-MEILISEARCH_EXTERNAL_HOST=http://localhost:7700
 MEILI_PARENT_KEY=sample_meili_parent_key
 MEILI_PARENT_KEY_UID=sample_parentkey_uid
 
