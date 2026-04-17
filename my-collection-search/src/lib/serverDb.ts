@@ -19,11 +19,7 @@ function createPool(): Pool {
 
 function getPool(): Pool {
   if (!globalThis.__mcsDbPool) {
-    const pool = createPool();
-    if (process.env.NODE_ENV !== "production") {
-      globalThis.__mcsDbPool = pool;
-    }
-    return pool;
+    globalThis.__mcsDbPool = createPool();
   }
   return globalThis.__mcsDbPool;
 }
