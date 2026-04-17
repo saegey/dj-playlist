@@ -39,7 +39,7 @@ export async function GET() {
 
     for (const manifestFile of manifestFiles) {
       const { manifest, username } = parseManifestFile(manifestFile);
-      const releaseIds: string[] = manifest.releaseIds || [];
+      const releaseIds: string[] = (manifest.releaseIds || []).map((id: unknown) => String(id));
       const missingFiles: string[] = [];
       const validFiles: string[] = [];
 
@@ -103,7 +103,7 @@ export async function POST() {
 
     for (const manifestFile of manifestFiles) {
       const { manifest, username } = parseManifestFile(manifestFile);
-      const releaseIds: string[] = manifest.releaseIds || [];
+      const releaseIds: string[] = (manifest.releaseIds || []).map((id: unknown) => String(id));
       const validReleaseIds: string[] = [];
       const removedReleaseIds: string[] = [];
 
