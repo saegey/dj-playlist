@@ -238,7 +238,7 @@ export function getAllTracksFromManifests(): DiscogsTrack[] {
   const allTracks: DiscogsTrack[] = [];
   for (const manifestFile of manifestFiles) {
     const { manifest, username } = parseManifestFile(manifestFile);
-    const releaseIds: string[] = manifest.releaseIds || [];
+    const releaseIds: string[] = (manifest.releaseIds || []).map((id: unknown) => String(id));
     for (const releaseId of releaseIds) {
       const releasePath = getReleasePath(username, releaseId);
       if (!releasePath) continue;

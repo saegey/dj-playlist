@@ -42,7 +42,7 @@ export async function POST() {
             encoder.encode(`Friend ID for ${username}: ${friendId}\n`)
           );
 
-          const releaseIds: string[] = manifest.releaseIds || [];
+          const releaseIds: string[] = (manifest.releaseIds || []).map((id: unknown) => String(id));
           controller.enqueue(
             encoder.encode(`Found ${releaseIds.length} releases\n\n`)
           );
