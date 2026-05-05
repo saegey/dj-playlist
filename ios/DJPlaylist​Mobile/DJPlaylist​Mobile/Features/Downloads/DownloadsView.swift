@@ -38,8 +38,8 @@ struct DownloadsView: View {
                         ForEach(tracks) { track in
                             HStack {
                                 VStack(alignment: .leading) {
-                                    Text(track.title ?? "Untitled")
-                                    Text(track.artist ?? "Unknown artist")
+                                    Text(track.displayTitle)
+                                    Text(track.displayArtist)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }

@@ -5,7 +5,8 @@ struct PlaylistsView: View {
     @State private var playlists: [Playlist] = []
     @State private var selectedPlaylist: Playlist?
     @State private var tracks: [Track] = []
-    @State private var isLoading = false
+    @State private var isLoadingPlaylists = false
+    @State private var isLoadingTracks = false
     @State private var errorMessage: String?
 
     var body: some View {
@@ -31,7 +32,7 @@ struct PlaylistsView: View {
                 }
             }
             .overlay {
-                if isLoading && playlists.isEmpty {
+                if isLoadingPlaylists && playlists.isEmpty {
                     ProgressView("Loading playlists...")
                 }
             }
@@ -46,12 +47,25 @@ struct PlaylistsView: View {
             }
             .sheet(item: $selectedPlaylist) { playlist in
                 NavigationStack {
-                    List(tracks) { track in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(track.title ?? "Untitled")
-                            Text(track.artist ?? "Unknown artist")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                    Group {
+                        if isLoadingTracks {
+                            ProgressView("Loading tracks...")
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if tracks.isEmpty {
+                            ContentUnavailableView(
+                                "No Tracks",
+                                systemImage: "music.note.list",
+                                description: Text("This playlist did not return any tracks.")
+                            )
+                        } else {
+                            List(tracks) { track in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(track.displayTitle)
+                                    Text(track.displayArtist)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                         }
                     }
                     .navigationTitle(playlist.name)
@@ -74,8 +88,8 @@ struct PlaylistsView: View {
     private func loadPlaylists() async {
         guard let service else { return }
 
-        isLoading = true
-        defer { isLoading = false }
+        isLoadingPlaylists = true
+        defer { isLoadingPlaylists = false }
 
         do {
             playlists = try await service.fetchPlaylists()
@@ -86,9 +100,13 @@ struct PlaylistsView: View {
 
     private func loadTracks(for playlist: Playlist) async {
         guard let service else { return }
+        selectedPlaylist = playlist
+        tracks = []
+        isLoadingTracks = true
+        defer { isLoadingTracks = false }
+
         do {
             tracks = try await service.fetchTracks(for: playlist.id)
-            selectedPlaylist = playlist
         } catch {
             errorMessage = error.localizedDescription
         }

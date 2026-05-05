@@ -28,19 +28,28 @@ struct ServerSetupView: View {
                     }
                     .disabled(isTesting)
                 }
-
-                if let errorMessage {
-                    Section("Error") {
-                        Text(errorMessage)
-                            .foregroundStyle(.red)
-                    }
-                }
             }
             .navigationTitle("Server Setup")
             .onAppear {
                 urlText = appState.serverURLString
             }
+            .alert("Connection Failed", isPresented: errorIsPresented) {
+                Button("OK") { errorMessage = nil }
+            } message: {
+                Text(errorMessage ?? "Unknown error")
+            }
         }
+    }
+
+    private var errorIsPresented: Binding<Bool> {
+        Binding(
+            get: { errorMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    errorMessage = nil
+                }
+            }
+        )
     }
 
     private func testAndSave() async {

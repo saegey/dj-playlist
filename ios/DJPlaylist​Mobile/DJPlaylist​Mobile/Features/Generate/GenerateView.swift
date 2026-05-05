@@ -38,8 +38,8 @@ struct GenerateView: View {
                     Section("Result (\(generatedTracks.count) tracks)") {
                         ForEach(generatedTracks) { track in
                             VStack(alignment: .leading) {
-                                Text(track.title ?? "Untitled")
-                                Text(track.artist ?? "Unknown artist")
+                                Text(track.displayTitle)
+                                Text(track.displayArtist)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
