@@ -9,10 +9,23 @@ final class AppState: ObservableObject {
         }
     }
 
+    @Published var defaultFriendID: Int? {
+        didSet {
+            if let defaultFriendID {
+                UserDefaults.standard.set(defaultFriendID, forKey: Self.defaultFriendIDKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: Self.defaultFriendIDKey)
+            }
+        }
+    }
+
     static let serverURLKey = "mobile.serverURL"
+    static let defaultFriendIDKey = "mobile.defaultFriendID"
 
     init() {
         serverURLString = UserDefaults.standard.string(forKey: Self.serverURLKey) ?? ""
+        let storedFriendID = UserDefaults.standard.integer(forKey: Self.defaultFriendIDKey)
+        defaultFriendID = storedFriendID != 0 ? storedFriendID : nil
     }
 
     var hasValidServerURL: Bool {

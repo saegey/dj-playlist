@@ -1,6 +1,6 @@
 import Foundation
 
-struct Playlist: Decodable, Identifiable {
+struct Playlist: Decodable, Identifiable, Hashable {
     let id: Int
     let name: String
     let createdAt: String?
@@ -17,9 +17,11 @@ struct Playlist: Decodable, Identifiable {
 struct Track: Decodable, Identifiable, Hashable {
     let trackID: String
     let friendID: Int?
-    let position: Int?
+    let position: String?
     let title: String?
     let artist: String?
+    let duration: String?
+    let albumThumbnailURL: String?
     let localAudioURL: String?
     let bpm: Double?
     let embedding: String?
@@ -35,6 +37,12 @@ struct Track: Decodable, Identifiable, Hashable {
         }
         return "Track reference"
     }
+    var displayPosition: String? { position?.nonEmpty }
+    var displayDuration: String? { duration?.nonEmpty }
+    var albumArtURL: URL? {
+        guard let albumThumbnailURL = albumThumbnailURL?.nonEmpty else { return nil }
+        return URL(string: albumThumbnailURL)
+    }
 
     enum CodingKeys: String, CodingKey {
         case trackID = "track_id"
@@ -46,6 +54,8 @@ struct Track: Decodable, Identifiable, Hashable {
         case artists
         case creator
         case author
+        case duration
+        case albumThumbnailURL = "album_thumbnail"
         case localAudioURL = "local_audio_url"
         case bpm
         case embedding
@@ -54,9 +64,11 @@ struct Track: Decodable, Identifiable, Hashable {
     init(
         trackID: String,
         friendID: Int?,
-        position: Int?,
+        position: String?,
         title: String?,
         artist: String?,
+        duration: String?,
+        albumThumbnailURL: String?,
         localAudioURL: String?,
         bpm: Double?,
         embedding: String?
@@ -66,6 +78,8 @@ struct Track: Decodable, Identifiable, Hashable {
         self.position = position
         self.title = title
         self.artist = artist
+        self.duration = duration
+        self.albumThumbnailURL = albumThumbnailURL
         self.localAudioURL = localAudioURL
         self.bpm = bpm
         self.embedding = embedding
@@ -76,8 +90,10 @@ struct Track: Decodable, Identifiable, Hashable {
 
         trackID = try container.decode(String.self, forKey: .trackID)
         friendID = try container.decodeIfPresent(Int.self, forKey: .friendID)
-        position = Self.decodeOptionalInt(forKey: .position, from: container)
+        position = Self.decodeOptionalString(forKey: .position, from: container)
         title = try container.decodeIfPresent(String.self, forKey: .title)
+        duration = try container.decodeIfPresent(String.self, forKey: .duration)
+        albumThumbnailURL = try container.decodeIfPresent(String.self, forKey: .albumThumbnailURL)
         localAudioURL = try container.decodeIfPresent(String.self, forKey: .localAudioURL)
         bpm = Self.decodeOptionalDouble(forKey: .bpm, from: container)
         embedding = Self.decodeOptionalEmbedding(from: container)
@@ -99,15 +115,16 @@ struct Track: Decodable, Identifiable, Hashable {
         }
     }
 
-    private static func decodeOptionalInt(
+    private static func decodeOptionalString(
         forKey key: CodingKeys,
         from container: KeyedDecodingContainer<CodingKeys>
-    ) -> Int? {
-        if let intValue = try? container.decodeIfPresent(Int.self, forKey: key) {
-            return intValue
+    ) -> String? {
+        if let stringValue = try? container.decodeIfPresent(String.self, forKey: key),
+           !stringValue.isEmpty {
+            return stringValue
         }
-        if let stringValue = try? container.decodeIfPresent(String.self, forKey: key) {
-            return Int(stringValue.trimmingCharacters(in: .whitespacesAndNewlines))
+        if let intValue = try? container.decodeIfPresent(Int.self, forKey: key) {
+            return String(intValue)
         }
         return nil
     }
@@ -139,6 +156,135 @@ struct Track: Decodable, Identifiable, Hashable {
         }
         if let values = try? container.decodeIfPresent([Int].self, forKey: .embedding) {
             return values.map { String($0) }.joined(separator: ",")
+        }
+        return nil
+    }
+}
+
+struct Album: Decodable, Identifiable, Hashable {
+    let rawID: String?
+    let releaseID: String?
+    let friendID: Int?
+    let artist: String?
+    let name: String?
+    let physicalIdentifier: String?
+    let coverURLString: String?
+    let year: String?
+    let label: String?
+    let format: String?
+    let genres: [String]?
+    let styles: [String]?
+    let trackCount: Int?
+
+    var id: String {
+        if let releaseID = releaseID?.nonEmpty, let friendID {
+            return "\(releaseID):\(friendID)"
+        }
+        return physicalIdentifier?.nonEmpty
+            ?? rawID?.nonEmpty
+            ?? "\(displayArtist)-\(displayName)"
+    }
+
+    var displayArtist: String {
+        artist?.nonEmpty ?? "Unknown artist"
+    }
+
+    var displayName: String {
+        name?.nonEmpty ?? "Unknown album"
+    }
+
+    var displayPhysicalIdentifier: String {
+        physicalIdentifier?.nonEmpty ?? "No physical identifier"
+    }
+
+    var coverArtURL: URL? {
+        guard let coverURLString = coverURLString?.nonEmpty else { return nil }
+        return URL(string: coverURLString)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case rawID = "id"
+        case releaseID = "release_id"
+        case friendID = "friend_id"
+        case artist
+        case artistName = "artist_name"
+        case artists
+        case creator
+        case author
+        case name
+        case title
+        case album
+        case albumName = "album_name"
+        case physicalIdentifier = "physical_identifier"
+        case physicalIdentifierAlt = "physicalIdentifier"
+        case libraryIdentifier = "library_identifier"
+        case coverURLString = "cover"
+        case coverURL = "cover_url"
+        case image
+        case imageURL = "image_url"
+        case albumThumbnail = "album_thumbnail"
+        case audioFileAlbumArtUrl = "audio_file_album_art_url"
+        case year
+        case label
+        case format
+        case genres
+        case styles
+        case trackCount = "track_count"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        rawID = Self.decodeLossyString(forKey: .rawID, from: container)
+        releaseID = Self.decodeLossyString(forKey: .releaseID, from: container)
+        friendID = try container.decodeIfPresent(Int.self, forKey: .friendID)
+        year = Self.decodeLossyString(forKey: .year, from: container)
+        label = Self.decodeLossyString(forKey: .label, from: container)
+        format = Self.decodeLossyString(forKey: .format, from: container)
+        genres = try container.decodeIfPresent([String].self, forKey: .genres)
+        styles = try container.decodeIfPresent([String].self, forKey: .styles)
+        trackCount = try container.decodeIfPresent(Int.self, forKey: .trackCount)
+        physicalIdentifier = Self.decodeLossyString(forKey: .libraryIdentifier, from: container)
+            ?? Self.decodeLossyString(forKey: .physicalIdentifier, from: container)
+            ?? Self.decodeLossyString(forKey: .physicalIdentifierAlt, from: container)
+        coverURLString = Self.decodeLossyString(forKey: .audioFileAlbumArtUrl, from: container)
+            ?? Self.decodeLossyString(forKey: .albumThumbnail, from: container)
+            ?? Self.decodeLossyString(forKey: .coverURLString, from: container)
+            ?? Self.decodeLossyString(forKey: .coverURL, from: container)
+            ?? Self.decodeLossyString(forKey: .image, from: container)
+            ?? Self.decodeLossyString(forKey: .imageURL, from: container)
+        name = Self.decodeLossyString(forKey: .name, from: container)
+            ?? Self.decodeLossyString(forKey: .title, from: container)
+            ?? Self.decodeLossyString(forKey: .album, from: container)
+            ?? Self.decodeLossyString(forKey: .albumName, from: container)
+
+        if let value = Self.decodeLossyString(forKey: .artist, from: container), !value.isEmpty {
+            artist = value
+        } else if let value = Self.decodeLossyString(forKey: .artistName, from: container), !value.isEmpty {
+            artist = value
+        } else if let values = try container.decodeIfPresent([String].self, forKey: .artists), !values.isEmpty {
+            artist = values.joined(separator: ", ")
+        } else if let value = Self.decodeLossyString(forKey: .artists, from: container), !value.isEmpty {
+            artist = value
+        } else if let value = Self.decodeLossyString(forKey: .creator, from: container), !value.isEmpty {
+            artist = value
+        } else if let value = Self.decodeLossyString(forKey: .author, from: container), !value.isEmpty {
+            artist = value
+        } else {
+            artist = nil
+        }
+    }
+
+    private static func decodeLossyString(
+        forKey key: CodingKeys,
+        from container: KeyedDecodingContainer<CodingKeys>
+    ) -> String? {
+        if let stringValue = try? container.decodeIfPresent(String.self, forKey: key),
+           !stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return stringValue
+        }
+        if let intValue = try? container.decodeIfPresent(Int.self, forKey: key) {
+            return String(intValue)
         }
         return nil
     }
@@ -189,6 +335,24 @@ struct PlaylistsResponse: Decodable {
 
 struct TracksResponse: Decodable {
     let tracks: [Track]
+}
+
+struct AlbumSearchResponse: Decodable {
+    let hits: [Album]
+}
+
+struct AlbumDetailResponse: Decodable {
+    let album: Album
+    let tracks: [Track]
+}
+
+struct Friend: Decodable, Identifiable, Hashable {
+    let id: Int
+    let username: String
+}
+
+struct FriendsResponse: Decodable {
+    let results: [Friend]
 }
 
 struct APIErrorResponse: Decodable {

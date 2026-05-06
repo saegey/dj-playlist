@@ -9,21 +9,13 @@ targets:
     sources:
       - path: .
         excludes:
+          - DJPlaylistMobile.xcodeproj
+          - Info.plist
           - README.md
           - project.yml
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.saeg.djplaylistmobile
         SWIFT_VERSION: 5.0
-        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
-        INFOPLIST_KEY_UILaunchScreen_Generation: true
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
     info:
       path: Info.plist
-      properties:
-        CFBundleDisplayName: DJPlaylistMobile
-        UILaunchScreen: {}
-        UIApplicationSceneManifest:
-          UIApplicationSupportsMultipleScenes: false
-        NSAppTransportSecurity:
-          NSAllowsArbitraryLoads: true

@@ -8,9 +8,9 @@ struct MainTabView: View {
                     Label("Playlists", systemImage: "music.note.list")
                 }
 
-            GenerateView()
+            AlbumsView()
                 .tabItem {
-                    Label("Generate", systemImage: "wand.and.stars")
+                    Label("Albums", systemImage: "opticaldisc")
                 }
 
             DownloadsView()

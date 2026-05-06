@@ -7,7 +7,10 @@
 	objects = {
 
 /* Begin PBXFileReference section */
+		716B3CD52FAAAE03004DBA15 /* DJPlaylistMobile.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = DJPlaylistMobile.xcodeproj; sourceTree = "<group>"; };
+		716B3D212FAAB06F004DBA15 /* DJPlaylistMobile.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = DJPlaylistMobile.xcodeproj; sourceTree = "<group>"; };
 		71A0FCCC2FAA429D00481B1B /* DJPlaylist​Mobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DJPlaylist​Mobile.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		71CF7B772FAAACFF00B6DE69 /* DJPlaylistMobile.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = DJPlaylistMobile.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -29,6 +32,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		716B3CD92FAAAE03004DBA15 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		716B3D222FAAB06F004DBA15 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
 		71A0FCC32FAA429D00481B1B = {
 			isa = PBXGroup;
 			children = (
@@ -41,6 +58,13 @@
 			isa = PBXGroup;
 			children = (
 				71A0FCCC2FAA429D00481B1B /* DJPlaylist​Mobile.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		71CF7B792FAAACFF00B6DE69 /* Products */ = {
+			isa = PBXGroup;
+			children = (
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -97,6 +121,20 @@
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 71A0FCCD2FAA429D00481B1B /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 716B3CD92FAAAE03004DBA15 /* Products */;
+					ProjectRef = 716B3CD52FAAAE03004DBA15 /* DJPlaylistMobile.xcodeproj */;
+				},
+				{
+					ProductGroup = 71CF7B792FAAACFF00B6DE69 /* Products */;
+					ProjectRef = 71CF7B772FAAACFF00B6DE69 /* DJPlaylistMobile.xcodeproj */;
+				},
+				{
+					ProductGroup = 716B3D222FAAB06F004DBA15 /* Products */;
+					ProjectRef = 716B3D212FAAB06F004DBA15 /* DJPlaylistMobile.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				71A0FCCB2FAA429D00481B1B /* DJPlaylist​Mobile */,
@@ -261,6 +299,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -293,6 +332,7 @@
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

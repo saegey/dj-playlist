@@ -3,6 +3,32 @@ import Foundation
 struct PlaylistService {
     let client: APIClient
 
+    func fetchAlbums(query: String = "", friendID: Int? = nil) async throws -> [Album] {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let encodedQuery = trimmedQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        var path = "/api/albums?limit=100"
+        if !encodedQuery.isEmpty {
+            path += "&q=\(encodedQuery)"
+        }
+        if let friendID {
+            path += "&friend_id=\(friendID)"
+        }
+        let data = try await client.rawRequest(path: path)
+        let response = try JSONDecoder().decode(AlbumSearchResponse.self, from: data)
+        return response.hits
+    }
+
+    func fetchFriends() async throws -> [Friend] {
+        let response: FriendsResponse = try await client.request(path: "/api/friends", method: "GET")
+        return response.results
+    }
+
+    func fetchAlbumDetail(releaseID: String, friendID: Int) async throws -> AlbumDetailResponse {
+        let encodedReleaseID = releaseID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? releaseID
+        let path = "/api/albums/\(encodedReleaseID)?friend_id=\(friendID)"
+        return try await client.request(path: path, method: "GET")
+    }
+
     func fetchPlaylists() async throws -> [Playlist] {
         let data = try await client.rawRequest(path: "/api/playlists")
 
@@ -41,7 +67,7 @@ struct PlaylistService {
     }
 
     func testConnection() async throws {
-        _ = try await client.rawRequest(path: "/api/openapi.mobile.json")
+        _ = try await client.rawRequest(path: "/api/albums?limit=1")
     }
 
     private func decodePlaylistsResponse(from data: Data) throws -> PlaylistsResponse {
@@ -100,6 +126,8 @@ struct PlaylistService {
                 position: reference.position ?? match.position,
                 title: match.title ?? reference.title,
                 artist: match.artist ?? reference.artist,
+                duration: match.duration ?? reference.duration,
+                albumThumbnailURL: match.albumThumbnailURL ?? reference.albumThumbnailURL,
                 localAudioURL: match.localAudioURL ?? reference.localAudioURL,
                 bpm: match.bpm ?? reference.bpm,
                 embedding: match.embedding ?? reference.embedding
