@@ -79,9 +79,15 @@ struct APIClient {
         do {
             (data, response) = try await URLSession.shared.data(for: request)
         } catch let urlError as URLError {
+            if urlError.code == .cancelled {
+                throw CancellationError()
+            }
             Self.debugLogTransportError(url: url, error: urlError)
             throw APIError.networkError(Self.message(for: urlError, url: url))
         } catch {
+            if error is CancellationError {
+                throw error
+            }
             Self.debugLogUnexpectedError(url: url, error: error)
             throw APIError.networkError(error.localizedDescription)
         }

@@ -31,9 +31,12 @@ private struct QueueEntry: Identifiable {
 @MainActor
 final class AudioPlayerService: ObservableObject {
     @Published private(set) var currentTrackID: String?
+    @Published private(set) var currentTrack: Track?
     @Published private(set) var isPlaying = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var queuedTrackIDs: [String] = []
+    @Published private(set) var elapsedTime: Double = 0
+    @Published private(set) var totalDuration: Double = 0
 
     private let fileManager = FileManager.default
     private let player = AVQueuePlayer()
@@ -46,6 +49,10 @@ final class AudioPlayerService: ObservableObject {
     private var timeControlStatusObservation: NSKeyValueObservation?
     private var timeObserverToken: Any?
     private var artworkLoadTask: Task<Void, Never>?
+    private var pendingTracks: [Track] = []
+    private var pendingServerURL: URL?
+    private var isPreparingMore = false
+    private let lookAheadCount = 3
 
     init() {
         configurePlayerObservers()
@@ -78,13 +85,18 @@ final class AudioPlayerService: ObservableObject {
 
         try configureAudioSession()
 
-        let preparedEntries = try await prepareQueueEntries(for: tracks, serverURL: serverURL)
+        pendingTracks = Array(tracks[startIndex...])
+        pendingServerURL = serverURL
+
+        let initialBatch = Array(pendingTracks.prefix(lookAheadCount))
+        pendingTracks.removeFirst(min(lookAheadCount, pendingTracks.count))
+
+        let preparedEntries = try await prepareQueueEntries(for: initialBatch, serverURL: serverURL)
         guard !preparedEntries.isEmpty else {
             throw AudioPlayerError.playbackFailed("No playable tracks were found in this playlist.")
         }
 
-        let clampedIndex = min(startIndex, preparedEntries.count - 1)
-        replaceQueue(with: preparedEntries, startAt: clampedIndex)
+        replaceQueue(with: preparedEntries, startAt: 0)
         player.play()
         updatePlaybackState()
         refreshNowPlayingInfo()
@@ -101,10 +113,15 @@ final class AudioPlayerService: ObservableObject {
         player.removeAllItems()
         queueEntries = []
         queuedTrackIDs = []
+        pendingTracks = []
+        pendingServerURL = nil
         currentTrackID = nil
+        currentTrack = nil
         currentIndex = 0
         errorMessage = nil
         isPlaying = false
+        elapsedTime = 0
+        totalDuration = 0
         artworkLoadTask?.cancel()
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
@@ -124,6 +141,7 @@ final class AudioPlayerService: ObservableObject {
         }
 
         currentTrackID = entries[startIndex].track.id
+        currentTrack = entries[startIndex].track
     }
 
     private func prepareQueueEntries(for tracks: [Track], serverURL: URL) async throws -> [QueueEntry] {
@@ -183,10 +201,20 @@ final class AudioPlayerService: ObservableObject {
             }
         }
 
-        let interval = CMTime(seconds: 1, preferredTimescale: 600)
-        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] _ in
+        let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
+        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             MainActor.assumeIsolated {
-                self?.refreshNowPlayingInfo()
+                guard let self else { return }
+                self.elapsedTime = time.seconds.isFinite ? time.seconds : 0
+                if let item = self.player.currentItem {
+                    let dur = item.duration.seconds
+                    if dur.isFinite {
+                        self.totalDuration = dur
+                    } else if let track = self.queueEntries[safe: self.currentIndex]?.track {
+                        self.totalDuration = self.playbackDurationSeconds(for: track) ?? 0
+                    }
+                }
+                self.refreshNowPlayingInfo()
             }
         }
     }
@@ -228,11 +256,16 @@ final class AudioPlayerService: ObservableObject {
         }
     }
 
+    func skipToNext() {
+        _ = skipToNextTrack()
+    }
+
     private func skipToNextTrack() -> MPRemoteCommandHandlerStatus {
         guard currentIndex + 1 < queueEntries.count else { return .commandFailed }
         currentIndex += 1
         player.advanceToNextItem()
         currentTrackID = queueEntries[currentIndex].track.id
+        currentTrack = queueEntries[currentIndex].track
         player.play()
         updatePlaybackState()
         refreshNowPlayingInfo()
@@ -261,6 +294,7 @@ final class AudioPlayerService: ObservableObject {
             player.insert(AVPlayerItem(url: entry.localFileURL), after: nil)
         }
         currentTrackID = queueEntries[currentIndex].track.id
+        currentTrack = queueEntries[currentIndex].track
         player.play()
         updatePlaybackState()
         refreshNowPlayingInfo()
@@ -271,6 +305,7 @@ final class AudioPlayerService: ObservableObject {
         guard item != nil else {
             if queueEntries.isEmpty {
                 currentTrackID = nil
+                currentTrack = nil
             }
             refreshNowPlayingInfo()
             return
@@ -278,6 +313,7 @@ final class AudioPlayerService: ObservableObject {
 
         guard queueEntries.indices.contains(currentIndex) else { return }
         currentTrackID = queueEntries[currentIndex].track.id
+        currentTrack = queueEntries[currentIndex].track
         refreshNowPlayingInfo()
     }
 
@@ -285,10 +321,42 @@ final class AudioPlayerService: ObservableObject {
         if currentIndex + 1 < queueEntries.count {
             currentIndex += 1
             currentTrackID = queueEntries[currentIndex].track.id
+            currentTrack = queueEntries[currentIndex].track
             updatePlaybackState()
             refreshNowPlayingInfo()
+            prepareMoreIfNeeded()
+        } else if !pendingTracks.isEmpty {
+            currentIndex += 1
+            prepareMoreIfNeeded()
         } else {
             stop()
+        }
+    }
+
+    private func prepareMoreIfNeeded() {
+        let itemsAhead = queueEntries.count - currentIndex - 1
+        guard itemsAhead < lookAheadCount, !pendingTracks.isEmpty, !isPreparingMore,
+              let serverURL = pendingServerURL else { return }
+
+        isPreparingMore = true
+        let batch = Array(pendingTracks.prefix(lookAheadCount))
+        pendingTracks.removeFirst(min(lookAheadCount, pendingTracks.count))
+
+        Task {
+            defer { isPreparingMore = false }
+            let entries = (try? await prepareQueueEntries(for: batch, serverURL: serverURL)) ?? []
+            for entry in entries {
+                queueEntries.append(entry)
+                queuedTrackIDs.append(entry.track.id)
+                player.insert(AVPlayerItem(url: entry.localFileURL), after: nil)
+            }
+            if currentTrackID == nil, let first = entries.first {
+                currentTrackID = first.track.id
+                currentTrack = first.track
+                player.play()
+                updatePlaybackState()
+                refreshNowPlayingInfo()
+            }
         }
     }
 
@@ -365,10 +433,11 @@ final class AudioPlayerService: ObservableObject {
     }
 
     private func playbackDurationSeconds(for track: Track) -> Double? {
+        if let seconds = track.durationSeconds, seconds > 0 {
+            return seconds
+        }
         guard let duration = track.displayDuration else { return nil }
         let components = duration.split(separator: ":").map { Int($0) ?? 0 }
-        guard !components.isEmpty else { return nil }
-
         if components.count == 2 {
             return Double((components[0] * 60) + components[1])
         }
@@ -416,6 +485,11 @@ final class AudioPlayerService: ObservableObject {
     }
 
     private func prepareLocalPlaybackURL(from remoteURL: URL, track: Track) async throws -> URL {
+        if let downloadedFileURL = downloadedAudioFileURL(for: track),
+           fileManager.fileExists(atPath: downloadedFileURL.path) {
+            return downloadedFileURL
+        }
+
         let destinationURL = try cachedAudioFileURL(for: track, remoteURL: remoteURL)
         if fileManager.fileExists(atPath: destinationURL.path) {
             return destinationURL
@@ -436,6 +510,12 @@ final class AudioPlayerService: ObservableObject {
         return destinationURL
     }
 
+    private func downloadedAudioFileURL(for track: Track) -> URL? {
+        let filename = extractFilename(from: track.localAudioURL ?? "")
+        guard !filename.isEmpty else { return nil }
+        return DownloadService.downloadedFileURL(for: filename)
+    }
+
     private func cachedAudioFileURL(for track: Track, remoteURL: URL) throws -> URL {
         guard let cachesDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first else {
             throw AudioPlayerError.invalidAudioURL
@@ -454,6 +534,16 @@ final class AudioPlayerService: ObservableObject {
             .appendingPathComponent("\(safeTrackID).\(safeExtension)")
     }
 
+    var hasNext: Bool {
+        currentIndex + 1 < queueEntries.count
+    }
+
+    func resume() {
+        player.play()
+        updatePlaybackState()
+        refreshNowPlayingInfo()
+    }
+
     deinit {
         if let playbackEndedObserver {
             NotificationCenter.default.removeObserver(playbackEndedObserver)
@@ -464,5 +554,11 @@ final class AudioPlayerService: ObservableObject {
         if let timeObserverToken {
             player.removeTimeObserver(timeObserverToken)
         }
+    }
+}
+
+private extension Array {
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

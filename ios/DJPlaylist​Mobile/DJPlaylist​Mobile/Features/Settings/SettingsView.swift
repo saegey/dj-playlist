@@ -8,6 +8,18 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    HStack {
+                        Spacer()
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 120)
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
+                }
+
                 Section("Server") {
                     Text(appState.serverURLString.isEmpty ? "Not configured" : appState.serverURLString)
                         .font(.footnote)

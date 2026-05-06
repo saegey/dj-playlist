@@ -17,14 +17,18 @@ struct Playlist: Decodable, Identifiable, Hashable {
 struct Track: Decodable, Identifiable, Hashable {
     let trackID: String
     let friendID: Int?
+    let releaseID: String?
     let position: String?
     let title: String?
     let artist: String?
+    let albumName: String?
+    let physicalIdentifier: String?
     let duration: String?
     let albumThumbnailURL: String?
     let localAudioURL: String?
     let bpm: Double?
     let embedding: String?
+    let durationSeconds: Double?
 
     var id: String { trackID }
     var displayTitle: String { title?.nonEmpty ?? trackID }
@@ -38,7 +42,19 @@ struct Track: Decodable, Identifiable, Hashable {
         return "Track reference"
     }
     var displayPosition: String? { position?.nonEmpty }
-    var displayDuration: String? { duration?.nonEmpty }
+    var displayAlbumName: String { albumName?.nonEmpty ?? "Unknown album" }
+    var displayPhysicalIdentifier: String? { physicalIdentifier?.nonEmpty }
+    var displayDuration: String? {
+        if let duration = duration?.nonEmpty {
+            return duration
+        }
+        if let seconds = durationSeconds, seconds > 0 {
+            let mins = Int(seconds) / 60
+            let secs = Int(seconds) % 60
+            return String(format: "%d:%02d", mins, secs)
+        }
+        return nil
+    }
     var albumArtURL: URL? {
         guard let albumThumbnailURL = albumThumbnailURL?.nonEmpty else { return nil }
         return URL(string: albumThumbnailURL)
@@ -47,6 +63,7 @@ struct Track: Decodable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case trackID = "track_id"
         case friendID = "friend_id"
+        case releaseID = "release_id"
         case position
         case title
         case artist
@@ -54,35 +71,49 @@ struct Track: Decodable, Identifiable, Hashable {
         case artists
         case creator
         case author
+        case albumName = "album_name"
+        case album
+        case physicalIdentifier = "physical_identifier"
+        case physicalIdentifierAlt = "physicalIdentifier"
+        case libraryIdentifier = "library_identifier"
         case duration
         case albumThumbnailURL = "album_thumbnail"
         case localAudioURL = "local_audio_url"
         case bpm
         case embedding
+        case durationSeconds = "duration_seconds"
     }
 
     init(
         trackID: String,
         friendID: Int?,
+        releaseID: String?,
         position: String?,
         title: String?,
         artist: String?,
+        albumName: String?,
+        physicalIdentifier: String?,
         duration: String?,
         albumThumbnailURL: String?,
         localAudioURL: String?,
         bpm: Double?,
-        embedding: String?
+        embedding: String?,
+        durationSeconds: Double? = nil
     ) {
         self.trackID = trackID
         self.friendID = friendID
+        self.releaseID = releaseID
         self.position = position
         self.title = title
         self.artist = artist
+        self.albumName = albumName
+        self.physicalIdentifier = physicalIdentifier
         self.duration = duration
         self.albumThumbnailURL = albumThumbnailURL
         self.localAudioURL = localAudioURL
         self.bpm = bpm
         self.embedding = embedding
+        self.durationSeconds = durationSeconds
     }
 
     init(from decoder: Decoder) throws {
@@ -90,12 +121,23 @@ struct Track: Decodable, Identifiable, Hashable {
 
         trackID = try container.decode(String.self, forKey: .trackID)
         friendID = try container.decodeIfPresent(Int.self, forKey: .friendID)
+        releaseID = Self.decodeOptionalString(forKey: .releaseID, from: container)
         position = Self.decodeOptionalString(forKey: .position, from: container)
         title = try container.decodeIfPresent(String.self, forKey: .title)
+        if let albumNameValue = try container.decodeIfPresent(String.self, forKey: .albumName),
+           !albumNameValue.isEmpty {
+            albumName = albumNameValue
+        } else {
+            albumName = try container.decodeIfPresent(String.self, forKey: .album)
+        }
+        physicalIdentifier = Self.decodeOptionalString(forKey: .libraryIdentifier, from: container)
+            ?? Self.decodeOptionalString(forKey: .physicalIdentifier, from: container)
+            ?? Self.decodeOptionalString(forKey: .physicalIdentifierAlt, from: container)
         duration = try container.decodeIfPresent(String.self, forKey: .duration)
         albumThumbnailURL = try container.decodeIfPresent(String.self, forKey: .albumThumbnailURL)
         localAudioURL = try container.decodeIfPresent(String.self, forKey: .localAudioURL)
         bpm = Self.decodeOptionalDouble(forKey: .bpm, from: container)
+        durationSeconds = Self.decodeOptionalDouble(forKey: .durationSeconds, from: container)
         embedding = Self.decodeOptionalEmbedding(from: container)
 
         if let value = try container.decodeIfPresent(String.self, forKey: .artist), !value.isEmpty {
@@ -232,6 +274,36 @@ struct Album: Decodable, Identifiable, Hashable {
         case trackCount = "track_count"
     }
 
+    init(
+        rawID: String?,
+        releaseID: String?,
+        friendID: Int?,
+        artist: String?,
+        name: String?,
+        physicalIdentifier: String?,
+        coverURLString: String?,
+        year: String?,
+        label: String?,
+        format: String?,
+        genres: [String]?,
+        styles: [String]?,
+        trackCount: Int?
+    ) {
+        self.rawID = rawID
+        self.releaseID = releaseID
+        self.friendID = friendID
+        self.artist = artist
+        self.name = name
+        self.physicalIdentifier = physicalIdentifier
+        self.coverURLString = coverURLString
+        self.year = year
+        self.label = label
+        self.format = format
+        self.genres = genres
+        self.styles = styles
+        self.trackCount = trackCount
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
@@ -297,6 +369,21 @@ private extension String {
     }
 }
 
+struct CreatePlaylistRequest: Encodable {
+    let name: String
+    let tracks: [PlaylistTrackRef]
+}
+
+struct PlaylistTrackRef: Encodable {
+    let track_id: String
+    let friend_id: Int
+}
+
+struct PatchPlaylistRequest: Encodable {
+    let id: Int
+    let tracks: [PlaylistTrackRef]
+}
+
 struct GeneticRequest: Encodable {
     let playlist: [TrackPayload]
 }
@@ -335,6 +422,10 @@ struct PlaylistsResponse: Decodable {
 
 struct TracksResponse: Decodable {
     let tracks: [Track]
+}
+
+struct TrackSearchResponse: Decodable {
+    let hits: [Track]
 }
 
 struct AlbumSearchResponse: Decodable {

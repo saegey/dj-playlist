@@ -18,6 +18,21 @@ struct PlaylistService {
         return response.hits
     }
 
+    func searchTracks(query: String = "", friendID: Int? = nil) async throws -> [Track] {
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let encodedQuery = trimmedQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        var path = "/api/tracks/search?limit=100"
+        if !encodedQuery.isEmpty {
+            path += "&q=\(encodedQuery)"
+        }
+        if let friendID {
+            path += "&filter=friend_id%20%3D%20\(friendID)"
+        }
+        let data = try await client.rawRequest(path: path)
+        let response = try JSONDecoder().decode(TrackSearchResponse.self, from: data)
+        return response.hits
+    }
+
     func fetchFriends() async throws -> [Friend] {
         let response: FriendsResponse = try await client.request(path: "/api/friends", method: "GET")
         return response.results
@@ -31,6 +46,24 @@ struct PlaylistService {
 
     func fetchPlaylists() async throws -> [Playlist] {
         let data = try await client.rawRequest(path: "/api/playlists")
+
+        do {
+            return try JSONDecoder().decode([Playlist].self, from: data)
+        } catch {
+            let response = try decodePlaylistsResponse(from: data)
+            return response.playlists
+        }
+    }
+
+    func fetchTrackDetail(trackID: String, friendID: Int) async throws -> Track {
+        let encodedTrackID = trackID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? trackID
+        let path = "/api/tracks/\(encodedTrackID)?friend_id=\(friendID)"
+        return try await client.request(path: path, method: "GET")
+    }
+
+    func fetchPlaylists(forTrackID trackID: String, friendID: Int) async throws -> [Playlist] {
+        let encodedTrackID = trackID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? trackID
+        let data = try await client.rawRequest(path: "/api/tracks/\(encodedTrackID)/playlists?friend_id=\(friendID)")
 
         do {
             return try JSONDecoder().decode([Playlist].self, from: data)
@@ -64,6 +97,39 @@ struct PlaylistService {
         )
 
         return response.optimizedPlaylist ?? response.playlist ?? []
+    }
+
+    func fetchSimilarTracks(trackID: String, friendID: Int, limit: Int = 50) async throws -> [Track] {
+        let encodedTrackID = trackID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trackID
+        let path = "/api/embeddings/similar?track_id=\(encodedTrackID)&friend_id=\(friendID)&limit=\(limit)"
+        let data = try await client.rawRequest(path: path)
+
+        if let tracks = try? JSONDecoder().decode([Track].self, from: data) {
+            return tracks
+        }
+        if let response = try? JSONDecoder().decode(TracksResponse.self, from: data) {
+            return response.tracks
+        }
+        let response = try JSONDecoder().decode(TrackSearchResponse.self, from: data)
+        return response.hits
+    }
+
+    func addTrackToPlaylist(playlistID: Int, trackID: String, friendID: Int) async throws {
+        let existingTracks = try await fetchTracks(for: playlistID)
+        var refs = existingTracks.compactMap { track -> PlaylistTrackRef? in
+            guard let fid = track.friendID else { return nil }
+            return PlaylistTrackRef(track_id: track.trackID, friend_id: fid)
+        }
+        refs.append(PlaylistTrackRef(track_id: trackID, friend_id: friendID))
+        let payload = PatchPlaylistRequest(id: playlistID, tracks: refs)
+        let body = try JSONEncoder().encode(payload)
+        _ = try await client.rawRequest(path: "/api/playlists", method: "PATCH", body: body)
+    }
+
+    func createPlaylist(name: String) async throws -> Playlist {
+        let payload = CreatePlaylistRequest(name: name, tracks: [])
+        let body = try JSONEncoder().encode(payload)
+        return try await client.request(path: "/api/playlists", method: "POST", body: body)
     }
 
     func testConnection() async throws {
@@ -123,14 +189,18 @@ struct PlaylistService {
             return Track(
                 trackID: match.trackID,
                 friendID: reference.friendID ?? match.friendID,
+                releaseID: reference.releaseID ?? match.releaseID,
                 position: reference.position ?? match.position,
                 title: match.title ?? reference.title,
                 artist: match.artist ?? reference.artist,
+                albumName: match.albumName ?? reference.albumName,
+                physicalIdentifier: match.physicalIdentifier ?? reference.physicalIdentifier,
                 duration: match.duration ?? reference.duration,
                 albumThumbnailURL: match.albumThumbnailURL ?? reference.albumThumbnailURL,
                 localAudioURL: match.localAudioURL ?? reference.localAudioURL,
                 bpm: match.bpm ?? reference.bpm,
-                embedding: match.embedding ?? reference.embedding
+                embedding: match.embedding ?? reference.embedding,
+                durationSeconds: match.durationSeconds ?? reference.durationSeconds
             )
         } catch {
             return reference

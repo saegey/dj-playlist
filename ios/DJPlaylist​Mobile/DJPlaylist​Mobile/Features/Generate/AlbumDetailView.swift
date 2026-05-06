@@ -8,6 +8,16 @@ struct AlbumDetailView: View {
     @State private var tracks: [Track] = []
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var showSimilarVibes = false
+    @State private var similarVibesTrack: Track?
+    @State private var similarTracks: [Track] = []
+    @State private var isLoadingSimilar = false
+    @State private var similarError: String?
+    @State private var showAddToPlaylist = false
+    @State private var addToPlaylistTrack: Track?
+    @State private var allPlaylists: [Playlist] = []
+    @State private var isLoadingAllPlaylists = false
+    @State private var addToPlaylistError: String?
 
     private var displayAlbum: Album { detailAlbum ?? album }
 
@@ -54,6 +64,12 @@ struct AlbumDetailView: View {
             Button("OK") { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "")
+        }
+        .sheet(isPresented: $showSimilarVibes) {
+            similarVibesSheet
+        }
+        .sheet(isPresented: $showAddToPlaylist) {
+            addToPlaylistSheet
         }
     }
 
@@ -189,18 +205,23 @@ struct AlbumDetailView: View {
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
                         }
-
-                        Button {
-                            togglePlayback(for: track)
-                        } label: {
-                            Image(systemName: playbackIconName(for: track))
-                                .font(.title3)
-                                .frame(width: 32, height: 32)
-                        }
-                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal)
                     .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+                    .contextMenu {
+                        Button("Play", systemImage: "play.fill") {
+                            togglePlayback(for: track)
+                        }
+                        Button("Similar Vibes", systemImage: "waveform.path") {
+                            similarVibesTrack = track
+                            showSimilarVibes = true
+                        }
+                        Button("Add to Playlist", systemImage: "text.badge.plus") {
+                            addToPlaylistTrack = track
+                            showAddToPlaylist = true
+                        }
+                    }
 
                     if track.id != tracks.last?.id {
                         Divider()
@@ -262,6 +283,132 @@ struct AlbumDetailView: View {
             return audioPlayer.isPlaying ? "pause.circle.fill" : "play.circle.fill"
         }
         return "play.circle"
+    }
+
+    private var similarVibesSheet: some View {
+        NavigationStack {
+            List(similarTracks) { similarTrack in
+                NavigationLink {
+                    TrackDetailView(track: similarTrack)
+                        .environmentObject(appState)
+                        .environmentObject(audioPlayer)
+                } label: {
+                    HStack(alignment: .top, spacing: 12) {
+                        AsyncImage(url: similarTrack.albumArtURL) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 10).fill(.quaternary)
+                                Image(systemName: "music.note").foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(width: 48, height: 48)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(similarTrack.displayTitle).font(.headline).lineLimit(2)
+                            Text(similarTrack.displayArtist).font(.subheadline).foregroundStyle(.secondary).lineLimit(1)
+                            if let bpm = similarTrack.bpm {
+                                Text("\(String(format: "%.0f", bpm)) BPM").font(.caption).foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+                }
+            }
+            .overlay {
+                if isLoadingSimilar {
+                    ProgressView("Finding similar vibes...")
+                } else if let similarError {
+                    ContentUnavailableView("Error", systemImage: "exclamationmark.triangle", description: Text(similarError))
+                } else if similarTracks.isEmpty {
+                    ContentUnavailableView("No Similar Tracks", systemImage: "waveform.path", description: Text("No tracks with similar vibes were found."))
+                }
+            }
+            .navigationTitle("Similar Vibes")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { showSimilarVibes = false }
+                }
+            }
+            .task { await loadSimilarTracks() }
+        }
+    }
+
+    private func loadSimilarTracks() async {
+        guard let service, let track = similarVibesTrack, let friendID = track.friendID else { return }
+        isLoadingSimilar = true
+        similarError = nil
+        similarTracks = []
+        defer { isLoadingSimilar = false }
+        do {
+            similarTracks = try await service.fetchSimilarTracks(trackID: track.trackID, friendID: friendID)
+        } catch is CancellationError {
+            return
+        } catch {
+            similarError = error.localizedDescription
+        }
+    }
+
+    private var addToPlaylistSheet: some View {
+        NavigationStack {
+            List(allPlaylists) { playlist in
+                Button {
+                    Task { await addTrack(to: playlist) }
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(playlist.name).foregroundStyle(.primary)
+                            if let count = playlist.tracks?.count {
+                                Text("\(count) tracks").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                    }
+                }
+            }
+            .overlay {
+                if isLoadingAllPlaylists {
+                    ProgressView("Loading playlists...")
+                } else if let addToPlaylistError {
+                    ContentUnavailableView("Error", systemImage: "exclamationmark.triangle", description: Text(addToPlaylistError))
+                } else if allPlaylists.isEmpty {
+                    ContentUnavailableView("No Playlists", systemImage: "music.note.list", description: Text("Create a playlist first."))
+                }
+            }
+            .navigationTitle("Add to Playlist")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { showAddToPlaylist = false }
+                }
+            }
+            .task { await loadAllPlaylists() }
+        }
+    }
+
+    private func loadAllPlaylists() async {
+        guard let service else { return }
+        isLoadingAllPlaylists = true
+        addToPlaylistError = nil
+        defer { isLoadingAllPlaylists = false }
+        do {
+            allPlaylists = try await service.fetchPlaylists()
+        } catch is CancellationError {
+            return
+        } catch {
+            addToPlaylistError = error.localizedDescription
+        }
+    }
+
+    private func addTrack(to playlist: Playlist) async {
+        guard let service, let track = addToPlaylistTrack, let friendID = track.friendID else { return }
+        do {
+            try await service.addTrackToPlaylist(playlistID: playlist.id, trackID: track.trackID, friendID: friendID)
+            showAddToPlaylist = false
+        } catch {
+            addToPlaylistError = error.localizedDescription
+        }
     }
 }
 

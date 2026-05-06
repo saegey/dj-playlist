@@ -64,3 +64,9 @@ final class DownloadService: ObservableObject {
         return base.appendingPathComponent("downloads", isDirectory: true)
     }
 }
+
+extension DownloadService {
+    static func downloadedFileURL(for filename: String) -> URL {
+        downloadsDirectory.appendingPathComponent(filename)
+    }
+}
