@@ -18,6 +18,15 @@ type OpenApiDocument = {
 };
 
 let cachedOpenApiDocument: OpenApiDocument | null = null;
+let cachedMobileOpenApiDocument: OpenApiDocument | null = null;
+
+const MOBILE_OPENAPI_PATHS = new Set([
+  "/api/playlists",
+  "/api/playlists/{id}/tracks",
+  "/api/playlists/genetic",
+  "/api/albums/{releaseId}/download",
+  "/api/discogs/verify-manifests",
+]);
 
 function exampleFromSchema(schema: unknown): unknown {
   if (!schema || typeof schema !== "object") return "example";
@@ -234,6 +243,32 @@ export function getOpenApiDocument(): OpenApiDocument {
   return cachedOpenApiDocument;
 }
 
+function buildMobileOpenApiDocumentInternal(): OpenApiDocument {
+  const fullDoc = getOpenApiDocument();
+  const mobilePaths = Object.fromEntries(
+    Object.entries(fullDoc.paths).filter(([path]) => MOBILE_OPENAPI_PATHS.has(path))
+  );
+
+  return {
+    ...fullDoc,
+    info: {
+      ...fullDoc.info,
+      title: "DJ Playlist Mobile API",
+      description:
+        "Mobile-focused subset of the DJ Playlist API for playlist generation and downloadable playlist workflows.",
+    },
+    paths: mobilePaths,
+  };
+}
+
+export function getMobileOpenApiDocument(): OpenApiDocument {
+  if (!cachedMobileOpenApiDocument) {
+    cachedMobileOpenApiDocument = buildMobileOpenApiDocumentInternal();
+  }
+  return cachedMobileOpenApiDocument;
+}
+
 export function invalidateOpenApiCache(): void {
   cachedOpenApiDocument = null;
+  cachedMobileOpenApiDocument = null;
 }

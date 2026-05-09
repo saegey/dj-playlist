@@ -1,0 +1,21 @@
+name: DJPlaylistMobile
+options:
+  minimumXcodeGenVersion: 2.38.0
+targets:
+  DJPlaylistMobile:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: .
+        excludes:
+          - DJPlaylistMobile.xcodeproj
+          - Info.plist
+          - README.md
+          - project.yml
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.saeg.djplaylistmobile
+        SWIFT_VERSION: 5.0
+    info:
+      path: Info.plist

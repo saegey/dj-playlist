@@ -44,8 +44,6 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             OPENAI_API_KEY=dummy
-            NEXT_PUBLIC_MEILISEARCH_HOST=https://meili.vinylplay.cc
-            NEXT_PUBLIC_MEILISEARCH_API_KEY=mysupersecretkey
             DISCOGS_USER_TOKEN=dummytoken
             DISCOGS_USERNAME=dummyusername
             DISCOGS_FOLDER_ID=dummyfolderid
@@ -55,7 +53,6 @@ jobs:
             DATABASE_URL=postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
             MEILISEARCH_HOST=http://meili:7700
             MEILISEARCH_API_KEY=mysupersecretkey
-            MEILISEARCH_EXTERNAL_HOST=http://localhost:7000
             YOUTUBE_API_KEY=dummyyoutubeapikey
 
       - name: Image digest
