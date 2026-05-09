@@ -119,6 +119,7 @@ struct PlaylistsView: View {
             } message: {
                 Text(errorMessage ?? "Unknown error")
             }
+            .miniPlayerSpacer()
         }
     }
 

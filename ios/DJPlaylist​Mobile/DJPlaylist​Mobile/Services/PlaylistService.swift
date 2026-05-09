@@ -116,14 +116,13 @@ struct PlaylistService {
 
     func addTrackToPlaylist(playlistID: Int, trackID: String, friendID: Int) async throws {
         let existingTracks = try await fetchTracks(for: playlistID)
-        var refs = existingTracks.compactMap { track -> PlaylistTrackRef? in
-            guard let fid = track.friendID else { return nil }
-            return PlaylistTrackRef(track_id: track.trackID, friend_id: fid)
-        }
+        var refs = playlistTrackRefs(from: existingTracks)
         refs.append(PlaylistTrackRef(track_id: trackID, friend_id: friendID))
-        let payload = PatchPlaylistRequest(id: playlistID, tracks: refs)
-        let body = try JSONEncoder().encode(payload)
-        _ = try await client.rawRequest(path: "/api/playlists", method: "PATCH", body: body)
+        try await patchPlaylist(playlistID: playlistID, tracks: refs)
+    }
+
+    func updatePlaylistTracks(playlistID: Int, tracks: [Track]) async throws {
+        try await patchPlaylist(playlistID: playlistID, tracks: playlistTrackRefs(from: tracks))
     }
 
     func createPlaylist(name: String) async throws -> Playlist {
@@ -134,6 +133,19 @@ struct PlaylistService {
 
     func testConnection() async throws {
         _ = try await client.rawRequest(path: "/api/albums?limit=1")
+    }
+
+    private func patchPlaylist(playlistID: Int, tracks: [PlaylistTrackRef]) async throws {
+        let payload = PatchPlaylistRequest(id: playlistID, tracks: tracks)
+        let body = try JSONEncoder().encode(payload)
+        _ = try await client.rawRequest(path: "/api/playlists", method: "PATCH", body: body)
+    }
+
+    private func playlistTrackRefs(from tracks: [Track]) -> [PlaylistTrackRef] {
+        tracks.compactMap { track in
+            guard let friendID = track.friendID else { return nil }
+            return PlaylistTrackRef(track_id: track.trackID, friend_id: friendID)
+        }
     }
 
     private func decodePlaylistsResponse(from data: Data) throws -> PlaylistsResponse {

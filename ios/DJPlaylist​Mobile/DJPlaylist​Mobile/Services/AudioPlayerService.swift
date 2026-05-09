@@ -29,14 +29,25 @@ private struct QueueEntry: Identifiable {
 }
 
 @MainActor
+final class PlaybackProgress: ObservableObject {
+    @Published var elapsedTime: Double = 0
+    @Published var totalDuration: Double = 0
+
+    func reset() {
+        elapsedTime = 0
+        totalDuration = 0
+    }
+}
+
+@MainActor
 final class AudioPlayerService: ObservableObject {
     @Published private(set) var currentTrackID: String?
     @Published private(set) var currentTrack: Track?
     @Published private(set) var isPlaying = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var queuedTrackIDs: [String] = []
-    @Published private(set) var elapsedTime: Double = 0
-    @Published private(set) var totalDuration: Double = 0
+
+    let progress = PlaybackProgress()
 
     private let fileManager = FileManager.default
     private let player = AVQueuePlayer()
@@ -49,14 +60,19 @@ final class AudioPlayerService: ObservableObject {
     private var timeControlStatusObservation: NSKeyValueObservation?
     private var timeObserverToken: Any?
     private var artworkLoadTask: Task<Void, Never>?
+    private var cachedArtwork: MPMediaItemArtwork?
+    private var cachedArtworkTrackID: String?
     private var pendingTracks: [Track] = []
     private var pendingServerURL: URL?
     private var isPreparingMore = false
     private let lookAheadCount = 3
+    private var interruptionObserver: NSObjectProtocol?
+    private var wasPlayingBeforeInterruption = false
 
     init() {
         configurePlayerObservers()
         configureRemoteCommands()
+        configureInterruptionHandling()
     }
 
     func togglePlayback(for track: Track, serverURL: URL) async throws {
@@ -120,9 +136,10 @@ final class AudioPlayerService: ObservableObject {
         currentIndex = 0
         errorMessage = nil
         isPlaying = false
-        elapsedTime = 0
-        totalDuration = 0
+        progress.reset()
         artworkLoadTask?.cancel()
+        cachedArtwork = nil
+        cachedArtworkTrackID = nil
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
@@ -205,13 +222,13 @@ final class AudioPlayerService: ObservableObject {
         timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                self.elapsedTime = time.seconds.isFinite ? time.seconds : 0
+                self.progress.elapsedTime = time.seconds.isFinite ? time.seconds : 0
                 if let item = self.player.currentItem {
                     let dur = item.duration.seconds
                     if dur.isFinite {
-                        self.totalDuration = dur
+                        self.progress.totalDuration = dur
                     } else if let track = self.queueEntries[safe: self.currentIndex]?.track {
-                        self.totalDuration = self.playbackDurationSeconds(for: track) ?? 0
+                        self.progress.totalDuration = self.playbackDurationSeconds(for: track) ?? 0
                     }
                 }
                 self.refreshNowPlayingInfo()
@@ -226,6 +243,7 @@ final class AudioPlayerService: ObservableObject {
         commandCenter.pauseCommand.removeTarget(nil)
         commandCenter.nextTrackCommand.removeTarget(nil)
         commandCenter.previousTrackCommand.removeTarget(nil)
+        commandCenter.changePlaybackPositionCommand.removeTarget(nil)
 
         commandCenter.playCommand.addTarget { [weak self] _ in
             MainActor.assumeIsolated {
@@ -254,22 +272,58 @@ final class AudioPlayerService: ObservableObject {
                 return self?.skipToPreviousTrack() ?? .commandFailed
             }
         }
+
+        commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
+            guard let event = event as? MPChangePlaybackPositionCommandEvent else {
+                return .commandFailed
+            }
+            MainActor.assumeIsolated {
+                self?.seek(to: event.positionTime)
+            }
+            return .success
+        }
     }
 
     func skipToNext() {
         _ = skipToNextTrack()
     }
 
-    private func skipToNextTrack() -> MPRemoteCommandHandlerStatus {
-        guard currentIndex + 1 < queueEntries.count else { return .commandFailed }
-        currentIndex += 1
-        player.advanceToNextItem()
+    func skipToPrevious() {
+        _ = skipToPreviousTrack()
+    }
+
+    func skipToIndex(_ index: Int) {
+        guard index >= 0, index < queueEntries.count, index != currentIndex else { return }
+        currentIndex = index
+        let remainingEntries = Array(queueEntries[currentIndex...])
+        player.removeAllItems()
+        for entry in remainingEntries {
+            player.insert(AVPlayerItem(url: entry.localFileURL), after: nil)
+        }
         currentTrackID = queueEntries[currentIndex].track.id
         currentTrack = queueEntries[currentIndex].track
         player.play()
         updatePlaybackState()
         refreshNowPlayingInfo()
-        return .success
+        prepareMoreIfNeeded()
+    }
+
+    private func skipToNextTrack() -> MPRemoteCommandHandlerStatus {
+        if currentIndex + 1 < queueEntries.count {
+            currentIndex += 1
+            player.advanceToNextItem()
+            currentTrackID = queueEntries[currentIndex].track.id
+            currentTrack = queueEntries[currentIndex].track
+            player.play()
+            updatePlaybackState()
+            refreshNowPlayingInfo()
+            prepareMoreIfNeeded()
+            return .success
+        } else if !pendingTracks.isEmpty {
+            prepareMoreIfNeeded()
+            return .success
+        }
+        return .commandFailed
     }
 
     private func skipToPreviousTrack() -> MPRemoteCommandHandlerStatus {
@@ -312,8 +366,11 @@ final class AudioPlayerService: ObservableObject {
         }
 
         guard queueEntries.indices.contains(currentIndex) else { return }
-        currentTrackID = queueEntries[currentIndex].track.id
-        currentTrack = queueEntries[currentIndex].track
+        let expected = queueEntries[currentIndex].track
+        if currentTrackID != expected.id {
+            currentTrackID = expected.id
+            currentTrack = expected
+        }
         refreshNowPlayingInfo()
     }
 
@@ -407,16 +464,25 @@ final class AudioPlayerService: ObservableObject {
             info[MPMediaItemPropertyPlaybackDuration] = duration
         }
 
+        if let artwork = cachedArtwork, cachedArtworkTrackID == entry.track.id {
+            info[MPMediaItemPropertyArtwork] = artwork
+        }
+
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
 
-        artworkLoadTask?.cancel()
-        if let albumArtURL = entry.track.albumArtURL {
-            artworkLoadTask = Task { [weak self] in
-                guard let self else { return }
-                if let artwork = await self.loadArtwork(from: albumArtURL) {
-                    var refreshed = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? info
-                    refreshed[MPMediaItemPropertyArtwork] = artwork
-                    MPNowPlayingInfoCenter.default().nowPlayingInfo = refreshed
+        if cachedArtworkTrackID != entry.track.id {
+            artworkLoadTask?.cancel()
+            cachedArtwork = nil
+            cachedArtworkTrackID = entry.track.id
+            let trackID = entry.track.id
+            if let albumArtURL = entry.track.albumArtURL {
+                artworkLoadTask = Task { [weak self] in
+                    guard let self else { return }
+                    if let artwork = await self.loadArtwork(from: albumArtURL) {
+                        guard self.cachedArtworkTrackID == trackID else { return }
+                        self.cachedArtwork = artwork
+                        self.refreshNowPlayingInfo()
+                    }
                 }
             }
         }
@@ -535,7 +601,15 @@ final class AudioPlayerService: ObservableObject {
     }
 
     var hasNext: Bool {
-        currentIndex + 1 < queueEntries.count
+        currentIndex + 1 < queueEntries.count || !pendingTracks.isEmpty
+    }
+
+    var queueTracks: [Track] {
+        queueEntries.map(\.track) + pendingTracks
+    }
+
+    var currentQueueIndex: Int {
+        currentIndex
     }
 
     func resume() {
@@ -544,12 +618,67 @@ final class AudioPlayerService: ObservableObject {
         refreshNowPlayingInfo()
     }
 
+    func seek(to seconds: Double) {
+        guard seconds.isFinite, seconds >= 0 else { return }
+
+        let duration = progress.totalDuration
+        let targetSeconds = duration > 0 ? min(seconds, duration) : seconds
+        let targetTime = CMTime(seconds: targetSeconds, preferredTimescale: 600)
+        progress.elapsedTime = targetSeconds
+
+        player.seek(to: targetTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+            Task { @MainActor in
+                self?.refreshNowPlayingInfo()
+            }
+        }
+    }
+
+    private func configureInterruptionHandling() {
+        interruptionObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance(),
+            queue: .main
+        ) { [weak self] notification in
+            MainActor.assumeIsolated {
+                self?.handleInterruption(notification)
+            }
+        }
+    }
+
+    private func handleInterruption(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+
+        switch type {
+        case .began:
+            wasPlayingBeforeInterruption = isPlaying
+        case .ended:
+            guard wasPlayingBeforeInterruption else { return }
+            wasPlayingBeforeInterruption = false
+
+            let options = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            if AVAudioSession.InterruptionOptions(rawValue: options).contains(.shouldResume) {
+                player.play()
+                updatePlaybackState()
+                refreshNowPlayingInfo()
+            }
+        @unknown default:
+            break
+        }
+    }
+
     deinit {
         if let playbackEndedObserver {
             NotificationCenter.default.removeObserver(playbackEndedObserver)
         }
         if let playbackFailedObserver {
             NotificationCenter.default.removeObserver(playbackFailedObserver)
+        }
+        if let interruptionObserver {
+            NotificationCenter.default.removeObserver(interruptionObserver)
         }
         if let timeObserverToken {
             player.removeTimeObserver(timeObserverToken)

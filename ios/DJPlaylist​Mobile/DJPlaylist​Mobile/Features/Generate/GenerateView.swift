@@ -5,6 +5,7 @@ struct AlbumsView: View {
     @State private var albums: [Album] = []
     @State private var friends: [Friend] = []
     @State private var selectedFriendID: Int?
+    @State private var hasAppliedDefault = false
     @State private var searchText = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
@@ -98,7 +99,10 @@ struct AlbumsView: View {
                 await loadAlbums()
             }
             .task {
-                selectedFriendID = appState.defaultFriendID
+                if !hasAppliedDefault {
+                    selectedFriendID = appState.defaultFriendID
+                    hasAppliedDefault = true
+                }
                 await loadFriends()
                 await loadAlbums()
             }
@@ -122,6 +126,7 @@ struct AlbumsView: View {
             } message: {
                 Text(errorMessage ?? "Unknown error")
             }
+            .miniPlayerSpacer()
         }
     }
 

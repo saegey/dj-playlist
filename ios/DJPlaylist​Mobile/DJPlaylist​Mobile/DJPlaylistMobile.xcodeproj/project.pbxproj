@@ -16,6 +16,7 @@
 		719416F42FAAE89200158CA8 /* TrackDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 719416F32FAAE89200158CA8 /* TrackDetailView.swift */; };
 		719416F62FAB7CD100158CA8 /* PlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 719416F52FAB7CD100158CA8 /* PlaylistDetailView.swift */; };
 		719416F82FAB876000158CA8 /* MiniPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 719416F72FAB876000158CA8 /* MiniPlayerView.swift */; };
+		719416FA2FAC106600158CA8 /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 719416F92FAC106600158CA8 /* NowPlayingView.swift */; };
 		8EA917873D2C76D70514F8AF /* DJPlaylistMobileApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 885153A3F76A328CE3FA521A /* DJPlaylistMobileApp.swift */; };
 		8F76002BC0239224CEB33A81 /* DownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A776A87F5B2D03817056067 /* DownloadService.swift */; };
 		9150FEAC5904272D75CCA21B /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DCA77098AEA13DD6789B93F /* MainTabView.swift */; };
@@ -41,6 +42,7 @@
 		719416F32FAAE89200158CA8 /* TrackDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackDetailView.swift; sourceTree = "<group>"; };
 		719416F52FAB7CD100158CA8 /* PlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistDetailView.swift; sourceTree = "<group>"; };
 		719416F72FAB876000158CA8 /* MiniPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniPlayerView.swift; sourceTree = "<group>"; };
+		719416F92FAC106600158CA8 /* NowPlayingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NowPlayingView.swift; sourceTree = "<group>"; };
 		885153A3F76A328CE3FA521A /* DJPlaylistMobileApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DJPlaylistMobileApp.swift; sourceTree = "<group>"; };
 		9C40F46CBEF105014E3F42F4 /* DJPlaylistMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DJPlaylistMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A04E77E347779D3D1A0AE5DB /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -132,6 +134,7 @@
 				4DCA77098AEA13DD6789B93F /* MainTabView.swift */,
 				A04E77E347779D3D1A0AE5DB /* RootView.swift */,
 				719416F72FAB876000158CA8 /* MiniPlayerView.swift */,
+				719416F92FAC106600158CA8 /* NowPlayingView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -257,6 +260,7 @@
 				F0D0E4523D2B6765D1CBEDA1 /* PlaylistsView.swift in Sources */,
 				4481B25D5A83FB2D341CEE74 /* RootView.swift in Sources */,
 				B04D9416E9D5F6C5B87B113A /* ServerSetupView.swift in Sources */,
+				719416FA2FAC106600158CA8 /* NowPlayingView.swift in Sources */,
 				C8C3923B13623525EDE60B57 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

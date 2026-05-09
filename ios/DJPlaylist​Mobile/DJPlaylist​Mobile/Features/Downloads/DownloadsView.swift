@@ -7,6 +7,7 @@ struct TracksView: View {
 
     @State private var friends: [Friend] = []
     @State private var selectedFriendID: Int?
+    @State private var hasAppliedDefault = false
     @State private var tracks: [Track] = []
     @State private var searchText = ""
     @State private var isLoading = false
@@ -81,7 +82,10 @@ struct TracksView: View {
             }
             .task {
                 downloadService.refreshDownloadedFiles()
-                selectedFriendID = appState.defaultFriendID
+                if !hasAppliedDefault {
+                    selectedFriendID = appState.defaultFriendID
+                    hasAppliedDefault = true
+                }
                 await loadFriends()
                 await loadTracks()
             }
@@ -116,6 +120,7 @@ struct TracksView: View {
             .sheet(isPresented: $showAddToPlaylist) {
                 addToPlaylistSheet
             }
+            .miniPlayerSpacer()
         }
     }
 
@@ -468,6 +473,7 @@ struct TracksView: View {
             Button("Play", systemImage: "play.fill") {
                 togglePlayback(for: track)
             }
+            .disabled(!track.isPlayable)
             Button("Similar Vibes", systemImage: "waveform.path") {
                 similarVibesTrack = track
                 showSimilarVibes = true

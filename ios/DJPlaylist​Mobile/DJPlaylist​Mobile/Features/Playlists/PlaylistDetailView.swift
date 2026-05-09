@@ -14,6 +14,7 @@ struct PlaylistDetailView: View {
     @State private var similarTracks: [Track] = []
     @State private var isLoadingSimilar = false
     @State private var similarError: String?
+    @State private var removingTrackIDs: Set<String> = []
 
     private var service: PlaylistService? {
         guard let url = appState.normalizedServerURL else { return nil }
@@ -84,6 +85,7 @@ struct PlaylistDetailView: View {
         .sheet(isPresented: $showSimilarVibes) {
             similarVibesSheet
         }
+        .miniPlayerSpacer()
     }
 
     private func loadTracks() async {
@@ -140,6 +142,31 @@ struct PlaylistDetailView: View {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+
+    private func removeTrackFromPlaylist(_ track: Track) {
+        guard let service else { return }
+        let updatedTracks = tracks.filter { !isSamePlaylistEntry($0, as: track) }
+        guard updatedTracks.count != tracks.count else { return }
+
+        removingTrackIDs.insert(track.id)
+
+        Task {
+            do {
+                try await service.updatePlaylistTracks(playlistID: playlist.id, tracks: updatedTracks)
+                tracks = updatedTracks
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            removingTrackIDs.remove(track.id)
+        }
+    }
+
+    private func isSamePlaylistEntry(_ lhs: Track, as rhs: Track) -> Bool {
+        if let lhsFriendID = lhs.friendID, let rhsFriendID = rhs.friendID {
+            return lhs.trackID == rhs.trackID && lhsFriendID == rhsFriendID
+        }
+        return lhs.trackID == rhs.trackID
     }
 
     private func formatDate(_ dateString: String) -> String {
@@ -328,10 +355,15 @@ struct PlaylistDetailView: View {
             Button("Play", systemImage: "play.fill") {
                 togglePlayback(for: track)
             }
+            .disabled(!track.isPlayable)
             Button("Similar Vibes", systemImage: "waveform.path") {
                 similarVibesTrack = track
                 showSimilarVibes = true
             }
+            Button("Remove from Playlist", systemImage: "minus.circle", role: .destructive) {
+                removeTrackFromPlaylist(track)
+            }
+            .disabled(removingTrackIDs.contains(track.id))
         }
     }
 }

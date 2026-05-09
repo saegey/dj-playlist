@@ -60,6 +60,10 @@ struct Track: Decodable, Identifiable, Hashable {
         return URL(string: albumThumbnailURL)
     }
 
+    var isPlayable: Bool {
+        localAudioURL?.nonEmpty != nil
+    }
+
     enum CodingKeys: String, CodingKey {
         case trackID = "track_id"
         case friendID = "friend_id"

@@ -49,6 +49,7 @@ struct AlbumDetailView: View {
                     Button("Play", systemImage: "play.fill") {
                         playAlbum()
                     }
+                    .disabled(!tracks.contains(where: \.isPlayable))
                 }
             }
         }
@@ -71,6 +72,7 @@ struct AlbumDetailView: View {
         .sheet(isPresented: $showAddToPlaylist) {
             addToPlaylistSheet
         }
+        .miniPlayerSpacer()
     }
 
     private var albumHeader: some View {
@@ -213,6 +215,7 @@ struct AlbumDetailView: View {
                         Button("Play", systemImage: "play.fill") {
                             togglePlayback(for: track)
                         }
+                        .disabled(!track.isPlayable)
                         Button("Similar Vibes", systemImage: "waveform.path") {
                             similarVibesTrack = track
                             showSimilarVibes = true
@@ -268,10 +271,11 @@ struct AlbumDetailView: View {
     }
 
     private func playAlbum() {
-        guard let serverURL = appState.normalizedServerURL, !tracks.isEmpty else { return }
+        let playableTracks = tracks.filter(\.isPlayable)
+        guard let serverURL = appState.normalizedServerURL, !playableTracks.isEmpty else { return }
         Task {
             do {
-                try await audioPlayer.playQueuedPlaylist(tracks, serverURL: serverURL)
+                try await audioPlayer.playQueuedPlaylist(playableTracks, serverURL: serverURL)
             } catch {
                 errorMessage = error.localizedDescription
             }

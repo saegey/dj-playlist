@@ -54,6 +54,7 @@ struct SettingsView: View {
             .task {
                 await loadFriends()
             }
+            .miniPlayerSpacer()
         }
     }
 

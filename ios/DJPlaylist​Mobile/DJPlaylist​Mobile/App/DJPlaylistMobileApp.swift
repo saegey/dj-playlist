@@ -10,6 +10,7 @@ struct DJPlaylistMobileApp: App {
             RootView()
                 .environmentObject(appState)
                 .environmentObject(audioPlayer)
+                .environmentObject(audioPlayer.progress)
         }
     }
 }

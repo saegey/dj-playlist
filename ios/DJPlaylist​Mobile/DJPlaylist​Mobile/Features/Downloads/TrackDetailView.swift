@@ -112,6 +112,7 @@ struct TrackDetailView: View {
                     Button("Play", systemImage: "play.fill") {
                         togglePlayback()
                     }
+                    .disabled(!displayTrack.isPlayable)
 
                     Button(isTrackDownloaded ? "Downloaded" : "Download", systemImage: isTrackDownloaded ? "checkmark.circle.fill" : "arrow.down.circle") {
                         Task { await downloadTrack() }
@@ -157,6 +158,7 @@ struct TrackDetailView: View {
         .sheet(isPresented: $showAddToPlaylist) {
             addToPlaylistSheet
         }
+        .miniPlayerSpacer()
     }
 
     private var header: some View {
@@ -214,6 +216,7 @@ struct TrackDetailView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(.primary)
                 .foregroundStyle(.background)
+                .disabled(!displayTrack.isPlayable)
             }
         }
         .padding(.vertical, 4)
