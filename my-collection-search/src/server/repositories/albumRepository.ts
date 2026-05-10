@@ -470,6 +470,17 @@ export class AlbumRepository {
     return result.rowCount || 0;
   }
 
+  async updateAlbumAudioFileAlbumArtUrl(
+    releaseId: string,
+    friendId: number,
+    publicUrl: string
+  ): Promise<void> {
+    await dbQuery(
+      `UPDATE albums SET audio_file_album_art_url = $1 WHERE release_id = $2 AND friend_id = $3`,
+      [publicUrl, releaseId, friendId]
+    );
+  }
+
   async getTracksForReleaseWithAudio(
     friendId: number,
     releaseId: string

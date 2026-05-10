@@ -79,6 +79,7 @@ export type TrackAudioMetadataRow = Pick<
   | "audio_file_album_art_url"
   | "year"
   | "composer"
+  | "release_id"
 >;
 
 const UPDATABLE_COLUMNS = {
@@ -567,7 +568,7 @@ export class TrackRepository {
   ): Promise<TrackAudioMetadataRow | null> {
     const { rows } = await dbQuery<TrackAudioMetadataRow>(
       `
-      SELECT track_id, friend_id, local_audio_url, audio_file_album_art_url, year, composer
+      SELECT track_id, friend_id, local_audio_url, audio_file_album_art_url, year, composer, release_id
       FROM tracks
       WHERE track_id = $1 AND friend_id = $2
       LIMIT 1

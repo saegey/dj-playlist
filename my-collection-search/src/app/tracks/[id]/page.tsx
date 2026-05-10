@@ -4,6 +4,8 @@ import NextLink from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { Box, Button, Flex, Heading, Skeleton, Text, VStack } from "@chakra-ui/react";
 import { toaster } from "@/components/ui/toaster";
+import { useTrackStore } from "@/stores/trackStore";
+import { useAlbumStore } from "@/stores/albumStore";
 import TrackResultStore from "@/components/TrackResultStore";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import PageContainer from "@/components/layout/PageContainer";
@@ -91,15 +93,24 @@ export default function TrackPage() {
                 onExtractCover={async () => {
                   try {
                     const savedUrl = await extractCoverMutation.mutateAsync();
+                    const releaseId = trackQuery.data?.release_id;
+                    if (savedUrl && releaseId) {
+                      useTrackStore.getState().updateTracksByRelease(releaseId, friendId, {
+                        audio_file_album_art_url: savedUrl,
+                      });
+                      useAlbumStore.getState().updateAlbum(releaseId, friendId, {
+                        audio_file_album_art_url: savedUrl,
+                      });
+                    }
                     toaster.create({
-                      title: "Embedded cover extracted",
-                      description: savedUrl || "Saved to track",
+                      title: "Album cover updated",
+                      description: savedUrl || "Saved to album",
                       type: "success",
                     });
                     await Promise.all([trackQuery.refetch(), audioMetadataQuery.refetch()]);
                   } catch (err) {
                     toaster.create({
-                      title: "Cover extraction failed",
+                      title: "Album cover update failed",
                       description: err instanceof Error ? err.message : String(err),
                       type: "error",
                     });
