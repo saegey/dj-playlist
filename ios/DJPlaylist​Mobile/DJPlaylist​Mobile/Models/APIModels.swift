@@ -25,10 +25,14 @@ struct Track: Decodable, Identifiable, Hashable {
     let physicalIdentifier: String?
     let duration: String?
     let albumThumbnailURL: String?
+    let audioFileAlbumArtURL: String?
     let localAudioURL: String?
     let bpm: Double?
     let embedding: String?
     let durationSeconds: Double?
+    let appleMusicURL: String?
+    let discogsURL: String?
+    let youtubeURL: String?
 
     var id: String { trackID }
     var displayTitle: String { title?.nonEmpty ?? trackID }
@@ -56,8 +60,13 @@ struct Track: Decodable, Identifiable, Hashable {
         return nil
     }
     var albumArtURL: URL? {
-        guard let albumThumbnailURL = albumThumbnailURL?.nonEmpty else { return nil }
-        return URL(string: albumThumbnailURL)
+        albumArtURL(relativeTo: nil)
+    }
+
+    func albumArtURL(relativeTo serverURL: URL?) -> URL? {
+        let artworkURLString = audioFileAlbumArtURL?.nonEmpty ?? albumThumbnailURL?.nonEmpty
+        guard let artworkURLString else { return nil }
+        return Self.normalizedArtworkURL(from: artworkURLString, relativeTo: serverURL)
     }
 
     var isPlayable: Bool {
@@ -82,10 +91,14 @@ struct Track: Decodable, Identifiable, Hashable {
         case libraryIdentifier = "library_identifier"
         case duration
         case albumThumbnailURL = "album_thumbnail"
+        case audioFileAlbumArtURL = "audio_file_album_art_url"
         case localAudioURL = "local_audio_url"
         case bpm
         case embedding
         case durationSeconds = "duration_seconds"
+        case appleMusicURL = "apple_music_url"
+        case discogsURL = "discogs_url"
+        case youtubeURL = "youtube_url"
     }
 
     init(
@@ -99,10 +112,14 @@ struct Track: Decodable, Identifiable, Hashable {
         physicalIdentifier: String?,
         duration: String?,
         albumThumbnailURL: String?,
+        audioFileAlbumArtURL: String? = nil,
         localAudioURL: String?,
         bpm: Double?,
         embedding: String?,
-        durationSeconds: Double? = nil
+        durationSeconds: Double? = nil,
+        appleMusicURL: String? = nil,
+        discogsURL: String? = nil,
+        youtubeURL: String? = nil
     ) {
         self.trackID = trackID
         self.friendID = friendID
@@ -114,10 +131,14 @@ struct Track: Decodable, Identifiable, Hashable {
         self.physicalIdentifier = physicalIdentifier
         self.duration = duration
         self.albumThumbnailURL = albumThumbnailURL
+        self.audioFileAlbumArtURL = audioFileAlbumArtURL
         self.localAudioURL = localAudioURL
         self.bpm = bpm
         self.embedding = embedding
         self.durationSeconds = durationSeconds
+        self.appleMusicURL = appleMusicURL
+        self.discogsURL = discogsURL
+        self.youtubeURL = youtubeURL
     }
 
     init(from decoder: Decoder) throws {
@@ -138,11 +159,15 @@ struct Track: Decodable, Identifiable, Hashable {
             ?? Self.decodeOptionalString(forKey: .physicalIdentifier, from: container)
             ?? Self.decodeOptionalString(forKey: .physicalIdentifierAlt, from: container)
         duration = try container.decodeIfPresent(String.self, forKey: .duration)
-        albumThumbnailURL = try container.decodeIfPresent(String.self, forKey: .albumThumbnailURL)
+        albumThumbnailURL = Self.decodeOptionalString(forKey: .albumThumbnailURL, from: container)
+        audioFileAlbumArtURL = Self.decodeOptionalString(forKey: .audioFileAlbumArtURL, from: container)
         localAudioURL = try container.decodeIfPresent(String.self, forKey: .localAudioURL)
         bpm = Self.decodeOptionalDouble(forKey: .bpm, from: container)
         durationSeconds = Self.decodeOptionalDouble(forKey: .durationSeconds, from: container)
         embedding = Self.decodeOptionalEmbedding(from: container)
+        appleMusicURL = Self.decodeOptionalString(forKey: .appleMusicURL, from: container)
+        discogsURL = Self.decodeOptionalString(forKey: .discogsURL, from: container)
+        youtubeURL = Self.decodeOptionalString(forKey: .youtubeURL, from: container)
 
         if let value = try container.decodeIfPresent(String.self, forKey: .artist), !value.isEmpty {
             artist = value
@@ -173,6 +198,31 @@ struct Track: Decodable, Identifiable, Hashable {
             return String(intValue)
         }
         return nil
+    }
+
+    private static func normalizedArtworkURL(from rawURLString: String, relativeTo serverURL: URL?) -> URL? {
+        let trimmed = rawURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let serverURL,
+           var components = URLComponents(string: trimmed) {
+            if components.scheme == nil, components.host == nil {
+                return URL(string: trimmed, relativeTo: serverURL)?.absoluteURL
+            }
+
+            if let host = components.host?.lowercased(), Self.isLocalArtworkHost(host) {
+                components.scheme = serverURL.scheme
+                components.host = serverURL.host
+                components.port = serverURL.port
+                return components.url
+            }
+        }
+
+        return URL(string: trimmed)
+    }
+
+    private static func isLocalArtworkHost(_ host: String) -> Bool {
+        host == "localhost" || host == "127.0.0.1" || host.hasSuffix(".local")
     }
 
     private static func decodeOptionalDouble(
@@ -221,6 +271,10 @@ struct Album: Decodable, Identifiable, Hashable {
     let genres: [String]?
     let styles: [String]?
     let trackCount: Int?
+    let albumRating: Double?
+    let albumNotes: String?
+    let purchasePrice: Double?
+    let condition: String?
 
     var id: String {
         if let releaseID = releaseID?.nonEmpty, let friendID {
@@ -244,8 +298,37 @@ struct Album: Decodable, Identifiable, Hashable {
     }
 
     var coverArtURL: URL? {
+        coverArtURL(relativeTo: nil)
+    }
+
+    func coverArtURL(relativeTo serverURL: URL?) -> URL? {
         guard let coverURLString = coverURLString?.nonEmpty else { return nil }
-        return URL(string: coverURLString)
+        return Self.normalizedArtworkURL(from: coverURLString, relativeTo: serverURL)
+    }
+
+    private static func normalizedArtworkURL(from rawURLString: String, relativeTo serverURL: URL?) -> URL? {
+        let trimmed = rawURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let serverURL,
+           var components = URLComponents(string: trimmed) {
+            if components.scheme == nil, components.host == nil {
+                return URL(string: trimmed, relativeTo: serverURL)?.absoluteURL
+            }
+
+            if let host = components.host?.lowercased(), Self.isLocalArtworkHost(host) {
+                components.scheme = serverURL.scheme
+                components.host = serverURL.host
+                components.port = serverURL.port
+                return components.url
+            }
+        }
+
+        return URL(string: trimmed)
+    }
+
+    private static func isLocalArtworkHost(_ host: String) -> Bool {
+        host == "localhost" || host == "127.0.0.1" || host.hasSuffix(".local")
     }
 
     enum CodingKeys: String, CodingKey {
@@ -276,6 +359,10 @@ struct Album: Decodable, Identifiable, Hashable {
         case genres
         case styles
         case trackCount = "track_count"
+        case albumRating = "album_rating"
+        case albumNotes = "album_notes"
+        case purchasePrice = "purchase_price"
+        case condition
     }
 
     init(
@@ -291,7 +378,11 @@ struct Album: Decodable, Identifiable, Hashable {
         format: String?,
         genres: [String]?,
         styles: [String]?,
-        trackCount: Int?
+        trackCount: Int?,
+        albumRating: Double? = nil,
+        albumNotes: String? = nil,
+        purchasePrice: Double? = nil,
+        condition: String? = nil
     ) {
         self.rawID = rawID
         self.releaseID = releaseID
@@ -306,6 +397,10 @@ struct Album: Decodable, Identifiable, Hashable {
         self.genres = genres
         self.styles = styles
         self.trackCount = trackCount
+        self.albumRating = albumRating
+        self.albumNotes = albumNotes
+        self.purchasePrice = purchasePrice
+        self.condition = condition
     }
 
     init(from decoder: Decoder) throws {
@@ -320,6 +415,10 @@ struct Album: Decodable, Identifiable, Hashable {
         genres = try container.decodeIfPresent([String].self, forKey: .genres)
         styles = try container.decodeIfPresent([String].self, forKey: .styles)
         trackCount = try container.decodeIfPresent(Int.self, forKey: .trackCount)
+        albumRating = Self.decodeLossyDouble(forKey: .albumRating, from: container)
+        albumNotes = Self.decodeLossyString(forKey: .albumNotes, from: container)
+        purchasePrice = Self.decodeLossyDouble(forKey: .purchasePrice, from: container)
+        condition = Self.decodeLossyString(forKey: .condition, from: container)
         physicalIdentifier = Self.decodeLossyString(forKey: .libraryIdentifier, from: container)
             ?? Self.decodeLossyString(forKey: .physicalIdentifier, from: container)
             ?? Self.decodeLossyString(forKey: .physicalIdentifierAlt, from: container)
@@ -364,6 +463,22 @@ struct Album: Decodable, Identifiable, Hashable {
         }
         return nil
     }
+
+    private static func decodeLossyDouble(
+        forKey key: CodingKeys,
+        from container: KeyedDecodingContainer<CodingKeys>
+    ) -> Double? {
+        if let doubleValue = try? container.decodeIfPresent(Double.self, forKey: key) {
+            return doubleValue
+        }
+        if let intValue = try? container.decodeIfPresent(Int.self, forKey: key) {
+            return Double(intValue)
+        }
+        if let stringValue = try? container.decodeIfPresent(String.self, forKey: key) {
+            return Double(stringValue.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        return nil
+    }
 }
 
 private extension String {
@@ -386,6 +501,16 @@ struct PlaylistTrackRef: Encodable {
 struct PatchPlaylistRequest: Encodable {
     let id: Int
     let tracks: [PlaylistTrackRef]
+}
+
+struct UpdateAlbumRequest: Encodable {
+    let release_id: String
+    let friend_id: Int
+    let album_rating: Double
+    let album_notes: String
+    let purchase_price: Double
+    let condition: String
+    let library_identifier: String
 }
 
 struct GeneticRequest: Encodable {

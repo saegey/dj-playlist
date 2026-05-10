@@ -83,6 +83,14 @@ struct TrackDetailView: View {
                 metadataRow("Audio URL", value: displayTrack.localAudioURL)
             }
 
+            if hasExternalLinks {
+                Section("Links") {
+                    linkRow("Apple Music", value: displayTrack.appleMusicURL, systemImage: "music.note")
+                    linkRow("Discogs", value: displayTrack.discogsURL, systemImage: "record.circle")
+                    linkRow("YouTube", value: displayTrack.youtubeURL, systemImage: "play.rectangle")
+                }
+            }
+
             Section("In Playlists") {
                 if isLoadingRelatedPlaylists {
                     ProgressView("Loading playlists...")
@@ -163,7 +171,7 @@ struct TrackDetailView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
-            AsyncImage(url: displayTrack.albumArtURL) { image in
+            AsyncImage(url: displayTrack.albumArtURL(relativeTo: appState.normalizedServerURL)) { image in
                 image
                     .resizable()
                     .scaledToFill()
@@ -232,6 +240,12 @@ struct TrackDetailView: View {
     private var isTrackDownloaded: Bool {
         guard let filename = downloadFilename(for: displayTrack) else { return false }
         return downloadedFiles.contains(filename)
+    }
+
+    private var hasExternalLinks: Bool {
+        externalURL(from: displayTrack.appleMusicURL) != nil
+            || externalURL(from: displayTrack.discogsURL) != nil
+            || externalURL(from: displayTrack.youtubeURL) != nil
     }
 
     private var isTrackDownloadable: Bool {
@@ -305,7 +319,7 @@ struct TrackDetailView: View {
                         .environmentObject(audioPlayer)
                 } label: {
                     HStack(alignment: .top, spacing: 12) {
-                        AsyncImage(url: similarTrack.albumArtURL) { image in
+                        AsyncImage(url: similarTrack.albumArtURL(relativeTo: appState.normalizedServerURL)) { image in
                             image
                                 .resizable()
                                 .scaledToFill()
@@ -493,6 +507,25 @@ struct TrackDetailView: View {
             }
             .padding(.vertical, 2)
         }
+    }
+
+    @ViewBuilder
+    private func linkRow(_ title: String, value: String?, systemImage: String) -> some View {
+        if let url = externalURL(from: value) {
+            Link(destination: url) {
+                Label(title, systemImage: systemImage)
+            }
+        }
+    }
+
+    private func externalURL(from value: String?) -> URL? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty,
+              let url = URL(string: trimmed),
+              url.scheme != nil else {
+            return nil
+        }
+        return url
     }
 
     private func tag(_ text: String, color: Color = .blue) -> some View {

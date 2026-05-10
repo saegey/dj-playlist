@@ -6,10 +6,17 @@ struct AlbumsView: View {
     @State private var friends: [Friend] = []
     @State private var selectedFriendID: Int?
     @State private var hasAppliedDefault = false
+    @State private var hasLoadedInitialData = false
     @State private var searchText = ""
     @State private var isLoading = false
+    @State private var isLoadingMore = false
+    @State private var canLoadMoreAlbums = true
+    @State private var nextAlbumOffset = 0
     @State private var errorMessage: String?
+    @State private var searchTask: Task<Void, Never>?
+    @SceneStorage("AlbumsView.visibleAlbumID") private var visibleAlbumID: String?
 
+    private let albumPageSize = 50
     private var activeFriendID: Int? { selectedFriendID }
 
     private var selectedFriendName: String {
@@ -22,45 +29,59 @@ struct AlbumsView: View {
 
     var body: some View {
         NavigationStack {
-            List(albums) { album in
-                NavigationLink(value: album) {
-                    HStack(alignment: .top, spacing: 12) {
-                        AsyncImage(url: album.coverArtURL) { image in
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        } placeholder: {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(.quaternary)
-                                Image(systemName: "opticaldisc.fill")
-                                    .foregroundStyle(.secondary)
+            List {
+                ForEach(albums) { album in
+                    NavigationLink(value: album) {
+                        HStack(alignment: .top, spacing: 12) {
+                            AsyncImage(url: album.coverArtURL(relativeTo: appState.normalizedServerURL)) { image in
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            } placeholder: {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(.quaternary)
+                                    Image(systemName: "opticaldisc.fill")
+                                        .foregroundStyle(.secondary)
+                                }
                             }
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(album.displayArtist)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+
+                                Text(album.displayName)
+                                    .font(.headline)
+                                    .lineLimit(2)
+
+                                Text(album.displayPhysicalIdentifier)
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .textSelection(.enabled)
+                            }
+
+                            Spacer(minLength: 0)
                         }
-                        .frame(width: 64, height: 64)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(album.displayArtist)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-
-                            Text(album.displayName)
-                                .font(.headline)
-                                .lineLimit(2)
-
-                            Text(album.displayPhysicalIdentifier)
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                                .textSelection(.enabled)
-                        }
-
-                        Spacer(minLength: 0)
+                        .padding(.vertical, 4)
+                        .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
                     }
-                    .padding(.vertical, 4)
-                    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                    .onAppear {
+                        loadMoreAlbumsIfNeeded(currentAlbum: album)
+                    }
+                }
+
+                if isLoadingMore {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                        Spacer()
+                    }
                 }
             }
+            .scrollPosition(id: $visibleAlbumID, anchor: .top)
             .navigationDestination(for: Album.self) { album in
                 AlbumDetailView(album: album)
             }
@@ -96,30 +117,28 @@ struct AlbumsView: View {
             }
             .searchable(text: $searchText, prompt: "Search albums")
             .refreshable {
-                await loadAlbums()
+                await loadAlbums(reset: true)
             }
             .task {
+                guard !hasLoadedInitialData else { return }
+
                 if !hasAppliedDefault {
                     selectedFriendID = appState.defaultFriendID
                     hasAppliedDefault = true
                 }
                 await loadFriends()
-                await loadAlbums()
+                await loadAlbums(reset: true)
+                hasLoadedInitialData = true
             }
-            .task(id: searchText) {
-                guard !searchText.isEmpty else {
-                    if !albums.isEmpty {
-                        await loadAlbums()
-                    }
-                    return
-                }
-
-                try? await Task.sleep(for: .milliseconds(300))
-                guard !Task.isCancelled else { return }
-                await loadAlbums()
+            .onChange(of: searchText) { _, newValue in
+                scheduleSearch(for: newValue)
             }
             .onChange(of: selectedFriendID) {
-                Task { await loadAlbums() }
+                guard hasLoadedInitialData else { return }
+                Task { await loadAlbums(reset: true) }
+            }
+            .onDisappear {
+                searchTask?.cancel()
             }
             .alert("Error", isPresented: .constant(errorMessage != nil)) {
                 Button("OK") { errorMessage = nil }
@@ -144,17 +163,75 @@ struct AlbumsView: View {
         }
     }
 
-    private func loadAlbums() async {
-        guard let service else { return }
+    private func scheduleSearch(for query: String) {
+        guard hasLoadedInitialData else { return }
 
-        isLoading = true
-        defer { isLoading = false }
+        searchTask?.cancel()
+        searchTask = Task {
+            if !query.isEmpty {
+                try? await Task.sleep(for: .milliseconds(300))
+            }
+            guard !Task.isCancelled else { return }
+            await loadAlbums(reset: true)
+        }
+    }
+
+    private func loadAlbums(reset: Bool) async {
+        guard let service else { return }
+        guard reset || canLoadMoreAlbums else { return }
+        guard reset || !isLoadingMore else { return }
+
+        if reset {
+            isLoading = true
+            canLoadMoreAlbums = true
+            nextAlbumOffset = 0
+            visibleAlbumID = nil
+        } else {
+            isLoadingMore = true
+        }
+
+        defer {
+            isLoading = false
+            isLoadingMore = false
+        }
 
         do {
-            albums = try await service.fetchAlbums(query: searchText, friendID: activeFriendID)
+            let page = try await service.fetchAlbums(
+                query: searchText,
+                friendID: activeFriendID,
+                limit: albumPageSize,
+                offset: reset ? 0 : nextAlbumOffset
+            )
+            let previousCount = albums.count
+            if reset {
+                albums = page
+            } else {
+                appendUniqueAlbums(page)
+            }
+            nextAlbumOffset = albums.count
+            canLoadMoreAlbums = page.count == albumPageSize && (reset || albums.count > previousCount)
+        } catch is CancellationError {
+            return
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func loadMoreAlbumsIfNeeded(currentAlbum: Album) {
+        guard canLoadMoreAlbums, !isLoading, !isLoadingMore else { return }
+        guard albums.suffix(8).contains(currentAlbum) else { return }
+
+        Task {
+            await loadAlbums(reset: false)
+        }
+    }
+
+    private func appendUniqueAlbums(_ newAlbums: [Album]) {
+        var seenIDs = Set(albums.map(\.id))
+        let uniqueNewAlbums = newAlbums.filter { album in
+            seenIDs.insert(album.id).inserted
+        }
+        albums.append(contentsOf: uniqueNewAlbums)
     }
 }
 

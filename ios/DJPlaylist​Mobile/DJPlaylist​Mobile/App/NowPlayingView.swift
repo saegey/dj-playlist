@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct NowPlayingView: View {
+    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var audioPlayer: AudioPlayerService
     @EnvironmentObject private var progress: PlaybackProgress
     @Environment(\.dismiss) private var dismiss
@@ -62,7 +63,7 @@ struct NowPlayingView: View {
     }
 
     private var artwork: some View {
-        AsyncImage(url: audioPlayer.currentTrack?.albumArtURL) { image in
+        AsyncImage(url: audioPlayer.currentTrack?.albumArtURL(relativeTo: appState.normalizedServerURL)) { image in
             image
                 .resizable()
                 .scaledToFill()
@@ -238,7 +239,7 @@ struct NowPlayingView: View {
                                 .frame(width: 20)
                         }
 
-                        AsyncImage(url: track.albumArtURL) { image in
+                        AsyncImage(url: track.albumArtURL(relativeTo: appState.normalizedServerURL)) { image in
                             image.resizable().scaledToFill()
                         } placeholder: {
                             ZStack {

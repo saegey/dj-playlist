@@ -215,7 +215,7 @@ struct PlaylistDetailView: View {
                         .environmentObject(audioPlayer)
                 } label: {
                     HStack(alignment: .top, spacing: 12) {
-                        AsyncImage(url: similarTrack.albumArtURL) { image in
+                        AsyncImage(url: similarTrack.albumArtURL(relativeTo: appState.normalizedServerURL)) { image in
                             image
                                 .resizable()
                                 .scaledToFill()
@@ -306,7 +306,7 @@ struct PlaylistDetailView: View {
                 TrackDetailView(track: track)
             } label: {
                 HStack(alignment: .top, spacing: 12) {
-                    AsyncImage(url: track.albumArtURL) { image in
+                    AsyncImage(url: track.albumArtURL(relativeTo: appState.normalizedServerURL)) { image in
                         image
                             .resizable()
                             .scaledToFill()
