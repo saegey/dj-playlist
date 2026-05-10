@@ -15,6 +15,12 @@ struct PlaylistDetailView: View {
     @State private var isLoadingSimilar = false
     @State private var similarError: String?
     @State private var removingTrackIDs: Set<String> = []
+    @State private var originalTrackOrder: [String] = []
+    @State private var isSavingPlaylistOrder = false
+
+    private var hasUnsavedOrderChanges: Bool {
+        !originalTrackOrder.isEmpty && trackOrderIDs(for: tracks) != originalTrackOrder
+    }
 
     private var service: PlaylistService? {
         guard let url = appState.normalizedServerURL else { return nil }
@@ -52,6 +58,7 @@ struct PlaylistDetailView: View {
                         ForEach(tracks) { track in
                             trackRow(for: track)
                         }
+                        .onMove(perform: moveTracks)
                     }
                 }
             }
@@ -59,7 +66,16 @@ struct PlaylistDetailView: View {
         .navigationTitle(playlist.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if hasUnsavedOrderChanges {
+                    Button("Save Playlist") {
+                        Task { await savePlaylistOrder() }
+                    }
+                    .disabled(isSavingPlaylistOrder)
+                }
+
+                EditButton()
+
                 Menu {
                     Button("Play Playlist", systemImage: "text.line.first.and.arrowtriangle.forward") {
                         playPlaylist()
@@ -95,7 +111,9 @@ struct PlaylistDetailView: View {
         defer { isLoadingTracks = false }
 
         do {
-            tracks = try await service.fetchTracks(for: playlist.id)
+            let fetchedTracks = try await service.fetchTracks(for: playlist.id)
+            tracks = fetchedTracks
+            originalTrackOrder = trackOrderIDs(for: fetchedTracks)
         } catch is CancellationError {
             return
         } catch {
@@ -155,10 +173,40 @@ struct PlaylistDetailView: View {
             do {
                 try await service.updatePlaylistTracks(playlistID: playlist.id, tracks: updatedTracks)
                 tracks = updatedTracks
+                originalTrackOrder = trackOrderIDs(for: updatedTracks)
             } catch {
                 errorMessage = error.localizedDescription
             }
             removingTrackIDs.remove(track.id)
+        }
+    }
+
+    private func moveTracks(from source: IndexSet, to destination: Int) {
+        tracks.move(fromOffsets: source, toOffset: destination)
+    }
+
+    private func savePlaylistOrder() async {
+        guard let service else { return }
+
+        isSavingPlaylistOrder = true
+        defer { isSavingPlaylistOrder = false }
+
+        do {
+            try await service.updatePlaylistTracks(playlistID: playlist.id, tracks: tracks)
+            originalTrackOrder = trackOrderIDs(for: tracks)
+        } catch is CancellationError {
+            return
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func trackOrderIDs(for tracks: [Track]) -> [String] {
+        tracks.map { track in
+            if let friendID = track.friendID {
+                return "\(track.trackID):\(friendID)"
+            }
+            return track.trackID
         }
     }
 

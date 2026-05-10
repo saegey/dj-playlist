@@ -57,10 +57,17 @@ struct AlbumsView: View {
                                     .font(.headline)
                                     .lineLimit(2)
 
-                                Text(album.displayPhysicalIdentifier)
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                                    .textSelection(.enabled)
+                                if let identifier = physicalIdentifier(for: album) {
+                                    Text(identifier)
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 3)
+                                        .background(.blue)
+                                        .foregroundStyle(.white)
+                                        .clipShape(Capsule())
+                                        .textSelection(.enabled)
+                                }
                             }
 
                             Spacer(minLength: 0)
@@ -152,6 +159,11 @@ struct AlbumsView: View {
     private var service: PlaylistService? {
         guard let url = appState.normalizedServerURL else { return nil }
         return PlaylistService(client: APIClient(serverURL: url))
+    }
+
+    private func physicalIdentifier(for album: Album) -> String? {
+        let identifier = album.physicalIdentifier?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return identifier?.isEmpty == false ? identifier : nil
     }
 
     private func loadFriends() async {
