@@ -4,6 +4,7 @@ import fs from "fs";
 import { promisify } from "util";
 import { execFile } from "child_process";
 import { trackRepository } from "@/server/repositories/trackRepository";
+import { albumRepository } from "@/server/repositories/albumRepository";
 import { trackAudioMetadataService } from "@/server/services/trackAudioMetadataService";
 
 const execFileAsync = promisify(execFile);
@@ -138,24 +139,39 @@ export async function POST(
     ]);
 
     const publicUrl = `/uploads/album-covers/${outputFile}`;
-    await trackRepository.updateTrackAudioFileAlbumArtUrl(
-      trackId,
-      friendId,
-      publicUrl
-    );
+    const releaseId = track.release_id;
 
-    // Keep MeiliSearch in sync so search/card views pick up new art immediately.
+    if (releaseId) {
+      await Promise.all([
+        albumRepository.updateAlbumCoverForRelease(friendId, releaseId, publicUrl),
+        albumRepository.updateAlbumAudioFileAlbumArtUrl(releaseId, friendId, publicUrl),
+      ]);
+    } else {
+      await trackRepository.updateTrackAudioFileAlbumArtUrl(trackId, friendId, publicUrl);
+    }
+
+    // Keep MeiliSearch in sync for all tracks on the album.
     try {
-      const updatedTrack =
-        await trackRepository.findTrackByTrackIdAndFriendIdWithLibraryFallback(
-          trackId,
-          friendId
-        );
-      if (updatedTrack) {
-        const { getMeiliClient } = await import("@/lib/meili");
-        const meiliClient = getMeiliClient();
-        const index = meiliClient.index("tracks");
-        await index.updateDocuments([updatedTrack]);
+      const { getMeiliClient } = await import("@/lib/meili");
+      const meiliClient = getMeiliClient();
+      const index = meiliClient.index("tracks");
+
+      if (releaseId) {
+        const trackIds = await albumRepository.listTrackIdsForAlbum(releaseId, friendId);
+        const refs = trackIds.map((id) => ({ track_id: id, friend_id: friendId }));
+        const tracks = await trackRepository.findTracksByRefsPreservingOrder(refs);
+        if (tracks.length > 0) {
+          await index.updateDocuments(tracks);
+        }
+      } else {
+        const updatedTrack =
+          await trackRepository.findTrackByTrackIdAndFriendIdWithLibraryFallback(
+            trackId,
+            friendId
+          );
+        if (updatedTrack) {
+          await index.updateDocuments([updatedTrack]);
+        }
       }
     } catch (meiliErr) {
       console.warn("Failed to update MeiliSearch track artwork field:", meiliErr);
@@ -164,7 +180,9 @@ export async function POST(
     return NextResponse.json({
       success: true,
       audio_file_album_art_url: publicUrl,
-      message: "Extracted embedded cover and saved to track.",
+      message: releaseId
+        ? "Extracted embedded cover and updated all tracks on the album."
+        : "Extracted embedded cover and saved to track.",
     });
   } catch (error) {
     console.error("Error extracting embedded audio cover:", error);

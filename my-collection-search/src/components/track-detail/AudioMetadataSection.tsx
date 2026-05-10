@@ -22,7 +22,7 @@ export default function AudioMetadataSection({
       <Flex justify="space-between" align="center" mb={3} gap={3} wrap="wrap">
         <Heading size="sm">Audio File Metadata (ffprobe)</Heading>
         <Button size="sm" variant="outline" loading={isExtractingCover} onClick={onExtractCover}>
-          Extract Embedded Cover
+          Update Album Cover
         </Button>
       </Flex>
 
