@@ -153,6 +153,10 @@ struct PlaylistService {
         return try await client.request(path: "/api/playlists", method: "POST", body: body)
     }
 
+    func deletePlaylist(id: Int) async throws {
+        _ = try await client.rawRequest(path: "/api/playlists?id=\(id)", method: "DELETE")
+    }
+
     func testConnection() async throws {
         _ = try await client.rawRequest(path: "/api/albums?limit=1")
     }
@@ -224,7 +228,7 @@ struct PlaylistService {
                 trackID: match.trackID,
                 friendID: reference.friendID ?? match.friendID,
                 releaseID: reference.releaseID ?? match.releaseID,
-                position: reference.position ?? match.position,
+                position: match.position ?? reference.position,
                 title: match.title ?? reference.title,
                 artist: match.artist ?? reference.artist,
                 albumName: match.albumName ?? reference.albumName,

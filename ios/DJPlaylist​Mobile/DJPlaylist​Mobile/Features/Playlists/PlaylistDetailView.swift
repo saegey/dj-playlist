@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PlaylistDetailView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var audioPlayer: AudioPlayerService
 
@@ -17,6 +18,8 @@ struct PlaylistDetailView: View {
     @State private var removingTrackIDs: Set<String> = []
     @State private var originalTrackOrder: [String] = []
     @State private var isSavingPlaylistOrder = false
+    @State private var showDeleteConfirmation = false
+    @State private var isDeletingPlaylist = false
 
     private var hasUnsavedOrderChanges: Bool {
         !originalTrackOrder.isEmpty && trackOrderIDs(for: tracks) != originalTrackOrder
@@ -80,6 +83,11 @@ struct PlaylistDetailView: View {
                     Button("Play Playlist", systemImage: "text.line.first.and.arrowtriangle.forward") {
                         playPlaylist()
                     }
+
+                    Button("Delete Playlist", systemImage: "trash", role: .destructive) {
+                        showDeleteConfirmation = true
+                    }
+                    .disabled(isDeletingPlaylist)
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -100,6 +108,19 @@ struct PlaylistDetailView: View {
         }
         .sheet(isPresented: $showSimilarVibes) {
             similarVibesSheet
+        }
+        .confirmationDialog(
+            "Delete Playlist?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Playlist", role: .destructive) {
+                Task { await deletePlaylist() }
+            }
+            .disabled(isDeletingPlaylist)
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This will permanently delete \"\(playlist.name)\".")
         }
         .miniPlayerSpacer()
     }
@@ -194,6 +215,22 @@ struct PlaylistDetailView: View {
         do {
             try await service.updatePlaylistTracks(playlistID: playlist.id, tracks: tracks)
             originalTrackOrder = trackOrderIDs(for: tracks)
+        } catch is CancellationError {
+            return
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func deletePlaylist() async {
+        guard let service else { return }
+
+        isDeletingPlaylist = true
+        defer { isDeletingPlaylist = false }
+
+        do {
+            try await service.deletePlaylist(id: playlist.id)
+            dismiss()
         } catch is CancellationError {
             return
         } catch {
@@ -379,6 +416,18 @@ struct PlaylistDetailView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
+
+                        if let identifier = track.displayPhysicalIdentifier {
+                            Text(identifier)
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(.blue)
+                                .foregroundStyle(.white)
+                                .clipShape(Capsule())
+                                .textSelection(.enabled)
+                        }
 
                         HStack(spacing: 8) {
                             if let position = track.displayPosition {

@@ -114,6 +114,10 @@ struct PlaylistsView: View {
             .navigationDestination(item: $selectedPlaylist) { playlist in
                 PlaylistDetailView(playlist: playlist)
             }
+            .onChange(of: selectedPlaylist) { _, newValue in
+                guard newValue == nil else { return }
+                Task { await loadPlaylists() }
+            }
             .alert("Error", isPresented: .constant(errorMessage != nil)) {
                 Button("OK") { errorMessage = nil }
             } message: {
