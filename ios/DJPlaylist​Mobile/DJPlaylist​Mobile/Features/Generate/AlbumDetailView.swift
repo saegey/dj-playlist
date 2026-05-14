@@ -18,6 +18,13 @@ struct AlbumDetailView: View {
     @State private var allPlaylists: [Playlist] = []
     @State private var isLoadingAllPlaylists = false
     @State private var addToPlaylistError: String?
+    @State private var showEditAlbum = false
+    @State private var editLibraryIdentifier = ""
+    @State private var editAlbumNotes = ""
+    @State private var editPurchasePrice = ""
+    @State private var editCondition = ""
+    @State private var isSavingAlbum = false
+    @State private var editAlbumError: String?
 
     private var displayAlbum: Album { detailAlbum ?? album }
 
@@ -45,11 +52,20 @@ struct AlbumDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                if !tracks.isEmpty {
-                    Button("Play", systemImage: "play.fill") {
-                        playAlbum()
+                Menu {
+                    Button("Edit Album", systemImage: "pencil") {
+                        prepareAlbumEdit()
+                        showEditAlbum = true
                     }
-                    .disabled(!tracks.contains(where: \.isPlayable))
+
+                    if !tracks.isEmpty {
+                        Button("Play", systemImage: "play.fill") {
+                            playAlbum()
+                        }
+                        .disabled(!tracks.contains(where: \.isPlayable))
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }
@@ -72,13 +88,16 @@ struct AlbumDetailView: View {
         .sheet(isPresented: $showAddToPlaylist) {
             addToPlaylistSheet
         }
+        .sheet(isPresented: $showEditAlbum) {
+            editAlbumSheet
+        }
         .miniPlayerSpacer()
     }
 
     private var albumHeader: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 16) {
-                AsyncImage(url: displayAlbum.coverArtURL) { image in
+                AsyncImage(url: displayAlbum.coverArtURL(relativeTo: appState.normalizedServerURL)) { image in
                     image
                         .resizable()
                         .scaledToFill()
@@ -138,6 +157,28 @@ struct AlbumDetailView: View {
                 }
             }
 
+            if displayAlbum.condition?.nonEmpty != nil || displayAlbum.purchasePrice != nil {
+                HStack(spacing: 8) {
+                    if let condition = displayAlbum.condition?.nonEmpty {
+                        Text(condition)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    if let purchasePrice = displayAlbum.purchasePrice {
+                        Text(formatPurchasePrice(purchasePrice))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            if let notes = displayAlbum.albumNotes?.nonEmpty {
+                Text(notes)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(4)
+            }
+
             if let genres = displayAlbum.genres, !genres.isEmpty {
                 FlowLayout(spacing: 4) {
                     ForEach(genres, id: \.self) { genre in
@@ -180,37 +221,44 @@ struct AlbumDetailView: View {
                     .padding(.bottom, 8)
 
                 ForEach(tracks) { track in
-                    HStack(alignment: .center, spacing: 12) {
-                        if let position = track.displayPosition {
-                            Text(position)
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                                .frame(width: 28, alignment: .trailing)
-                        }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(track.displayTitle)
-                                .font(.body)
-                                .lineLimit(2)
-
-                            if let artist = track.artist, artist != displayAlbum.artist {
-                                Text(artist)
+                    NavigationLink {
+                        TrackDetailView(track: track)
+                            .environmentObject(appState)
+                            .environmentObject(audioPlayer)
+                    } label: {
+                        HStack(alignment: .center, spacing: 12) {
+                            if let position = track.displayPosition {
+                                Text(position)
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: 28, alignment: .trailing)
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(track.displayTitle)
+                                    .font(.body)
+                                    .lineLimit(2)
+
+                                if let artist = track.artist, artist != displayAlbum.artist {
+                                    Text(artist)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+
+                            Spacer(minLength: 0)
+
+                            if let duration = track.displayDuration {
+                                Text(duration)
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
                             }
                         }
-
-                        Spacer(minLength: 0)
-
-                        if let duration = track.displayDuration {
-                            Text(duration)
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 10)
-                    .contentShape(Rectangle())
+                    .buttonStyle(.plain)
                     .contextMenu {
                         Button("Play", systemImage: "play.fill") {
                             togglePlayback(for: track)
@@ -298,7 +346,7 @@ struct AlbumDetailView: View {
                         .environmentObject(audioPlayer)
                 } label: {
                     HStack(alignment: .top, spacing: 12) {
-                        AsyncImage(url: similarTrack.albumArtURL) { image in
+                        AsyncImage(url: similarTrack.albumArtURL(relativeTo: appState.normalizedServerURL)) { image in
                             image.resizable().scaledToFill()
                         } placeholder: {
                             ZStack {
@@ -351,6 +399,51 @@ struct AlbumDetailView: View {
             return
         } catch {
             similarError = error.localizedDescription
+        }
+    }
+
+    private var editAlbumSheet: some View {
+        NavigationStack {
+            Form {
+                Section("Catalog") {
+                    TextField("Library identifier", text: $editLibraryIdentifier)
+                    TextField("Condition", text: $editCondition)
+                    TextField("Purchase price", text: $editPurchasePrice)
+                        .keyboardType(.decimalPad)
+                }
+
+                Section("Notes") {
+                    TextEditor(text: $editAlbumNotes)
+                        .frame(minHeight: 120)
+                }
+
+                if let editAlbumError {
+                    Section {
+                        Text(editAlbumError)
+                            .foregroundStyle(.red)
+                    }
+                }
+            }
+            .disabled(isSavingAlbum)
+            .navigationTitle("Edit Album")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showEditAlbum = false }
+                        .disabled(isSavingAlbum)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        Task { await saveAlbumEdits() }
+                    }
+                    .disabled(isSavingAlbum || displayAlbum.releaseID == nil || displayAlbum.friendID == nil)
+                }
+            }
+            .overlay {
+                if isSavingAlbum {
+                    ProgressView("Saving...")
+                }
+            }
         }
     }
 
@@ -413,6 +506,67 @@ struct AlbumDetailView: View {
         } catch {
             addToPlaylistError = error.localizedDescription
         }
+    }
+
+    private func prepareAlbumEdit() {
+        editLibraryIdentifier = displayAlbum.physicalIdentifier ?? ""
+        editAlbumNotes = displayAlbum.albumNotes ?? ""
+        editPurchasePrice = displayAlbum.purchasePrice.map(formatEditableNumber) ?? ""
+        editCondition = displayAlbum.condition ?? ""
+        editAlbumError = nil
+    }
+
+    private func saveAlbumEdits() async {
+        guard let service,
+              let releaseID = displayAlbum.releaseID,
+              let friendID = displayAlbum.friendID else {
+            editAlbumError = "Album identifiers are missing."
+            return
+        }
+
+        let trimmedPrice = editPurchasePrice.trimmingCharacters(in: .whitespacesAndNewlines)
+        let purchasePrice: Double
+        if trimmedPrice.isEmpty {
+            purchasePrice = 0
+        } else if let parsedPrice = Double(trimmedPrice) {
+            purchasePrice = parsedPrice
+        } else {
+            editAlbumError = "Purchase price must be a number."
+            return
+        }
+
+        isSavingAlbum = true
+        editAlbumError = nil
+        defer { isSavingAlbum = false }
+
+        do {
+            try await service.updateAlbum(
+                releaseID: releaseID,
+                friendID: friendID,
+                albumRating: displayAlbum.albumRating ?? 0,
+                albumNotes: editAlbumNotes.trimmingCharacters(in: .whitespacesAndNewlines),
+                purchasePrice: purchasePrice,
+                condition: editCondition.trimmingCharacters(in: .whitespacesAndNewlines),
+                libraryIdentifier: editLibraryIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+            showEditAlbum = false
+            await loadDetail()
+        } catch is CancellationError {
+            return
+        } catch {
+            editAlbumError = error.localizedDescription
+        }
+    }
+
+    private func formatPurchasePrice(_ value: Double) -> String {
+        "$" + formatEditableNumber(value)
+    }
+
+    private func formatEditableNumber(_ value: Double) -> String {
+        if value.rounded() == value {
+            return String(format: "%.0f", value)
+        }
+        return String(format: "%.2f", value)
     }
 }
 

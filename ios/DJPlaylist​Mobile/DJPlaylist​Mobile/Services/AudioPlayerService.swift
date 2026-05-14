@@ -23,7 +23,7 @@ enum AudioPlayerError: LocalizedError {
 
 private struct QueueEntry: Identifiable {
     let track: Track
-    let localFileURL: URL
+    let playbackURL: URL
 
     var id: String { track.id }
 }
@@ -154,7 +154,7 @@ final class AudioPlayerService: ObservableObject {
 
         player.removeAllItems()
         for entry in entries[startIndex...] {
-            player.insert(AVPlayerItem(url: entry.localFileURL), after: nil)
+            player.insert(AVPlayerItem(url: entry.playbackURL), after: nil)
         }
 
         currentTrackID = entries[startIndex].track.id
@@ -167,8 +167,8 @@ final class AudioPlayerService: ObservableObject {
 
         for track in tracks {
             guard let streamURL = streamURL(for: track, serverURL: serverURL) else { continue }
-            let localFileURL = try await prepareLocalPlaybackURL(from: streamURL, track: track)
-            entries.append(QueueEntry(track: track, localFileURL: localFileURL))
+            let playbackURL = try playbackURL(for: track, streamURL: streamURL)
+            entries.append(QueueEntry(track: track, playbackURL: playbackURL))
         }
 
         return entries
@@ -298,7 +298,7 @@ final class AudioPlayerService: ObservableObject {
         let remainingEntries = Array(queueEntries[currentIndex...])
         player.removeAllItems()
         for entry in remainingEntries {
-            player.insert(AVPlayerItem(url: entry.localFileURL), after: nil)
+            player.insert(AVPlayerItem(url: entry.playbackURL), after: nil)
         }
         currentTrackID = queueEntries[currentIndex].track.id
         currentTrack = queueEntries[currentIndex].track
@@ -345,7 +345,7 @@ final class AudioPlayerService: ObservableObject {
         let remainingEntries = Array(queueEntries[currentIndex...])
         player.removeAllItems()
         for entry in remainingEntries {
-            player.insert(AVPlayerItem(url: entry.localFileURL), after: nil)
+            player.insert(AVPlayerItem(url: entry.playbackURL), after: nil)
         }
         currentTrackID = queueEntries[currentIndex].track.id
         currentTrack = queueEntries[currentIndex].track
@@ -405,7 +405,7 @@ final class AudioPlayerService: ObservableObject {
             for entry in entries {
                 queueEntries.append(entry)
                 queuedTrackIDs.append(entry.track.id)
-                player.insert(AVPlayerItem(url: entry.localFileURL), after: nil)
+                player.insert(AVPlayerItem(url: entry.playbackURL), after: nil)
             }
             if currentTrackID == nil, let first = entries.first {
                 currentTrackID = first.track.id
@@ -475,7 +475,7 @@ final class AudioPlayerService: ObservableObject {
             cachedArtwork = nil
             cachedArtworkTrackID = entry.track.id
             let trackID = entry.track.id
-            if let albumArtURL = entry.track.albumArtURL {
+            if let albumArtURL = entry.track.albumArtURL(relativeTo: pendingServerURL) {
                 artworkLoadTask = Task { [weak self] in
                     guard let self else { return }
                     if let artwork = await self.loadArtwork(from: albumArtURL) {
@@ -550,30 +550,18 @@ final class AudioPlayerService: ObservableObject {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func prepareLocalPlaybackURL(from remoteURL: URL, track: Track) async throws -> URL {
+    private func playbackURL(for track: Track, streamURL: URL) throws -> URL {
         if let downloadedFileURL = downloadedAudioFileURL(for: track),
            fileManager.fileExists(atPath: downloadedFileURL.path) {
             return downloadedFileURL
         }
 
-        let destinationURL = try cachedAudioFileURL(for: track, remoteURL: remoteURL)
-        if fileManager.fileExists(atPath: destinationURL.path) {
-            return destinationURL
+        let cachedFileURL = try cachedAudioFileURL(for: track, remoteURL: streamURL)
+        if fileManager.fileExists(atPath: cachedFileURL.path) {
+            return cachedFileURL
         }
 
-        let (tempURL, response) = try await URLSession.shared.download(from: remoteURL)
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200 ..< 300).contains(httpResponse.statusCode) else {
-            throw AudioPlayerError.playbackFailed("Audio download failed.")
-        }
-
-        let parentURL = destinationURL.deletingLastPathComponent()
-        try fileManager.createDirectory(at: parentURL, withIntermediateDirectories: true)
-        if fileManager.fileExists(atPath: destinationURL.path) {
-            try fileManager.removeItem(at: destinationURL)
-        }
-        try fileManager.moveItem(at: tempURL, to: destinationURL)
-        return destinationURL
+        return streamURL
     }
 
     private func downloadedAudioFileURL(for track: Track) -> URL? {

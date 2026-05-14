@@ -34,6 +34,7 @@ struct AirPlayRoutePickerView: UIViewRepresentable {
 }
 
 struct MiniPlayerView: View {
+    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var audioPlayer: AudioPlayerService
     @EnvironmentObject private var progress: PlaybackProgress
     @State private var showNowPlaying = false
@@ -61,7 +62,7 @@ struct MiniPlayerView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .task(id: audioPlayer.currentTrack?.id) {
                     artworkImage = nil
-                    guard let url = audioPlayer.currentTrack?.albumArtURL else { return }
+                    guard let url = audioPlayer.currentTrack?.albumArtURL(relativeTo: appState.normalizedServerURL) else { return }
                     do {
                         let (data, _) = try await URLSession.shared.data(from: url)
                         if !Task.isCancelled {

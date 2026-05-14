@@ -3,10 +3,10 @@ import Foundation
 struct PlaylistService {
     let client: APIClient
 
-    func fetchAlbums(query: String = "", friendID: Int? = nil) async throws -> [Album] {
+    func fetchAlbums(query: String = "", friendID: Int? = nil, limit: Int = 50, offset: Int = 0) async throws -> [Album] {
         let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let encodedQuery = trimmedQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        var path = "/api/albums?limit=100"
+        var path = "/api/albums?limit=\(limit)&offset=\(offset)"
         if !encodedQuery.isEmpty {
             path += "&q=\(encodedQuery)"
         }
@@ -42,6 +42,28 @@ struct PlaylistService {
         let encodedReleaseID = releaseID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? releaseID
         let path = "/api/albums/\(encodedReleaseID)?friend_id=\(friendID)"
         return try await client.request(path: path, method: "GET")
+    }
+
+    func updateAlbum(
+        releaseID: String,
+        friendID: Int,
+        albumRating: Double,
+        albumNotes: String,
+        purchasePrice: Double,
+        condition: String,
+        libraryIdentifier: String
+    ) async throws {
+        let payload = UpdateAlbumRequest(
+            release_id: releaseID,
+            friend_id: friendID,
+            album_rating: albumRating,
+            album_notes: albumNotes,
+            purchase_price: purchasePrice,
+            condition: condition,
+            library_identifier: libraryIdentifier
+        )
+        let body = try JSONEncoder().encode(payload)
+        _ = try await client.rawRequest(path: "/api/albums/update", method: "PATCH", body: body)
     }
 
     func fetchPlaylists() async throws -> [Playlist] {
@@ -131,6 +153,10 @@ struct PlaylistService {
         return try await client.request(path: "/api/playlists", method: "POST", body: body)
     }
 
+    func deletePlaylist(id: Int) async throws {
+        _ = try await client.rawRequest(path: "/api/playlists?id=\(id)", method: "DELETE")
+    }
+
     func testConnection() async throws {
         _ = try await client.rawRequest(path: "/api/albums?limit=1")
     }
@@ -202,17 +228,21 @@ struct PlaylistService {
                 trackID: match.trackID,
                 friendID: reference.friendID ?? match.friendID,
                 releaseID: reference.releaseID ?? match.releaseID,
-                position: reference.position ?? match.position,
+                position: match.position ?? reference.position,
                 title: match.title ?? reference.title,
                 artist: match.artist ?? reference.artist,
                 albumName: match.albumName ?? reference.albumName,
                 physicalIdentifier: match.physicalIdentifier ?? reference.physicalIdentifier,
                 duration: match.duration ?? reference.duration,
                 albumThumbnailURL: match.albumThumbnailURL ?? reference.albumThumbnailURL,
+                audioFileAlbumArtURL: match.audioFileAlbumArtURL ?? reference.audioFileAlbumArtURL,
                 localAudioURL: match.localAudioURL ?? reference.localAudioURL,
                 bpm: match.bpm ?? reference.bpm,
                 embedding: match.embedding ?? reference.embedding,
-                durationSeconds: match.durationSeconds ?? reference.durationSeconds
+                durationSeconds: match.durationSeconds ?? reference.durationSeconds,
+                appleMusicURL: match.appleMusicURL ?? reference.appleMusicURL,
+                discogsURL: match.discogsURL ?? reference.discogsURL,
+                youtubeURL: match.youtubeURL ?? reference.youtubeURL
             )
         } catch {
             return reference
