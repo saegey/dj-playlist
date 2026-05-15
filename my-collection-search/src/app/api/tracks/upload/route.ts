@@ -4,6 +4,8 @@ import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { writeEssentiaAnalysis } from "@/lib/essentia-storage";
+import { generateAndStoreAudioVibeEmbedding } from "@/lib/audio-vibe-embedding";
+import { generateAndStoreIdentityEmbedding } from "@/lib/identity-embedding";
 import { trackRepository } from "@/server/repositories/trackRepository";
 
 export const runtime = "nodejs"; // Ensure Node.js runtime for file system access
@@ -47,6 +49,19 @@ async function processAudioFile(
   // Fetch updated track
   const rows = await trackRepository.findTracksByTrackId(track_id);
   if (rows && rows[0]) {
+    for (const row of rows) {
+      try {
+        await generateAndStoreIdentityEmbedding(row.track_id, row.friend_id);
+      } catch (identityError) {
+        console.error("Failed to update identity embedding after upload:", identityError);
+      }
+      try {
+        await generateAndStoreAudioVibeEmbedding(row.track_id, row.friend_id);
+      } catch (audioError) {
+        console.error("Failed to update audio vibe embedding after upload:", audioError);
+      }
+    }
+
     try {
       const { getMeiliClient } = await import("@/lib/meili");
       const meiliClient = getMeiliClient();

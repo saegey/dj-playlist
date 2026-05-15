@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTrackEmbedding } from "@/lib/track-embedding";
+import { generateAndStoreAudioVibeEmbedding } from "@/lib/audio-vibe-embedding";
+import { generateAndStoreIdentityEmbedding } from "@/lib/identity-embedding";
 import { getPostHogClient } from "@/lib/posthog-server";
 import {
   trackRepository,
@@ -23,7 +25,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
 
-    // Only update embedding if any prompt field changed
+    // Legacy single-vector embedding fields
     const promptFields: Array<keyof TrackWithLibraryIdentifierRow> = [
       "local_tags",
       "styles",
@@ -52,6 +54,42 @@ export async function PATCH(req: Request) {
       }
     }
 
+    const identityFields: Array<keyof TrackWithLibraryIdentifierRow> = [
+      "title",
+      "artist",
+      "album",
+      "year",
+      "genres",
+      "styles",
+      "local_tags",
+      "composer",
+    ];
+    const audioVibeFields: Array<keyof TrackWithLibraryIdentifierRow> = [
+      "bpm",
+      "key",
+      "danceability",
+      "mood_happy",
+      "mood_sad",
+      "mood_relaxed",
+      "mood_aggressive",
+    ];
+    const fieldsChanged = (
+      fields: Array<keyof TrackWithLibraryIdentifierRow>
+    ): boolean => {
+      for (const field of fields) {
+        const before = current?.[field];
+        const after = updated?.[field];
+        if (Array.isArray(before) || Array.isArray(after)) {
+          const beforeArr = Array.isArray(before) ? before : [];
+          const afterArr = Array.isArray(after) ? after : [];
+          if (beforeArr.join() !== afterArr.join()) return true;
+          continue;
+        }
+        if (before !== after) return true;
+      }
+      return false;
+    };
+
     let embedding;
     if (shouldUpdateEmbedding) {
       try {
@@ -66,6 +104,23 @@ export async function PATCH(req: Request) {
         console.error("Failed to update embedding:", embedError);
       }
     }
+
+    if (fieldsChanged(identityFields)) {
+      try {
+        await generateAndStoreIdentityEmbedding(updated.track_id, updated.friend_id);
+      } catch (identityError) {
+        console.error("Failed to update identity embedding:", identityError);
+      }
+    }
+
+    if (fieldsChanged(audioVibeFields)) {
+      try {
+        await generateAndStoreAudioVibeEmbedding(updated.track_id, updated.friend_id);
+      } catch (audioVibeError) {
+        console.error("Failed to update audio vibe embedding:", audioVibeError);
+      }
+    }
+
     // Always update MeiliSearch
     try {
       const index = meiliClient.index("tracks");
