@@ -16,8 +16,7 @@ import {
   Portal,
 } from "@chakra-ui/react";
 import { TbPlaylist } from "react-icons/tb";
-import { SiApplemusic } from "react-icons/si";
-import { LuAudioLines, LuCloudDownload } from "react-icons/lu";
+import { LuCloudDownload } from "react-icons/lu";
 import { IoBookSharp, IoMusicalNotes, IoSettings, IoAlbums, IoAddCircle } from "react-icons/io5";
 import { FiMenu } from "react-icons/fi";
 // import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
@@ -31,9 +30,6 @@ const menuItems = [
   { href: "/albums", label: "Albums" },
   { href: "/albums/add", label: "Add Album" },
   { href: "/playlists", label: "Playlists" },
-  { href: "/missing-apple-music", label: "Match" },
-  { href: "/backfill-audio", label: "Audio" },
-  { href: "/bulk-notes", label: "Metadata" },
   { href: "/jobs", label: "Jobs" },
   { href: "/settings", label: "Settings" },
 ];
@@ -116,15 +112,7 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
                         ? IoAddCircle
                         : item.href === "/albums"
                         ? IoAlbums
-                        : item.href === "/tracks"
-                        ? IoAlbums
-                        : item.href === "/missing-apple-music"
-                        ? SiApplemusic
-                        : item.href === "/backfill-audio"
-                        ? LuAudioLines
-                        : item.href === "/bulk-notes"
-                        ? IoBookSharp
-                        : item.href === "/settings"
+                        :item.href === "/settings"
                         ? IoSettings
                         : item.href === "/playlists"
                         ? TbPlaylist

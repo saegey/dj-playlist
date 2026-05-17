@@ -20,9 +20,6 @@ const NAV_ITEMS = [
   { href: "/albums", label: "Albums" },
   { href: "/albums/add", label: "Add Album" },
   { href: "/playlists", label: "Playlists" },
-  { href: "/missing-apple-music", label: "Match" },
-  { href: "/backfill-audio", label: "Audio" },
-  { href: "/bulk-notes", label: "Metadata" },
   { href: "/jobs", label: "Jobs" },
   { href: "/settings", label: "Settings" },
 ];

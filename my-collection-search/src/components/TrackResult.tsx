@@ -13,6 +13,7 @@ import {
   Icon,
   RatingGroup,
   Badge,
+  Checkbox,
 } from "@chakra-ui/react";
 import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
@@ -47,6 +48,8 @@ export type TrackResultProps = {
   showLinks?: boolean;
   showNotes?: boolean;
   showPlaylistCount?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 };
 
 export default function TrackResult({
@@ -62,6 +65,8 @@ export default function TrackResult({
   showGenres = true,
   showNotes = true,
   showPlaylistCount = true,
+  isSelected,
+  onToggleSelect,
 }: TrackResultProps) {
   const [expanded, setExpanded] = useState(false);
   const [hasMounted, setHasMounted] = React.useState(false);
@@ -94,8 +99,18 @@ export default function TrackResult({
   // Minimized view (only render after mount to avoid hydration mismatch)
   if (minimized && !expanded && hasMounted) {
     return (
-      <Box borderWidth="1px" borderRadius="md" p={3} mb={2} position="relative">
+      <Box borderWidth="1px" borderRadius="md" p={3} mb={2} position="relative"
+        borderColor={isSelected ? "blue.500" : undefined}
+      >
         <Flex alignItems="center" gap={2}>
+          {onToggleSelect && (
+            <Box flexShrink={0} onClick={(e) => e.stopPropagation()}>
+              <Checkbox.Root checked={isSelected} onChange={onToggleSelect}>
+                <Checkbox.HiddenInput />
+                <Checkbox.Control />
+              </Checkbox.Root>
+            </Box>
+          )}
           {/* Track summary (clickable to expand) */}
           <Box
             flex="1"
@@ -165,7 +180,16 @@ export default function TrackResult({
       gap={3}
       position="relative"
       width={"100%"}
+      borderColor={isSelected ? "blue.500" : undefined}
     >
+      {onToggleSelect && (
+        <Box flexShrink={0} alignSelf="center" onClick={(e) => e.stopPropagation()}>
+          <Checkbox.Root checked={isSelected} onChange={onToggleSelect}>
+            <Checkbox.HiddenInput />
+            <Checkbox.Control />
+          </Checkbox.Root>
+        </Box>
+      )}
       {/* Album Art with Play Overlay */}
       <Box
         position="relative"

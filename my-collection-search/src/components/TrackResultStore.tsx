@@ -9,10 +9,12 @@ import { useTrackStore } from '@/stores/trackStore';
 interface TrackResultStoreProps extends Omit<TrackResultProps, 'track'> {
   trackId: string;
   friendId: number;
-  fallbackTrack?: Track; // Use this if track not in store yet
-  compact?: boolean; // Use compact layout
-  playlistMode?: boolean; // Use playlist-optimized layout
-  fetchIfMissing?: boolean; // Fetch from API if not in store
+  fallbackTrack?: Track;
+  compact?: boolean;
+  playlistMode?: boolean;
+  fetchIfMissing?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 /**
@@ -27,6 +29,8 @@ export default function TrackResultStore({
   compact = false,
   playlistMode = false,
   fetchIfMissing = false,
+  isSelected,
+  onToggleSelect,
   ...props
 }: TrackResultStoreProps) {
   const trackFromStore = useTrack(trackId, friendId);
@@ -73,5 +77,5 @@ export default function TrackResultStore({
     ? TrackResultCompact
     : TrackResult;
 
-  return <Component track={track} {...props} />;
+  return <Component track={track} isSelected={isSelected} onToggleSelect={onToggleSelect} {...props} />;
 }

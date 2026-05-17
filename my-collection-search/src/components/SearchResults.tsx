@@ -5,6 +5,11 @@ import { Box, Text, IconButton, Flex, Spinner, Badge } from "@chakra-ui/react";
 import { LuLayoutGrid, LuTable, LuMaximize2, LuMinimize2, LuFilter } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
+import TrackSelectionBar from "@/components/TrackSelectionBar";
+import { useEnrichmentStore } from "@/stores/enrichmentStore";
+import { useTrackStore } from "@/stores/trackStore";
+import { analyzeTrackAsync } from "@/services/internalApi/tracks";
+import { toaster } from "@/components/ui/toaster";
 
 import TrackResultStore from "@/components/TrackResultStore";
 import TrackTableViewWithLoader from "@/components/TrackTableViewWithLoader";
@@ -22,7 +27,9 @@ const TrackResultItem: React.FC<{
   friendId: number;
   playlistCount?: number;
   compact?: boolean;
-}> = ({ trackId, friendId, playlistCount, compact }) => {
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+}> = ({ trackId, friendId, playlistCount, compact, isSelected, onToggleSelect }) => {
   const track = useTrack(trackId, friendId);
 
   if (!track) {
@@ -38,6 +45,8 @@ const TrackResultItem: React.FC<{
       playlistCount={playlistCount}
       buttons={[<TrackActionsMenu key="menu" track={track} />]}
       compact={compact}
+      isSelected={isSelected}
+      onToggleSelect={onToggleSelect}
     />
   );
 
@@ -99,6 +108,71 @@ const SearchResults: React.FC = () => {
     friend: currentUserFriend,
     filter: searchFilters.length > 0 ? searchFilters : undefined,
   });
+
+  // Selection state
+  const [selectedTracks, setSelectedTracks] = React.useState<Set<string>>(new Set());
+  const setQueue = useEnrichmentStore((s) => s.setQueue);
+
+  const toggleTrack = React.useCallback((trackId: string, friendId: number) => {
+    const key = `${trackId}:${friendId}`;
+    setSelectedTracks((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const selectAll = React.useCallback(() => {
+    setSelectedTracks(new Set(trackInfo.map((t) => `${t.trackId}:${t.friendId}`)));
+  }, [trackInfo]);
+
+  const clearSelection = React.useCallback(() => setSelectedTracks(new Set()), []);
+
+  const handleEnrich = React.useCallback(() => {
+    const queue = trackInfo
+      .filter((t) => selectedTracks.has(`${t.trackId}:${t.friendId}`))
+      .map((t) => ({ trackId: t.trackId, friendId: t.friendId }));
+    setQueue(queue);
+    router.push("/enrich");
+  }, [trackInfo, selectedTracks, setQueue, router]);
+
+  const trackStoreMap = useTrackStore((s) => s.tracks);
+
+  const downloadableTracks = React.useMemo(() => {
+    return Array.from(selectedTracks)
+      .map((key) => trackStoreMap.get(key))
+      .filter(
+        (t): t is NonNullable<typeof t> =>
+          !!t &&
+          !t.local_audio_url &&
+          !!(t.apple_music_url || t.youtube_url || t.soundcloud_url)
+      );
+  }, [selectedTracks, trackStoreMap]);
+
+  const handleDownloadAudio = React.useCallback(async () => {
+    if (downloadableTracks.length === 0) return;
+    let queued = 0;
+    for (const track of downloadableTracks) {
+      try {
+        await analyzeTrackAsync({
+          track_id: track.track_id,
+          friend_id: track.friend_id,
+          apple_music_url: track.apple_music_url ?? null,
+          youtube_url: track.youtube_url ?? null,
+          soundcloud_url: track.soundcloud_url ?? null,
+        });
+        queued++;
+      } catch {
+        // continue on individual failures
+      }
+    }
+    toaster.create({
+      title: `${queued} track${queued !== 1 ? "s" : ""} queued for download`,
+      type: "success",
+    });
+    clearSelection();
+  }, [downloadableTracks, clearSelection]);
 
   // View mode state with localStorage persistence
   const [viewMode, setViewMode] = React.useState<"card" | "table">("card");
@@ -369,15 +443,18 @@ const SearchResults: React.FC = () => {
           </Text>
 
           {viewMode === "card" ? (
-            // Card view (existing)
+            // Card view
             trackInfo.map((info) => {
+              const key = `${info.trackId}:${info.friendId}`;
               return (
                 <TrackResultItem
                   key={`search-${info.trackId}-${info.friendId}`}
                   trackId={info.trackId}
                   friendId={info.friendId}
-                  playlistCount={playlistCounts[`${info.trackId}:${info.friendId}`]}
+                  playlistCount={playlistCounts[key]}
                   compact={compactMode}
+                  isSelected={selectedTracks.has(key)}
+                  onToggleSelect={() => toggleTrack(info.trackId, info.friendId)}
                 />
               );
             })
@@ -388,6 +465,8 @@ const SearchResults: React.FC = () => {
                 trackInfo={trackInfo}
                 playlistCounts={playlistCounts}
                 buttons={(track) => <TrackActionsMenu track={track} />}
+                selectedTracks={selectedTracks}
+                onToggleTrack={toggleTrack}
               />
             </>
           )}
@@ -402,6 +481,16 @@ const SearchResults: React.FC = () => {
         </>
       )}
       {/* End of results/infinite scroll */}
+
+      <TrackSelectionBar
+        selectedCount={selectedTracks.size}
+        loadedCount={trackInfo.length}
+        downloadableCount={downloadableTracks.length}
+        onSelectAll={selectAll}
+        onClear={clearSelection}
+        onEnrich={handleEnrich}
+        onDownloadAudio={handleDownloadAudio}
+      />
     </Box>
   );
 };

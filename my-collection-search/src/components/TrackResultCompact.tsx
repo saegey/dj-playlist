@@ -10,6 +10,7 @@ import {
   Icon,
   RatingGroup,
   Badge,
+  Checkbox,
 } from "@chakra-ui/react";
 import { SiDiscogs, SiApplemusic, SiYoutube, SiSoundcloud } from "react-icons/si";
 import ExpandableMarkdown from "./ExpandableMarkdown";
@@ -43,6 +44,8 @@ export type TrackResultCompactProps = {
   showLinks?: boolean;
   showNotes?: boolean;
   showPlaylistCount?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 };
 
 export default function TrackResultCompact({
@@ -57,6 +60,8 @@ export default function TrackResultCompact({
   showLinks = true,
   showNotes = true,
   showPlaylistCount = true,
+  isSelected,
+  onToggleSelect,
 }: TrackResultCompactProps) {
   const { replacePlaylist } = usePlaylistPlayer();
   const artworkSrc =
@@ -106,7 +111,16 @@ export default function TrackResultCompact({
       width="100%"
       _hover={{ bg: "bg.muted" }}
       transition="background 0.2s"
+      borderColor={isSelected ? "blue.500" : undefined}
     >
+      {onToggleSelect && (
+        <Box flexShrink={0} alignSelf="center" onClick={(e) => e.stopPropagation()}>
+          <Checkbox.Root checked={isSelected} onChange={onToggleSelect}>
+            <Checkbox.HiddenInput />
+            <Checkbox.Control />
+          </Checkbox.Root>
+        </Box>
+      )}
       {/* Album Art with Play Overlay */}
       <Box
         position="relative"

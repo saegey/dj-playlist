@@ -17,8 +17,7 @@ import {
 import { Tooltip } from "@/components/ui/tooltip";
 import { FiMenu, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { TbPlaylist } from "react-icons/tb";
-import { SiApplemusic } from "react-icons/si";
-import { LuAudioLines, LuCloudDownload } from "react-icons/lu";
+import { LuCloudDownload } from "react-icons/lu";
 import {
   IoBookSharp,
   IoMusicalNotes,
@@ -35,9 +34,6 @@ const menuItems = [
   { href: "/albums", label: "Albums" },
   { href: "/albums/add", label: "Add Album" },
   { href: "/playlists", label: "Playlists" },
-  { href: "/missing-apple-music", label: "Match" },
-  { href: "/backfill-audio", label: "Audio" },
-  { href: "/bulk-notes", label: "Metadata" },
   { href: "/jobs", label: "Jobs" },
   { href: "/settings", label: "Settings" },
 ];
@@ -46,10 +42,6 @@ function getItemIcon(href: string) {
   if (href === "/") return IoMusicalNotes;
   if (href === "/albums/add") return IoAddCircle;
   if (href === "/albums") return IoAlbums;
-  if (href === "/tracks") return IoAlbums;
-  if (href === "/missing-apple-music") return SiApplemusic;
-  if (href === "/backfill-audio") return LuAudioLines;
-  if (href === "/bulk-notes") return IoBookSharp;
   if (href === "/settings") return IoSettings;
   if (href === "/playlists") return TbPlaylist;
   if (href === "/jobs") return LuCloudDownload;
