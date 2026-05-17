@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Box, Table, Badge, RatingGroup, Link, Icon, Flex } from "@chakra-ui/react";
+import { Box, Table, Badge, RatingGroup, Link, Icon, Flex, Checkbox } from "@chakra-ui/react";
 import { Track } from "@/types/track";
 import { SiDiscogs, SiApplemusic, SiYoutube, SiSoundcloud } from "react-icons/si";
 import { FaPlay } from "react-icons/fa";
@@ -25,7 +25,9 @@ const TrackTableRow: React.FC<{
   friendId: number;
   playlistCount?: number;
   buttons?: (track: Track) => React.ReactNode;
-}> = ({ trackId, friendId, buttons }) => {
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+}> = ({ trackId, friendId, buttons, isSelected, onToggleSelect }) => {
   const track = useTrack(trackId, friendId);
   const { replacePlaylist } = usePlaylistPlayer();
 
@@ -38,7 +40,16 @@ const TrackTableRow: React.FC<{
   const allGenres = [...genres, ...styles];
 
   return (
-    <Table.Row>
+    <Table.Row bg={isSelected ? "blue.subtle" : undefined}>
+      {/* Checkbox */}
+      <Table.Cell onClick={(e) => e.stopPropagation()}>
+        {onToggleSelect && (
+          <Checkbox.Root checked={isSelected} onChange={onToggleSelect}>
+            <Checkbox.HiddenInput />
+            <Checkbox.Control />
+          </Checkbox.Root>
+        )}
+      </Table.Cell>
       {/* Play button */}
       <Table.Cell>
         {track.local_audio_url && (
@@ -155,18 +166,23 @@ export type TrackTableViewWithLoaderProps = {
   trackInfo: Array<{ trackId: string; friendId: number }>;
   playlistCounts?: Record<string, number>;
   buttons?: (track: Track) => React.ReactNode;
+  selectedTracks?: Set<string>;
+  onToggleTrack?: (trackId: string, friendId: number) => void;
 };
 
 export default function TrackTableViewWithLoader({
   trackInfo,
   playlistCounts = {},
   buttons,
+  selectedTracks,
+  onToggleTrack,
 }: TrackTableViewWithLoaderProps) {
   return (
     <Box overflowX="auto">
       <Table.Root size="sm" variant="outline" interactive>
         <Table.Header>
           <Table.Row>
+            <Table.ColumnHeader width="40px"></Table.ColumnHeader>
             <Table.ColumnHeader width="40px"></Table.ColumnHeader>
             <Table.ColumnHeader>Title</Table.ColumnHeader>
             <Table.ColumnHeader>Artist</Table.ColumnHeader>
@@ -189,6 +205,12 @@ export default function TrackTableViewWithLoader({
               friendId={info.friendId}
               playlistCount={playlistCounts[`${info.trackId}:${info.friendId}`]}
               buttons={buttons}
+              isSelected={selectedTracks?.has(`${info.trackId}:${info.friendId}`)}
+              onToggleSelect={
+                onToggleTrack
+                  ? () => onToggleTrack(info.trackId, info.friendId)
+                  : undefined
+              }
             />
           ))}
         </Table.Body>
