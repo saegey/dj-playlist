@@ -28,22 +28,6 @@ export async function POST(request: Request) {
     const embedding = await getTrackEmbedding(track);
     await trackRepository.updateTrackEmbedding(track_id, friend_id, embedding);
 
-    // Update MeiliSearch index with new embedding
-    try {
-      const { getMeiliClient } = await import("@/lib/meili");
-      const meiliClient = getMeiliClient();
-      const index = meiliClient.index("tracks");
-      await index.updateDocuments([
-        {
-          ...track,
-          hasVectors: true,
-          _vectors: { default: embedding },
-        },
-      ]);
-    } catch (err) {
-      console.warn("Failed to update MeiliSearch embedding:", err);
-    }
-
     return new Response(JSON.stringify({ embedding }), { status: 200 });
   } catch (err) {
     console.error("Vectorize error:", err);

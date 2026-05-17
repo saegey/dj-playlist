@@ -6,7 +6,9 @@
  *   npm run backfill-identity
  *   npm run backfill-identity -- --type=audio_vibe
  *   npm run backfill-identity -- --friend_id=1
+ *   npm run backfill-identity -- --friend-id=1
  *   npm run backfill-identity -- --limit=100 --batch_size=10
+ *   npm run backfill-identity -- --limit=100 --batch-size=10
  *   npm run backfill-identity -- --force
  */
 
@@ -36,11 +38,11 @@ function parseArgs(): EmbeddingBackfillOptions {
         process.exit(1);
       }
       options.type = type;
-    } else if (arg.startsWith("--friend_id=")) {
+    } else if (arg.startsWith("--friend_id=") || arg.startsWith("--friend-id=")) {
       options.friend_id = parseInt(arg.split("=")[1], 10);
     } else if (arg.startsWith("--limit=")) {
       options.limit = parseInt(arg.split("=")[1], 10);
-    } else if (arg.startsWith("--batch_size=")) {
+    } else if (arg.startsWith("--batch_size=") || arg.startsWith("--batch-size=")) {
       options.batch_size = parseInt(arg.split("=")[1], 10);
     } else if (arg === "--force") {
       options.force = true;
@@ -51,8 +53,10 @@ Usage: npm run backfill-identity [options]
 Options:
   --type=TYPE        Embedding type: 'identity' or 'audio_vibe' (default: identity)
   --friend_id=N      Only process tracks for this friend_id
+  --friend-id=N      Alias for --friend_id
   --limit=N          Limit number of tracks to process
   --batch_size=N     Number of concurrent embeddings (default: 5)
+  --batch-size=N     Alias for --batch_size
   --force            Force re-embedding even if hash unchanged
   --help, -h         Show this help message
 
@@ -60,10 +64,16 @@ Examples:
   npm run backfill-identity
   npm run backfill-identity -- --type=audio_vibe
   npm run backfill-identity -- --friend_id=1
+  npm run backfill-identity -- --friend-id=1
   npm run backfill-identity -- --limit=100 --batch_size=10
+  npm run backfill-identity -- --limit=100 --batch-size=10
   npm run backfill-identity -- --type=audio_vibe --force
       `);
       process.exit(0);
+    } else if (arg.startsWith("--")) {
+      console.error(`❌ Unknown flag: ${arg}`);
+      console.error("Run with --help to see supported options.");
+      process.exit(1);
     }
   }
 

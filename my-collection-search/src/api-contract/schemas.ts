@@ -473,18 +473,18 @@ export const trackSearchPostBodySchema = z.object({
     .optional(),
 });
 
-const meiliSearchMetaSchema = z.object({
+const searchMetaSchema = z.object({
   estimatedTotalHits: z.number().int(),
   offset: z.number().int(),
   limit: z.number().int(),
   processingTimeMs: z.number().int(),
 });
 
-export const trackSearchGetResponseSchema = meiliSearchMetaSchema.extend({
+export const trackSearchGetResponseSchema = searchMetaSchema.extend({
   hits: z.array(z.unknown()),
 });
 
-export const trackSearchPostResponseSchema = meiliSearchMetaSchema.extend({
+export const trackSearchPostResponseSchema = searchMetaSchema.extend({
   tracks: z.array(z.unknown()),
 });
 

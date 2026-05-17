@@ -1,4 +1,4 @@
-import { getMeiliClient } from "@/lib/meili";
+import { dbQuery } from "@/lib/serverDb";
 import type { Album, Track } from "@/types/track";
 import { albumRepository } from "@/server/repositories/albumRepository";
 
@@ -19,23 +19,86 @@ export class AlbumApiService {
     query: string;
     sort: string;
   }> {
-    const meiliClient = getMeiliClient();
-    const index = meiliClient.index("albums");
+    const queryText = params.q.trim();
+    const sqlParams: unknown[] = [];
+    const whereClauses: string[] = [];
+    let queryParamRef: string | null = null;
 
-    const filters: string[] = [];
-    if (params.friendId) filters.push(`friend_id = ${params.friendId}`);
-    const filterString = filters.length > 0 ? filters.join(" AND ") : undefined;
+    if (params.friendId) {
+      sqlParams.push(Number(params.friendId));
+      whereClauses.push(`friend_id = $${sqlParams.length}`);
+    }
 
-    const searchResults = await index.search(params.q, {
-      limit: params.limit,
-      offset: params.offset,
-      filter: filterString,
-      sort: [params.sort],
-    });
+    if (queryText.length > 0) {
+      sqlParams.push(queryText);
+      queryParamRef = `$${sqlParams.length}`;
+      whereClauses.push(
+        `(
+          to_tsvector('simple', coalesce(title, '') || ' ' || coalesce(artist, '')) @@ plainto_tsquery('simple', ${queryParamRef})
+          OR similarity(coalesce(title, ''), ${queryParamRef}) > 0.15
+          OR similarity(coalesce(artist, ''), ${queryParamRef}) > 0.15
+        )`
+      );
+    }
 
-    const hits = Array.isArray(searchResults.hits)
-      ? (searchResults.hits as AlbumSearchHit[])
-      : [];
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+    const sortMap: Record<string, string> = {
+      "date_added:desc": "date_added DESC NULLS LAST, release_id DESC, friend_id DESC",
+      "date_added:asc": "date_added ASC NULLS LAST, release_id ASC, friend_id ASC",
+      "year:desc": "year DESC NULLS LAST, release_id DESC, friend_id DESC",
+      "year:asc": "year ASC NULLS LAST, release_id ASC, friend_id ASC",
+      "title:asc": "title ASC NULLS LAST, release_id ASC, friend_id ASC",
+      "album_rating:desc":
+        "album_rating DESC NULLS LAST, release_id DESC, friend_id DESC",
+    };
+
+    const rankSql =
+      queryParamRef
+        ? `
+          (
+            ts_rank(
+              to_tsvector('simple', coalesce(title, '') || ' ' || coalesce(artist, '')),
+              plainto_tsquery('simple', ${queryParamRef})
+            ) * 2.0
+            + GREATEST(
+              similarity(coalesce(title, ''), ${queryParamRef}),
+              similarity(coalesce(artist, ''), ${queryParamRef})
+            )
+          ) DESC,
+        `
+        : "";
+
+    const sortSql = sortMap[params.sort] ?? sortMap["date_added:desc"];
+
+    sqlParams.push(params.limit);
+    const limitRef = `$${sqlParams.length}`;
+    sqlParams.push(params.offset);
+    const offsetRef = `$${sqlParams.length}`;
+
+    const { rows } = await dbQuery<AlbumSearchHit>(
+      `
+      SELECT *
+      FROM albums
+      ${whereSql}
+      ORDER BY ${rankSql} ${sortSql}
+      LIMIT ${limitRef}
+      OFFSET ${offsetRef}
+      `,
+      sqlParams
+    );
+
+    const countParams = [...sqlParams.slice(0, sqlParams.length - 2)];
+    const { rows: countRows } = await dbQuery<{ total: string }>(
+      `
+      SELECT COUNT(*)::text AS total
+      FROM albums
+      ${whereSql}
+      `,
+      countParams
+    );
+
+    const hits = rows;
 
     const friendIds = Array.from(
       new Set(
@@ -80,9 +143,9 @@ export class AlbumApiService {
 
     return {
       hits: finalHits,
-      estimatedTotalHits: searchResults.estimatedTotalHits ?? 0,
-      offset: searchResults.offset,
-      limit: searchResults.limit,
+      estimatedTotalHits: Number(countRows[0]?.total ?? 0),
+      offset: params.offset,
+      limit: params.limit,
       query: params.q,
       sort: params.sort,
     };

@@ -39,11 +39,6 @@ services:
       file: docker-compose.yml
       service: db
 
-  meili:
-    extends:
-      file: docker-compose.yml
-      service: meili
-
   essentia:
     extends:
       file: docker-compose.yml
@@ -113,9 +108,6 @@ services:
 volumes:
   db_data:
     name: teststack_db_data
-    external: true
-  meili_data:
-    name: teststack_meili_data
     external: true
   music_data:
     name: teststack_music_data

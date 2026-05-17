@@ -6,7 +6,7 @@ A full-stack Next.js app for managing, analyzing, and syncing vinyl music collec
 
 ## Features
 - **Modern Frontend**: Next.js 15, React 19, TypeScript, and Chakra UI v3
-- **Powerful Search**: MeiliSearch with infinite scroll, full-text search, and advanced filtering
+- **Powerful Search**: PostgreSQL-powered full-text + fuzzy search with infinite scroll and advanced filtering
 - **Multi-Platform Integration**: Discogs, Apple Music, Spotify, YouTube, and SoundCloud
 - **Audio Analysis**: Essentia-powered BPM, key detection, and mood analysis via FastAPI microservice
 - **Smart Playlisting**: AI-powered playlist generation using genetic algorithms
@@ -72,8 +72,7 @@ dj-playlist/
 
    This will start:
    - PostgreSQL database (port 5432)
-   - MeiliSearch (port 7700)
-   - Next.js app (port 3000)
+   -    - Next.js app (port 3000)
    - Essentia API for audio analysis (port 8000)
 
 4. **Run database migrations**:
@@ -83,12 +82,10 @@ dj-playlist/
 
 5. **Access the application**:
    - Frontend: [http://localhost:3000](http://localhost:3000)
-   - MeiliSearch admin: [http://localhost:7700](http://localhost:7700)
-
 6. **Import your Discogs collection**:
    - Navigate to the import page in the UI
    - Click "Sync from Discogs"
-   - Your collection will be imported and indexed in MeiliSearch
+   - Your collection will be imported
 
 ### Production Deployment
 
@@ -112,7 +109,7 @@ This option uses tagged container images from GitHub Container Registry. Ideal f
 
    This configuration:
    - Pulls pre-built images from `ghcr.io/saegey/myapp:v1.0.78`
-   - Includes all services: app, db, MeiliSearch, Redis, Essentia API, GA service, download worker
+   - Includes all services: app, db, Redis, Essentia API, GA service, download worker
    - Uses named volumes for persistence
 
 3. **Run migrations**:
@@ -176,9 +173,9 @@ If using Portainer on a Linux server (x86_64):
 
 ### Local Development (Without Docker)
 
-1. **Start PostgreSQL and MeiliSearch** (use Docker or install locally):
+1. **Start PostgreSQL** (use Docker or install locally):
    ```sh
-   docker compose up -d db meili
+   docker compose up -d db
    ```
 
 2. **Install dependencies**:
@@ -223,7 +220,7 @@ If using Portainer on a Linux server (x86_64):
 1. Set up Discogs credentials in `.env`
 2. Navigate to the import page in the UI
 3. Click "Sync from Discogs" to import your collection
-4. Tracks are automatically indexed in MeiliSearch for instant search
+4. Tracks are automatically indexed for PostgreSQL search for instant search
 
 ### Enriching Metadata
 - **Auto-match**: Automatically find Apple Music, Spotify, and YouTube links for tracks
@@ -263,7 +260,7 @@ If using Portainer on a Linux server (x86_64):
 ## Audio Analysis
 - Audio files are processed and stored in `/audio` volume
 - Essentia microservice runs in its own container (`essentia-api`)
-- Analysis results are saved to PostgreSQL and indexed in MeiliSearch
+- Analysis results are saved to PostgreSQL
 - Supports MP3, WAV, FLAC, and other common audio formats
 
 ## USB DAC Audio Playback (Optional)
@@ -551,12 +548,6 @@ Copy `my-collection-search/.env.example` to `my-collection-search/.env` and conf
 # Database
 DATABASE_URL=postgres://djplaylist:djplaylist@localhost:5432/djplaylist
 
-# MeiliSearch
-MEILISEARCH_API_KEY=mysupersecretkey
-MEILISEARCH_HOST=http://meili:7700
-MEILI_PARENT_KEY=sample_meili_parent_key
-MEILI_PARENT_KEY_UID=sample_parentkey_uid
-
 # Discogs (Required for collection import)
 DISCOGS_USER_TOKEN=your_discogs_token
 DISCOGS_USERNAME=your_discogs_username
@@ -683,7 +674,7 @@ The project includes three Docker Compose files for different deployment scenari
 ### `docker-compose.prod.yml` (Production with Registry Images)
 - Uses pre-built images from GitHub Container Registry
 - Faster deployment (no build time)
-- Includes all production services: app, db, Redis, MeiliSearch, Essentia API, GA service, download worker
+- Includes all production services: app, db, Redis, Essentia API, GA service, download worker
 - **Currently x86_64/amd64 only** - ARM64 images not yet published
 - Ideal for Linux servers and tools like Portainer
 - Usage: `docker compose -f docker-compose.prod.yml up -d`
@@ -707,16 +698,13 @@ docker compose logs db
 docker compose exec db psql -U djplaylist -d djplaylist -c "SELECT 1;"
 ```
 
-### MeiliSearch not indexing
+### PostgreSQL search issues
 ```sh
-# Check MeiliSearch logs
-docker compose logs meili
+# Check database logs
+docker compose logs db
 
-# Verify MeiliSearch is accessible
-curl http://localhost:7700/health
-
-# Re-index all tracks (via UI or API)
-# Navigate to /admin/reindex in the app
+# Verify database is accessible
+docker compose exec db psql -U djplaylist -d djplaylist -c "SELECT 1;"
 ```
 
 ### Missing API credentials
@@ -755,7 +743,7 @@ curl http://localhost:8000/health
 ### Backend
 - Next.js API Routes
 - PostgreSQL 16 with pgvector extension
-- MeiliSearch (search engine)
+- PostgreSQL full-text + trigram search
 - Redis (job queuing)
 - node-pg-migrate (database migrations)
 

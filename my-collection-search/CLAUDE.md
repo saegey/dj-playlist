@@ -9,13 +9,13 @@
 
 ## Overview
 - Next.js app to browse, search, and manage a personal DJ track collection.
-- Data sources: PostgreSQL (with pgvector) + Meilisearch for fast search.
+- Data sources: PostgreSQL (with pgvector) + PostgreSQL full-text + trigram search.
 - Features: full-text search with infinite scroll, playlist views, track editing (rating, notes, links), audio analysis, AI helpers.
 
 ## Tech stack
 - Framework: Next.js 16, React 19, TypeScript
 - UI: Chakra UI v3
-- Data: TanStack Query v5, Meilisearch
+- Data: TanStack Query v5, PostgreSQL search
 - DB: Postgres (pgvector), migrations via node-pg-migrate
 - Services: optional Essentia API (audio analysis) and GA service
 
@@ -24,12 +24,12 @@
   - npm run dev — start Next.js
   - npm run build / npm start — production build/run
   - npm run migrate — run DB migrations (requires DATABASE_URL)
-- Docker (recommended for DB + Meili + app):
-  - docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db meili
+- Docker (recommended for DB + app):
+  - docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db
   - docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm migrate
   - docker compose -f docker-compose.yml -f docker-compose.dev.yml up app
 - Key env vars (see docker-compose.yml and .env):
-  - DATABASE_URL, MEILISEARCH_HOST, MEILISEARCH_API_KEY
+  - DATABASE_URL
   - Apple/Spotify/Discogs/OpenAI credentials as needed
 
 ## Structure (key folders)
@@ -37,7 +37,7 @@
 - src/hooks — data hooks, mutations, cache helpers
 - src/lib — queryKeys, helpers
 - src/server/repositories — backend DB access (*Repository.ts files)
-- src/server/services — backend-only services (DB, Redis, Meili, external APIs)
+- src/server/services — backend-only services (DB, Redis, external APIs)
 - src/services — frontend-only: http.ts, aiService.ts, backupService.ts, internalApi/
 - src/providers - React context providers
 - src/types — domain types (Track, etc.)
@@ -174,9 +174,6 @@ Backups
 - GET /api/backups → { files: string[] }
 - POST /api/restore (multipart) → { message? }
 
-Meilisearch admin (server-side helper)
-- Tracks index: searchable/filterable fields and ranking rules in code (see server/services/meiliIndexService.ts)
-
 Error shape & status codes
 - http<T>() throws Error(message) when !res.ok.
   - Message taken from { error } or { message } JSON field, else `HTTP <status>`.
@@ -188,7 +185,7 @@ Error shape & status codes
 - Minimal diffs; don’t reformat unrelated code
 
 ## Contact points
-- If you need details about auth, Meili setup, or missing envs, ask for: MEILISEARCH_HOST/API_KEY values and DATABASE_URL.
+- If you need details about auth, missing envs, ask for DATABASE_URL and provider credentials.
 - If a list doesn’t update after a mutation, check its query key and include it in useTracksCacheUpdater.
 
 ## Database schema (PostgreSQL)
@@ -259,7 +256,7 @@ Notes
 - The compound PK allows the same track_id to exist for multiple users.
 - friend_id columns added to normalize references to friends table (replacing username strings).
 - username columns kept temporarily for backwards compatibility during transition.
-- Meilisearch stores denormalized Track docs for fast search; Postgres is the source of truth.
+- PostgreSQL is the source of truth for both storage and search.
 
 Migration Scripts
 - migrations/1737641200000_add_friend_id_columns.js — adds friend_id to tracks and playlist_tracks

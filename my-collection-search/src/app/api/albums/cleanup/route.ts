@@ -1,7 +1,6 @@
 // API endpoint to clean up albums with no tracks
 // Deletes albums where track_count = 0 or where no actual tracks exist in the database
 
-import { getMeiliClient } from "@/lib/meili";
 import { NextResponse } from "next/server";
 import { withDbTransaction } from "@/lib/serverDb";
 import { albumRepository, type AlbumCleanupRow } from "@/server/repositories/albumRepository";
@@ -105,52 +104,6 @@ export async function POST() {
         controller.enqueue(
           encoder.encode(`\n✅ Deleted ${deletedCount} albums from database\n\n`)
         );
-
-        controller.enqueue(
-          encoder.encode("Cleaning up MeiliSearch index...\n")
-        );
-        try {
-          const meiliClient = getMeiliClient();
-          const albumsIndex = meiliClient.index("albums");
-          const docIds = Array.from(albumsToDelete.keys());
-          let meiliDeletedCount = 0;
-
-          for (const docId of docIds) {
-            try {
-              await albumsIndex.deleteDocument(docId);
-              meiliDeletedCount++;
-              if (meiliDeletedCount % 10 === 0) {
-                controller.enqueue(
-                  encoder.encode(
-                    `Deleted ${meiliDeletedCount}/${docIds.length} from MeiliSearch...\n`
-                  )
-                );
-              }
-            } catch (error) {
-              if (error instanceof Error && !error.message.includes("not found")) {
-                controller.enqueue(
-                  encoder.encode(
-                    `⚠️  MeiliSearch delete warning for ${docId}: ${error.message}\n`
-                  )
-                );
-              }
-            }
-          }
-
-          controller.enqueue(
-            encoder.encode(
-              `✅ Deleted ${meiliDeletedCount} documents from MeiliSearch\n\n`
-            )
-          );
-        } catch (error) {
-          controller.enqueue(
-            encoder.encode(
-              `⚠️  MeiliSearch cleanup error: ${
-                error instanceof Error ? error.message : String(error)
-              }\n`
-            )
-          );
-        }
 
         controller.enqueue(encoder.encode("\n📊 Cleanup Summary:\n"));
         controller.enqueue(

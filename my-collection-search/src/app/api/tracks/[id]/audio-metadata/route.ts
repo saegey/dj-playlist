@@ -150,33 +150,6 @@ export async function POST(
       await trackRepository.updateTrackAudioFileAlbumArtUrl(trackId, friendId, publicUrl);
     }
 
-    // Keep MeiliSearch in sync for all tracks on the album.
-    try {
-      const { getMeiliClient } = await import("@/lib/meili");
-      const meiliClient = getMeiliClient();
-      const index = meiliClient.index("tracks");
-
-      if (releaseId) {
-        const trackIds = await albumRepository.listTrackIdsForAlbum(releaseId, friendId);
-        const refs = trackIds.map((id) => ({ track_id: id, friend_id: friendId }));
-        const tracks = await trackRepository.findTracksByRefsPreservingOrder(refs);
-        if (tracks.length > 0) {
-          await index.updateDocuments(tracks);
-        }
-      } else {
-        const updatedTrack =
-          await trackRepository.findTrackByTrackIdAndFriendIdWithLibraryFallback(
-            trackId,
-            friendId
-          );
-        if (updatedTrack) {
-          await index.updateDocuments([updatedTrack]);
-        }
-      }
-    } catch (meiliErr) {
-      console.warn("Failed to update MeiliSearch track artwork field:", meiliErr);
-    }
-
     return NextResponse.json({
       success: true,
       audio_file_album_art_url: publicUrl,

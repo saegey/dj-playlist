@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  buildMeiliSearchFilters,
+  buildSearchFilters,
   hasActiveFilters,
   getActiveFilterCount,
   createEmptyFilters,
@@ -25,49 +25,49 @@ const empty: TracksFilter = {
   missingMetadata: false,
 };
 
-describe("buildMeiliSearchFilters", () => {
+describe("buildSearchFilters", () => {
   it("returns empty array for no active filters", () => {
-    expect(buildMeiliSearchFilters(empty)).toEqual([]);
+    expect(buildSearchFilters(empty)).toEqual([]);
   });
 
   it("adds local_audio_url IS NULL for missingAudio", () => {
-    expect(buildMeiliSearchFilters({ ...empty, missingAudio: true })).toEqual([
+    expect(buildSearchFilters({ ...empty, missingAudio: true })).toEqual([
       "local_audio_url IS NULL",
     ]);
   });
 
   it("adds bpm/key IS NULL for missingMetadata", () => {
-    expect(buildMeiliSearchFilters({ ...empty, missingMetadata: true })).toEqual([
+    expect(buildSearchFilters({ ...empty, missingMetadata: true })).toEqual([
       "(bpm IS NULL OR key IS NULL)",
     ]);
   });
 
   it("adds all-streaming-urls filter for missingAnyStreamingUrl", () => {
-    expect(buildMeiliSearchFilters({ ...empty, missingAnyStreamingUrl: true })).toEqual([
+    expect(buildSearchFilters({ ...empty, missingAnyStreamingUrl: true })).toEqual([
       "(apple_music_url IS NULL AND youtube_url IS NULL AND soundcloud_url IS NULL)",
     ]);
   });
 
   it("adds individual apple_music_url filter", () => {
-    expect(buildMeiliSearchFilters({ ...empty, missingAppleMusic: true })).toEqual([
+    expect(buildSearchFilters({ ...empty, missingAppleMusic: true })).toEqual([
       "apple_music_url IS NULL",
     ]);
   });
 
   it("adds individual youtube_url filter", () => {
-    expect(buildMeiliSearchFilters({ ...empty, missingYouTube: true })).toEqual([
+    expect(buildSearchFilters({ ...empty, missingYouTube: true })).toEqual([
       "youtube_url IS NULL",
     ]);
   });
 
   it("adds individual soundcloud_url filter", () => {
-    expect(buildMeiliSearchFilters({ ...empty, missingSoundCloud: true })).toEqual([
+    expect(buildSearchFilters({ ...empty, missingSoundCloud: true })).toEqual([
       "soundcloud_url IS NULL",
     ]);
   });
 
   it("missingAnyStreamingUrl suppresses individual streaming filters", () => {
-    const filters = buildMeiliSearchFilters({
+    const filters = buildSearchFilters({
       ...empty,
       missingAnyStreamingUrl: true,
       missingAppleMusic: true,
@@ -80,7 +80,7 @@ describe("buildMeiliSearchFilters", () => {
   });
 
   it("combines multiple independent filters", () => {
-    const filters = buildMeiliSearchFilters({
+    const filters = buildSearchFilters({
       ...empty,
       missingAudio: true,
       missingMetadata: true,

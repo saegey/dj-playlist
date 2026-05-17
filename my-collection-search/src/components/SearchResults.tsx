@@ -14,7 +14,7 @@ import { useSearchResults } from "@/hooks/useSearchResults";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { useTrack } from "@/hooks/useTrack";
 import TracksFilterModal, { TracksFilter } from "@/components/TracksFilterModal";
-import { buildMeiliSearchFilters, createEmptyFilters, getActiveFilterCount } from "@/lib/trackFilters";
+import { buildSearchFilters, createEmptyFilters, getActiveFilterCount } from "@/lib/trackFilters";
 import { useUsername } from "@/providers/UsernameProvider";
 
 const TrackResultItem: React.FC<{
@@ -71,9 +71,9 @@ const SearchResults: React.FC = () => {
   const [filterModalOpen, setFilterModalOpen] = React.useState(false);
   const [appliedFilters, setAppliedFilters] = React.useState<TracksFilter>(createEmptyFilters());
 
-  // Build MeiliSearch filter strings, combining with friend_id filter
-  const meiliFilters = React.useMemo(() => {
-    const customFilters = buildMeiliSearchFilters(appliedFilters);
+  // Build filter strings, combining with friend_id filter
+  const searchFilters = React.useMemo(() => {
+    const customFilters = buildSearchFilters(appliedFilters);
 
     // Add friend_id filter if a friend is selected
     if (currentUserFriend?.id) {
@@ -97,7 +97,7 @@ const SearchResults: React.FC = () => {
     mode: "infinite",
     limit: 20,
     friend: currentUserFriend,
-    filter: meiliFilters.length > 0 ? meiliFilters : undefined,
+    filter: searchFilters.length > 0 ? searchFilters : undefined,
   });
 
   // View mode state with localStorage persistence

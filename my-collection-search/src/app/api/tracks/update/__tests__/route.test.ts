@@ -5,16 +5,17 @@ const {
   mockUpdateTrack,
   mockUpdateEmbedding,
   mockGetTrackEmbedding,
-  mockMeiliUpdate,
+  mockGenerateIdentityEmbedding,
+  mockGenerateAudioVibeEmbedding,
   mockPostHogCapture,
 } = vi.hoisted(() => {
-  const mockMeiliUpdate = vi.fn().mockResolvedValue(undefined);
   return {
     mockFindTrack: vi.fn(),
     mockUpdateTrack: vi.fn(),
     mockUpdateEmbedding: vi.fn().mockResolvedValue(undefined),
     mockGetTrackEmbedding: vi.fn().mockResolvedValue([0.1, 0.2]),
-    mockMeiliUpdate,
+    mockGenerateIdentityEmbedding: vi.fn().mockResolvedValue({ updated: true }),
+    mockGenerateAudioVibeEmbedding: vi.fn().mockResolvedValue({ updated: true }),
     mockPostHogCapture: vi.fn(),
   };
 });
@@ -31,10 +32,12 @@ vi.mock("@/lib/track-embedding", () => ({
   getTrackEmbedding: mockGetTrackEmbedding,
 }));
 
-vi.mock("@/lib/meili", () => ({
-  getMeiliClient: () => ({
-    index: () => ({ updateDocuments: mockMeiliUpdate }),
-  }),
+vi.mock("@/lib/identity-embedding", () => ({
+  generateAndStoreIdentityEmbedding: mockGenerateIdentityEmbedding,
+}));
+
+vi.mock("@/lib/audio-vibe-embedding", () => ({
+  generateAndStoreAudioVibeEmbedding: mockGenerateAudioVibeEmbedding,
 }));
 
 vi.mock("@/lib/posthog-server", () => ({
@@ -79,12 +82,14 @@ beforeEach(() => {
   mockUpdateTrack.mockReset();
   mockUpdateEmbedding.mockReset();
   mockGetTrackEmbedding.mockReset();
-  mockMeiliUpdate.mockReset();
+  mockGenerateIdentityEmbedding.mockReset();
+  mockGenerateAudioVibeEmbedding.mockReset();
   mockPostHogCapture.mockReset();
 
   mockUpdateEmbedding.mockResolvedValue(undefined);
   mockGetTrackEmbedding.mockResolvedValue([0.1, 0.2]);
-  mockMeiliUpdate.mockResolvedValue(undefined);
+  mockGenerateIdentityEmbedding.mockResolvedValue({ updated: true });
+  mockGenerateAudioVibeEmbedding.mockResolvedValue({ updated: true });
 });
 
 // ─── Track not found ──────────────────────────────────────────────────────────
@@ -109,6 +114,7 @@ describe("PATCH /api/tracks/update — embedding update (scalar fields)", () => 
     await PATCH(makeReq(PATCH_BODY));
     expect(mockGetTrackEmbedding).toHaveBeenCalledOnce();
     expect(mockUpdateEmbedding).toHaveBeenCalledOnce();
+    expect(mockGenerateAudioVibeEmbedding).toHaveBeenCalledOnce();
   });
 
   it("regenerates embedding when key changes", async () => {
@@ -140,6 +146,8 @@ describe("PATCH /api/tracks/update — embedding update (scalar fields)", () => 
     await PATCH(makeReq(PATCH_BODY));
     expect(mockGetTrackEmbedding).not.toHaveBeenCalled();
     expect(mockUpdateEmbedding).not.toHaveBeenCalled();
+    expect(mockGenerateIdentityEmbedding).not.toHaveBeenCalled();
+    expect(mockGenerateAudioVibeEmbedding).not.toHaveBeenCalled();
   });
 
   it("does NOT regenerate embedding when only title changes", async () => {
@@ -147,6 +155,23 @@ describe("PATCH /api/tracks/update — embedding update (scalar fields)", () => 
     mockUpdateTrack.mockResolvedValueOnce(baseTrack({ title: "New Title" }));
     await PATCH(makeReq(PATCH_BODY));
     expect(mockGetTrackEmbedding).not.toHaveBeenCalled();
+  });
+});
+
+describe("PATCH /api/tracks/update — track_embeddings updates", () => {
+  it("regenerates identity embedding when identity fields change", async () => {
+    mockFindTrack.mockResolvedValueOnce(baseTrack({ title: "Old Title" }));
+    mockUpdateTrack.mockResolvedValueOnce(baseTrack({ title: "New Title" }));
+    await PATCH(makeReq(PATCH_BODY));
+    expect(mockGenerateIdentityEmbedding).toHaveBeenCalledWith("t1", 1);
+    expect(mockGenerateAudioVibeEmbedding).not.toHaveBeenCalled();
+  });
+
+  it("regenerates audio vibe embedding when audio fields change", async () => {
+    mockFindTrack.mockResolvedValueOnce(baseTrack({ mood_happy: 0.2 }));
+    mockUpdateTrack.mockResolvedValueOnce(baseTrack({ mood_happy: 0.7 }));
+    await PATCH(makeReq(PATCH_BODY));
+    expect(mockGenerateAudioVibeEmbedding).toHaveBeenCalledWith("t1", 1);
   });
 });
 
@@ -179,35 +204,6 @@ describe("PATCH /api/tracks/update — embedding update (array fields)", () => {
     mockUpdateTrack.mockResolvedValueOnce(baseTrack({ local_tags: "crate1,crate2" }));
     await PATCH(makeReq(PATCH_BODY));
     expect(mockGetTrackEmbedding).toHaveBeenCalledOnce();
-  });
-});
-
-// ─── MeiliSearch update ───────────────────────────────────────────────────────
-
-describe("PATCH /api/tracks/update — MeiliSearch update", () => {
-  it("always calls MeiliSearch updateDocuments even when embedding does not change", async () => {
-    mockFindTrack.mockResolvedValueOnce(baseTrack({ star_rating: 3 }));
-    mockUpdateTrack.mockResolvedValueOnce(baseTrack({ star_rating: 5 }));
-    await PATCH(makeReq(PATCH_BODY));
-    expect(mockMeiliUpdate).toHaveBeenCalledOnce();
-  });
-
-  it("includes _vectors.default in Meili update when embedding was regenerated", async () => {
-    const newEmbedding = [0.9, 0.8];
-    mockGetTrackEmbedding.mockResolvedValueOnce(newEmbedding);
-    mockFindTrack.mockResolvedValueOnce(baseTrack({ bpm: 120 }));
-    mockUpdateTrack.mockResolvedValueOnce(baseTrack({ bpm: 130 }));
-    await PATCH(makeReq(PATCH_BODY));
-    const meiliDoc = mockMeiliUpdate.mock.calls[0][0][0];
-    expect(meiliDoc._vectors).toEqual({ default: newEmbedding });
-  });
-
-  it("does NOT include _vectors in Meili update when embedding was not regenerated", async () => {
-    mockFindTrack.mockResolvedValueOnce(baseTrack({ star_rating: 3 }));
-    mockUpdateTrack.mockResolvedValueOnce(baseTrack({ star_rating: 5 }));
-    await PATCH(makeReq(PATCH_BODY));
-    const meiliDoc = mockMeiliUpdate.mock.calls[0][0][0];
-    expect(meiliDoc._vectors).toBeUndefined();
   });
 });
 

@@ -53,7 +53,7 @@ export default function BulkNotesPage() {
     run();
   }, [friend?.id]);
 
-  // Build filter string for MeiliSearch
+  // Build filter string for search API
   let filter = undefined;
   const localTagsFilter =
     "local_tags IS NULL OR local_tags IS EMPTY OR local_tags = '{}'";

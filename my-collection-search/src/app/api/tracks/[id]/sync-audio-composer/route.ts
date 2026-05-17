@@ -54,23 +54,6 @@ export async function POST(
 
     await trackRepository.updateTrackComposer(trackId, friendId, composer);
 
-    // Update MeiliSearch
-    try {
-      const updatedTrack =
-        await trackRepository.findTrackByTrackIdAndFriendIdWithLibraryFallback(
-          trackId,
-          friendId
-        );
-      if (updatedTrack) {
-        const { getMeiliClient } = await import("@/lib/meili");
-        const meiliClient = getMeiliClient();
-        const index = meiliClient.index("tracks");
-        await index.updateDocuments([updatedTrack]);
-      }
-    } catch (meiliErr) {
-      console.warn("Failed to update MeiliSearch track composer field:", meiliErr);
-    }
-
     return NextResponse.json({
       success: true,
       composer,

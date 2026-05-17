@@ -2,17 +2,6 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 import { dbQuery } from "@/lib/serverDb";
-import { getMeiliClient } from "@/lib/meili";
-import {
-  getOrCreateAlbumsIndex,
-  configureAlbumsIndex,
-} from "@/server/services/albumMeiliService";
-import {
-  getOrCreateTracksIndex,
-  configureMeiliIndex,
-} from "@/server/services/meiliIndexService";
-import { addTracksToMeili } from "@/server/services/meiliDocumentService";
-import type { Track } from "@/types/track";
 
 type RestorePgConfig = {
   db: string;
@@ -103,109 +92,23 @@ async function reindexSearch(): Promise<{
   tracksIndexed: number;
   warning: string | null;
 }> {
-  let albumsIndexed = 0;
-  let tracksIndexed = 0;
-  let warning: string | null = null;
-
   try {
-    const meiliClient = getMeiliClient();
-
-    const albumsIndex = await getOrCreateAlbumsIndex(meiliClient);
-    await configureAlbumsIndex(albumsIndex);
-    const albumsRes = await dbQuery<{
-      release_id: string;
-      friend_id: number;
-      username: string | null;
-      title: string;
-      artist: string;
-      year: string | null;
-      genres: string[] | null;
-      styles: string[] | null;
-      album_thumbnail: string | null;
-      discogs_url: string | null;
-      date_added: string | null;
-      date_changed: string | null;
-      track_count: number | null;
-      album_rating: number | null;
-      album_notes: string | null;
-      purchase_price: number | null;
-      condition: string | null;
-      label: string | null;
-      catalog_number: string | null;
-      country: string | null;
-      format: string | null;
-      library_identifier: string | null;
-    }>(`
-      SELECT
-        a.release_id,
-        a.friend_id,
-        f.username,
-        a.title,
-        a.artist,
-        a.year,
-        a.genres,
-        a.styles,
-        a.album_thumbnail,
-        a.discogs_url,
-        a.date_added,
-        a.date_changed,
-        a.track_count,
-        a.album_rating,
-        a.album_notes,
-        a.purchase_price,
-        a.condition,
-        a.label,
-        a.catalog_number,
-        a.country,
-        a.format,
-        a.library_identifier
-      FROM albums a
-      LEFT JOIN friends f ON f.id = a.friend_id
-    `);
-    await albumsIndex.deleteAllDocuments();
-    const albumDocs = albumsRes.rows.map((row) => ({
-      id: `${row.release_id}_${row.friend_id}`,
-      ...row,
-    }));
-    if (albumDocs.length > 0) {
-      await albumsIndex.addDocuments(albumDocs);
-    }
-    albumsIndexed = albumDocs.length;
-
-    const tracksIndex = await getOrCreateTracksIndex(meiliClient);
-    await configureMeiliIndex(tracksIndex, meiliClient);
-    const tracksRes = await dbQuery<Record<string, unknown> & {
-      username_resolved?: string | null;
-      username?: string | null;
-    }>(`
-      SELECT
-        t.*,
-        a.library_identifier,
-        COALESCE(f.username, t.username) AS username_resolved
-      FROM tracks t
-      LEFT JOIN albums a
-        ON t.release_id = a.release_id AND t.friend_id = a.friend_id
-      LEFT JOIN friends f
-        ON t.friend_id = f.id
-    `);
-    await tracksIndex.deleteAllDocuments();
-    const trackDocs = tracksRes.rows.map((row) => {
-      const normalized: Record<string, unknown> = {
-        ...row,
-        username: row.username_resolved ?? row.username ?? null,
-      };
-      delete normalized.username_resolved;
-      return normalized;
-    });
-    if (trackDocs.length > 0) {
-      await addTracksToMeili(tracksIndex, trackDocs as Track[]);
-    }
-    tracksIndexed = trackDocs.length;
+    const [{ rows: albumsRows }, { rows: tracksRows }] = await Promise.all([
+      dbQuery<{ count: string }>("SELECT COUNT(*)::text AS count FROM albums"),
+      dbQuery<{ count: string }>("SELECT COUNT(*)::text AS count FROM tracks"),
+    ]);
+    return {
+      albumsIndexed: Number(albumsRows[0]?.count ?? 0),
+      tracksIndexed: Number(tracksRows[0]?.count ?? 0),
+      warning: null,
+    };
   } catch (error) {
-    warning = error instanceof Error ? error.message : String(error);
+    return {
+      albumsIndexed: 0,
+      tracksIndexed: 0,
+      warning: error instanceof Error ? error.message : String(error),
+    };
   }
-
-  return { albumsIndexed, tracksIndexed, warning };
 }
 
 export async function restoreDatabaseFromUpload(file: File): Promise<RestoreResult> {

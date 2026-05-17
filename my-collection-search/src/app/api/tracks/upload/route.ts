@@ -4,6 +4,8 @@ import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { writeEssentiaAnalysis } from "@/lib/essentia-storage";
+import { generateAndStoreAudioVibeEmbedding } from "@/lib/audio-vibe-embedding";
+import { generateAndStoreIdentityEmbedding } from "@/lib/identity-embedding";
 import { trackRepository } from "@/server/repositories/trackRepository";
 
 export const runtime = "nodejs"; // Ensure Node.js runtime for file system access
@@ -16,7 +18,7 @@ type AnalysisResult = {
   metadata?: { audio_properties?: { length?: number } };
 };
 
-// Helper function to update database and MeiliSearch
+// Helper function to update database
 async function processAudioFile(
   local_audio_url: string,
   track_id: string,
@@ -47,14 +49,19 @@ async function processAudioFile(
   // Fetch updated track
   const rows = await trackRepository.findTracksByTrackId(track_id);
   if (rows && rows[0]) {
-    try {
-      const { getMeiliClient } = await import("@/lib/meili");
-      const meiliClient = getMeiliClient();
-      const index = meiliClient.index("tracks");
-      await index.updateDocuments([rows[0]]);
-    } catch (meiliError) {
-      console.error("Failed to update MeiliSearch:", meiliError);
+    for (const row of rows) {
+      try {
+        await generateAndStoreIdentityEmbedding(row.track_id, row.friend_id);
+      } catch (identityError) {
+        console.error("Failed to update identity embedding after upload:", identityError);
+      }
+      try {
+        await generateAndStoreAudioVibeEmbedding(row.track_id, row.friend_id);
+      } catch (audioError) {
+        console.error("Failed to update audio vibe embedding after upload:", audioError);
+      }
     }
+
   }
 }
 
@@ -192,14 +199,11 @@ export async function POST(req: NextRequest) {
     console.warn("Cleanup warning:", cleanupErr);
   }
 
-  // Update database and MeiliSearch
+  // Update database
   try {
     await processAudioFile(local_audio_url, track_id, analysisResult);
   } catch (err) {
-    console.warn(
-      "Could not update track with local_audio_url or MeiliSearch:",
-      err
-    );
+    console.warn("Could not update track with local_audio_url:", err);
   }
 
   // Trigger MPD database update so new file is available for playback

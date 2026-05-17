@@ -84,9 +84,9 @@ Filter: Missing local audio
 
 ## Technical Details
 
-### MeiliSearch Filters
+### Search API Filters
 
-The filters are converted to MeiliSearch filter strings:
+The filters are converted to Search API filter strings:
 
 ```typescript
 // Missing local audio
@@ -111,7 +111,7 @@ Multiple filters are combined with **AND** logic:
 
 ### Performance
 
-- Filters use MeiliSearch's native filtering (very fast)
+- Filters use Search API's database-backed filtering
 - Indexed fields: all URL fields, bpm, key, local_audio_url
 - No performance impact on large collections
 
@@ -119,13 +119,13 @@ Multiple filters are combined with **AND** logic:
 
 ### Files Created
 - `src/components/TracksFilterModal.tsx` - Filter modal UI
-- `src/lib/trackFilters.ts` - Filter utilities and MeiliSearch conversion
+- `src/lib/trackFilters.ts` - Filter utilities and Search API conversion
 - `src/components/SearchResults.tsx` - Updated with filter integration
 
 ### Key Functions
 
-**buildMeiliSearchFilters(filters: TracksFilter): string[]**
-- Converts filter state to MeiliSearch filter strings
+**buildSearch APIFilters(filters: TracksFilter): string[]**
+- Converts filter state to Search API filter strings
 - Handles special logic (e.g., "all streaming URLs" disables individual filters)
 
 **createEmptyFilters(): TracksFilter**
@@ -150,7 +150,7 @@ Potential additions:
 ## Troubleshooting
 
 ### Filters not working?
-- Check MeiliSearch index has filterable attributes configured
+- Check Search API index has filter handling supports requested fields
 - Run: `/api/admin/reindex` if needed
 - Verify fields exist in database
 

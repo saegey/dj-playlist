@@ -42,4 +42,4 @@ services:
       - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
       - album_covers:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
-      - ./cookies:/app/cookies:ro  # Mount local cookies directory as read-only
+      - ./cookies:/app/cookies:ro # Mount local cookies directory as read-only

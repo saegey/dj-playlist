@@ -34,7 +34,7 @@ export default function BackfillAudioPage() {
   const { mutateAsync: vectorize } = useVectorizeTrackMutation();
   const { mutateAsync: analyze } = useAsyncAnalyzeTrackMutation();
 
-  // Build Meili filter (AND conditions)
+  // Build search filter (AND conditions)
   const filter = useMemo(() => {
     const f: string[] = [];
     if (selectedFriend) f.push(`friend_id = ${selectedFriend.id}`);

@@ -89,7 +89,7 @@ export default function RemovedReleasesDialog({
                     • Delete all tracks from PostgreSQL database
                   </Text>
                   <Text fontSize="sm" color="fg.muted">
-                    • Remove tracks from Meilisearch index
+                    • Remove tracks from search results
                   </Text>
                 </VStack>
               </Box>

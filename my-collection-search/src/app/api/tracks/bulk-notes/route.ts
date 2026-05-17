@@ -4,9 +4,6 @@ import { trackRepository } from "@/server/repositories/trackRepository";
 
 // POST: bulk update notes/genre
 export async function POST(request: Request) {
-  const { getMeiliClient } = await import("@/lib/meili");
-  const meiliClient = getMeiliClient();
-
   try {
     const { updates } = await request.json();
     if (!Array.isArray(updates))
@@ -23,7 +20,7 @@ export async function POST(request: Request) {
         u.local_tags || "",
         u.notes || ""
       );
-      // Fetch all updated tracks for MeiliSearch
+      // Fetch all updated tracks
       const updatedRows = await trackRepository.findTracksByTrackId(u.track_id);
       for (const updated of updatedRows) {
         // Only update embedding if local_tags or notes changed
@@ -61,11 +58,6 @@ export async function POST(request: Request) {
         }
         updatedTracks.push(updated);
       }
-    }
-    // Update MeiliSearch index
-    if (updatedTracks.length > 0) {
-      const index = meiliClient.index("tracks");
-      await index.updateDocuments(updatedTracks);
     }
     return NextResponse.json({
       success: true,
