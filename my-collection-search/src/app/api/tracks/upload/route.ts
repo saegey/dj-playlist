@@ -18,7 +18,7 @@ type AnalysisResult = {
   metadata?: { audio_properties?: { length?: number } };
 };
 
-// Helper function to update database and MeiliSearch
+// Helper function to update database
 async function processAudioFile(
   local_audio_url: string,
   track_id: string,
@@ -62,14 +62,6 @@ async function processAudioFile(
       }
     }
 
-    try {
-      const { getMeiliClient } = await import("@/lib/meili");
-      const meiliClient = getMeiliClient();
-      const index = meiliClient.index("tracks");
-      await index.updateDocuments([rows[0]]);
-    } catch (meiliError) {
-      console.error("Failed to update MeiliSearch:", meiliError);
-    }
   }
 }
 
@@ -207,14 +199,11 @@ export async function POST(req: NextRequest) {
     console.warn("Cleanup warning:", cleanupErr);
   }
 
-  // Update database and MeiliSearch
+  // Update database
   try {
     await processAudioFile(local_audio_url, track_id, analysisResult);
   } catch (err) {
-    console.warn(
-      "Could not update track with local_audio_url or MeiliSearch:",
-      err
-    );
+    console.warn("Could not update track with local_audio_url:", err);
   }
 
   // Trigger MPD database update so new file is available for playback

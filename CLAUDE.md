@@ -16,7 +16,7 @@ Multi-service vinyl collection management system combining a Next.js web app wit
        ┌───────┴────────┬─────────────┬──────────────┐
        │                │             │              │
    ┌───▼────┐      ┌────▼────┐   ┌───▼────┐    ┌────▼────┐
-   │ Postgres│      │MeiliSearch  │ Redis  │    │Essentia │
+   │ Postgres│      │PostgreSQL search  │ Redis  │    │Essentia │
    │(pgvector)│     │ (Search) │  │(Queue) │    │API      │
    │Port 5432│      │Port 7700│   │Port 6379    │Port 8001│
    └────┬────┘      └─────────┘   └───┬────┘    └────┬────┘
@@ -43,7 +43,7 @@ Multi-service vinyl collection management system combining a Next.js web app wit
   - User interface for browsing/searching collections
   - REST API endpoints for tracks, playlists, friends
   - Integration with external APIs (Discogs, Apple Music, Spotify, YouTube, OpenAI)
-  - Database operations and MeiliSearch indexing
+  - Database operations and PostgreSQL search indexing
   - Job queue management (enqueuing download tasks)
 - **See**: `my-collection-search/CLAUDE.md` for detailed app architecture
 
@@ -56,15 +56,15 @@ Multi-service vinyl collection management system combining a Next.js web app wit
   - Compound primary key (track_id, username) allows multi-user collections
 - **Migrations**: Managed via node-pg-migrate in `my-collection-search/migrations/`
 
-#### 3. MeiliSearch
+#### 3. PostgreSQL search
 - **Purpose**: Fast full-text search engine for instant track search
-- **Image**: `getmeili/meilisearch:v1.6`
+- **Image**: `pgvector/pgvector:pg15`
 - **Features**:
   - Indexes denormalized track documents from Postgres
   - Searchable fields: title, artist, album, genres, styles, notes, tags
   - Filterable fields: BPM, key, star_rating, platform URLs, username
   - Custom ranking rules for relevance
-- **Note**: Postgres is source of truth; MeiliSearch is read-only index
+- **Note**: Postgres is source of truth; PostgreSQL search is read-only index
 
 #### 4. Redis
 - **Purpose**: Job queue for background tasks
@@ -140,7 +140,7 @@ User → Next.js UI → Discogs API
               ↓
       Parse & Store in Postgres
               ↓
-      Index in MeiliSearch
+      Index in PostgreSQL search
               ↓
       Display in UI
 ```
@@ -163,7 +163,7 @@ User requests download → Next.js API
               ↓
       Worker updates track via Next.js API
               ↓
-      Postgres updated & MeiliSearch re-indexed
+      Postgres updated & PostgreSQL search re-indexed
               ↓
       UI reflects new metadata
 ```
@@ -189,7 +189,7 @@ User selects tracks → Next.js UI
 - Builds all images from source
 - Platform-agnostic (x86_64, ARM64)
 - Suitable for development and Mac production deployments
-- Services: app, db, meili, essentia-api, migrate
+- Services: app, db, search, essentia-api, migrate
 
 ### `docker-compose.dev.yml` (Development Overrides)
 - Extends base configuration
@@ -200,7 +200,7 @@ User selects tracks → Next.js UI
 ### `docker-compose.prod.yml` (Production - Registry Images)
 - Uses pre-built images from GitHub Container Registry
 - **Architecture**: x86_64/amd64 only (ARM64 not yet published)
-- All services: app, db, meili, redis, essentia, ga-service, download-worker
+- All services: app, db, search, redis, essentia, ga-service, download-worker
 - Named volumes for data persistence
 - **Usage**: `docker compose -f docker-compose.prod.yml up -d`
 - **Ideal for**: Linux servers, Portainer deployments
@@ -231,7 +231,7 @@ docker compose run --rm migrate
 ## Volumes & Data Persistence
 
 - `db_data` — PostgreSQL database files
-- `meili_data` — MeiliSearch index data
+- `search_indexes_data` — PostgreSQL search index data
 - `redis_data` — Redis persistence
 - `music_data` — Downloaded audio files (shared: app ↔ download-worker)
 - `db_dumps` — Database backup SQL files
@@ -245,7 +245,7 @@ See `my-collection-search/.env.example` for full list. Key variables:
 
 ### Required
 - `DATABASE_URL` — Postgres connection string
-- `MEILISEARCH_HOST`, `MEILISEARCH_API_KEY` — Search engine config
+- `DATABASE_URL` — Search engine config
 - `DISCOGS_USER_TOKEN`, `DISCOGS_USERNAME` — Collection import
 
 ### Optional (Platform Integrations)
@@ -283,7 +283,7 @@ See `my-collection-search/.env.example` for full list. Key variables:
 
 ## Architectural Decisions
 
-### Why MeiliSearch?
+### Why PostgreSQL search?
 - Faster, simpler setup than Elasticsearch for small-to-medium datasets
 - Built-in typo tolerance and relevance ranking
 - Lightweight resource footprint
@@ -325,7 +325,7 @@ npm run migrate up  # Apply locally
 docker compose run --rm migrate  # Apply in Docker
 ```
 
-### Re-index MeiliSearch
+### Re-index PostgreSQL search
 ```bash
 # Via UI: Navigate to /admin/reindex (if implemented)
 # Via API: POST to appropriate re-index endpoint
@@ -399,7 +399,7 @@ docker compose logs essentia-api
 docker compose exec app ls -la /app/audio/
 ```
 
-### MeiliSearch Out of Sync
+### PostgreSQL search Out of Sync
 ```bash
 # Check index stats:
 curl http://localhost:7700/indexes/tracks/stats \
@@ -446,7 +446,7 @@ curl -X POST http://localhost:8002/generate \
 
 ## Project Goals
 
-- **Single Source of Truth**: Postgres for data, MeiliSearch for search
+- **Single Source of Truth**: Postgres for data, PostgreSQL search for search
 - **Async Heavy Tasks**: Offload downloads/analysis to background workers
 - **Multi-Platform Support**: Aggregate metadata from Discogs, Apple, Spotify, YouTube
 - **Rich Audio Metadata**: BPM, key, mood for DJ-quality playlist building
@@ -468,7 +468,7 @@ curl -X POST http://localhost:8002/generate \
 When working across services:
 1. Keep data contracts consistent (Track schema, API responses)
 2. Update both app and worker when changing shared models
-3. Test full flow: UI → API → Redis → Worker → Essentia → DB → MeiliSearch
+3. Test full flow: UI → API → Redis → Worker → Essentia → DB → PostgreSQL search
 4. Document new environment variables in `.env.example`
 5. Add migrations for schema changes
 6. Update both CLAUDE.md files (root + my-collection-search/) if relevant

@@ -1,11 +1,6 @@
-import { getMeiliClient } from "@/lib/meili";
 import { friendRepository, type FriendRow } from "@/server/repositories/friendRepository";
 
 type ProgressFn = (line: string) => void;
-
-function escapeMeiliFilterValue(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
 
 export class FriendService {
   async listFriends(): Promise<FriendRow[]> {
@@ -57,21 +52,6 @@ export class FriendService {
     } catch (error) {
       onProgress(
         `Error deleting manifest/release files: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
-
-    // Remove from MeiliSearch
-    try {
-      const meiliClient = getMeiliClient();
-      const tracksIndex = meiliClient.index("tracks");
-      const escaped = escapeMeiliFilterValue(username);
-      await tracksIndex.deleteDocuments({ filter: `username = "${escaped}"` });
-      onProgress(`Deleted tracks from MeiliSearch for user: ${username}`);
-    } catch (error) {
-      onProgress(
-        `Error deleting from MeiliSearch: ${
           error instanceof Error ? error.message : String(error)
         }`
       );

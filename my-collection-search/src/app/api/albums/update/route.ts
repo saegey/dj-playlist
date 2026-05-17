@@ -1,6 +1,5 @@
 // API endpoint for updating album metadata (rating, notes, purchase_price, condition)
 import { NextRequest, NextResponse } from "next/server";
-import { getMeiliClient } from "@/lib/meili";
 import { withDbTransaction } from "@/lib/serverDb";
 import { albumRepository } from "@/server/repositories/albumRepository";
 
@@ -67,44 +66,18 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // If library_identifier was updated, fetch all tracks for this album and update them in MeiliSearch
+    // If library_identifier was updated, fetch all tracks for this album
     let updatedTracksCount = 0;
     if (library_identifier !== undefined) {
       try {
-        // Fetch all tracks for this album with the new library_identifier from JOIN
         const tracksResult = await albumRepository.getTracksForAlbumWithLibraryIdentifier(
           release_id,
           friend_id
         );
-
-        if (tracksResult.length > 0) {
-          const meiliClient = getMeiliClient();
-          const tracksIndex = meiliClient.index("tracks");
-
-          // Update all tracks in MeiliSearch with the new library_identifier
-          await tracksIndex.updateDocuments(tracksResult);
-          updatedTracksCount = tracksResult.length;
-        }
+        updatedTracksCount = tracksResult.length;
       } catch (tracksError) {
-        console.error("Error updating tracks in MeiliSearch:", tracksError);
-        // Don't fail the request if tracks update fails
+        console.error("Error fetching tracks for updated album:", tracksError);
       }
-    }
-
-    // Update album in MeiliSearch
-    try {
-      const meiliClient = getMeiliClient();
-      const index = meiliClient.index("albums");
-
-      await index.updateDocuments([
-        {
-          id: `${updatedAlbum.release_id}_${updatedAlbum.friend_id}`,
-          ...updatedAlbum,
-        },
-      ]);
-    } catch (meiliError) {
-      console.error("Error updating MeiliSearch:", meiliError);
-      // Don't fail the request if MeiliSearch update fails
     }
 
     return NextResponse.json({

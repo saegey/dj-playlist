@@ -38,8 +38,6 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm migrate
 ## Key environment variables
 
 - `DATABASE_URL`
-- `MEILISEARCH_HOST`
-- `MEILISEARCH_API_KEY`
 - `REDIS_URL`
 - Provider credentials (Apple/Spotify/Discogs/OpenAI) as needed
 

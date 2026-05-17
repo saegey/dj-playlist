@@ -58,7 +58,6 @@ export type DeleteReleasesResponse = {
   failedDeletes: string[];
   deletedTrackIds: string[];
   deletedFromDb: number;
-  deletedFromMeili: number;
 };
 
 export type DiscogsLookupQuery = z.input<typeof discogsLookupQuerySchema>;

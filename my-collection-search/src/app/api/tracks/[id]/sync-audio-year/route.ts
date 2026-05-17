@@ -54,22 +54,6 @@ export async function POST(
 
     await trackRepository.updateTrackYear(trackId, friendId, String(parsedYear));
 
-    try {
-      const updatedTrack =
-        await trackRepository.findTrackByTrackIdAndFriendIdWithLibraryFallback(
-          trackId,
-          friendId
-        );
-      if (updatedTrack) {
-        const { getMeiliClient } = await import("@/lib/meili");
-        const meiliClient = getMeiliClient();
-        const index = meiliClient.index("tracks");
-        await index.updateDocuments([updatedTrack]);
-      }
-    } catch (meiliErr) {
-      console.warn("Failed to update MeiliSearch track year field:", meiliErr);
-    }
-
     return NextResponse.json({
       success: true,
       year: String(parsedYear),

@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const allDeletedIds = [...existingDeletedIds, ...releaseIds];
     saveManifest(manifestPath, remainingIds, allDeletedIds);
 
-    // Step 3: Delete from PostgreSQL + Meilisearch
+    // Step 3: Delete from PostgreSQL
     const cleanup = await cleanupDiscogsReleases(username, releaseIds);
 
     return NextResponse.json({
@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
       failedDeletes,
       deletedTrackIds: cleanup.deletedTrackIds,
       deletedFromDb: cleanup.deletedTracksCount,
-      deletedFromMeili: cleanup.deletedFromMeiliTracks,
     });
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));

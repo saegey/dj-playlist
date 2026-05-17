@@ -171,21 +171,6 @@ export async function POST(request: NextRequest) {
       publicUrl
     );
 
-    try {
-      const updatedTracks = await albumRepository.getTracksForAlbumWithLibraryIdentifier(
-        releaseId,
-        friendId
-      );
-      if (updatedTracks.length > 0) {
-        const { getMeiliClient } = await import("@/lib/meili");
-        const meiliClient = getMeiliClient();
-        const index = meiliClient.index("tracks");
-        await index.updateDocuments(updatedTracks);
-      }
-    } catch (meiliErr) {
-      console.warn("Failed to update MeiliSearch tracks for album cover sync:", meiliErr);
-    }
-
     return NextResponse.json({
       success: true,
       release_id: releaseId,

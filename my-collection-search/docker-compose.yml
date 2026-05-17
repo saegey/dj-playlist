@@ -9,10 +9,6 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-djplaylist}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-djplaylist}
-      MEILISEARCH_HOST: ${MEILISEARCH_HOST}
-      MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY}
-      MEILI_PARENT_KEY: ${MEILI_PARENT_KEY}
-      MEILI_PARENT_KEY_UID: ${MEILI_PARENT_KEY_UID}
       APPLE_MUSIC_TEAM_ID: ${APPLE_MUSIC_TEAM_ID}
       APPLE_MUSIC_KEY_ID: ${APPLE_MUSIC_KEY_ID}
       APPLE_MUSIC_PRIVATE_KEY_PATH: ${APPLE_MUSIC_PRIVATE_KEY_PATH}
@@ -35,7 +31,6 @@ services:
 
     depends_on:
       - db
-      - meili
       - redis
     volumes:
       - ${APP_AUDIO_MOUNT:-music_data:/app/audio}
@@ -78,21 +73,12 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
-  meili:
-    image: getmeili/meilisearch:v1.6
-    restart: always
-    environment:
-      MEILI_MASTER_KEY: ${MEILISEARCH_API_KEY:?Set MEILISEARCH_API_KEY}
-      MEILI_EXPERIMENTAL_ENABLE_VECTOR_STORE: "true"
-    ports:
-      - "7700:7700"
-    volumes:
-      - meili_data:/meili_data
-
   # MPD (Music Player Daemon) for local DAC playback
   mpd:
     image: vimagick/mpd:latest
     container_name: mpd
+    profiles:
+      - audio
     restart: unless-stopped
     ports:
       - "6600:6600"  # MPD protocol port
@@ -160,7 +146,6 @@ services:
 
 volumes:
   db_data:
-  meili_data:
   music_data:
   db_dumps:
   discogs_exports:

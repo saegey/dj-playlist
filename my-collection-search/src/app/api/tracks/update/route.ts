@@ -10,9 +10,6 @@ import {
 } from "@/server/repositories/trackRepository";
 
 export async function PATCH(req: Request) {
-  const { getMeiliClient } = await import("@/lib/meili");
-  const meiliClient = getMeiliClient();
-
   try {
     const data = (await req.json()) as UpdateTrackInput;
     const current = await trackRepository.findTrackByTrackIdAndFriendId(
@@ -119,19 +116,6 @@ export async function PATCH(req: Request) {
       } catch (audioVibeError) {
         console.error("Failed to update audio vibe embedding:", audioVibeError);
       }
-    }
-
-    // Always update MeiliSearch
-    try {
-      const index = meiliClient.index("tracks");
-      await index.updateDocuments([
-        {
-          ...updated,
-          ...(embedding ? { _vectors: { default: embedding } } : {}),
-        },
-      ]);
-    } catch (meiliError) {
-      console.error("Failed to update MeiliSearch:", meiliError);
     }
 
     // PostHog: Track track edit (server-side)

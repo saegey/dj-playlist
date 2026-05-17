@@ -1,8 +1,7 @@
 // API endpoint to backfill albums table from existing Discogs release files
-// This reads all release JSONs, creates album records, and indexes them in MeiliSearch
+// This reads all release JSONs and creates album records in PostgreSQL
 
 import { dbPool } from "@/lib/serverDb";
-import { getMeiliClient } from "@/lib/meili";
 import {
   getManifestFiles,
   parseManifestFile,
@@ -27,7 +26,6 @@ export async function POST() {
         );
 
         let totalAlbums = 0;
-        let totalIndexed = 0;
         const errors: string[] = [];
 
         for (const manifestFile of manifestFiles) {
@@ -114,79 +112,6 @@ export async function POST() {
             `\n✅ Backfill complete! Total albums: ${totalAlbums}\n`
           )
         );
-
-        // Now index in MeiliSearch
-        controller.enqueue(
-          encoder.encode("\nIndexing albums in MeiliSearch...\n")
-        );
-
-        try {
-          const meiliClient = getMeiliClient();
-
-          // Get all albums from database
-          const albumsRows = await albumRepository.listAlbumsForReindex();
-          const albums = albumsRows.map((row) => ({
-            id: `${row.release_id}_${row.friend_id}`, // MeiliSearch primary key
-            ...row,
-          }));
-
-          // Create or get albums index
-          let index;
-          try {
-            index = await meiliClient.getIndex("albums");
-          } catch {
-            await meiliClient.createIndex("albums", { primaryKey: "id" });
-            index = meiliClient.index("albums");
-          }
-
-          // Configure index
-          await index.updateSearchableAttributes([
-            "title",
-            "artist",
-            "label",
-            "catalog_number",
-            "genres",
-            "styles",
-            "album_notes",
-            "library_identifier",
-          ]);
-
-          await index.updateFilterableAttributes([
-            "friend_id",
-            "release_id",
-            "year",
-            "genres",
-            "styles",
-            "album_rating",
-            "condition",
-            "date_added",
-            "label",
-            "format",
-            "library_identifier",
-          ]);
-
-          await index.updateSortableAttributes([
-            "library_identifier",
-            "date_added",
-            "year",
-            "title",
-            "album_rating",
-          ]);
-
-          // Add albums to index
-          await index.addDocuments(albums);
-          totalIndexed = albums.length;
-
-          controller.enqueue(
-            encoder.encode(`✅ Indexed ${totalIndexed} albums in MeiliSearch\n`)
-          );
-        } catch (error) {
-          const errorMsg = `Error indexing in MeiliSearch: ${
-            error instanceof Error ? error.message : String(error)
-          }`;
-          errors.push(errorMsg);
-          controller.enqueue(encoder.encode(`❌ ${errorMsg}\n`));
-        }
 
         if (errors.length > 0) {
           controller.enqueue(

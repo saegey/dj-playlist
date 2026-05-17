@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { getMeiliClient } from "@/lib/meili";
-import { getOrCreateTracksIndex, configureMeiliIndex } from "@/server/services/meiliIndexService";
-import { addTracksToMeili } from "@/server/services/meiliDocumentService";
 import { trackRepository } from "@/server/repositories/trackRepository";
 
 export async function GET() {
   return NextResponse.json(
     {
       success: false,
-      message: "Use POST /api/tracks/reindex to rebuild the Meili tracks index from Postgres.",
+      message: "Use POST /api/tracks/reindex to validate/rebuild Postgres-backed track search metadata.",
     },
     { status: 200 }
   );
@@ -16,19 +13,12 @@ export async function GET() {
 
 export async function POST() {
   try {
-    const meiliClient = getMeiliClient();
-    const index = await getOrCreateTracksIndex(meiliClient);
-    await configureMeiliIndex(index, meiliClient);
-
     const docs = await trackRepository.listTracksForReindex();
-
-    await index.deleteAllDocuments();
-    await addTracksToMeili(index, docs);
 
     return NextResponse.json({
       success: true,
       indexed: docs.length,
-      message: `Reindexed ${docs.length} tracks from Postgres into MeiliSearch.`,
+      message: `Validated ${docs.length} tracks available in Postgres for search.`,
     });
   } catch (error) {
     return NextResponse.json(

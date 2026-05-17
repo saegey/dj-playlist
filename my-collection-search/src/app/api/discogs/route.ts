@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
               )
             );
 
-            // Delete local files first, then clean DB + Meili in one shared service
+            // Delete local files first, then clean DB in one shared service
             try {
               const { deleteRelease } = await import("@/server/services/discogsManifestService");
 
@@ -270,7 +270,7 @@ export async function GET(request: NextRequest) {
             )
           );
 
-          // Step 5: Auto-ingest into Postgres and Meilisearch
+          // Step 5: Auto-ingest into Postgres
           if (newReleases.length > 0) {
             controller.enqueue(
               encoder.encode(`\n--- Starting Auto-Ingest ---\n\n`)
@@ -280,19 +280,9 @@ export async function GET(request: NextRequest) {
               const { getTracksFromManifestReleases } = await import(
                 "@/server/services/discogsManifestService"
               );
-              const {
-                getOrCreateTracksIndex,
-                configureMeiliIndex,
-              } = await import("@/server/services/meiliIndexService");
               const { upsertTracks } = await import(
                 "@/server/services/trackUpsertService"
               );
-              const { addTracksToMeili } = await import(
-                "@/server/services/meiliDocumentService"
-              );
-              const { getMeiliClient } = await import("@/lib/meili");
-
-              const meiliClient = getMeiliClient();
 
               controller.enqueue(
                 encoder.encode(`Loading tracks from new releases...\n\n`)
@@ -306,27 +296,11 @@ export async function GET(request: NextRequest) {
               );
 
               controller.enqueue(
-                encoder.encode(`Configuring Meilisearch index...\n\n`)
-              );
-              const index = await getOrCreateTracksIndex(meiliClient);
-              await configureMeiliIndex(index, meiliClient);
-
-              controller.enqueue(
                 encoder.encode(`Upserting tracks to Postgres...\n\n`)
               );
               const upserted = await upsertTracks(allTracks);
               controller.enqueue(
                 encoder.encode(`Upserted ${upserted.length} tracks to Postgres\n\n`)
-              );
-
-              controller.enqueue(
-                encoder.encode(`Indexing tracks in Meilisearch...\n\n`)
-              );
-              await addTracksToMeili(index, upserted);
-              controller.enqueue(
-                encoder.encode(
-                  `Indexed ${upserted.length} tracks in Meilisearch\n\n`
-                )
               );
 
               // Step 6: Ingest albums
@@ -341,11 +315,6 @@ export async function GET(request: NextRequest) {
                 } = await import(
                   "@/server/services/albumUpsertService"
                 );
-                const {
-                  getOrCreateAlbumsIndex,
-                  configureAlbumsIndex,
-                  addAlbumsToMeili,
-                } = await import("@/server/services/albumMeiliService");
 
                 controller.enqueue(
                   encoder.encode(`Loading albums from new releases...\n`)
@@ -366,20 +335,6 @@ export async function GET(request: NextRequest) {
                 });
                 controller.enqueue(
                   encoder.encode(`Upserted ${upsertedAlbums.length} albums to Postgres\n\n`)
-                );
-
-                controller.enqueue(
-                  encoder.encode(`Configuring albums index in Meilisearch...\n`)
-                );
-                const albumsIndex = await getOrCreateAlbumsIndex(meiliClient);
-                await configureAlbumsIndex(albumsIndex);
-
-                controller.enqueue(
-                  encoder.encode(`Indexing albums in Meilisearch...\n`)
-                );
-                await addAlbumsToMeili(albumsIndex, upsertedAlbums);
-                controller.enqueue(
-                  encoder.encode(`Indexed ${upsertedAlbums.length} albums in Meilisearch\n\n`)
                 );
 
                 controller.enqueue(

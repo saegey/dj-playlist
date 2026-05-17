@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
 import { getManifestFiles, getAllTracksFromManifests } from "@/server/services/discogsManifestService";
-import { getOrCreateTracksIndex, configureMeiliIndex } from "@/server/services/meiliIndexService";
 import { upsertTracks } from "@/server/services/trackUpsertService";
-import { addTracksToMeili } from "@/server/services/meiliDocumentService";
 
 export async function POST() {
   try {
-    const { getMeiliClient } = await import("@/lib/meili");
-    const meiliClient = getMeiliClient();
-
     // 1. Manifest/track extraction
     const manifestFiles = getManifestFiles();
     if (!manifestFiles.length) {
@@ -19,18 +14,11 @@ export async function POST() {
     }
     const allTracks = getAllTracksFromManifests();
 
-    // 2. Meili index creation/config
-    const index = await getOrCreateTracksIndex(meiliClient);
-    await configureMeiliIndex(index, meiliClient);
-
-    // 3. Upsert into Postgres
+    // 2. Upsert into Postgres
     const upserted = await upsertTracks(allTracks);
 
-    // 4. Add to Meili
-    await addTracksToMeili(index, upserted);
-
     return NextResponse.json({
-      message: `Upserted & indexed ${upserted.length} tracks.`,
+      message: `Upserted ${upserted.length} tracks into Postgres.`,
     });
   } catch (e) {
     const err = e instanceof Error ? e : new Error(String(e));

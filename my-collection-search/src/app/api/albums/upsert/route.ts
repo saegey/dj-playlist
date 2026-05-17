@@ -3,14 +3,9 @@ import { withDbTransaction } from '@/lib/serverDb';
 import { generateLocalTrackId } from '@/lib/localTrackHelpers';
 import { saveAlbumCover } from '@/lib/fileUpload';
 import { AlbumToUpsert, upsertAlbum } from '@/server/services/albumUpsertService';
-import { addTracksToMeili } from '@/server/services/meiliDocumentService';
-import { addAlbumsToMeili, getOrCreateAlbumsIndex } from '@/server/services/albumMeiliService';
 import { Track } from '@/types/track';
 import { AlbumMetadata, TrackUpsertMetadata } from '@/types/albumMetadata';
-import { getMeiliClient } from '@/lib/meili';
 import { albumRepository } from '@/server/repositories/albumRepository';
-
-const meiliClient = getMeiliClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -137,13 +132,6 @@ export async function POST(request: NextRequest) {
 
       if (tracksToDelete.length > 0) {
         await albumRepository.deleteTracksByIds(client, tracksToDelete, friendId);
-
-        // Remove from MeiliSearch
-        const tracksIndex = meiliClient.index('tracks');
-        const docsToDelete = tracksToDelete.map(id => `${id}_${username}`);
-        tracksIndex.deleteDocuments(docsToDelete).catch((err) => {
-          console.error('Failed to delete tracks from MeiliSearch:', err);
-        });
       }
 
       // Upsert tracks
@@ -187,20 +175,6 @@ export async function POST(request: NextRequest) {
       return { updatedAlbum, upsertedTracks, tracksToDelete };
       }
     );
-
-      // Index in MeiliSearch (async, don't block response)
-      const tracksIndex = meiliClient.index('tracks');
-      const albumsIndex = await getOrCreateAlbumsIndex(meiliClient);
-
-      // Index tracks
-      addTracksToMeili(tracksIndex, upsertedTracks as never[]).catch((err) => {
-        console.error('Failed to index tracks in MeiliSearch:', err);
-      });
-
-      // Index album
-      addAlbumsToMeili(albumsIndex, [updatedAlbum]).catch((err) => {
-        console.error('Failed to index album in MeiliSearch:', err);
-      });
 
       return NextResponse.json({
         album: updatedAlbum,

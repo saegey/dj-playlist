@@ -1,5 +1,3 @@
-import { getMeiliClient } from "@/lib/meili";
-import { deleteAlbumsFromMeili } from "@/server/services/albumMeiliService";
 import { friendRepository } from "@/server/repositories/friendRepository";
 import { trackRepository } from "@/server/repositories/trackRepository";
 import { albumRepository } from "@/server/repositories/albumRepository";
@@ -9,13 +7,9 @@ type CleanupResult = {
   deletedTrackIds: string[];
   deletedTracksCount: number;
   deletedAlbumsCount: number;
-  deletedFromMeiliTracks: number;
-  deletedFromMeiliAlbums: number;
+  deletedFromSearchTracks: number;
+  deletedFromSearchAlbums: number;
 };
-
-function escapeMeiliString(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-}
 
 export async function cleanupDiscogsReleases(
   username: string,
@@ -27,8 +21,8 @@ export async function cleanupDiscogsReleases(
       deletedTrackIds: [],
       deletedTracksCount: 0,
       deletedAlbumsCount: 0,
-      deletedFromMeiliTracks: 0,
-      deletedFromMeiliAlbums: 0,
+      deletedFromSearchTracks: 0,
+      deletedFromSearchAlbums: 0,
     };
   }
 
@@ -39,8 +33,8 @@ export async function cleanupDiscogsReleases(
       deletedTrackIds: [],
       deletedTracksCount: 0,
       deletedAlbumsCount: 0,
-      deletedFromMeiliTracks: 0,
-      deletedFromMeiliAlbums: 0,
+      deletedFromSearchTracks: 0,
+      deletedFromSearchAlbums: 0,
     };
   }
 
@@ -57,39 +51,12 @@ export async function cleanupDiscogsReleases(
     releaseIds
   );
 
-  let deletedFromMeiliTracks = 0;
-  let deletedFromMeiliAlbums = 0;
-
-  try {
-    const meiliClient = getMeiliClient();
-    const albumsIndex = meiliClient.index("albums");
-    await deleteAlbumsFromMeili(
-      albumsIndex,
-      releaseIds.map((releaseId) => ({ release_id: releaseId, friend_id: friendId }))
-    );
-    deletedFromMeiliAlbums = releaseIds.length;
-  } catch (error) {
-    console.warn("[Discogs Cleanup] Failed to delete albums from Meili:", error);
-  }
-
-  try {
-    const meiliClient = getMeiliClient();
-    const tracksIndex = meiliClient.index("tracks");
-    const filter = `(${releaseIds
-      .map((id) => `release_id = "${escapeMeiliString(id)}"`)
-      .join(" OR ")}) AND friend_id = ${friendId}`;
-    await tracksIndex.deleteDocuments({ filter });
-    deletedFromMeiliTracks = deletedTrackIds.length;
-  } catch (error) {
-    console.warn("[Discogs Cleanup] Failed to delete tracks from Meili:", error);
-  }
-
   return {
     friendId,
     deletedTrackIds,
     deletedTracksCount,
     deletedAlbumsCount,
-    deletedFromMeiliTracks,
-    deletedFromMeiliAlbums,
+    deletedFromSearchTracks: 0,
+    deletedFromSearchAlbums: 0,
   };
 }

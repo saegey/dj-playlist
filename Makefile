@@ -17,7 +17,7 @@ TAG ?= $(TAG_PREFIX)$(TAG_TIME)
 
 .PHONY: tag tag-push compose-dev compose-prod compose-down compose-logs compose-dev-mac compose-dev-reset
 .PHONY: build-app build-essentia build-ga-service build-download-worker build-all build-packages
-.PHONY: migrate-up migrate-down migrate-create configure-meili reindex-meili
+.PHONY: migrate-up migrate-down migrate-create
 .PHONY: push-images deploy-prod-local deploy-prod-remote deploy-prod-remote-localbuild release release-localbuild
 .PHONY: check-compose
 
@@ -116,10 +116,3 @@ migrate-down: check-compose
 migrate-create:
 	@if [ -z "$(NAME)" ]; then echo "Usage: make migrate-create NAME=my-migration-name"; exit 1; fi
 	cd $(COMPOSE_DIR) && npm run migrate create $(NAME)
-
-# MeiliSearch configuration
-configure-meili: check-compose
-	$(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml exec app node scripts/configure-meilisearch.mjs
-
-reindex-meili: check-compose
-	$(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml exec app node scripts/reindex-meilisearch.mjs

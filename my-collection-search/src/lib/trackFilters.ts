@@ -1,10 +1,10 @@
 import { TracksFilter } from "@/components/TracksFilterModal";
 
 /**
- * Convert TracksFilter state to MeiliSearch filter strings
- * MeiliSearch filters support IS NULL, IS NOT NULL, AND, OR operators
+ * Convert TracksFilter state to SQL-style filter expressions used by search API
+ * Supports IS NULL, IS NOT NULL, AND, OR operators
  */
-export function buildMeiliSearchFilters(filters: TracksFilter): string[] {
+export function buildSearchFilters(filters: TracksFilter): string[] {
   const filterStrings: string[] = [];
 
   // Missing local audio

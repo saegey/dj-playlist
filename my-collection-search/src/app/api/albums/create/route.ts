@@ -3,14 +3,9 @@ import { withDbTransaction } from '@/lib/serverDb';
 import { generateLocalReleaseId, generateLocalTrackId } from '@/lib/localTrackHelpers';
 import { saveAlbumCover } from '@/lib/fileUpload';
 import { AlbumToUpsert, upsertAlbum } from '@/server/services/albumUpsertService';
-import { addTracksToMeili } from '@/server/services/meiliDocumentService';
-import { addAlbumsToMeili, configureAlbumsIndex, getOrCreateAlbumsIndex } from '@/server/services/albumMeiliService';
 import { Track } from '@/types/track';
 import { AlbumMetadata, TrackMetadata } from '@/types/albumMetadata';
-import { getMeiliClient } from '@/lib/meili';
 import { albumRepository } from '@/server/repositories/albumRepository';
-
-const meiliClient = getMeiliClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -152,23 +147,6 @@ export async function POST(request: NextRequest) {
       }
 
       return { createdAlbum, createdTracks };
-    });
-
-    // Index in MeiliSearch (async, don't block response)
-    const tracksIndex = meiliClient.index('tracks');
-    const albumsIndex = await getOrCreateAlbumsIndex(meiliClient);
-    configureAlbumsIndex(albumsIndex).catch((err) => {
-      console.warn('Failed to configure albums index:', err);
-    });
-
-    // Index tracks
-    addTracksToMeili(tracksIndex, createdTracks as never[]).catch((err) => {
-      console.error('Failed to index tracks in MeiliSearch:', err);
-    });
-
-    // Index album (using proper helper that adds composite id)
-    addAlbumsToMeili(albumsIndex, [createdAlbum]).catch((err) => {
-      console.error('Failed to index album in MeiliSearch:', err);
     });
 
     return NextResponse.json({
