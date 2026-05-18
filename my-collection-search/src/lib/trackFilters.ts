@@ -1,4 +1,11 @@
-import { TracksFilter } from "@/components/TracksFilterModal";
+export interface TracksFilter {
+  missingAudio?: boolean;
+  missingAppleMusic?: boolean;
+  missingYouTube?: boolean;
+  missingSoundCloud?: boolean;
+  missingAnyStreamingUrl?: boolean;
+  missingMetadata?: boolean;
+}
 
 /**
  * Convert TracksFilter state to SQL-style filter expressions used by search API

@@ -11,6 +11,8 @@ export class AlbumApiService {
     offset: number;
     friendId?: string | null;
     sort: string;
+    missingLibraryIdentifier?: boolean;
+    missingLocalCoverArtUrl?: boolean;
   }): Promise<{
     hits: AlbumSearchHit[];
     estimatedTotalHits: number;
@@ -26,7 +28,27 @@ export class AlbumApiService {
 
     if (params.friendId) {
       sqlParams.push(Number(params.friendId));
-      whereClauses.push(`friend_id = $${sqlParams.length}`);
+      whereClauses.push(`a.friend_id = $${sqlParams.length}`);
+    }
+
+    if (params.missingLibraryIdentifier) {
+      whereClauses.push("a.library_identifier IS NULL");
+    }
+
+    if (params.missingLocalCoverArtUrl) {
+      whereClauses.push(
+        `(
+          (a.audio_file_album_art_url IS NULL OR btrim(a.audio_file_album_art_url) = '')
+          AND NOT EXISTS (
+            SELECT 1
+            FROM tracks t
+            WHERE t.release_id = a.release_id
+              AND t.friend_id = a.friend_id
+              AND t.audio_file_album_art_url IS NOT NULL
+              AND btrim(t.audio_file_album_art_url) <> ''
+          )
+        )`
+      );
     }
 
     if (queryText.length > 0) {
@@ -78,8 +100,8 @@ export class AlbumApiService {
 
     const { rows } = await dbQuery<AlbumSearchHit>(
       `
-      SELECT *
-      FROM albums
+      SELECT a.*
+      FROM albums a
       ${whereSql}
       ORDER BY ${rankSql} ${sortSql}
       LIMIT ${limitRef}
@@ -92,7 +114,7 @@ export class AlbumApiService {
     const { rows: countRows } = await dbQuery<{ total: string }>(
       `
       SELECT COUNT(*)::text AS total
-      FROM albums
+      FROM albums a
       ${whereSql}
       `,
       countParams

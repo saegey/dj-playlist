@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Box, Text, IconButton, Flex, Spinner, Badge } from "@chakra-ui/react";
-import { LuLayoutGrid, LuTable, LuMaximize2, LuMinimize2, LuFilter } from "react-icons/lu";
+import { LuLayoutGrid, LuTable, LuMaximize2, LuMinimize2 } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
 import TrackSelectionBar from "@/components/TrackSelectionBar";
@@ -18,8 +18,8 @@ import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { useTrack } from "@/hooks/useTrack";
-import TracksFilterModal, { TracksFilter } from "@/components/TracksFilterModal";
-import { buildSearchFilters, createEmptyFilters, getActiveFilterCount } from "@/lib/trackFilters";
+import FilterChips from "@/components/FilterChips";
+import { TracksFilter, buildSearchFilters, createEmptyFilters, getActiveFilterCount } from "@/lib/trackFilters";
 import { useUsername } from "@/providers/UsernameProvider";
 
 const TrackResultItem: React.FC<{
@@ -75,14 +75,12 @@ const SearchResults: React.FC = () => {
     setFriend(friends[0]);
   }, [currentUserFriend, friends, setFriend, isHydrated]);
 
-  // Filter state
-  const [filters, setFilters] = React.useState<TracksFilter>(createEmptyFilters());
-  const [filterModalOpen, setFilterModalOpen] = React.useState(false);
-  const [appliedFilters, setAppliedFilters] = React.useState<TracksFilter>(createEmptyFilters());
+  // Filter state - applied immediately (no modal)
+  const [activeFilters, setActiveFilters] = React.useState<TracksFilter>(createEmptyFilters());
 
   // Build filter strings, combining with friend_id filter
   const searchFilters = React.useMemo(() => {
-    const customFilters = buildSearchFilters(appliedFilters);
+    const customFilters = buildSearchFilters(activeFilters);
 
     // Add friend_id filter if a friend is selected
     if (currentUserFriend?.id) {
@@ -90,7 +88,7 @@ const SearchResults: React.FC = () => {
     }
 
     return customFilters;
-  }, [appliedFilters, currentUserFriend]);
+  }, [activeFilters, currentUserFriend]);
 
   const {
     query,
@@ -200,30 +198,17 @@ const SearchResults: React.FC = () => {
     localStorage.setItem("searchCompactMode", String(newCompact));
   };
 
-  // Filter handlers
-  const handleApplyFilters = () => {
-    setAppliedFilters(filters);
-    setFilterModalOpen(false);
+  const handleFilterToggle = React.useCallback((key: string) => {
+    setActiveFilters((prev) => ({
+      ...prev,
+      [key]: !prev[key as keyof TracksFilter],
+    }));
+  }, []);
 
-    // PostHog: Track filter application
-    posthog.capture("search_filter_applied", {
-      filter_count: getActiveFilterCount(filters),
-      has_missing_audio: !!filters.missingAudio,
-      has_missing_metadata: !!filters.missingMetadata,
-      has_missing_any_streaming: !!filters.missingAnyStreamingUrl,
-      has_missing_apple_music: !!filters.missingAppleMusic,
-      has_missing_youtube: !!filters.missingYouTube,
-      has_missing_soundcloud: !!filters.missingSoundCloud,
-    });
-  };
-
-  const handleClearFilters = () => {
-    const emptyFilters = createEmptyFilters();
-    setFilters(emptyFilters);
-    setAppliedFilters(emptyFilters);
-  };
-
-  const activeFilterCount = getActiveFilterCount(appliedFilters);
+  const handleClearAllFilters = React.useCallback(() => {
+    setActiveFilters(createEmptyFilters());
+  }, []);
+  const activeFilterCount = getActiveFilterCount(activeFilters);
 
   const observer = React.useRef<IntersectionObserver | null>(null);
   const bottomSentinelRef = React.useRef<HTMLDivElement>(null);
@@ -268,16 +253,27 @@ const SearchResults: React.FC = () => {
     return () => clearTimeout(handler);
   }, [debouncedValue, onQueryChange, query, activeFilterCount]);
 
-  // Hydrate query from URL (?q=...) on first mount
+  // Hydrate query and filters from URL on first mount
   React.useEffect(() => {
     const urlQ = searchParams?.get("q") ?? "";
     if (urlQ && urlQ !== debouncedValue) {
       setDebouncedValue(urlQ);
     }
+    const fromUrl: TracksFilter = {
+      missingAudio: searchParams?.get("missingAudio") === "1",
+      missingMetadata: searchParams?.get("missingMetadata") === "1",
+      missingAnyStreamingUrl: searchParams?.get("missingAnyStreamingUrl") === "1",
+      missingAppleMusic: searchParams?.get("missingAppleMusic") === "1",
+      missingYouTube: searchParams?.get("missingYouTube") === "1",
+      missingSoundCloud: searchParams?.get("missingSoundCloud") === "1",
+    };
+    if (Object.values(fromUrl).some(Boolean)) {
+      setActiveFilters(fromUrl);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep URL in sync when effective query changes
+  // Keep URL in sync when query or filters change
   React.useEffect(() => {
     if (!pathname) return;
     const params = new URLSearchParams(searchParamsString);
@@ -286,11 +282,19 @@ const SearchResults: React.FC = () => {
     } else {
       params.delete("q");
     }
+    const filterKeys: (keyof TracksFilter)[] = [
+      "missingAudio", "missingMetadata", "missingAnyStreamingUrl",
+      "missingAppleMusic", "missingYouTube", "missingSoundCloud",
+    ];
+    filterKeys.forEach((key) => {
+      if (activeFilters[key]) params.set(key, "1");
+      else params.delete(key);
+    });
     const nextQueryString = params.toString();
     if (nextQueryString === searchParamsString) return;
     const newUrl = nextQueryString ? `${pathname}?${nextQueryString}` : pathname;
     router.replace(newUrl);
-  }, [query, pathname, router, searchParamsString]);
+  }, [query, activeFilters, pathname, router, searchParamsString]);
 
   return (
     <Box mb={'100px'}>
@@ -305,29 +309,6 @@ const SearchResults: React.FC = () => {
         }}
         desktopControls={
           <>
-            <Box position="relative">
-              <IconButton
-                aria-label="Filter tracks"
-                size="sm"
-                variant={activeFilterCount > 0 ? "solid" : "ghost"}
-                colorPalette={activeFilterCount > 0 ? "blue" : undefined}
-                onClick={() => setFilterModalOpen(true)}
-              >
-                <LuFilter />
-              </IconButton>
-              {activeFilterCount > 0 && (
-                <Badge
-                  position="absolute"
-                  top="-1"
-                  right="-1"
-                  size="sm"
-                  colorPalette="blue"
-                  variant="solid"
-                >
-                  {activeFilterCount}
-                </Badge>
-              )}
-            </Box>
             <IconButton
               aria-label="Card view"
               size="sm"
@@ -355,31 +336,6 @@ const SearchResults: React.FC = () => {
               </IconButton>
             )}
           </>
-        }
-        mobilePrimaryControl={
-          <Box position="relative">
-            <IconButton
-              aria-label="Filter tracks"
-              size="sm"
-              variant={activeFilterCount > 0 ? "solid" : "ghost"}
-              colorPalette={activeFilterCount > 0 ? "blue" : undefined}
-              onClick={() => setFilterModalOpen(true)}
-            >
-              <LuFilter />
-            </IconButton>
-            {activeFilterCount > 0 && (
-              <Badge
-                position="absolute"
-                top="-1"
-                right="-1"
-                size="sm"
-                colorPalette="blue"
-                variant="solid"
-              >
-                {activeFilterCount}
-              </Badge>
-            )}
-          </Box>
         }
         mobileSecondaryControls={
           <>
@@ -413,14 +369,17 @@ const SearchResults: React.FC = () => {
         }
       />
 
-      {/* Filter Modal */}
-      <TracksFilterModal
-        open={filterModalOpen}
-        onClose={() => setFilterModalOpen(false)}
-        filters={filters}
-        onFiltersChange={setFilters}
-        onApply={handleApplyFilters}
-        onClear={handleClearFilters}
+      <FilterChips
+        chips={[
+          { key: "missingAudio", label: "Missing audio", active: !!activeFilters.missingAudio },
+          { key: "missingMetadata", label: "Missing metadata", active: !!activeFilters.missingMetadata },
+          { key: "missingAnyStreamingUrl", label: "No streaming URL", active: !!activeFilters.missingAnyStreamingUrl },
+          { key: "missingAppleMusic", label: "No Apple Music", active: !!activeFilters.missingAppleMusic },
+          { key: "missingYouTube", label: "No YouTube", active: !!activeFilters.missingYouTube },
+          { key: "missingSoundCloud", label: "No SoundCloud", active: !!activeFilters.missingSoundCloud },
+        ]}
+        onToggle={handleFilterToggle}
+        onClearAll={activeFilterCount > 0 ? handleClearAllFilters : undefined}
       />
 
       {initialLoading ? (

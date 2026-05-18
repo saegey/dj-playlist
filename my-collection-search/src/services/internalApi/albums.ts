@@ -99,6 +99,10 @@ export async function searchAlbums(
   }
   if (typeof params.limit === "number") searchParams.append("limit", String(params.limit));
   if (typeof params.offset === "number") searchParams.append("offset", String(params.offset));
+  if (params.missing_library_identifier) searchParams.append("missing_library_identifier", "1");
+  if (params.missing_local_cover_art_url) {
+    searchParams.append("missing_local_cover_art_url", "1");
+  }
 
   const query = searchParams.toString();
   const path = query ? `/api/albums?${query}` : "/api/albums";

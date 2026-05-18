@@ -17,6 +17,7 @@ services:
       # Keep node_modules inside the container image
       - /app/node_modules
       - ${APP_AUDIO_MOUNT:-music_data:/app/audio}
+      - ${APP_ALBUM_COVERS_SRC:-album_covers}:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
@@ -40,6 +41,6 @@ services:
       GAMDL_COOKIE_FILE: /app/cookies/music.apple.com_cookies.txt
     volumes:
       - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
-      - album_covers:/app/public/uploads/album-covers
+      - ${WORKER_ALBUM_COVERS_SRC:-album_covers}:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
       - ./cookies:/app/cookies:ro # Mount local cookies directory as read-only

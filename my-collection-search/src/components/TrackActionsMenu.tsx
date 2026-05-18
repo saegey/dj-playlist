@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { Button, Menu, Portal, Dialog, Flex, Box, Icon, Link } from "@chakra-ui/react";
-import { FiCalendar, FiClock, FiDownload, FiEdit, FiMoreVertical, FiPlus, FiPlusSquare, FiZap, FiTarget } from "react-icons/fi";
+import { FiCalendar, FiClock, FiDownload, FiEdit, FiMoreVertical, FiPlus, FiPlusSquare, FiTrash2, FiZap, FiTarget } from "react-icons/fi";
+import { useQueryClient } from "@tanstack/react-query";
 import { SiApplemusic, SiYoutube, SiSoundcloud } from "react-icons/si";
 
 import type { Track } from "@/types/track";
@@ -12,7 +13,7 @@ import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
 import PlaylistRecommendations from "./PlaylistRecommendations";
 import SimilarTracks from "./SimilarTracks";
 import SimilarVibeTracks from "./SimilarVibeTracks";
-import { analyzeLocalAudioAsync, analyzeTrackAsync, recalcTrackDuration, syncTrackYearFromAudio } from "@/services/internalApi/tracks";
+import { analyzeLocalAudioAsync, analyzeTrackAsync, recalcTrackDuration, softDeleteTrack, syncTrackYearFromAudio } from "@/services/internalApi/tracks";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
 import posthog from "posthog-js";
@@ -25,7 +26,10 @@ export default function TrackActionsMenu({ track }: Props) {
   const { openTrackEditor } = useTrackEditor();
   const { appendToQueue } = usePlaylistPlayer();
   const { openForTrack, playlistDialog, nameDialog } = useAddToPlaylistDialog();
+  const queryClient = useQueryClient();
 
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false);
   const [recommendationsTrackSnapshot, setRecommendationsTrackSnapshot] = useState<Track[]>([]);
   const [similarTracksModalOpen, setSimilarTracksModalOpen] = useState(false);
@@ -44,6 +48,28 @@ export default function TrackActionsMenu({ track }: Props) {
   const canRecalcDuration =
     !!track.local_audio_url && (!track.duration_seconds || track.duration_seconds <= 0);
   const canSyncYearFromAudio = !!track.local_audio_url;
+
+  const handleDeleteConfirm = async () => {
+    if (!track.friend_id) {
+      toaster.create({ title: "Track missing friend_id", type: "error" });
+      return;
+    }
+    setDeleteLoading(true);
+    try {
+      await softDeleteTrack({ track_id: track.track_id, friend_id: track.friend_id });
+      setDeleteConfirmOpen(false);
+      toaster.create({ title: "Track deleted", type: "success" });
+      queryClient.invalidateQueries({ queryKey: ["tracks"] });
+    } catch (err) {
+      toaster.create({
+        title: "Failed to delete track",
+        description: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const handleFetchAudio = async () => {
     if (!track.friend_id) {
@@ -292,6 +318,21 @@ export default function TrackActionsMenu({ track }: Props) {
                 <FiTarget /> Similar Vibe
               </Menu.Item>
 
+              <Box
+                as="hr"
+                my={1}
+                borderColor="gray.200"
+                borderWidth={0}
+                borderTopWidth={1}
+              />
+              <Menu.Item
+                onSelect={() => setDeleteConfirmOpen(true)}
+                value="delete"
+                color="red.500"
+              >
+                <FiTrash2 /> Delete Track
+              </Menu.Item>
+
               {/* Music Service Links */}
               {(track.apple_music_url || track.youtube_url || track.soundcloud_url) && (
                 <>
@@ -332,6 +373,43 @@ export default function TrackActionsMenu({ track }: Props) {
       {/* Dialog components */}
       {playlistDialog}
       {nameDialog}
+
+      {/* Delete confirmation */}
+      <Dialog.Root
+        open={deleteConfirmOpen}
+        onOpenChange={(e) => !deleteLoading && setDeleteConfirmOpen(e.open)}
+        size="sm"
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Delete track?</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <strong>{track.title}</strong> by {track.artist} will be soft-deleted and won&apos;t be re-imported from Discogs.
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteConfirmOpen(false)}
+                  disabled={deleteLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  colorPalette="red"
+                  onClick={handleDeleteConfirm}
+                  loading={deleteLoading}
+                >
+                  Delete
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
 
       {/* AI Recommendations Modal */}
       <Dialog.Root

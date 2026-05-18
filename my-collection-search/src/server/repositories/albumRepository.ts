@@ -119,6 +119,7 @@ export class AlbumRepository {
       SELECT *
       FROM tracks
       WHERE release_id = $1 AND friend_id = $2
+        AND deleted_at IS NULL
       ORDER BY position
       `,
       [releaseId, friendId]

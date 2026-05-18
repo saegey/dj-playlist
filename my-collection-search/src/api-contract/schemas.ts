@@ -973,6 +973,8 @@ export const albumSearchQuerySchema = z.object({
   friend_id: intFromInputSchema.optional(),
   limit: nonNegativeIntFromInputSchema.optional().default(20),
   offset: nonNegativeIntFromInputSchema.optional().default(0),
+  missing_library_identifier: z.boolean().optional(),
+  missing_local_cover_art_url: z.boolean().optional(),
 });
 
 export const albumSearchResponseSchema = z.object({
