@@ -13,6 +13,7 @@ export class AlbumApiService {
     sort: string;
     missingLibraryIdentifier?: boolean;
     missingLocalCoverArtUrl?: boolean;
+    missingAudio?: boolean;
   }): Promise<{
     hits: AlbumSearchHit[];
     estimatedTotalHits: number;
@@ -33,6 +34,18 @@ export class AlbumApiService {
 
     if (params.missingLibraryIdentifier) {
       whereClauses.push("a.library_identifier IS NULL");
+    }
+
+    if (params.missingAudio) {
+      whereClauses.push(
+        `EXISTS (
+          SELECT 1 FROM tracks t
+          WHERE t.release_id = a.release_id
+            AND t.friend_id = a.friend_id
+            AND (t.local_audio_url IS NULL OR btrim(t.local_audio_url) = '')
+            AND t.deleted_at IS NULL
+        )`
+      );
     }
 
     if (params.missingLocalCoverArtUrl) {

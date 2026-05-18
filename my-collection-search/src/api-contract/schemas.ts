@@ -975,6 +975,7 @@ export const albumSearchQuerySchema = z.object({
   offset: nonNegativeIntFromInputSchema.optional().default(0),
   missing_library_identifier: z.boolean().optional(),
   missing_local_cover_art_url: z.boolean().optional(),
+  missing_audio: z.boolean().optional(),
 });
 
 export const albumSearchResponseSchema = z.object({

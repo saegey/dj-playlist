@@ -2614,7 +2614,15 @@ export const apiContractRoutes: ApiContractRoute[] = [
         { name: "q", in: "query", required: false, schema: { type: "string" } },
         { name: "limit", in: "query", required: false, schema: { type: "integer", default: 20 } },
         { name: "offset", in: "query", required: false, schema: { type: "integer", default: 0 } },
-        { name: "filter", in: "query", required: false, schema: { type: "string" } },
+        {
+          name: "filter",
+          in: "query",
+          required: false,
+          schema: {
+            type: "string",
+            description: "SQL-style filter expression. Multiple conditions joined with ' AND '. Supported values: 'local_audio_url IS NULL' (missing audio), '(bpm IS NULL OR key IS NULL)' (missing metadata), 'apple_music_url IS NULL' (missing Apple Music), 'youtube_url IS NULL' (missing YouTube), 'soundcloud_url IS NULL' (missing SoundCloud), '(apple_music_url IS NULL AND youtube_url IS NULL AND soundcloud_url IS NULL)' (missing all streaming URLs), 'friend_id = {integer}' (filter by friend)",
+          },
+        },
       ],
       responses: {
         "200": {
@@ -3268,6 +3276,9 @@ export const apiContractRoutes: ApiContractRoute[] = [
         { name: "friend_id", in: "query", required: false, schema: { type: "integer" } },
         { name: "limit", in: "query", required: false, schema: { type: "integer", default: 20 } },
         { name: "offset", in: "query", required: false, schema: { type: "integer", default: 0 } },
+        { name: "missing_library_identifier", in: "query", required: false, schema: { type: "integer", enum: [1], description: "Filter albums missing a library identifier" } },
+        { name: "missing_local_cover_art_url", in: "query", required: false, schema: { type: "integer", enum: [1], description: "Filter albums missing local cover art" } },
+        { name: "missing_audio", in: "query", required: false, schema: { type: "integer", enum: [1], description: "Filter albums with at least one track missing local audio" } },
       ],
       responses: {
         "200": {

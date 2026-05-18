@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
     const missingLibraryIdentifier = searchParams.get("missing_library_identifier") === "1";
     const missingLocalCoverArtUrl =
       searchParams.get("missing_local_cover_art_url") === "1";
+    const missingAudio = searchParams.get("missing_audio") === "1";
 
     const response = await albumApiService.searchAlbums({
       q,
@@ -32,6 +33,7 @@ export async function GET(request: NextRequest) {
       sort,
       missingLibraryIdentifier: missingLibraryIdentifier || undefined,
       missingLocalCoverArtUrl: missingLocalCoverArtUrl || undefined,
+      missingAudio: missingAudio || undefined,
     });
     return NextResponse.json(response);
   } catch (error) {

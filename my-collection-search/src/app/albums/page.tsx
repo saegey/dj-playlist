@@ -36,8 +36,8 @@ function AlbumsPageContent() {
   );
 
   const missingLibraryIdentifier = searchParams.get("missing_library_identifier") === "1";
-  const missingLocalCoverArtUrl =
-    searchParams.get("missing_local_cover_art_url") === "1";
+  const missingLocalCoverArtUrl = searchParams.get("missing_local_cover_art_url") === "1";
+  const missingAudio = searchParams.get("missing_audio") === "1";
 
   // Set default friend_id to current user's library on initial load
   React.useEffect(() => {
@@ -63,6 +63,7 @@ function AlbumsPageContent() {
     if (selectedFriendId) params.set("friend_id", selectedFriendId.toString());
     if (missingLibraryIdentifier) params.set("missing_library_identifier", "1");
     if (missingLocalCoverArtUrl) params.set("missing_local_cover_art_url", "1");
+    if (missingAudio) params.set("missing_audio", "1");
     router.push(`/albums?${params.toString()}`);
   };
 
@@ -73,6 +74,7 @@ function AlbumsPageContent() {
     if (sort !== "date_added:desc") params.set("sort", sort);
     if (missingLibraryIdentifier) params.set("missing_library_identifier", "1");
     if (missingLocalCoverArtUrl) params.set("missing_local_cover_art_url", "1");
+    if (missingAudio) params.set("missing_audio", "1");
 
     if (friendId > 0) {
       setSelectedFriendId(friendId);
@@ -99,6 +101,13 @@ function AlbumsPageContent() {
         params.set("missing_local_cover_art_url", "1");
       } else {
         params.delete("missing_local_cover_art_url");
+      }
+    }
+    if (key === "missingAudio") {
+      if (!missingAudio) {
+        params.set("missing_audio", "1");
+      } else {
+        params.delete("missing_audio");
       }
     }
     router.replace(`/albums?${params.toString()}`);
@@ -176,12 +185,14 @@ function AlbumsPageContent() {
               label: "Missing local cover",
               active: missingLocalCoverArtUrl,
             },
+            { key: "missingAudio", label: "Missing audio", active: missingAudio },
           ]}
           onToggle={handleAlbumFilterToggle}
-          onClearAll={missingLibraryIdentifier || missingLocalCoverArtUrl ? () => {
+          onClearAll={missingLibraryIdentifier || missingLocalCoverArtUrl || missingAudio ? () => {
             const params = new URLSearchParams(searchParams.toString());
             params.delete("missing_library_identifier");
             params.delete("missing_local_cover_art_url");
+            params.delete("missing_audio");
             router.replace(`/albums?${params.toString()}`);
           } : undefined}
         />
