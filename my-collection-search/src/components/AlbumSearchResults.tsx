@@ -13,6 +13,9 @@ export default function AlbumSearchResults() {
   const query = searchParams.get("q") || "";
   const sort = searchParams.get("sort") || "date_added:desc";
   const friendId = searchParams.get("friend_id");
+  const missingLibraryIdentifier = searchParams.get("missing_library_identifier") === "1";
+  const missingLocalCoverArtUrl =
+    searchParams.get("missing_local_cover_art_url") === "1";
 
   const { data, albumRefs, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } =
     useAlbumsInfiniteQuery({
@@ -20,6 +23,8 @@ export default function AlbumSearchResults() {
       sort,
       friend_id: friendId ? parseInt(friendId) : undefined,
       limit: 20,
+      missing_library_identifier: missingLibraryIdentifier || undefined,
+      missing_local_cover_art_url: missingLocalCoverArtUrl || undefined,
     });
   const albumsFromStore = useAlbumsByRefs(albumRefs);
   const albumsFromQuery = data?.pages.flatMap((page) => page.hits) || [];

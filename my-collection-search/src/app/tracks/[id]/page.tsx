@@ -94,13 +94,20 @@ export default function TrackPage() {
                   try {
                     const savedUrl = await extractCoverMutation.mutateAsync();
                     const releaseId = trackQuery.data?.release_id;
-                    if (savedUrl && releaseId) {
-                      useTrackStore.getState().updateTracksByRelease(releaseId, friendId, {
+                    if (savedUrl) {
+                      // Always update the current track in store to avoid stale UI when no release_id exists.
+                      useTrackStore.getState().updateTrack(trackId, friendId, {
                         audio_file_album_art_url: savedUrl,
                       });
-                      useAlbumStore.getState().updateAlbum(releaseId, friendId, {
-                        audio_file_album_art_url: savedUrl,
-                      });
+
+                      if (releaseId) {
+                        useTrackStore.getState().updateTracksByRelease(releaseId, friendId, {
+                          audio_file_album_art_url: savedUrl,
+                        });
+                        useAlbumStore.getState().updateAlbum(releaseId, friendId, {
+                          audio_file_album_art_url: savedUrl,
+                        });
+                      }
                     }
                     toaster.create({
                       title: "Album cover updated",

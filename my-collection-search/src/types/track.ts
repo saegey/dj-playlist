@@ -40,6 +40,7 @@ export type Track = {
   embedding?: string | number[] | null;
   _vectors?: { default?: number[] };
   hasVectors?: boolean;
+  deleted_at?: string | null;
 };
 
 export type YoutubeVideo = {

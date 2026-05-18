@@ -170,12 +170,17 @@ export function deleteRelease(username: string, releaseId: string): boolean {
   return false;
 }
 
+function stripDiscogsNumbering(name: string): string {
+  return name.replace(/\s*\(\d+\)\s*$/, "").trim();
+}
+
 export function extractTracksFromAlbum(
   album: DiscogsRelease,
   username: string
 ): DiscogsTrack[] {
-  const artist_name =
-    album.artists_sort || album.artists?.[0]?.name || "Unknown Artist";
+  const artist_name = stripDiscogsNumbering(
+    album.artists_sort || album.artists?.[0]?.name || "Unknown Artist"
+  );
   return album.tracklist.map((tr: ProcessedTrack) => {
     const track_id = `${album.id}-${tr.position}`
       .trim()
@@ -184,7 +189,7 @@ export function extractTracksFromAlbum(
       track_id,
       release_id: album.id.toString(), // Add release_id for album linking
       title: tr.title,
-      artist: tr.artists?.map((a) => a.name).join(", ") || artist_name,
+      artist: tr.artists?.map((a) => stripDiscogsNumbering(a.name)).join(", ") || artist_name,
       album: album.title,
       year: album.year ?? null,
       styles: album.styles || [],

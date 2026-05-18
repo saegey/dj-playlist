@@ -19,12 +19,16 @@ TAG ?= $(TAG_PREFIX)$(TAG_TIME)
 .PHONY: build-app build-essentia build-ga-service build-download-worker build-all build-packages
 .PHONY: migrate-up migrate-down migrate-create
 .PHONY: push-images deploy-prod-local deploy-prod-remote deploy-prod-remote-localbuild release release-localbuild
-.PHONY: check-compose
+.PHONY: check-compose sync-album-covers
 
 REGISTRY ?= ghcr.io/saegey
 PLATFORM ?= linux/amd64
 PROD_HOST ?= vinyl.local
 PROD_STACK_DIR ?= /opt/stacks/dj-playlist
+SSH_USER ?= saegey
+ALBUM_COVERS_REMOTE_HOST ?= $(SSH_USER)@$(PROD_HOST)
+ALBUM_COVERS_REMOTE_PATH ?= /var/lib/docker/volumes/teststack_album_covers/_data
+ALBUM_COVERS_LOCAL_DIR ?= /Users/saegey/groovenet-covers
 
 check-compose:
 	@if [ -z "$(COMPOSE_CMD)" ]; then \
@@ -116,3 +120,9 @@ migrate-down: check-compose
 migrate-create:
 	@if [ -z "$(NAME)" ]; then echo "Usage: make migrate-create NAME=my-migration-name"; exit 1; fi
 	cd $(COMPOSE_DIR) && npm run migrate create $(NAME)
+
+sync-album-covers:
+	./$(COMPOSE_DIR)/scripts/sync-album-covers.sh \
+		"$(ALBUM_COVERS_REMOTE_HOST)" \
+		"$(ALBUM_COVERS_REMOTE_PATH)" \
+		"$(ALBUM_COVERS_LOCAL_DIR)"

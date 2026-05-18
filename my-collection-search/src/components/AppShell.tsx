@@ -23,7 +23,6 @@ import {
   IoMusicalNotes,
   IoSettings,
   IoAlbums,
-  IoAddCircle,
 } from "react-icons/io5";
 import { usePathname } from "next/navigation";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
@@ -32,7 +31,6 @@ import CommandPalette from "@/components/CommandPalette";
 const menuItems = [
   { href: "/", label: "Tracks" },
   { href: "/albums", label: "Albums" },
-  { href: "/albums/add", label: "Add Album" },
   { href: "/playlists", label: "Playlists" },
   { href: "/jobs", label: "Jobs" },
   { href: "/settings", label: "Settings" },
@@ -40,7 +38,6 @@ const menuItems = [
 
 function getItemIcon(href: string) {
   if (href === "/") return IoMusicalNotes;
-  if (href === "/albums/add") return IoAddCircle;
   if (href === "/albums") return IoAlbums;
   if (href === "/settings") return IoSettings;
   if (href === "/playlists") return TbPlaylist;

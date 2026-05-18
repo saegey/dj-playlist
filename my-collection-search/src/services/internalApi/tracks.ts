@@ -257,6 +257,16 @@ export async function fetchTrackById(params: {
   return await http<Track>(url, { method: "GET", cache: "no-store" });
 }
 
+export async function softDeleteTrack(params: {
+  track_id: string;
+  friend_id: number;
+}): Promise<{ success: boolean; track_id: string; friend_id: number }> {
+  return await http(
+    `/api/tracks/${encodeURIComponent(params.track_id)}?friend_id=${params.friend_id}`,
+    { method: "DELETE" }
+  );
+}
+
 export async function fetchTrackPlaylists(
   trackId: string,
   friendId: number

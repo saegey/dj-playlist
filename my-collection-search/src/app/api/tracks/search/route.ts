@@ -77,7 +77,7 @@ async function searchTracksPg(params: {
   const offsetRef = `$${sqlParams.length + 1}`;
   sqlParams.push(params.offset);
 
-  const whereClauses = [...params.where];
+  const whereClauses = [...params.where, "deleted_at IS NULL"];
 
   if (queryText.length > 0 && queryParamRef) {
     whereClauses.push(

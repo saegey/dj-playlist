@@ -106,7 +106,7 @@ export class TrackRepository {
   async upsertDiscogsTrackByTrackIdUsername(
     track: DiscogsTrack,
     friendId: number
-  ): Promise<Track> {
+  ): Promise<Track | null> {
     const { rows } = await dbQuery<Track>(
       `
       INSERT INTO tracks (
@@ -134,7 +134,9 @@ export class TrackRepository {
         duration_seconds = EXCLUDED.duration_seconds,
         friend_id        = EXCLUDED.friend_id,
         release_id       = EXCLUDED.release_id
-        -- URL fields are intentionally excluded from updates to preserve manually-added values.
+        -- URL fields intentionally excluded to preserve manually-added values.
+        -- deleted_at intentionally excluded: soft-deleted tracks stay deleted on re-import.
+      WHERE tracks.deleted_at IS NULL
       RETURNING *
       `,
       [
@@ -160,12 +162,21 @@ export class TrackRepository {
         track.release_id,
       ]
     );
-    if (!rows[0]) {
-      throw new Error(
-        `Expected track upsert to return a row for ${track.track_id}@${track.username}`
-      );
-    }
-    return rows[0];
+    // Returns null when the track is soft-deleted (upsert WHERE clause prevents update).
+    return rows[0] ?? null;
+  }
+
+  async softDeleteTrack(trackId: string, friendId: number): Promise<Track | null> {
+    const { rows } = await dbQuery<Track>(
+      `
+      UPDATE tracks
+      SET deleted_at = NOW()
+      WHERE track_id = $1 AND friend_id = $2 AND deleted_at IS NULL
+      RETURNING *
+      `,
+      [trackId, friendId]
+    );
+    return rows[0] ?? null;
   }
 
   async findTrackWithLocalAudio(

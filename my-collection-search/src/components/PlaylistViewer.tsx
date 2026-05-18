@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, type ChangeEvent } from "react";
+import React, { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import {
   Box,
   EmptyState,
@@ -12,6 +12,9 @@ import {
   Portal,
   Button,
   Badge,
+  Card,
+  SimpleGrid,
+  Progress,
 } from "@chakra-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FiHeadphones } from "react-icons/fi";
@@ -120,6 +123,86 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
 
   // Get total playtime for display
   const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
+  const playlistStats = useMemo(() => {
+    const genreCounts = new Map<string, number>();
+    const styleCounts = new Map<string, number>();
+    const keyCounts = new Map<string, number>();
+    let bpmCount = 0;
+    let bpmSum = 0;
+    let bpmMin = Number.POSITIVE_INFINITY;
+    let bpmMax = Number.NEGATIVE_INFINITY;
+    let ratingCount = 0;
+    let ratingSum = 0;
+    let favoritesCount = 0;
+    let localAudioCount = 0;
+
+    for (const track of tracks) {
+      for (const genre of track.genres || []) {
+        const label = genre.trim();
+        if (!label) continue;
+        genreCounts.set(label, (genreCounts.get(label) ?? 0) + 1);
+      }
+      for (const style of track.styles || []) {
+        const label = style.trim();
+        if (!label) continue;
+        styleCounts.set(label, (styleCounts.get(label) ?? 0) + 1);
+      }
+
+      const key = typeof track.key === "string" ? track.key.trim() : "";
+      if (key) {
+        keyCounts.set(key, (keyCounts.get(key) ?? 0) + 1);
+      }
+
+      const bpmValueRaw = typeof track.bpm === "string" ? Number(track.bpm) : Number(track.bpm);
+      if (Number.isFinite(bpmValueRaw) && bpmValueRaw > 0) {
+        bpmCount += 1;
+        bpmSum += bpmValueRaw;
+        bpmMin = Math.min(bpmMin, bpmValueRaw);
+        bpmMax = Math.max(bpmMax, bpmValueRaw);
+      }
+
+      const rating = typeof track.star_rating === "number" ? track.star_rating : null;
+      if (rating !== null) {
+        ratingCount += 1;
+        ratingSum += rating;
+        if (rating >= 4) favoritesCount += 1;
+      }
+
+      if (track.local_audio_url) {
+        localAudioCount += 1;
+      }
+    }
+
+    const top = (counts: Map<string, number>, limit = 4): Array<[string, number]> =>
+      Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit);
+
+    return {
+      trackCount: tracks.length,
+      topGenres: top(genreCounts),
+      topStyles: top(styleCounts),
+      topKeys: top(keyCounts, 3),
+      bpmSummary:
+        bpmCount > 0
+          ? {
+              avg: Math.round(bpmSum / bpmCount),
+              min: Math.round(bpmMin),
+              max: Math.round(bpmMax),
+              coverage: Math.round((bpmCount / tracks.length) * 100),
+            }
+          : null,
+      ratingSummary:
+        ratingCount > 0
+          ? {
+              avg: Number((ratingSum / ratingCount).toFixed(1)),
+              favoritesCount,
+            }
+          : null,
+      localAudioCoverage:
+        tracks.length > 0 ? Math.round((localAudioCount / tracks.length) * 100) : 0,
+    };
+  }, [tracks]);
 
   // Append tracks to the current playlist
   const appendTracksToPlaylist = async (newTracks: PlaylistTrackPayload[]) => {
@@ -513,6 +596,80 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           />
         </Flex>
       </Flex>
+      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={3} mb={4}>
+        <Card.Root size="sm" variant="outline">
+          <Card.Body>
+            <VStack align="start" gap={1}>
+              <Text fontSize="xs" color="gray.500">Tracks</Text>
+              <Text fontWeight="bold" fontSize="lg">{playlistStats.trackCount}</Text>
+              <Text fontSize="xs" color="gray.500">Audio Ready: {playlistStats.localAudioCoverage}%</Text>
+              <Progress.Root value={playlistStats.localAudioCoverage} size="xs" width="100%">
+                <Progress.Track>
+                  <Progress.Range />
+                </Progress.Track>
+              </Progress.Root>
+            </VStack>
+          </Card.Body>
+        </Card.Root>
+        <Card.Root size="sm" variant="outline">
+          <Card.Body>
+            <VStack align="start" gap={1}>
+              <Text fontSize="xs" color="gray.500">Top Genres</Text>
+              <Flex gap={1} wrap="wrap">
+                {playlistStats.topGenres.length > 0 ? playlistStats.topGenres.map(([name, count]) => (
+                  <Badge key={`genre-${name}`} variant="subtle">
+                    {name} ({count})
+                  </Badge>
+                )) : <Text fontSize="sm" color="gray.500">No genre tags</Text>}
+              </Flex>
+            </VStack>
+          </Card.Body>
+        </Card.Root>
+        <Card.Root size="sm" variant="outline">
+          <Card.Body>
+            <VStack align="start" gap={1}>
+              <Text fontSize="xs" color="gray.500">Rhythm & Harmony</Text>
+              {playlistStats.bpmSummary ? (
+                <>
+                  <Text fontSize="sm">BPM avg {playlistStats.bpmSummary.avg} ({playlistStats.bpmSummary.min}-{playlistStats.bpmSummary.max})</Text>
+                  <Text fontSize="xs" color="gray.500">BPM coverage: {playlistStats.bpmSummary.coverage}%</Text>
+                </>
+              ) : (
+                <Text fontSize="sm" color="gray.500">No BPM data</Text>
+              )}
+              <Flex gap={1} wrap="wrap">
+                {playlistStats.topKeys.length > 0 ? playlistStats.topKeys.map(([name, count]) => (
+                  <Badge key={`key-${name}`} variant="subtle">
+                    {name} ({count})
+                  </Badge>
+                )) : <Text fontSize="xs" color="gray.500">No key data</Text>}
+              </Flex>
+            </VStack>
+          </Card.Body>
+        </Card.Root>
+        <Card.Root size="sm" variant="outline">
+          <Card.Body>
+            <VStack align="start" gap={1}>
+              <Text fontSize="xs" color="gray.500">Ratings & Styles</Text>
+              {playlistStats.ratingSummary ? (
+                <>
+                  <Text fontSize="sm">Avg rating: {playlistStats.ratingSummary.avg}</Text>
+                  <Text fontSize="xs" color="gray.500">4★+ tracks: {playlistStats.ratingSummary.favoritesCount}</Text>
+                </>
+              ) : (
+                <Text fontSize="sm" color="gray.500">No ratings yet</Text>
+              )}
+              <Flex gap={1} wrap="wrap">
+                {playlistStats.topStyles.length > 0 ? playlistStats.topStyles.map(([name, count]) => (
+                  <Badge key={`style-${name}`} variant="subtle">
+                    {name} ({count})
+                  </Badge>
+                )) : <Text fontSize="xs" color="gray.500">No style tags</Text>}
+              </Flex>
+            </VStack>
+          </Card.Body>
+        </Card.Root>
+      </SimpleGrid>
       <Box overflowY="auto">
         <DraggableTrackList
           tracksPlaylist={tracksPlaylist}

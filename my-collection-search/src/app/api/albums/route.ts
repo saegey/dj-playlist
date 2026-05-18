@@ -20,6 +20,9 @@ export async function GET(request: NextRequest) {
     // - title:asc (alphabetical)
     // - album_rating:desc (highest rated)
     const sort = searchParams.get("sort") || "date_added:desc";
+    const missingLibraryIdentifier = searchParams.get("missing_library_identifier") === "1";
+    const missingLocalCoverArtUrl =
+      searchParams.get("missing_local_cover_art_url") === "1";
 
     const response = await albumApiService.searchAlbums({
       q,
@@ -27,6 +30,8 @@ export async function GET(request: NextRequest) {
       offset,
       friendId,
       sort,
+      missingLibraryIdentifier: missingLibraryIdentifier || undefined,
+      missingLocalCoverArtUrl: missingLocalCoverArtUrl || undefined,
     });
     return NextResponse.json(response);
   } catch (error) {
