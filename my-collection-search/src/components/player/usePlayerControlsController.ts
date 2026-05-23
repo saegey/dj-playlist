@@ -5,8 +5,6 @@ import type { IconType } from "react-icons";
 import { FiVolume2, FiVolume1, FiVolumeX } from "react-icons/fi";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { toaster } from "@/components/ui/toaster";
-import { usePlaybackMode, useLocalPlayback } from "@/hooks/usePlaybackMode";
-import { useMPDStatus } from "@/hooks/useMPDStatus";
 
 export function usePlayerControlsController() {
   const {
@@ -18,6 +16,7 @@ export function usePlayerControlsController() {
     pause: browserPause,
     playNext,
     playPrev,
+    clearQueue,
     playlist,
     volume,
     setVolume,
@@ -25,10 +24,6 @@ export function usePlayerControlsController() {
     isAirPlayActive,
     showAirPlayPicker,
   } = usePlaylistPlayer();
-
-  const { mode, setMode } = usePlaybackMode();
-  const localPlayback = useLocalPlayback();
-  const mpdStatus = useMPDStatus(mode === "local-dac");
 
   const currentArtwork =
     currentTrack?.audio_file_album_art_url ||
@@ -56,18 +51,9 @@ export function usePlayerControlsController() {
 
   const handleSeek = useCallback(
     async (time: number) => {
-      if (mode === "local-dac") {
-        try {
-          await localPlayback.seek(time);
-          console.log("[DAC Mode] Seeked to", time);
-        } catch (error) {
-          console.error("[DAC Mode] Seek failed:", error);
-        }
-      } else {
-        seek(time);
-      }
+      seek(time);
     },
-    [mode, localPlayback, seek]
+    [seek]
   );
 
   const handleAirPlayClick = useCallback(() => {
@@ -81,6 +67,11 @@ export function usePlayerControlsController() {
     }
   }, [showAirPlayPicker]);
 
+  const handleClosePlayer = useCallback(async () => {
+    browserPause();
+    clearQueue();
+  }, [browserPause, clearQueue]);
+
   return {
     isPlaying,
     currentTrack,
@@ -91,10 +82,6 @@ export function usePlayerControlsController() {
     isAirPlayActive,
     playNext,
     playPrev,
-    mode,
-    setMode,
-    localPlayback,
-    mpdStatus,
     currentArtwork,
     safeLen,
     canPrev,
@@ -104,5 +91,6 @@ export function usePlayerControlsController() {
     handlePause,
     handleSeek,
     handleAirPlayClick,
+    handleClosePlayer,
   };
 }

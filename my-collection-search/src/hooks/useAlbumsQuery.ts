@@ -2,8 +2,6 @@
 import { useEffect } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, InfiniteData } from "@tanstack/react-query";
 import {
-  cleanupAlbumsStream,
-  fetchAlbumsCleanupSummary,
   getAlbumWithTracks,
   searchAlbums,
   updateAlbum,
@@ -184,26 +182,4 @@ export function useUpdateAlbumMutation() {
       }
     },
   });
-}
-
-/**
- * Hook for cleaning up albums with no tracks
- */
-export function useCleanupAlbums() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async () => cleanupAlbumsStream(),
-    onSuccess: () => {
-      // Invalidate all album queries to refetch with cleaned data
-      queryClient.invalidateQueries({ queryKey: ["albums"] });
-    },
-  });
-}
-
-/**
- * Get summary of albums that would be cleaned up (without deleting)
- */
-export async function getAlbumsCleanupSummary() {
-  return await fetchAlbumsCleanupSummary();
 }

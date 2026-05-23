@@ -448,11 +448,6 @@ export class AlbumRepository {
     return rows;
   }
 
-  async deleteAllAlbums(): Promise<number> {
-    const result = await dbQuery("DELETE FROM albums");
-    return result.rowCount || 0;
-  }
-
   async updateAlbumCoverForRelease(
     friendId: number,
     releaseId: string,
@@ -558,38 +553,6 @@ export class AlbumRepository {
     return result.rowCount ?? 0;
   }
 
-  async listAlbumsForReindex(): Promise<Array<Record<string, unknown>>> {
-    const { rows } = await dbQuery(
-      `
-      SELECT
-        a.release_id,
-        a.friend_id,
-        f.username,
-        a.title,
-        a.artist,
-        a.year,
-        a.genres,
-        a.styles,
-        a.album_thumbnail,
-        a.discogs_url,
-        a.date_added,
-        a.date_changed,
-        a.track_count,
-        a.album_rating,
-        a.album_notes,
-        a.purchase_price,
-        a.condition,
-        a.label,
-        a.catalog_number,
-        a.country,
-        a.format,
-        a.library_identifier
-      FROM albums a
-      LEFT JOIN friends f ON f.id = a.friend_id
-      `
-    );
-    return rows as Array<Record<string, unknown>>;
-  }
 }
 
 export const albumRepository = new AlbumRepository();

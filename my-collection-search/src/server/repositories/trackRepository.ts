@@ -58,11 +58,6 @@ export type OrderedTrackRow = TrackWithLibraryIdentifierRow & {
   ord: number;
 };
 
-export type MissingMusicUrlPageResult = {
-  tracks: Track[];
-  total: number;
-};
-
 export type TrackReindexRow = TrackWithLibraryIdentifierRow;
 export type TrackAnalysisBulkUpdate = Pick<Track, "local_audio_url"> & {
   bpm?: number | null;
@@ -258,18 +253,6 @@ export class TrackRepository {
     return rows;
   }
 
-  async getAllTracksWithLibraryIdentifier(): Promise<TrackWithLibraryIdentifierRow[]> {
-    const { rows } = await dbQuery<TrackWithLibraryIdentifierRow>(
-      `
-      SELECT t.*, a.library_identifier
-      FROM tracks t
-      LEFT JOIN albums a ON t.release_id = a.release_id AND t.friend_id = a.friend_id
-      ORDER BY t.id DESC
-      `
-    );
-    return rows;
-  }
-
   async getPlaylistCountsForTracks(
     trackRefs: TrackRef[]
   ): Promise<Record<string, number>> {
@@ -376,42 +359,6 @@ export class TrackRepository {
       params
     );
     return rows;
-  }
-
-  async findMissingMusicUrlTracksPaginated(params: {
-    pageSize: number;
-    offset: number;
-    friendId?: string | null;
-  }): Promise<MissingMusicUrlPageResult> {
-    const { pageSize, offset, friendId } = params;
-    const whereBase =
-      "(apple_music_url IS NULL OR apple_music_url = '') AND (youtube_url IS NULL OR youtube_url = '') AND (soundcloud_url IS NULL OR soundcloud_url = '')";
-
-    const where = friendId ? `${whereBase} AND friend_id = $1` : whereBase;
-    const countValues: Array<string | number> = friendId ? [friendId] : [];
-    const tracksValues: Array<string | number> = friendId
-      ? [friendId, pageSize, offset]
-      : [pageSize, offset];
-
-    const countQuery = `SELECT COUNT(*) FROM tracks WHERE ${where}`;
-    const tracksQuery = `
-      SELECT *
-      FROM tracks
-      WHERE ${where}
-      ORDER BY id DESC
-      LIMIT $${friendId ? 2 : 1}
-      OFFSET $${friendId ? 3 : 2}
-    `;
-
-    const [countResult, tracksResult] = await Promise.all([
-      dbQuery<{ count: string }>(countQuery, countValues),
-      dbQuery<Track>(tracksQuery, tracksValues),
-    ]);
-
-    return {
-      tracks: tracksResult.rows,
-      total: parseInt(countResult.rows[0]?.count ?? "0", 10),
-    };
   }
 
   async findTrackByTrackIdAndFriendId(

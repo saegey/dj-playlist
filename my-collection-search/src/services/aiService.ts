@@ -16,7 +16,7 @@ export async function fetchYouTubeMusicSearch(
   args: YouTubeMusicSearchArgs
 ): Promise<YouTubeMusicSearchResponse> {
   return await http<YouTubeMusicSearchResponse>(
-    "/api/ai/youtube-music-search",
+    "/api/providers/youtube/music-search",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -41,7 +41,7 @@ export async function fetchAppleMusicAISearch(
   args: AppleMusicAISearchArgs
 ): Promise<AppleMusicAISearchResponse> {
   return await http<AppleMusicAISearchResponse>(
-    "/api/ai/apple-music-search",
+    "/api/providers/apple-music/search",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

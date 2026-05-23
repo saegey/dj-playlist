@@ -22,8 +22,6 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm migrate
 - `docker-compose.yml`: base services/config for all environments
 - `docker-compose.dev.yml`: dev overrides (hot reload, source mounts)
 - `docker-compose.prod.yml`: production template that extends base services
-- `docker-compose.mac.yml`: macOS override (disables `mpd`)
-- `docker-compose.airplay.yml`: standalone AirPlay receiver stack
 
 ## Useful npm scripts
 

@@ -3,13 +3,16 @@ import { dbQuery } from "@/lib/serverDb";
 import {
   trackSearchGetQuerySchema,
   trackSearchGetResponseSchema,
-  trackSearchPostBodySchema,
-  trackSearchPostResponseSchema,
 } from "@/api-contract/schemas";
 
 type ParsedFilter = {
   where: string[];
   params: unknown[];
+};
+
+const stripSearchOnlyFields = (row: Record<string, unknown>) => {
+  const { embedding: _embedding, ...rest } = row;
+  return rest;
 };
 
 function parseTrackFilter(filter: string | undefined): ParsedFilter {
@@ -132,7 +135,7 @@ async function searchTracksPg(params: {
   );
 
   return {
-    hits: rows,
+    hits: rows.map((row) => stripSearchOnlyFields(row as Record<string, unknown>)),
     estimatedTotalHits: Number(countRows[0]?.total ?? 0),
     offset: params.offset,
     limit: params.limit,
@@ -154,8 +157,12 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { q, limit, offset, filter } = parsedQuery.data;
+    const { q, limit, offset, filter, friend_id } = parsedQuery.data;
     const parsedFilter = parseTrackFilter(filter);
+    if (friend_id !== undefined) {
+      parsedFilter.params.push(friend_id);
+      parsedFilter.where.push(`friend_id = $${parsedFilter.params.length}`);
+    }
     const response = await searchTracksPg({
       q,
       limit,
@@ -164,71 +171,6 @@ export async function GET(request: NextRequest) {
       whereParams: parsedFilter.params,
     });
     const validated = trackSearchGetResponseSchema.parse(response);
-    return NextResponse.json(validated);
-  } catch (error: any) {
-    console.error("Search error:", error);
-    return NextResponse.json(
-      { error: error.message || "Search failed" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const parsedBody = trackSearchPostBodySchema.safeParse(await request.json());
-    if (!parsedBody.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid request body",
-          details: parsedBody.error.flatten(),
-        },
-        { status: 400 }
-      );
-    }
-    const { query, limit, offset, filters } = parsedBody.data;
-    const where: string[] = [];
-    const whereParams: unknown[] = [];
-
-    if (filters) {
-      if (filters.bpm_min !== undefined) {
-        whereParams.push(filters.bpm_min);
-        where.push(`bpm >= $${whereParams.length}`);
-      }
-      if (filters.bpm_max !== undefined) {
-        whereParams.push(filters.bpm_max);
-        where.push(`bpm <= $${whereParams.length}`);
-      }
-      if (filters.key) {
-        whereParams.push(filters.key);
-        where.push(`key = $${whereParams.length}`);
-      }
-      if (filters.star_rating !== undefined) {
-        whereParams.push(filters.star_rating);
-        where.push(`star_rating >= $${whereParams.length}`);
-      }
-      if (filters.friend_id !== undefined) {
-        whereParams.push(filters.friend_id);
-        where.push(`friend_id = $${whereParams.length}`);
-      }
-    }
-
-    const results = await searchTracksPg({
-      q: query,
-      limit,
-      offset,
-      where,
-      whereParams,
-    });
-
-    const response = {
-      tracks: results.hits,
-      estimatedTotalHits: results.estimatedTotalHits,
-      offset: results.offset,
-      limit: results.limit,
-      processingTimeMs: results.processingTimeMs,
-    };
-    const validated = trackSearchPostResponseSchema.parse(response);
     return NextResponse.json(validated);
   } catch (error: any) {
     console.error("Search error:", error);

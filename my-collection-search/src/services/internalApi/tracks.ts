@@ -1,21 +1,14 @@
 import { z } from "zod";
 import {
   similarVibeQuerySchema,
-  similarVibeResponseSchema,
   similarIdentityQuerySchema,
-  similarIdentityResponseSchema,
   trackPlaylistCountsBodySchema,
   trackPlaylistCountsResponseSchema,
   trackSearchGetQuerySchema,
   trackSearchGetResponseSchema,
+  recommendationsResponseSchema,
   audioVibeEmbeddingDataSchema,
   audioVibeEmbeddingPreviewResponseSchema,
-  bulkNotesBodySchema,
-  bulkNotesResponseSchema,
-  bulkNotesUpdateSchema,
-  coverArtBackfillBodySchema,
-  coverArtBackfillResponseSchema,
-  durationBackfillResponseSchema,
   embeddingAudioVibePreviewApiResponseSchema,
   embeddingIdentityPreviewApiResponseSchema,
   embeddingPreviewResponseSchema,
@@ -27,8 +20,6 @@ import {
   trackExtractEmbeddedCoverResponseSchema,
   trackPlaylistsResponseSchema,
   trackPlaylistMembershipSchema,
-  essentiaBackfillBodySchema,
-  essentiaBackfillResponseSchema,
 } from "@/api-contract/schemas";
 import { http } from "@/services/http";
 import type { Track } from "@/types/track";
@@ -55,9 +46,6 @@ export type AudioVibeEmbeddingPreviewResponse = z.infer<
   typeof audioVibeEmbeddingPreviewResponseSchema
 >;
 
-export type DurationBackfillResponse = z.infer<
-  typeof durationBackfillResponseSchema
->;
 export type TrackBatchRef = {
   friend_id: number;
   track_id: string;
@@ -67,21 +55,30 @@ export type TrackPlaylistCountsResponse = z.infer<
   typeof trackPlaylistCountsResponseSchema
 >;
 export type SimilarTracksOptions = z.input<typeof similarIdentityQuerySchema>;
-type SimilarTracksResponseApi = z.infer<typeof similarIdentityResponseSchema>;
 export type SimilarTrack = Track & {
   distance: number;
   identity_text: string;
 };
-export type SimilarTracksResponse = Omit<SimilarTracksResponseApi, "tracks"> & {
+export type SimilarTracksResponse = {
+  source_track_id: string;
+  source_friend_id: number;
+  filters: {
+    era?: string;
+    country?: string;
+    tags?: string[];
+  };
+  count: number;
   tracks: SimilarTrack[];
 };
 export type SimilarVibeTracksOptions = z.input<typeof similarVibeQuerySchema>;
-type SimilarVibeTracksResponseApi = z.infer<typeof similarVibeResponseSchema>;
 export type SimilarVibeTrack = Track & {
   distance: number;
   identity_text: string;
 };
-export type SimilarVibeTracksResponse = Omit<SimilarVibeTracksResponseApi, "tracks"> & {
+export type SimilarVibeTracksResponse = {
+  source_track_id: string;
+  source_friend_id: number;
+  count: number;
   tracks: SimilarVibeTrack[];
 };
 export type TrackSearchQuery = z.input<typeof trackSearchGetQuerySchema>;
@@ -89,19 +86,6 @@ type TrackSearchApiResponse = z.infer<typeof trackSearchGetResponseSchema>;
 export type TrackSearchResponse = Omit<TrackSearchApiResponse, "hits"> & {
   hits: Track[];
 };
-export type BulkNotesUpdate = z.input<typeof bulkNotesUpdateSchema>;
-type BulkNotesApiResponse = z.infer<typeof bulkNotesResponseSchema>;
-export type BulkNotesResponse = Omit<BulkNotesApiResponse, "tracks"> & {
-  tracks?: Track[];
-};
-export type CoverArtBackfillBody = z.input<typeof coverArtBackfillBodySchema>;
-export type CoverArtBackfillResponse = z.infer<
-  typeof coverArtBackfillResponseSchema
->;
-export type EssentiaBackfillBody = z.input<typeof essentiaBackfillBodySchema>;
-export type EssentiaBackfillResponse = z.infer<
-  typeof essentiaBackfillResponseSchema
->;
 export type AnalyzeArgs = {
   track_id: string;
   friend_id: number;
@@ -133,15 +117,6 @@ export type TrackMetadataResponse = { genre?: string; notes?: string } & Record<
   string,
   unknown
 >;
-export type MissingAppleTracksArgs = {
-  page: number;
-  pageSize: number;
-  friendId?: number | null;
-};
-export type MissingAppleTracksResponse = {
-  tracks: Track[];
-  total: number;
-};
 
 export async function fetchTracksByIds(tracks: TrackBatchRef[]): Promise<Track[]> {
   if (!tracks || tracks.length === 0) return [];
@@ -153,32 +128,10 @@ export async function fetchTracksByIds(tracks: TrackBatchRef[]): Promise<Track[]
 }
 
 export async function saveTrack(data: TrackEditFormProps): Promise<Track> {
-  return await http<Track>("/api/tracks/update", {
+  return await http<Track>("/api/tracks", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
-  });
-}
-
-export async function vectorizeTrack(args: {
-  track_id: string;
-  friend_id: number;
-}): Promise<{ embedding: number[] }> {
-  return await http<{ embedding: number[] }>("/api/tracks/vectorize", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(args),
-  });
-}
-
-export async function recalcTrackDuration(args: {
-  track_id: string;
-  friend_id: number;
-}): Promise<{ jobId: string }> {
-  return await http<{ jobId: string }>("/api/tracks/fix-duration", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(args),
   });
 }
 
@@ -189,39 +142,6 @@ export async function analyzeTrackAsync(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(args),
-  });
-}
-
-export async function analyzeLocalAudioAsync(args: {
-  track_id: string;
-  friend_id: number;
-  local_audio_url?: string | null;
-}): Promise<AsyncAnalyzeResponse> {
-  return await http<AsyncAnalyzeResponse>("/api/tracks/analyze-local-async", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(args),
-  });
-}
-
-export async function syncTrackYearFromAudio(args: {
-  track_id: string;
-  friend_id: number;
-}): Promise<{
-  success: boolean;
-  year: string;
-  previous_year?: string | number | null;
-  message: string;
-}> {
-  return await http<{
-    success: boolean;
-    year: string;
-    previous_year?: string | number | null;
-    message: string;
-  }>(`/api/tracks/${encodeURIComponent(args.track_id)}/sync-audio-year`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ friend_id: args.friend_id }),
   });
 }
 
@@ -240,7 +160,7 @@ export async function uploadTrackAudio(
 export async function fetchTrackMetadata(
   args: TrackMetadataArgs
 ): Promise<TrackMetadataResponse> {
-  return await http<TrackMetadataResponse>("/api/ai/track-metadata", {
+  return await http<TrackMetadataResponse>("/api/providers/openai/track-metadata", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(args),
@@ -342,7 +262,7 @@ export async function fetchIdentityEmbeddingPreview(
   friendId: number
 ): Promise<IdentityEmbeddingPreviewResponse> {
   const preview = await http<EmbeddingPreviewResponse>(
-    `/api/embeddings/preview?track_id=${encodeURIComponent(trackId)}&friend_id=${friendId}&type=identity`,
+    `/api/tracks/${encodeURIComponent(trackId)}/embedding-preview?friend_id=${friendId}&type=identity`,
     {
       method: "GET",
       cache: "no-store",
@@ -360,7 +280,7 @@ export async function fetchAudioVibeEmbeddingPreview(
   friendId: number
 ): Promise<AudioVibeEmbeddingPreviewResponse> {
   const preview = await http<EmbeddingPreviewResponse>(
-    `/api/embeddings/preview?track_id=${encodeURIComponent(trackId)}&friend_id=${friendId}&type=audio_vibe`,
+    `/api/tracks/${encodeURIComponent(trackId)}/embedding-preview?friend_id=${friendId}&type=audio_vibe`,
     {
       method: "GET",
       cache: "no-store",
@@ -373,55 +293,132 @@ export async function fetchAudioVibeEmbeddingPreview(
   });
 }
 
-export async function queueFixMissingDurations(): Promise<DurationBackfillResponse> {
-  return await http<DurationBackfillResponse>("/api/tracks/fix-missing-durations", {
-    method: "POST",
-  });
-}
-
 export async function fetchSimilarVibeTracks(
   options: SimilarVibeTracksOptions
 ): Promise<SimilarVibeTracksResponse> {
+  const friendId = Number(options.friend_id);
   const params = new URLSearchParams({
     track_id: options.track_id,
-    friend_id: String(options.friend_id),
+    friend_id: String(friendId),
+    mode: "audio",
   });
-  if (typeof options.limit === "number") params.set("limit", String(options.limit));
+  if (typeof options.limit === "number") {
+    params.set("limit_audio", String(options.limit));
+  }
   if (typeof options.ivfflat_probes === "number") {
     params.set("ivfflat_probes", String(options.ivfflat_probes));
   }
 
-  return await http<SimilarVibeTracksResponse>(
-    `/api/embeddings/similar-vibe?${params.toString()}`,
-    {
-      method: "GET",
-      cache: "no-store",
-    }
+  const data = await http<z.infer<typeof recommendationsResponseSchema>>(
+    `/api/recommendations/candidates?${params.toString()}`,
+    { method: "GET", cache: "no-store" }
   );
+
+  const tracks: SimilarVibeTrack[] = data.candidates
+    .filter((candidate) => candidate.simAudio !== null)
+    .sort((a, b) => (b.simAudio ?? 0) - (a.simAudio ?? 0))
+    .map((candidate) => ({
+      track_id: candidate.trackId,
+      friend_id: candidate.friendId,
+      title: candidate.metadata.title,
+      artist: candidate.metadata.artist,
+      album: candidate.metadata.album,
+      year: candidate.metadata.year,
+      genres: candidate.metadata.genres,
+      styles: candidate.metadata.styles,
+      local_tags: candidate.metadata.tags.join(", "),
+      bpm: candidate.metadata.bpm,
+      key: candidate.metadata.key,
+      danceability: candidate.metadata.danceability,
+      mood_happy: candidate.metadata.moodHappy,
+      mood_sad: candidate.metadata.moodSad,
+      mood_relaxed: candidate.metadata.moodRelaxed,
+      mood_aggressive: candidate.metadata.moodAggressive,
+      star_rating: candidate.metadata.starRating,
+      distance: 1 - (candidate.simAudio ?? 0),
+      identity_text: "",
+    })) as SimilarVibeTrack[];
+
+  return {
+    source_track_id: options.track_id,
+    source_friend_id: friendId,
+    count: tracks.length,
+    tracks,
+  };
 }
 
 export async function fetchSimilarTracks(
   options: SimilarTracksOptions
 ): Promise<SimilarTracksResponse> {
+  const friendId = Number(options.friend_id);
   const params = new URLSearchParams({
     track_id: options.track_id,
-    friend_id: String(options.friend_id),
+    friend_id: String(friendId),
+    mode: "identity",
   });
-  if (typeof options.limit === "number") params.set("limit", String(options.limit));
+  if (typeof options.limit === "number") {
+    params.set("limit_identity", String(options.limit));
+  }
   if (typeof options.ivfflat_probes === "number") {
     params.set("ivfflat_probes", String(options.ivfflat_probes));
   }
-  if (options.era) params.set("era", options.era);
-  if (options.country) params.set("country", options.country);
-  if (options.tags) params.set("tags", options.tags);
-
-  return await http<SimilarTracksResponse>(
-    `/api/embeddings/similar?${params.toString()}`,
-    {
-      method: "GET",
-      cache: "no-store",
-    }
+  const data = await http<z.infer<typeof recommendationsResponseSchema>>(
+    `/api/recommendations/candidates?${params.toString()}`,
+    { method: "GET", cache: "no-store" }
   );
+
+  let tracks: SimilarTrack[] = data.candidates
+    .filter((candidate) => candidate.simIdentity !== null)
+    .sort((a, b) => (b.simIdentity ?? 0) - (a.simIdentity ?? 0))
+    .map((candidate) => ({
+      track_id: candidate.trackId,
+      friend_id: candidate.friendId,
+      title: candidate.metadata.title,
+      artist: candidate.metadata.artist,
+      album: candidate.metadata.album,
+      year: candidate.metadata.year,
+      genres: candidate.metadata.genres,
+      styles: candidate.metadata.styles,
+      local_tags: candidate.metadata.tags.join(", "),
+      bpm: candidate.metadata.bpm,
+      key: candidate.metadata.key,
+      danceability: candidate.metadata.danceability,
+      star_rating: candidate.metadata.starRating,
+      distance: 1 - (candidate.simIdentity ?? 0),
+      identity_text: "",
+    })) as SimilarTrack[];
+
+  if (options.era) {
+    const eraFilter = options.era.trim().toLowerCase();
+    tracks = tracks.filter((track) => String(track.year ?? "").toLowerCase().includes(eraFilter));
+  }
+  if (options.tags) {
+    const requiredTags = options.tags
+      .split(",")
+      .map((tag) => tag.trim().toLowerCase())
+      .filter(Boolean);
+    if (requiredTags.length > 0) {
+      tracks = tracks.filter((track) => {
+        const trackTags = String(track.local_tags ?? "")
+          .split(",")
+          .map((tag) => tag.trim().toLowerCase())
+          .filter(Boolean);
+        return requiredTags.every((tag) => trackTags.includes(tag));
+      });
+    }
+  }
+
+  return {
+    source_track_id: options.track_id,
+    source_friend_id: friendId,
+    filters: {
+      era: options.era,
+      country: options.country,
+      tags: options.tags?.split(",").map((tag) => tag.trim()).filter(Boolean),
+    },
+    count: tracks.length,
+    tracks,
+  };
 }
 
 export async function searchTracks(
@@ -451,51 +448,4 @@ export async function fetchPlaylistCounts(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-}
-
-export async function bulkUpdateTrackNotes(
-  updates: BulkNotesUpdate[]
-): Promise<BulkNotesResponse> {
-  const body: z.input<typeof bulkNotesBodySchema> = { updates };
-  return await http<BulkNotesResponse>("/api/tracks/bulk-notes", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-export async function queueExtractMissingCoverArt(
-  body: CoverArtBackfillBody = {}
-): Promise<CoverArtBackfillResponse> {
-  return await http<CoverArtBackfillResponse>("/api/tracks/extract-missing-cover-art", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-export async function queueBackfillEssentia(
-  body: EssentiaBackfillBody = {}
-): Promise<EssentiaBackfillResponse> {
-  return await http<EssentiaBackfillResponse>("/api/tracks/backfill-essentia", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
-export async function fetchMissingAppleTracks(
-  args: MissingAppleTracksArgs
-): Promise<MissingAppleTracksResponse> {
-  let url = `/api/tracks/missing-apple-music?page=${args.page}&pageSize=${args.pageSize}`;
-  if (args.friendId) url += `&friendId=${encodeURIComponent(args.friendId)}`;
-  const raw = await http<unknown>(url, { method: "GET", cache: "no-store" });
-  if (Array.isArray(raw)) {
-    const tracks = raw as Track[];
-    return { tracks, total: tracks.length };
-  }
-  const obj = raw as { tracks?: Track[]; total?: number };
-  const tracks = Array.isArray(obj.tracks) ? obj.tracks : [];
-  const total = typeof obj.total === "number" ? obj.total : tracks.length;
-  return { tracks, total };
 }

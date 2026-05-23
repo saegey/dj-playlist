@@ -2,14 +2,6 @@ COMPOSE_CMD ?= $(shell if docker compose version >/dev/null 2>&1; then echo "doc
 COMPOSE_DIR ?= my-collection-search
 BUILDKIT_ENV ?= DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1
 
-# Detect OS for platform-specific overrides
-UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Darwin)
-	PLATFORM_OVERRIDE := -f $(COMPOSE_DIR)/docker-compose.mac.yml
-else
-	PLATFORM_OVERRIDE :=
-endif
-
 # Timestamped release tag like v20250112T153045Z
 TAG_PREFIX ?= v
 TAG_TIME := $(shell date -u +%Y%m%dT%H%M%SZ)
@@ -48,14 +40,11 @@ tag-push: tag
 	git push origin $(TAG)
 
 compose-dev: check-compose
-	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml $(PLATFORM_OVERRIDE) up --remove-orphans
-
-compose-dev-mac: check-compose
-	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml -f $(COMPOSE_DIR)/docker-compose.mac.yml up --remove-orphans
+	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml up --remove-orphans
 
 compose-dev-reset: check-compose
-	$(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml $(PLATFORM_OVERRIDE) down --remove-orphans
-	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml $(PLATFORM_OVERRIDE) up --build --force-recreate --remove-orphans
+	$(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml down --remove-orphans
+	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.dev.yml up --build --force-recreate --remove-orphans
 
 compose-prod: check-compose
 	$(BUILDKIT_ENV) $(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml -f $(COMPOSE_DIR)/docker-compose.prod.yml up

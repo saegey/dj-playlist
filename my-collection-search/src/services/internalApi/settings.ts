@@ -144,16 +144,18 @@ export async function updateGamdlSettings(
 export async function resetGamdlSettings(
   body: ResetGamdlSettingsBody
 ): Promise<ResetGamdlSettingsResponse> {
-  return await http<ResetGamdlSettingsResponse>("/api/settings/gamdl/reset", {
+  return await http<ResetGamdlSettingsResponse>("/api/settings/gamdl/actions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ action: "reset_settings", ...body }),
   });
 }
 
 export async function testGamdlConnection(): Promise<GamdlConnectionTestResponse> {
-  return await http<GamdlConnectionTestResponse>("/api/settings/gamdl/test", {
+  return await http<GamdlConnectionTestResponse>("/api/settings/gamdl/actions", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "test_connection" }),
   });
 }
 

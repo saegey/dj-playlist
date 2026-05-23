@@ -100,7 +100,7 @@ export async function lookupDiscogsRelease(
   if (typeof query.friend_id === "number") {
     params.set("friend_id", String(query.friend_id));
   }
-  return await http<DiscogsLookupResponse>(`/api/ai/discogs?${params.toString()}`, {
+  return await http<DiscogsLookupResponse>(`/api/providers/discogs/release-lookup?${params.toString()}`, {
     method: "GET",
     cache: "no-store",
   });

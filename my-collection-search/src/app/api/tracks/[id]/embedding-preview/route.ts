@@ -3,7 +3,17 @@ import {
   buildTrackPrompt,
   getDefaultTrackEmbeddingTemplate,
 } from "@/lib/track-embedding";
+import { embeddingsService } from "@/server/services/embeddingsService";
 import { trackRepository } from "@/server/repositories/trackRepository";
+
+type PreviewType = "prompt" | "identity" | "audio_vibe";
+
+function parsePreviewType(value: string | null): PreviewType {
+  if (value === "identity" || value === "audio_vibe" || value === "prompt") {
+    return value;
+  }
+  return "prompt";
+}
 
 export async function GET(
   request: NextRequest,
@@ -12,12 +22,22 @@ export async function GET(
   try {
     const trackId = (await params).id;
     const friendIdRaw = request.nextUrl.searchParams.get("friend_id");
+    const previewType = parsePreviewType(request.nextUrl.searchParams.get("type"));
     const friendId = Number(friendIdRaw);
     if (!trackId || !friendId || Number.isNaN(friendId)) {
       return NextResponse.json(
-        { error: "Missing required parameters: track_id and friend_id" },
+        { error: "Missing required parameters: id and friend_id" },
         { status: 400 }
       );
+    }
+
+    if (previewType === "identity" || previewType === "audio_vibe") {
+      const preview = await embeddingsService.getPreview(
+        previewType,
+        trackId,
+        friendId
+      );
+      return NextResponse.json(preview);
     }
 
     const track = await trackRepository.findTrackByTrackIdAndFriendIdRaw(
@@ -36,6 +56,7 @@ export async function GET(
     const prompt = buildTrackPrompt(track, template);
 
     return NextResponse.json({
+      type: "prompt",
       track_id: trackId,
       friend_id: friendId,
       isDefaultTemplate: template === defaultTemplate,

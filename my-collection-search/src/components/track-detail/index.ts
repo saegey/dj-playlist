@@ -4,3 +4,4 @@ export { default as EmbeddingPreviewSection } from "./EmbeddingPreviewSection";
 export { default as IdentityEmbeddingSection } from "./IdentityEmbeddingSection";
 export { default as AudioVibeEmbeddingSection } from "./AudioVibeEmbeddingSection";
 export { default as TrackPlaylistsSection } from "./TrackPlaylistsSection";
+export { default as TrackDebugModal } from "./TrackDebugModal";

@@ -13,22 +13,29 @@ import {
   albumSearchResponseSchema,
   albumUpdateBodySchema,
   albumUpdateResponseSchema,
-  albumsCleanupSummaryResponseSchema,
   albumUpsertWithTracksResponseSchema,
   apiErrorSchema,
   bulkNotesBodySchema,
   bulkNotesResponseSchema,
-  coverArtBackfillBodySchema,
-  coverArtBackfillResponseSchema,
+  backupPolicyGetResponseSchema,
+  backupPolicyPutBodySchema,
+  backupPolicyPutResponseSchema,
+  backupCreateResponseSchema,
+  backupCreateCustomResponseSchema,
   discogsLookupQuerySchema,
   discogsLookupResponseSchema,
-  durationBackfillResponseSchema,
+  discogsDeleteReleasesBodySchema,
+  discogsDeleteReleasesResponseSchema,
+  providerAppleMusicSearchBodySchema,
+  providerAppleMusicSearchResponseSchema,
+  providerTrackMetadataBodySchema,
+  providerTrackMetadataResponseSchema,
+  providerYouTubeMusicSearchBodySchema,
+  providerYouTubeMusicSearchResponseSchema,
   embeddingPromptSettingsGetResponseSchema,
   embeddingPromptSettingsPutBodySchema,
   embeddingPromptSettingsPutResponseSchema,
   embeddingPromptSettingsQuerySchema,
-  essentiaBackfillBodySchema,
-  essentiaBackfillResponseSchema,
   friendDeleteQuerySchema,
   friendMutationBodySchema,
   friendMutationResponseSchema,
@@ -36,22 +43,14 @@ import {
   friendsListResponseSchema,
   manifestCleanupResponseSchema,
   manifestVerificationResponseSchema,
-  localPlaybackControlBodySchema,
-  localPlaybackControlResponseSchema,
-  localPlaybackStatusResponseSchema,
-  localPlaybackTestResponseSchema,
-  gamdlCookieDeleteResponseSchema,
-  gamdlCookieFileInfoSchema,
   gamdlCookieUploadResponseSchema,
-  gamdlConnectionTestResponseSchema,
   gamdlSettingsGetResponseSchema,
   gamdlSettingsPutBodySchema,
   gamdlSettingsPutResponseSchema,
   gamdlSettingsQuerySchema,
-  gamdlSettingsResetBodySchema,
-  gamdlSettingsResetResponseSchema,
   jobDetailsResponseSchema,
   jobsClearResponseSchema,
+  jobsEventsSseResponseSchema,
   jobsListQuerySchema,
   jobsListResponseSchema,
   playlistCreateBodySchema,
@@ -66,14 +65,8 @@ import {
   recommendationsQuerySchema,
   recommendationsBatchBodySchema,
   recommendationsResponseSchema,
-  similarIdentityQuerySchema,
-  similarIdentityResponseSchema,
-  similarVibeQuerySchema,
-  similarVibeResponseSchema,
   trackSearchGetQuerySchema,
   trackSearchGetResponseSchema,
-  trackSearchPostBodySchema,
-  trackSearchPostResponseSchema,
 } from "@/api-contract/schemas";
 
 export type HttpMethod = "get" | "post" | "patch" | "put" | "delete";
@@ -218,33 +211,28 @@ const playlistDetailExample = {
 const trackSearchGetExample = {
   hits: [
     {
+      id: 9211,
       track_id: "trk_001",
+      friend_id: 1,
       title: "Move Through",
       artist: "Night Driver",
-      friend_id: 1,
+      album: "Neon Junction",
+      year: "2021",
+      genres: ["Electronic"],
+      styles: ["Deep House"],
+      bpm: 124,
+      key: "Am",
+      notes: null,
+      local_tags: "warmup,groovy",
+      local_audio_url: "/audio/Night Driver - Move Through.mp3",
+      audio_file_album_art_url: "/uploads/album-covers/trk_001.jpg",
+      library_identifier: "friend-1",
     },
   ],
   estimatedTotalHits: 128,
   offset: 0,
   limit: 20,
   processingTimeMs: 4,
-};
-
-const trackSearchPostExample = {
-  tracks: [
-    {
-      track_id: "trk_099",
-      title: "Kinetic Pulse",
-      artist: "Sigma Lane",
-      friend_id: 1,
-      bpm: 126,
-      key: "Am",
-    },
-  ],
-  estimatedTotalHits: 23,
-  offset: 0,
-  limit: 20,
-  processingTimeMs: 5,
 };
 
 const recommendationsExample = {
@@ -444,23 +432,7 @@ function makeTrackRoute(
 }
 
 const remainingTracksContracts: ApiContractRoute[] = [
-  makeTrackRoute("get", "/api/tracks", "List tracks", {
-    responses: {
-      "200": {
-        description: "Tracks fetched",
-        content: {
-          "application/json": {
-            schema: { type: "array", items: trackEntitySchemaObject },
-          },
-        },
-      },
-      "500": {
-        description: "Server error",
-        content: { "application/json": { schema: errorResponseSchemaObject } },
-      },
-    },
-  }),
-  makeTrackRoute("patch", "/api/tracks/update", "Update track fields", {
+  makeTrackRoute("patch", "/api/tracks", "Update track fields", {
     requestBody: {
       required: true,
       content: {
@@ -537,39 +509,6 @@ const remainingTracksContracts: ApiContractRoute[] = [
       "500": { description: "Upload/processing error", content: { "application/json": { schema: errorResponseSchemaObject } } },
     },
   }),
-  makeTrackRoute("post", "/api/tracks/vectorize", "Vectorize track", {
-    requestBody: {
-      required: true,
-      content: {
-        "application/json": {
-          schema: {
-            type: "object",
-            properties: { track_id: { type: "string" }, friend_id: { type: "integer" } },
-            required: ["track_id", "friend_id"],
-          },
-        },
-      },
-    },
-    responses: {
-      "200": {
-        description: "Track embedding generated",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                embedding: { type: "array", items: { type: "number" } },
-              },
-              required: ["embedding"],
-            },
-          },
-        },
-      },
-      "400": { description: "Missing required fields", content: { "application/json": { schema: errorResponseSchemaObject } } },
-      "404": { description: "Track not found", content: { "application/json": { schema: errorResponseSchemaObject } } },
-      "500": { description: "Vectorization error", content: { "application/json": { schema: errorResponseSchemaObject } } },
-    },
-  }),
   makeTrackRoute("post", "/api/tracks/analyze-async", "Queue async track analysis", {
     requestBody: {
       required: true,
@@ -612,124 +551,6 @@ const remainingTracksContracts: ApiContractRoute[] = [
       "500": { description: "Queueing error", content: { "application/json": { schema: errorResponseSchemaObject } } },
     },
   }),
-  makeTrackRoute(
-    "post",
-    "/api/tracks/analyze-local-async",
-    "Queue async local track analysis",
-    {
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                track_id: { type: "string" },
-                friend_id: { type: "integer" },
-                local_audio_url: { type: "string" },
-              },
-              required: ["track_id", "friend_id"],
-            },
-          },
-        },
-      },
-      responses: {
-        "200": {
-          description: "Local analysis job queued",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  success: { type: "boolean" },
-                  jobId: { type: "string" },
-                  message: { type: "string" },
-                },
-                required: ["success", "jobId", "message"],
-              },
-            },
-          },
-        },
-        "400": { description: "Invalid request", content: { "application/json": { schema: errorResponseSchemaObject } } },
-        "404": { description: "Track not found", content: { "application/json": { schema: errorResponseSchemaObject } } },
-        "500": { description: "Queueing error", content: { "application/json": { schema: errorResponseSchemaObject } } },
-      },
-    }
-  ),
-  {
-    operationId: "backfillTrackEssentia",
-    method: "post",
-    path: "/api/tracks/backfill-essentia",
-    summary: "Backfill essentia analysis",
-    tags: ["Tracks"],
-    bodySchema: essentiaBackfillBodySchema,
-    successSchema: essentiaBackfillResponseSchema,
-    errorSchema: apiErrorSchema,
-    openapi: {
-      requestBody: {
-        required: false,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                friend_id: { type: ["integer", "null"] },
-                force: { type: "boolean", default: false },
-              },
-              additionalProperties: false,
-            },
-          },
-        },
-      },
-      responses: {
-        "200": {
-          description: "Essentia jobs queued",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  queued: { type: "integer" },
-                  skipped_existing: { type: "integer" },
-                  total_candidates: { type: "integer" },
-                  force: { type: "boolean" },
-                  jobIds: { type: "array", items: { type: "string" } },
-                  errors: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        track_id: { type: "string" },
-                        friend_id: { type: "integer" },
-                        error: { type: "string" },
-                      },
-                      required: ["track_id", "friend_id", "error"],
-                    },
-                  },
-                },
-                required: [
-                  "queued",
-                  "skipped_existing",
-                  "total_candidates",
-                  "force",
-                  "jobIds",
-                  "errors",
-                ],
-              },
-            },
-          },
-        },
-        "400": {
-          description: "Invalid request",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Queueing error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-      },
-    },
-  },
   makeTrackRoute("post", "/api/tracks/batch", "Fetch ordered batch of tracks", {
     requestBody: {
       required: true,
@@ -771,295 +592,6 @@ const remainingTracksContracts: ApiContractRoute[] = [
       "500": { description: "Batch query error", content: { "application/json": { schema: errorResponseSchemaObject } } },
     },
   }),
-  {
-    operationId: "bulkUpdateTrackNotes",
-    method: "post",
-    path: "/api/tracks/bulk-notes",
-    summary: "Bulk update track notes",
-    tags: ["Tracks"],
-    bodySchema: bulkNotesBodySchema,
-    successSchema: bulkNotesResponseSchema,
-    errorSchema: apiErrorSchema,
-    openapi: {
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                updates: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      track_id: { type: "string" },
-                      local_tags: { type: "string" },
-                      notes: { type: "string" },
-                    },
-                    required: ["track_id"],
-                    additionalProperties: true,
-                  },
-                },
-              },
-              required: ["updates"],
-              additionalProperties: false,
-            },
-          },
-        },
-      },
-      responses: {
-        "200": {
-          description: "Bulk update result",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  success: { type: "boolean" },
-                  updated: { type: "integer" },
-                  tracks: { type: "array", items: trackEntitySchemaObject },
-                },
-                required: ["success"],
-                additionalProperties: true,
-              },
-            },
-          },
-        },
-        "400": {
-          description: "Invalid input",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Bulk update error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-      },
-    },
-  },
-  {
-    operationId: "extractMissingTrackCoverArt",
-    method: "post",
-    path: "/api/tracks/extract-missing-cover-art",
-    summary: "Extract missing cover art",
-    tags: ["Tracks"],
-    bodySchema: coverArtBackfillBodySchema,
-    successSchema: coverArtBackfillResponseSchema,
-    errorSchema: apiErrorSchema,
-    openapi: {
-      requestBody: {
-        required: false,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                friend_id: { type: ["integer", "null"] },
-              },
-              additionalProperties: false,
-            },
-          },
-        },
-      },
-      responses: {
-        "200": {
-          description: "Cover-art extraction jobs queued",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  queued: { type: "integer" },
-                  queuedAlbums: { type: "integer" },
-                  tracksImpacted: { type: "integer" },
-                  jobIds: { type: "array", items: { type: "string" } },
-                  errors: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        track_id: { type: "string" },
-                        friend_id: { type: "integer" },
-                        release_id: { type: ["string", "null"] },
-                        error: { type: "string" },
-                      },
-                      required: ["track_id", "friend_id", "release_id", "error"],
-                    },
-                  },
-                },
-                required: ["queued", "queuedAlbums", "tracksImpacted", "jobIds", "errors"],
-              },
-            },
-          },
-        },
-        "400": {
-          description: "Invalid request",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Queueing error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-      },
-    },
-  },
-  makeTrackRoute("post", "/api/tracks/fix-duration", "Fix track duration", {
-    requestBody: {
-      required: true,
-      content: {
-        "application/json": {
-          schema: {
-            type: "object",
-            properties: {
-              track_id: { type: "string" },
-              friend_id: { type: "integer" },
-            },
-            required: ["track_id", "friend_id"],
-          },
-        },
-      },
-    },
-    responses: {
-      "200": {
-        description: "Duration job queued",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                jobId: { type: "string" },
-                track_id: { type: "string" },
-                friend_id: { type: "integer" },
-              },
-              required: ["jobId", "track_id", "friend_id"],
-            },
-          },
-        },
-      },
-      "400": { description: "Invalid request", content: { "application/json": { schema: errorResponseSchemaObject } } },
-      "500": { description: "Queueing error", content: { "application/json": { schema: errorResponseSchemaObject } } },
-    },
-  }),
-  {
-    operationId: "fixTracksMissingDuration",
-    method: "post",
-    path: "/api/tracks/fix-missing-durations",
-    summary: "Fix missing durations",
-    tags: ["Tracks"],
-    successSchema: durationBackfillResponseSchema,
-    errorSchema: apiErrorSchema,
-    openapi: {
-      responses: {
-        "200": {
-          description: "Bulk duration jobs queued",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  queued: { type: "integer" },
-                  jobIds: { type: "array", items: { type: "string" } },
-                  errors: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        track_id: { type: "string" },
-                        error: { type: "string" },
-                      },
-                      required: ["track_id", "error"],
-                    },
-                  },
-                },
-                required: ["queued", "jobIds", "errors"],
-              },
-            },
-          },
-        },
-        "500": {
-          description: "Queueing error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-      },
-    },
-  },
-  makeTrackRoute("get", "/api/tracks/job-events/{jobId}", "Stream track job events", {
-    parameters: [
-      { name: "jobId", in: "path", required: true, schema: { type: "string" } },
-    ],
-    responses: {
-      "200": {
-        description: "Server-sent event stream",
-        content: {
-          "text/event-stream": {
-            schema: { type: "string" },
-          },
-        },
-      },
-      "400": { description: "Missing jobId", content: { "application/json": { schema: errorResponseSchemaObject } } },
-    },
-  }),
-  makeTrackRoute("get", "/api/tracks/job-status/{jobId}", "Get track job status", {
-    parameters: [
-      { name: "jobId", in: "path", required: true, schema: { type: "string" } },
-    ],
-    responses: {
-      "200": {
-        description: "Job status",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                id: { type: "string" },
-                state: { type: "string" },
-                progress: { type: "number" },
-                data: { type: "object", additionalProperties: true },
-                returnvalue: { type: ["object", "array", "string", "number", "boolean", "null"] },
-                failedReason: { type: "string" },
-              },
-              required: ["id", "state", "progress", "data"],
-            },
-          },
-        },
-      },
-      "400": { description: "Missing jobId", content: { "application/json": { schema: errorResponseSchemaObject } } },
-      "404": { description: "Job not found", content: { "application/json": { schema: errorResponseSchemaObject } } },
-      "500": { description: "Lookup error", content: { "application/json": { schema: errorResponseSchemaObject } } },
-    },
-  }),
-  makeTrackRoute(
-    "get",
-    "/api/tracks/missing-apple-music",
-    "List tracks missing Apple Music URL",
-    {
-      parameters: [
-        { name: "page", in: "query", required: false, schema: { type: "integer", default: 1 } },
-        { name: "pageSize", in: "query", required: false, schema: { type: "integer", default: 50 } },
-        { name: "friendId", in: "query", required: false, schema: { type: "integer" } },
-      ],
-      responses: {
-        "200": {
-          description: "Paginated tracks",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  tracks: { type: "array", items: trackEntitySchemaObject },
-                  page: { type: "integer" },
-                  pageSize: { type: "integer" },
-                  total: { type: "integer" },
-                  totalPages: { type: "integer" },
-                },
-                required: ["tracks", "page", "pageSize", "total", "totalPages"],
-              },
-            },
-          },
-        },
-      },
-    }
-  ),
   makeTrackRoute("post", "/api/tracks/playlist_counts", "Get playlist counts for tracks", {
     requestBody: {
       required: true,
@@ -1107,47 +639,6 @@ const remainingTracksContracts: ApiContractRoute[] = [
       },
     },
   }),
-  makeTrackRoute("get", "/api/tracks/reindex", "Get track reindex usage info", {
-    responses: {
-      "200": {
-        description: "Usage hint",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                success: { type: "boolean" },
-                message: { type: "string" },
-              },
-              required: ["success", "message"],
-            },
-          },
-        },
-      },
-    },
-  }),
-  makeTrackRoute("post", "/api/tracks/reindex", "Reindex tracks", {
-    responses: {
-      "200": {
-        description: "Reindex result",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                success: { type: "boolean" },
-                indexed: { type: "integer" },
-                message: { type: "string" },
-                error: { type: "string" },
-              },
-              required: ["success"],
-            },
-          },
-        },
-      },
-      "500": { description: "Reindex error", content: { "application/json": { schema: errorResponseSchemaObject } } },
-    },
-  }),
   makeTrackRoute("get", "/api/tracks/{id}", "Get track by id", {
     parameters: [
       { name: "id", in: "path", required: true, schema: { type: "string" } },
@@ -1166,6 +657,33 @@ const remainingTracksContracts: ApiContractRoute[] = [
       },
       "400": { description: "Missing required parameters", content: { "application/json": { schema: errorResponseSchemaObject } } },
       "404": { description: "Track not found", content: { "application/json": { schema: errorResponseSchemaObject } } },
+    },
+  }),
+  makeTrackRoute("delete", "/api/tracks/{id}", "Soft delete track by id", {
+    parameters: [
+      { name: "id", in: "path", required: true, schema: { type: "string" } },
+      { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
+    ],
+    responses: {
+      "200": {
+        description: "Track soft deleted",
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                success: { type: "boolean" },
+                track_id: { type: "string" },
+                friend_id: { type: "integer" },
+              },
+              required: ["success", "track_id", "friend_id"],
+            },
+          },
+        },
+      },
+      "400": { description: "Missing or invalid parameters", content: { "application/json": { schema: errorResponseSchemaObject } } },
+      "404": { description: "Track not found or already deleted", content: { "application/json": { schema: errorResponseSchemaObject } } },
+      "500": { description: "Server error", content: { "application/json": { schema: errorResponseSchemaObject } } },
     },
   }),
   makeTrackRoute("get", "/api/tracks/{id}/audio-metadata", "Get local audio metadata for track", {
@@ -1233,26 +751,55 @@ const remainingTracksContracts: ApiContractRoute[] = [
       "404": { description: "No embedded artwork / track not found", content: { "application/json": { schema: errorResponseSchemaObject } } },
     },
   }),
-  makeTrackRoute("get", "/api/tracks/{id}/embedding-preview", "Preview track embedding", {
+  makeTrackRoute("get", "/api/tracks/{id}/embedding-preview", "Preview track embedding data", {
     parameters: [
       { name: "id", in: "path", required: true, schema: { type: "string" } },
       { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
+      {
+        name: "type",
+        in: "query",
+        required: false,
+        schema: { type: "string", enum: ["prompt", "identity", "audio_vibe"], default: "prompt" },
+      },
     ],
     responses: {
       "200": {
-        description: "Embedding prompt preview",
+        description: "Embedding preview payload",
         content: {
           "application/json": {
             schema: {
-              type: "object",
-              properties: {
-                track_id: { type: "string" },
-                friend_id: { type: "integer" },
-                isDefaultTemplate: { type: "boolean" },
-                template: { type: "string" },
-                prompt: { type: "string" },
-              },
-              required: ["track_id", "friend_id", "isDefaultTemplate", "template", "prompt"],
+              oneOf: [
+                {
+                  type: "object",
+                  properties: {
+                    type: { type: "string", enum: ["prompt"] },
+                    track_id: { type: "string" },
+                    friend_id: { type: "integer" },
+                    isDefaultTemplate: { type: "boolean" },
+                    template: { type: "string" },
+                    prompt: { type: "string" },
+                  },
+                  required: ["type", "track_id", "friend_id", "isDefaultTemplate", "template", "prompt"],
+                },
+                {
+                  type: "object",
+                  properties: {
+                    type: { type: "string", enum: ["identity"] },
+                    text: { type: "string" },
+                    data: { type: "object", additionalProperties: true },
+                  },
+                  required: ["type", "text", "data"],
+                },
+                {
+                  type: "object",
+                  properties: {
+                    type: { type: "string", enum: ["audio_vibe"] },
+                    text: { type: "string" },
+                    data: { type: "object", additionalProperties: true },
+                  },
+                  required: ["type", "text", "data"],
+                },
+              ],
             },
           },
         },
@@ -1320,83 +867,6 @@ const remainingTracksContracts: ApiContractRoute[] = [
         },
       },
       "400": { description: "Missing required parameters", content: { "application/json": { schema: errorResponseSchemaObject } } },
-    },
-  }),
-  makeTrackRoute(
-    "post",
-    "/api/tracks/{id}/sync-audio-composer",
-    "Sync audio composer into track",
-    {
-      parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: { friend_id: { type: "integer" } },
-              required: ["friend_id"],
-            },
-          },
-        },
-      },
-      responses: {
-        "200": {
-          description: "Composer synced",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  success: { type: "boolean" },
-                  composer: { type: "string" },
-                  previous_composer: { type: ["string", "null"] },
-                  message: { type: "string" },
-                },
-                required: ["success", "composer", "previous_composer", "message"],
-              },
-            },
-          },
-        },
-        "400": { description: "Missing required parameters", content: { "application/json": { schema: errorResponseSchemaObject } } },
-        "404": { description: "Track or composer tag not found", content: { "application/json": { schema: errorResponseSchemaObject } } },
-      },
-    }
-  ),
-  makeTrackRoute("post", "/api/tracks/{id}/sync-audio-year", "Sync audio year into track", {
-    parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-    requestBody: {
-      required: true,
-      content: {
-        "application/json": {
-          schema: {
-            type: "object",
-            properties: { friend_id: { type: "integer" } },
-            required: ["friend_id"],
-          },
-        },
-      },
-    },
-    responses: {
-      "200": {
-        description: "Year synced",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                success: { type: "boolean" },
-                year: { type: "string" },
-                previous_year: { type: ["string", "number", "null"] },
-                message: { type: "string" },
-              },
-              required: ["success", "year", "previous_year", "message"],
-            },
-          },
-        },
-      },
-      "400": { description: "Missing required parameters", content: { "application/json": { schema: errorResponseSchemaObject } } },
-      "404": { description: "Track or year tag not found", content: { "application/json": { schema: errorResponseSchemaObject } } },
     },
   }),
 ];
@@ -1533,40 +1003,6 @@ export const apiContractRoutes: ApiContractRoute[] = [
         "400": {
           description: "Invalid username",
           content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-      },
-    },
-  },
-  {
-    operationId: "streamAddFriend",
-    method: "get",
-    path: "/api/friends/stream-add",
-    summary: "Stream add-friend progress via SSE",
-    tags: ["Friends"],
-    querySchema: friendDeleteQuerySchema,
-    successSchema: z.string(),
-    errorSchema: apiErrorSchema,
-    openapi: {
-      parameters: [
-        {
-          name: "username",
-          in: "query",
-          required: true,
-          schema: { type: "string" },
-        },
-      ],
-      responses: {
-        "200": {
-          description: "SSE stream",
-          content: {
-            "text/event-stream": {
-              schema: { type: "string" },
-            },
-          },
-        },
-        "400": {
-          description: "Invalid username",
-          content: { "text/event-stream": { schema: { type: "string" } } },
         },
       },
     },
@@ -1744,51 +1180,36 @@ export const apiContractRoutes: ApiContractRoute[] = [
     },
   },
   {
-    operationId: "getGamdlCookieStatus",
+    operationId: "streamJobEvents",
     method: "get",
-    path: "/api/settings/gamdl-cookies",
-    summary: "Get GAMDL cookie file status",
-    tags: ["Settings"],
-    successSchema: gamdlCookieFileInfoSchema,
+    path: "/api/jobs/events",
+    summary: "Stream real-time job completion/error events (SSE)",
+    tags: ["Jobs"],
+    successSchema: jobsEventsSseResponseSchema,
     errorSchema: apiErrorSchema,
     openapi: {
       responses: {
         "200": {
-          description: "Cookie file status",
+          description:
+            "Server-sent events stream used by the UI to react to completed/failed jobs without polling. Initial event data is `connected`.",
           content: {
-            "application/json": {
+            "text/event-stream": {
               schema: {
-                type: "object",
-                properties: {
-                  exists: { type: "boolean" },
-                  filename: { type: "string" },
-                  size: { type: "number" },
-                  lastModified: { type: "string" },
-                  domains: { type: "array", items: { type: "string" } },
-                  cookieCount: { type: "integer" },
-                  hasAppleMusic: { type: "boolean" },
-                  expiryDates: { type: "array", items: { type: "string" } },
-                  isValid: { type: "boolean" },
-                  validationErrors: { type: "array", items: { type: "string" } },
-                },
-                required: ["exists"],
-                additionalProperties: true,
+                type: "string",
+                example:
+                  "data: connected\\n\\ndata: {\"type\":\"job_completed\",\"job_id\":\"123\",\"track_id\":\"abc\",\"friend_id\":1,\"timestamp\":1710000000000}\\n\\n",
               },
             },
           },
-        },
-        "500": {
-          description: "Server error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
         },
       },
     },
   },
   {
     operationId: "uploadGamdlCookieFile",
-    method: "post",
+    method: "put",
     path: "/api/settings/gamdl-cookies",
-    summary: "Upload GAMDL cookie file",
+    summary: "Upload or replace GAMDL cookie file",
     tags: ["Settings"],
     successSchema: gamdlCookieUploadResponseSchema,
     errorSchema: apiErrorSchema,
@@ -1832,32 +1253,53 @@ export const apiContractRoutes: ApiContractRoute[] = [
     },
   },
   {
-    operationId: "deleteGamdlCookieFile",
-    method: "delete",
-    path: "/api/settings/gamdl-cookies",
-    summary: "Delete GAMDL cookie file",
+    operationId: "runGamdlAction",
+    method: "post",
+    path: "/api/settings/gamdl/actions",
+    summary: "Run GAMDL action (cookie_status, delete_cookie, test_connection, reset_settings)",
     tags: ["Settings"],
-    successSchema: gamdlCookieDeleteResponseSchema,
+    successSchema: z.unknown(),
     errorSchema: apiErrorSchema,
     openapi: {
-      responses: {
-        "200": {
-          description: "Cookie file deleted",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  success: { type: "boolean" },
-                  message: { type: "string" },
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                action: {
+                  type: "string",
+                  enum: [
+                    "cookie_status",
+                    "delete_cookie",
+                    "test_connection",
+                    "reset_settings",
+                  ],
                 },
-                required: ["success", "message"],
+                friend_id: { type: "integer" },
               },
+              required: ["action"],
+              additionalProperties: false,
             },
           },
         },
+      },
+      responses: {
+        "200": {
+          description: "Action result",
+          content: {
+            "application/json": {
+              schema: { type: "object", additionalProperties: true },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid action payload",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
         "500": {
-          description: "Server error",
+          description: "Action execution failed",
           content: { "application/json": { schema: errorResponseSchemaObject } },
         },
       },
@@ -2002,150 +1444,71 @@ export const apiContractRoutes: ApiContractRoute[] = [
     },
   },
   {
-    operationId: "resetGamdlSettings",
-    method: "post",
-    path: "/api/settings/gamdl/reset",
-    summary: "Reset GAMDL settings to defaults for a friend",
+    operationId: "getBackupPolicy",
+    method: "get",
+    path: "/api/settings/backup",
+    summary: "Get backup policy settings",
     tags: ["Settings"],
-    bodySchema: gamdlSettingsResetBodySchema,
-    successSchema: gamdlSettingsResetResponseSchema,
+    successSchema: backupPolicyGetResponseSchema,
     errorSchema: apiErrorSchema,
     openapi: {
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                friend_id: { type: "integer" },
-              },
-              required: ["friend_id"],
-              additionalProperties: false,
-            },
-          },
-        },
-      },
       responses: {
         "200": {
-          description: "GAMDL settings reset",
+          description: "Backup policy",
           content: {
             "application/json": {
               schema: {
                 type: "object",
                 properties: {
-                  success: { type: "boolean" },
-                  message: { type: "string" },
-                  settings: { type: "object", additionalProperties: true },
-                },
-                required: ["success", "message", "settings"],
-              },
-            },
-          },
-        },
-        "400": {
-          description: "Missing or invalid friend_id",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Server error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-      },
-    },
-  },
-  {
-    operationId: "testGamdlConnection",
-    method: "post",
-    path: "/api/settings/gamdl/test",
-    summary: "Test GAMDL setup and Apple Music auth readiness",
-    tags: ["Settings"],
-    successSchema: gamdlConnectionTestResponseSchema,
-    errorSchema: apiErrorSchema,
-    openapi: {
-      responses: {
-        "200": {
-          description: "Test completed",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  success: { type: "boolean" },
-                  message: { type: "string" },
-                  details: {
+                  policy: {
                     type: "object",
                     properties: {
-                      gamdl_available: { type: "boolean" },
-                      cookie_file_exists: { type: "boolean" },
-                      cookie_file_valid: { type: "boolean" },
-                      test_download_attempted: { type: "boolean" },
-                      test_download_success: { type: "boolean" },
-                      error_type: { type: "string" },
+                      enabled: { type: "boolean" },
+                      provider: { type: "string", enum: ["restic-b2"] },
+                      schedule_cron: { type: "string" },
+                      retention_preset: {
+                        type: "string",
+                        enum: ["aggressive", "balanced", "archive"],
+                      },
+                      include_database: { type: "boolean" },
+                      include_audio_files: { type: "boolean" },
+                      include_album_covers: { type: "boolean" },
+                      include_uploads: { type: "boolean" },
+                      updated_at: { type: "string" },
                     },
                     required: [
-                      "gamdl_available",
-                      "cookie_file_exists",
-                      "cookie_file_valid",
-                      "test_download_attempted",
-                      "test_download_success",
+                      "enabled",
+                      "provider",
+                      "schedule_cron",
+                      "retention_preset",
+                      "include_database",
+                      "include_audio_files",
+                      "include_album_covers",
+                      "include_uploads",
+                      "updated_at",
                     ],
                   },
                 },
-                required: ["success", "message", "details"],
-              },
-            },
-          },
-        },
-        "500": {
-          description: "Test execution failed",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-      },
-    },
-  },
-  {
-    operationId: "getLocalPlaybackStatus",
-    method: "get",
-    path: "/api/playback/local",
-    summary: "Get current local playback status",
-    tags: ["Playback"],
-    successSchema: localPlaybackStatusResponseSchema,
-    errorSchema: apiErrorSchema,
-    openapi: {
-      responses: {
-        "200": {
-          description: "Local playback status",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  enabled: { type: "boolean" },
-                  status: { type: "object", additionalProperties: true },
-                },
-                required: ["enabled", "status"],
+                required: ["policy"],
               },
             },
           },
         },
         "500": {
           description: "Server error",
-          content: {
-            "application/json": { schema: errorResponseSchemaObject },
-          },
+          content: { "application/json": { schema: errorResponseSchemaObject } },
         },
       },
     },
   },
   {
-    operationId: "controlLocalPlayback",
-    method: "post",
-    path: "/api/playback/local",
-    summary: "Control local playback actions",
-    tags: ["Playback"],
-    bodySchema: localPlaybackControlBodySchema,
-    successSchema: localPlaybackControlResponseSchema,
+    operationId: "updateBackupPolicy",
+    method: "put",
+    path: "/api/settings/backup",
+    summary: "Update backup policy settings",
+    tags: ["Settings"],
+    bodySchema: backupPolicyPutBodySchema,
+    successSchema: backupPolicyPutResponseSchema,
     errorSchema: apiErrorSchema,
     openapi: {
       requestBody: {
@@ -2155,15 +1518,18 @@ export const apiContractRoutes: ApiContractRoute[] = [
             schema: {
               type: "object",
               properties: {
-                action: {
+                enabled: { type: "boolean" },
+                provider: { type: "string", enum: ["restic-b2"] },
+                schedule_cron: { type: "string" },
+                retention_preset: {
                   type: "string",
-                  enum: ["play", "pause", "resume", "stop", "seek", "volume"],
+                  enum: ["aggressive", "balanced", "archive"],
                 },
-                filename: { type: "string" },
-                seconds: { type: "number" },
-                volume: { type: "number" },
+                include_database: { type: "boolean" },
+                include_audio_files: { type: "boolean" },
+                include_album_covers: { type: "boolean" },
+                include_uploads: { type: "boolean" },
               },
-              required: ["action"],
               additionalProperties: false,
             },
           },
@@ -2171,30 +1537,64 @@ export const apiContractRoutes: ApiContractRoute[] = [
       },
       responses: {
         "200": {
-          description: "Playback action result",
+          description: "Backup policy updated",
           content: {
             "application/json": {
               schema: {
                 type: "object",
                 properties: {
                   success: { type: "boolean" },
-                  status: { type: "object", additionalProperties: true },
-                  volume: { type: "number" },
+                  message: { type: "string" },
+                  policy: { type: "object", additionalProperties: true },
                 },
-                required: ["success"],
-                additionalProperties: true,
+                required: ["success", "message", "policy"],
               },
             },
           },
         },
         "400": {
-          description: "Invalid action payload",
+          description: "Invalid backup policy payload",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "createDatabaseBackup",
+    method: "post",
+    path: "/api/backup",
+    summary: "Create database backup (plain SQL format)",
+    tags: ["Backup"],
+    successSchema: backupCreateResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Backup created",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  message: { type: "string" },
+                },
+                required: ["message"],
+              },
+            },
+          },
+        },
+        "404": {
+          description: "Database file not found (file-copy fallback)",
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
         },
         "500": {
-          description: "Server error",
+          description: "Backup creation failed",
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
@@ -2203,32 +1603,98 @@ export const apiContractRoutes: ApiContractRoute[] = [
     },
   },
   {
-    operationId: "testLocalPlayback",
-    method: "get",
-    path: "/api/playback/test",
-    summary: "Test local playback configuration and availability",
-    tags: ["Playback"],
-    successSchema: localPlaybackTestResponseSchema,
+    operationId: "createDatabaseBackupCustom",
+    method: "post",
+    path: "/api/backup-custom",
+    summary: "Create database backup (pg_dump custom format)",
+    tags: ["Backup"],
+    successSchema: backupCreateCustomResponseSchema,
     errorSchema: apiErrorSchema,
     openapi: {
       responses: {
         "200": {
-          description: "Playback test result",
+          description: "Custom backup created",
           content: {
             "application/json": {
               schema: {
                 type: "object",
                 properties: {
-                  available: { type: "boolean" },
                   message: { type: "string" },
-                  error: { type: "string" },
-                  config: { type: "object", additionalProperties: true },
-                  testResult: { type: "object", additionalProperties: true },
+                  filename: { type: "string" },
+                  format: { type: "string", enum: ["custom"] },
                 },
-                required: ["available"],
-                additionalProperties: true,
+                required: ["message", "filename", "format"],
               },
             },
+          },
+        },
+        "500": {
+          description: "Backup creation failed",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "streamAudioFile",
+    method: "get",
+    path: "/api/audio",
+    summary: "Stream local audio file for browser playback",
+    tags: ["Audio"],
+    successSchema: z.unknown(),
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "filename",
+          in: "query",
+          required: true,
+          schema: { type: "string" },
+          description: "Local audio filename or relative path stored in `local_audio_url`.",
+        },
+        {
+          name: "range",
+          in: "header",
+          required: false,
+          schema: { type: "string" },
+          description: "Optional byte range header for seeking (example: `bytes=0-1023`).",
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Full audio stream",
+          content: {
+            "audio/mpeg": { schema: { type: "string", format: "binary" } },
+            "audio/mp4": { schema: { type: "string", format: "binary" } },
+            "audio/wav": { schema: { type: "string", format: "binary" } },
+          },
+        },
+        "206": {
+          description: "Partial audio stream (range request)",
+          content: {
+            "audio/mpeg": { schema: { type: "string", format: "binary" } },
+            "audio/mp4": { schema: { type: "string", format: "binary" } },
+            "audio/wav": { schema: { type: "string", format: "binary" } },
+          },
+        },
+        "400": {
+          description: "Missing filename parameter",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "404": {
+          description: "Audio file not found",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "416": {
+          description: "Invalid range request",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
           },
         },
         "500": {
@@ -2613,13 +2079,14 @@ export const apiContractRoutes: ApiContractRoute[] = [
         { name: "q", in: "query", required: false, schema: { type: "string" } },
         { name: "limit", in: "query", required: false, schema: { type: "integer", default: 20 } },
         { name: "offset", in: "query", required: false, schema: { type: "integer", default: 0 } },
+        { name: "friend_id", in: "query", required: false, schema: { type: "integer" } },
         {
           name: "filter",
           in: "query",
           required: false,
           schema: {
             type: "string",
-            description: "SQL-style filter expression. Multiple conditions joined with ' AND '. Supported values: 'local_audio_url IS NULL' (missing audio), '(bpm IS NULL OR key IS NULL)' (missing metadata), 'apple_music_url IS NULL' (missing Apple Music), 'youtube_url IS NULL' (missing YouTube), 'soundcloud_url IS NULL' (missing SoundCloud), '(apple_music_url IS NULL AND youtube_url IS NULL AND soundcloud_url IS NULL)' (missing all streaming URLs), 'friend_id = {integer}' (filter by friend)",
+            description: "SQL-style filter expression. Multiple conditions joined with ' AND '. Supported values: 'local_audio_url IS NULL' (missing audio), '(bpm IS NULL OR key IS NULL)' (missing metadata), 'apple_music_url IS NULL' (missing Apple Music), 'youtube_url IS NULL' (missing YouTube), 'soundcloud_url IS NULL' (missing SoundCloud), '(apple_music_url IS NULL AND youtube_url IS NULL AND soundcloud_url IS NULL)' (missing all streaming URLs).",
           },
         },
       ],
@@ -2632,7 +2099,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
                 ...trackSearchResponseBase,
                 properties: {
                   ...(trackSearchResponseBase.properties as Record<string, unknown>),
-                  hits: { type: "array", items: { type: "object", additionalProperties: true } },
+                  hits: { type: "array", items: trackEntitySchemaObject },
                 },
                 required: [...(trackSearchResponseBase.required as string[]), "hits"],
               },
@@ -2655,88 +2122,58 @@ export const apiContractRoutes: ApiContractRoute[] = [
     },
   },
   {
-    operationId: "searchTracksFiltered",
-    method: "post",
-    path: "/api/tracks/search",
-    summary: "Search tracks (body filters)",
-    tags: ["Tracks"],
-    bodySchema: trackSearchPostBodySchema,
-    successSchema: trackSearchPostResponseSchema,
-    errorSchema: apiErrorSchema,
-    openapi: {
-      requestBody: {
-        required: true,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                query: { type: "string" },
-                limit: { type: "integer", default: 20 },
-                offset: { type: "integer", default: 0 },
-                filters: {
-                  type: "object",
-                  properties: {
-                    bpm_min: { type: "number" },
-                    bpm_max: { type: "number" },
-                    key: { type: "string" },
-                    star_rating: { type: "number" },
-                    friend_id: { type: "integer" },
-                  },
-                },
-              },
-              additionalProperties: false,
-            },
-          },
-        },
-      },
-      responses: {
-        "200": {
-          description: "Filtered search results",
-          content: {
-            "application/json": {
-              schema: {
-                ...trackSearchResponseBase,
-                properties: {
-                  ...(trackSearchResponseBase.properties as Record<string, unknown>),
-                  tracks: { type: "array", items: { type: "object", additionalProperties: true } },
-                },
-                required: [...(trackSearchResponseBase.required as string[]), "tracks"],
-              },
-              examples: {
-                filteredSearch: {
-                  summary: "Filtered track search",
-                  value: trackSearchPostExample,
-                },
-              },
-            },
-          },
-        },
-        "500": {
-          description: "Search error",
-          content: {
-            "application/json": { schema: errorResponseSchemaObject },
-          },
-        },
-      },
-    },
-  },
-  {
     operationId: "recommendationCandidates",
     method: "get",
     path: "/api/recommendations/candidates",
-    summary: "Get recommendation candidates",
+    summary: "Get recommendation candidates (combined, identity-only, or audio-only)",
     tags: ["Recommendations"],
     querySchema: recommendationsQuerySchema,
     successSchema: recommendationsResponseSchema,
     errorSchema: apiErrorSchema,
     openapi: {
       parameters: [
-        { name: "track_id", in: "query", required: true, schema: { type: "string" } },
-        { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
-        { name: "limit_identity", in: "query", required: false, schema: { type: "integer", default: 200 } },
-        { name: "limit_audio", in: "query", required: false, schema: { type: "integer", default: 200 } },
-        { name: "ivfflat_probes", in: "query", required: false, schema: { type: "integer", default: 10 } },
+        {
+          name: "track_id",
+          in: "query",
+          required: true,
+          schema: { type: "string" },
+          description: "Seed track identifier.",
+        },
+        {
+          name: "friend_id",
+          in: "query",
+          required: true,
+          schema: { type: "integer" },
+          description: "Library owner id for the seed track.",
+        },
+        {
+          name: "mode",
+          in: "query",
+          required: false,
+          schema: { type: "string", enum: ["combined", "identity", "audio"], default: "combined" },
+          description: "Select retrieval mode. `combined` unions both embeddings, `identity` only identity embedding, `audio` only audio vibe embedding.",
+        },
+        {
+          name: "limit_identity",
+          in: "query",
+          required: false,
+          schema: { type: "integer", minimum: 0, maximum: 1000, default: 200 },
+          description: "Maximum candidates from identity embedding search. Ignored when `mode=audio`.",
+        },
+        {
+          name: "limit_audio",
+          in: "query",
+          required: false,
+          schema: { type: "integer", minimum: 0, maximum: 1000, default: 200 },
+          description: "Maximum candidates from audio vibe embedding search. Ignored when `mode=identity`.",
+        },
+        {
+          name: "ivfflat_probes",
+          in: "query",
+          required: false,
+          schema: { type: "integer", minimum: 1, maximum: 1000, default: 10 },
+          description: "pgvector ivfflat probes setting; higher is more accurate and slower.",
+        },
       ],
       responses: {
         "200": {
@@ -2764,15 +2201,37 @@ export const apiContractRoutes: ApiContractRoute[] = [
               },
               examples: {
                 recommendationCandidates: {
-                  summary: "Recommendations",
+                  summary: "Combined mode",
                   value: recommendationsExample,
+                },
+                recommendationCandidatesIdentityOnly: {
+                  summary: "Identity-only mode",
+                  value: {
+                    ...recommendationsExample,
+                    seedEmbeddings: { identity: true, audio: false },
+                    candidates: recommendationsExample.candidates.map((candidate) => ({
+                      ...candidate,
+                      simAudio: null,
+                    })),
+                  },
+                },
+                recommendationCandidatesAudioOnly: {
+                  summary: "Audio-only mode",
+                  value: {
+                    ...recommendationsExample,
+                    seedEmbeddings: { identity: false, audio: true },
+                    candidates: recommendationsExample.candidates.map((candidate) => ({
+                      ...candidate,
+                      simIdentity: null,
+                    })),
+                  },
                 },
               },
             },
           },
         },
         "400": {
-          description: "Invalid query",
+          description: "Invalid query (missing/invalid parameters or out-of-range limits)",
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
@@ -2865,108 +2324,6 @@ export const apiContractRoutes: ApiContractRoute[] = [
         },
         "404": {
           description: "Seed embeddings missing",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Server error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-      },
-    },
-  },
-  {
-    operationId: "findSimilarIdentityTracks",
-    method: "get",
-    path: "/api/embeddings/similar",
-    summary: "Find similar tracks by identity embedding",
-    tags: ["Embeddings"],
-    querySchema: similarIdentityQuerySchema,
-    successSchema: similarIdentityResponseSchema,
-    errorSchema: apiErrorSchema,
-    openapi: {
-      parameters: [
-        { name: "track_id", in: "query", required: true, schema: { type: "string" } },
-        { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
-        { name: "limit", in: "query", required: false, schema: { type: "integer", default: 50 } },
-        { name: "ivfflat_probes", in: "query", required: false, schema: { type: "integer", default: 10 } },
-        { name: "era", in: "query", required: false, schema: { type: "string" } },
-        { name: "country", in: "query", required: false, schema: { type: "string" } },
-        { name: "tags", in: "query", required: false, schema: { type: "string", description: "Comma-separated tags" } },
-      ],
-      responses: {
-        "200": {
-          description: "Similar identity tracks",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  source_track_id: { type: "string" },
-                  source_friend_id: { type: "integer" },
-                  filters: { type: "object", additionalProperties: true },
-                  count: { type: "integer" },
-                  tracks: { type: "array", items: { type: "object", additionalProperties: true } },
-                },
-                required: ["source_track_id", "source_friend_id", "filters", "count", "tracks"],
-              },
-            },
-          },
-        },
-        "400": {
-          description: "Missing or invalid query",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "404": {
-          description: "Identity embedding not found",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Server error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-      },
-    },
-  },
-  {
-    operationId: "findSimilarVibeTracks",
-    method: "get",
-    path: "/api/embeddings/similar-vibe",
-    summary: "Find similar tracks by audio vibe embedding",
-    tags: ["Embeddings"],
-    querySchema: similarVibeQuerySchema,
-    successSchema: similarVibeResponseSchema,
-    errorSchema: apiErrorSchema,
-    openapi: {
-      parameters: [
-        { name: "track_id", in: "query", required: true, schema: { type: "string" } },
-        { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
-        { name: "limit", in: "query", required: false, schema: { type: "integer", default: 50 } },
-        { name: "ivfflat_probes", in: "query", required: false, schema: { type: "integer", default: 10 } },
-      ],
-      responses: {
-        "200": {
-          description: "Similar vibe tracks",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  source_track_id: { type: "string" },
-                  source_friend_id: { type: "integer" },
-                  count: { type: "integer" },
-                  tracks: { type: "array", items: { type: "object", additionalProperties: true } },
-                },
-                required: ["source_track_id", "source_friend_id", "count", "tracks"],
-              },
-            },
-          },
-        },
-        "400": {
-          description: "Missing or invalid query",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "404": {
-          description: "Audio vibe embedding not found",
           content: { "application/json": { schema: errorResponseSchemaObject } },
         },
         "500": {
@@ -3191,11 +2548,11 @@ export const apiContractRoutes: ApiContractRoute[] = [
     },
   },
   {
-    operationId: "lookupAiDiscogsRelease",
+    operationId: "lookupProviderDiscogsRelease",
     method: "get",
-    path: "/api/ai/discogs",
-    summary: "Lookup Discogs release and matched track by track_id",
-    tags: ["AI"],
+    path: "/api/providers/discogs/release-lookup",
+    summary: "Lookup Discogs release JSON and matched track by track_id",
+    tags: ["Providers"],
     querySchema: discogsLookupQuerySchema,
     successSchema: discogsLookupResponseSchema,
     errorSchema: apiErrorSchema,
@@ -3252,6 +2609,192 @@ export const apiContractRoutes: ApiContractRoute[] = [
         },
         "500": {
           description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "searchProviderYouTubeMusic",
+    method: "post",
+    path: "/api/providers/youtube/music-search",
+    summary: "Search YouTube Music videos by track metadata",
+    tags: ["Providers"],
+    bodySchema: providerYouTubeMusicSearchBodySchema,
+    successSchema: providerYouTubeMusicSearchResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                artist: { type: "string" },
+              },
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "YouTube matches",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  results: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: { type: "string" },
+                        title: { type: "string" },
+                        url: { type: "string" },
+                        channel: { type: "string" },
+                        thumbnail: { type: "string" },
+                      },
+                      required: ["id", "title", "url", "channel"],
+                    },
+                  },
+                },
+                required: ["results"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Provider or server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "searchProviderAppleMusic",
+    method: "post",
+    path: "/api/providers/apple-music/search",
+    summary: "Search Apple Music catalog by track metadata",
+    tags: ["Providers"],
+    bodySchema: providerAppleMusicSearchBodySchema,
+    successSchema: providerAppleMusicSearchResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                title: { type: "string" },
+                artist: { type: "string" },
+                album: { type: "string" },
+                isrc: { type: "string" },
+              },
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Apple Music matches",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  results: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: { type: "string" },
+                        title: { type: "string" },
+                        artist: { type: "string" },
+                        album: { type: "string" },
+                        url: { type: "string" },
+                        artwork: { type: "string" },
+                        duration: { type: "number" },
+                        isrc: { type: "string" },
+                      },
+                      required: ["id"],
+                    },
+                  },
+                },
+                required: ["results"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Provider or server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "generateProviderOpenAiTrackMetadata",
+    method: "post",
+    path: "/api/providers/openai/track-metadata",
+    summary: "Generate metadata suggestions from OpenAI",
+    tags: ["Providers"],
+    bodySchema: providerTrackMetadataBodySchema,
+    successSchema: providerTrackMetadataResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                prompt: { type: "string" },
+                friend_id: { type: "integer" },
+              },
+              required: ["prompt"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Generated metadata",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  genre: { type: "string" },
+                  notes: { type: "string" },
+                },
+                additionalProperties: true,
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid prompt payload",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Provider or server error",
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
@@ -3373,7 +2916,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
   {
     operationId: "updateAlbum",
     method: "patch",
-    path: "/api/albums/update",
+    path: "/api/albums",
     summary: "Update album metadata",
     tags: ["Albums"],
     bodySchema: albumUpdateBodySchema,
@@ -3619,82 +3162,6 @@ export const apiContractRoutes: ApiContractRoute[] = [
     },
   },
   {
-    operationId: "getAlbumsCleanupSummary",
-    method: "get",
-    path: "/api/albums/cleanup",
-    summary: "Preview album cleanup summary",
-    tags: ["Albums"],
-    successSchema: albumsCleanupSummaryResponseSchema,
-    errorSchema: apiErrorSchema,
-    openapi: {
-      responses: {
-        "200": {
-          description: "Album cleanup summary",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  totalAlbumsToClean: { type: "integer" },
-                  emptyTrackCount: { type: "integer" },
-                  orphanedAlbums: { type: "integer" },
-                  sample: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        release_id: { type: "string" },
-                        friend_id: { type: "integer" },
-                        title: { type: "string" },
-                        artist: { type: "string" },
-                        track_count: { type: "integer" },
-                      },
-                      required: ["release_id", "friend_id", "title", "artist"],
-                    },
-                  },
-                },
-                required: ["totalAlbumsToClean", "emptyTrackCount", "orphanedAlbums", "sample"],
-              },
-            },
-          },
-        },
-        "500": {
-          description: "Server error",
-          content: {
-            "application/json": { schema: errorResponseSchemaObject },
-          },
-        },
-      },
-    },
-  },
-  {
-    operationId: "cleanupAlbums",
-    method: "post",
-    path: "/api/albums/cleanup",
-    summary: "Run album cleanup stream",
-    tags: ["Albums"],
-    successSchema: z.string(),
-    errorSchema: apiErrorSchema,
-    openapi: {
-      responses: {
-        "200": {
-          description: "Streaming cleanup log",
-          content: {
-            "text/event-stream": {
-              schema: { type: "string" },
-            },
-          },
-        },
-        "500": {
-          description: "Server error",
-          content: {
-            "application/json": { schema: errorResponseSchemaObject },
-          },
-        },
-      },
-    },
-  },
-  {
     operationId: "getAlbumDiscogsRaw",
     method: "get",
     path: "/api/albums/{releaseId}/discogs-raw",
@@ -3804,6 +3271,108 @@ export const apiContractRoutes: ApiContractRoute[] = [
         },
         "400": {
           description: "Missing required parameters",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "syncDiscogsCollectionStream",
+    method: "get",
+    path: "/api/discogs",
+    summary: "Sync Discogs collection and stream progress output",
+    tags: ["Discogs"],
+    successSchema: z.unknown(),
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "username",
+          in: "query",
+          required: false,
+          schema: { type: "string" },
+          description: "Discogs username to sync. Defaults to `DISCOGS_USERNAME` when omitted.",
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Progress stream",
+          content: {
+            "text/event-stream": {
+              schema: { type: "string" },
+            },
+          },
+        },
+        "500": {
+          description: "Discogs credentials or server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "deleteDiscogsReleases",
+    method: "post",
+    path: "/api/discogs/delete-releases",
+    summary: "Delete selected Discogs release exports and related DB tracks",
+    tags: ["Discogs"],
+    bodySchema: discogsDeleteReleasesBodySchema,
+    successSchema: discogsDeleteReleasesResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                username: { type: "string" },
+                releaseIds: { type: "array", items: { type: "string" } },
+              },
+              required: ["username", "releaseIds"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Release delete summary",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  message: { type: "string" },
+                  deletedFiles: { type: "array", items: { type: "string" } },
+                  failedDeletes: { type: "array", items: { type: "string" } },
+                  deletedTrackIds: { type: "array", items: { type: "string" } },
+                  deletedFromDb: { type: "integer" },
+                },
+                required: [
+                  "message",
+                  "deletedFiles",
+                  "failedDeletes",
+                  "deletedTrackIds",
+                  "deletedFromDb",
+                ],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid request body",
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },

@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
   try {
     const essentiaApiUrl =
       process.env.ESSENTIA_API_URL || "http://essentia:8001/analyze";
-    const fileUrl = `http://app:3000/api/audio?filename=${wavFileName}`;
+    const fileUrl = wavDest;
     const res = await fetch(essentiaApiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -204,18 +204,6 @@ export async function POST(req: NextRequest) {
     await processAudioFile(local_audio_url, track_id, analysisResult);
   } catch (err) {
     console.warn("Could not update track with local_audio_url:", err);
-  }
-
-  // Trigger MPD database update so new file is available for playback
-  try {
-    const { localPlaybackService } = await import("@/server/services/localPlaybackService");
-    if (localPlaybackService.isLocalPlaybackEnabled()) {
-      await localPlaybackService.updateDatabase();
-      console.log("MPD database update triggered after file upload");
-    }
-  } catch (err) {
-    console.warn("Could not update MPD database:", err);
-    // Don't fail the request if MPD update fails
   }
 
   return NextResponse.json({

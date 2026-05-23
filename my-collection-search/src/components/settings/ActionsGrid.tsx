@@ -2,25 +2,16 @@
 "use client";
 import { useState } from "react";
 import { Button, Flex, Menu, Text, Box } from "@chakra-ui/react";
-import { FiDatabase, FiBriefcase, FiTrash2, FiMoreVertical, FiImage } from "react-icons/fi";
+import { FiBriefcase, FiMoreVertical } from "react-icons/fi";
 import { SiDiscogs } from "react-icons/si";
 import { toaster } from "@/components/ui/toaster";
 import {
-    useSyncDiscogs,
-  useVerifyManifests,
-  useCleanupManifests,
-  useDeleteReleases,
+  useSyncDiscogs, useVerifyManifests, useCleanupManifests, useDeleteReleases,
 } from "@/hooks/useDiscogsQuery";
 import { useBackupsQuery } from "@/hooks/useBackupsQuery";
-import { useCleanupAlbums } from "@/hooks/useAlbumsQuery";
 import ManifestVerificationDialog from "@/components/settings/dialogs/ManifestVerificationDialog";
 import RemovedReleasesDialog from "@/components/settings/dialogs/RemovedReleasesDialog";
 import type { VerificationResult } from "@/services/internalApi/discogs";
-import {
-  queueBackfillEssentia,
-  queueExtractMissingCoverArt,
-  queueFixMissingDurations,
-} from "@/services/internalApi/tracks";
 
 type ActionsGridProps = {
   showTitle?: boolean;
@@ -41,10 +32,6 @@ export default function ActionsGrid({ showTitle = true }: ActionsGridProps) {
   const verifyManifests = useVerifyManifests();
   const cleanupManifests = useCleanupManifests();
   const { addBackup, addBackupLoading } = useBackupsQuery();
-  const cleanupAlbums = useCleanupAlbums();
-  const [durationFixLoading, setDurationFixLoading] = useState(false);
-  const [coverArtBackfillLoading, setCoverArtBackfillLoading] = useState(false);
-  const [essentiaBackfillLoading, setEssentiaBackfillLoading] = useState(false);
 
   const [verificationOpen, setVerificationOpen] = useState(false);
   const [verificationResults, setVerificationResults] = useState<
@@ -52,73 +39,7 @@ export default function ActionsGrid({ showTitle = true }: ActionsGridProps) {
   >([]);
 
   const disableAll =
-    discogsSync.isPending ||
-    addBackupLoading ||
-    verifyManifests.isPending ||
-    cleanupAlbums.isPending;
-
-  const handleFixMissingDurations = async () => {
-    setDurationFixLoading(true);
-    try {
-      const data = await queueFixMissingDurations();
-      toaster.create({
-        title: "Duration backfill queued",
-        description: `Queued ${data.queued} tracks${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,
-        type: data.errors?.length ? "warning" : "success",
-        duration: 5000,
-      });
-    } catch (err) {
-      toaster.create({
-        title: "Duration backfill failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        type: "error",
-      });
-    } finally {
-      setDurationFixLoading(false);
-    }
-  };
-
-  const handleExtractMissingCoverArt = async () => {
-    setCoverArtBackfillLoading(true);
-    try {
-      const data = await queueExtractMissingCoverArt();
-      toaster.create({
-        title: "Embedded cover extraction queued",
-        description: `Queued ${data.queuedAlbums ?? data.queued} albums for ${data.tracksImpacted ?? 0} tracks${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,
-        type: data.errors?.length ? "warning" : "success",
-        duration: 5000,
-      });
-    } catch (err) {
-      toaster.create({
-        title: "Embedded cover extraction failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        type: "error",
-      });
-    } finally {
-      setCoverArtBackfillLoading(false);
-    }
-  };
-
-  const handleBackfillEssentia = async () => {
-    setEssentiaBackfillLoading(true);
-    try {
-      const data = await queueBackfillEssentia();
-      toaster.create({
-        title: "Essentia backfill queued",
-        description: `Queued ${data.queued} tracks, skipped ${data.skipped_existing} existing analyses${data.errors?.length ? ` (${data.errors.length} errors)` : ""}`,
-        type: data.errors?.length ? "warning" : "success",
-        duration: 5000,
-      });
-    } catch (err) {
-      toaster.create({
-        title: "Essentia backfill failed",
-        description: err instanceof Error ? err.message : "Unknown error",
-        type: "error",
-      });
-    } finally {
-      setEssentiaBackfillLoading(false);
-    }
-  };
+    discogsSync.isPending || addBackupLoading || verifyManifests.isPending;
 
   const handleSyncClick = async () => {
     try {
@@ -278,56 +199,6 @@ export default function ActionsGrid({ showTitle = true }: ActionsGridProps) {
               </Menu.Item>
 
               <Menu.Separator />
-
-              <Menu.Item
-                value="cleanup-albums"
-                onClick={() =>
-                  cleanupAlbums.mutate(undefined, {
-                    onSuccess: () => {
-                      toaster.create({
-                        title: "Album Cleanup Complete",
-                        type: "success",
-                        description: "Removed albums with no tracks",
-                      });
-                    },
-                    onError: (e: Error) =>
-                      toaster.create({
-                        title: "Album Cleanup Failed",
-                        type: "error",
-                        description: e.message,
-                      }),
-                  })
-                }
-                disabled={disableAll || cleanupAlbums.isPending}
-              >
-                <FiTrash2 /> Cleanup Empty Albums
-              </Menu.Item>
-
-              <Menu.Separator />
-
-              <Menu.Item
-                value="fix-durations"
-                onClick={handleFixMissingDurations}
-                disabled={disableAll || durationFixLoading}
-              >
-                <FiDatabase /> Fix Missing Durations (Audio)
-              </Menu.Item>
-
-              <Menu.Item
-                value="extract-cover-art"
-                onClick={handleExtractMissingCoverArt}
-                disabled={disableAll || coverArtBackfillLoading}
-              >
-                <FiImage /> Extract Missing Embedded Cover Art
-              </Menu.Item>
-
-              <Menu.Item
-                value="backfill-essentia"
-                onClick={handleBackfillEssentia}
-                disabled={disableAll || essentiaBackfillLoading}
-              >
-                <FiDatabase /> Backfill Essentia Analysis (Local Audio)
-              </Menu.Item>
             </Menu.Content>
           </Menu.Positioner>
         </Menu.Root>
