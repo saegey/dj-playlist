@@ -3,9 +3,6 @@
 
 services:
   app:
-    extends:
-      file: docker-compose.yml
-      service: app
     image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
     container_name: myapp
     environment:
@@ -29,47 +26,22 @@ services:
     restart: unless-stopped
 
   migrate:
-    extends:
-      file: docker-compose.yml
-      service: migrate
     image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
 
-  db:
-    extends:
-      file: docker-compose.yml
-      service: db
-
   essentia:
-    extends:
-      file: docker-compose.yml
-      service: essentia
     image: ghcr.io/saegey/essentia-api:${IMAGE_TAG:-latest}
     container_name: essentia-api
 
   ga-service:
-    extends:
-      file: docker-compose.yml
-      service: ga-service
     image: ghcr.io/saegey/ga-service:${IMAGE_TAG:-latest}
     container_name: ga-service
 
-  redis:
-    extends:
-      file: docker-compose.yml
-      service: redis
-
   download-worker:
-    extends:
-      file: docker-compose.yml
-      service: download-worker
     image: ghcr.io/saegey/download-worker:${IMAGE_TAG:-latest}
     container_name: download-worker
     restart: unless-stopped
 
   mpd:
-    extends:
-      file: docker-compose.yml
-      service: mpd
     volumes:
       - ${MPD_AUDIO_MOUNT:-music_data:/var/lib/mpd/music:ro}  # Read-only music files
       - mpd_data:/var/lib/mpd  # MPD state/database

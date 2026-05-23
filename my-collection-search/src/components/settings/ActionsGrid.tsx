@@ -23,7 +23,11 @@ import {
   queueFixMissingDurations,
 } from "@/services/internalApi/tracks";
 
-export default function ActionsGrid() {
+type ActionsGridProps = {
+  showTitle?: boolean;
+};
+
+export default function ActionsGrid({ showTitle = true }: ActionsGridProps) {
   const [removedReleasesOpen, setRemovedReleasesOpen] = useState(false);
   const [removedReleases, setRemovedReleases] = useState<string[]>([]);
   const [removedUsername, setRemovedUsername] = useState<string>("");
@@ -230,9 +234,13 @@ export default function ActionsGrid() {
   return (
     <Box mb={4}>
       <Flex align="center" justify="space-between" mb={4}>
-        <Text fontWeight="bold" fontSize="lg">
-          Settings
-        </Text>
+        {showTitle ? (
+          <Text fontWeight="bold" fontSize="lg">
+            Settings
+          </Text>
+        ) : (
+          <Box />
+        )}
         <Menu.Root>
           <Menu.Trigger asChild>
             <Button size="sm" variant="outline" disabled={disableAll}>
