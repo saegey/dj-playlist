@@ -20,9 +20,9 @@ services:
       - cookie_data:/app/cookies
       - album_covers:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
-      - /var/run/docker.sock:/var/run/docker.sock  # Required for AirPlay interruption control
+      - /var/run/docker.sock:/var/run/docker.sock # Required for AirPlay interruption control
     devices:
-      - /dev/snd:/dev/snd  # Pass through all audio devices
+      - /dev/snd:/dev/snd # Pass through all audio devices
     restart: unless-stopped
 
   migrate:
@@ -43,8 +43,8 @@ services:
 
   mpd:
     volumes:
-      - ${MPD_AUDIO_MOUNT:-music_data:/var/lib/mpd/music:ro}  # Read-only music files
-      - mpd_data:/var/lib/mpd  # MPD state/database
+      - ${MPD_AUDIO_MOUNT:-music_data:/var/lib/mpd/music:ro} # Read-only music files
+      - mpd_data:/var/lib/mpd # MPD state/database
       - ./config/mpd.conf:/etc/mpd.conf.template:ro
     environment:
       - AUDIO_DEVICE=${AUDIO_DEVICE:-hw:0,0}
@@ -56,7 +56,7 @@ services:
   shairport-sync:
     image: mikebrady/shairport-sync:latest
     container_name: shairport-sync
-    network_mode: host  # Required for AirPlay discovery (mDNS/Bonjour)
+    network_mode: host # Required for AirPlay discovery (mDNS/Bonjour)
     restart: unless-stopped
     environment:
       # AirPlay device name (shows up in iOS/Mac AirPlay menu)
@@ -68,7 +68,7 @@ services:
       # Audio device configuration
       - AUDIO_DEVICE=${AUDIO_DEVICE:-plughw:1,0}
     devices:
-      - /dev/snd:/dev/snd  # Share audio device with app
+      - /dev/snd:/dev/snd # Share audio device with app
     volumes:
       - ./config/shairport-sync.conf:/etc/shairport-sync.conf.template:ro
       - ./scripts/airplay-session-start.sh:/usr/local/bin/airplay-session-start.sh:ro
@@ -79,7 +79,7 @@ services:
 
 volumes:
   db_data:
-    name: teststack_db_data
+    name: teststack_db_data_v2
     external: true
   music_data:
     name: teststack_music_data
