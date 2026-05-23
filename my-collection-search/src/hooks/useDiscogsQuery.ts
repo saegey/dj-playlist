@@ -4,25 +4,15 @@ import { useMutation } from "@tanstack/react-query";
 
 import { useSettingsDialogs } from "@/providers/SettingsDialogProvider";
 import { useSyncStreams } from "@/providers/SyncStreamsProvider";
-import {
-  updateDiscogsIndex,
-  syncDiscogsStream,
+import {  syncDiscogsStream,
   verifyManifests,
   cleanupManifests,
   deleteReleases,
   type SyncResult,
-  type IndexResult,
   type ManifestVerificationResponse,
   type ManifestCleanupResponse,
   type DeleteReleasesResponse,
 } from "@/services/internalApi/discogs";
-
-/** 1) Normal mutation (index update) */
-export function useUpdateDiscogsIndex() {
-  return useMutation<IndexResult, Error, void>({
-    mutationFn: () => updateDiscogsIndex(),
-  });
-}
 
 /** 2) Verify manifests */
 export function useVerifyManifests() {

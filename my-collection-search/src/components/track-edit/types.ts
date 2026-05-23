@@ -7,7 +7,6 @@ export interface TrackEditFormProps {
   year?: string | number | null;
   duration?: string;
   discogs_url?: string;
-  spotify_url?: string;
   release_id?: string;
   local_tags?: string | undefined;
   notes?: string | undefined | null;
@@ -43,8 +42,7 @@ export type TrackEditFormState = {
 
 export type TrackForSearch = Pick<
   TrackEditFormProps,
-  "track_id" | "year" | "duration" | "isrc" | "release_id" | "discogs_url" | "spotify_url"
-> | null;
+  "track_id" | "year" | "duration" | "isrc" | "release_id" | "discogs_url" > | null;
 
 export function toTrackEditFormState(
   track: TrackEditFormProps | null

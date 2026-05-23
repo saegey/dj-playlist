@@ -130,7 +130,6 @@ export async function POST(request: NextRequest) {
           position,
           '', // discogs_url empty for local tracks
           track.apple_music_url || '',
-          track.spotify_url || '',
           track.youtube_url || '',
           track.soundcloud_url || '',
           albumThumbnail || '',

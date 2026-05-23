@@ -12,6 +12,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import AlbumSearchResults from "@/components/AlbumSearchResults";
 import PageContainer from "@/components/layout/PageContainer";
 import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
+import FilterChips from "@/components/FilterChips";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
 
@@ -33,6 +34,10 @@ function AlbumsPageContent() {
       ? parseInt(searchParams.get("friend_id")!)
       : null
   );
+
+  const missingLibraryIdentifier = searchParams.get("missing_library_identifier") === "1";
+  const missingLocalCoverArtUrl = searchParams.get("missing_local_cover_art_url") === "1";
+  const missingAudio = searchParams.get("missing_audio") === "1";
 
   // Set default friend_id to current user's library on initial load
   React.useEffect(() => {
@@ -56,6 +61,9 @@ function AlbumsPageContent() {
     if (query) params.set("q", query);
     if (sort !== "date_added:desc") params.set("sort", sort);
     if (selectedFriendId) params.set("friend_id", selectedFriendId.toString());
+    if (missingLibraryIdentifier) params.set("missing_library_identifier", "1");
+    if (missingLocalCoverArtUrl) params.set("missing_local_cover_art_url", "1");
+    if (missingAudio) params.set("missing_audio", "1");
     router.push(`/albums?${params.toString()}`);
   };
 
@@ -64,6 +72,9 @@ function AlbumsPageContent() {
     const params = new URLSearchParams();
     if (query) params.set("q", query);
     if (sort !== "date_added:desc") params.set("sort", sort);
+    if (missingLibraryIdentifier) params.set("missing_library_identifier", "1");
+    if (missingLocalCoverArtUrl) params.set("missing_local_cover_art_url", "1");
+    if (missingAudio) params.set("missing_audio", "1");
 
     if (friendId > 0) {
       setSelectedFriendId(friendId);
@@ -74,6 +85,32 @@ function AlbumsPageContent() {
     }
 
     router.push(`/albums?${params.toString()}`);
+  };
+
+  const handleAlbumFilterToggle = (key: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (key === "missingIdentifier") {
+      if (!missingLibraryIdentifier) {
+        params.set("missing_library_identifier", "1");
+      } else {
+        params.delete("missing_library_identifier");
+      }
+    }
+    if (key === "missingLocalCoverArtUrl") {
+      if (!missingLocalCoverArtUrl) {
+        params.set("missing_local_cover_art_url", "1");
+      } else {
+        params.delete("missing_local_cover_art_url");
+      }
+    }
+    if (key === "missingAudio") {
+      if (!missingAudio) {
+        params.set("missing_audio", "1");
+      } else {
+        params.delete("missing_audio");
+      }
+    }
+    router.replace(`/albums?${params.toString()}`);
   };
 
   return (
@@ -106,6 +143,9 @@ function AlbumsPageContent() {
               <Button colorScheme="blue" onClick={handleSearch} flexShrink={0}>
                 Search
               </Button>
+              <Button variant="outline" flexShrink={0} onClick={() => router.push("/albums/add")}>
+                + Add Album
+              </Button>
             </>
           }
           mobilePrimaryControl={
@@ -135,6 +175,26 @@ function AlbumsPageContent() {
               </NativeSelectField>
             </NativeSelectRoot>
           }
+        />
+
+        <FilterChips
+          chips={[
+            { key: "missingIdentifier", label: "Missing identifier", active: missingLibraryIdentifier },
+            {
+              key: "missingLocalCoverArtUrl",
+              label: "Missing local cover",
+              active: missingLocalCoverArtUrl,
+            },
+            { key: "missingAudio", label: "Missing audio", active: missingAudio },
+          ]}
+          onToggle={handleAlbumFilterToggle}
+          onClearAll={missingLibraryIdentifier || missingLocalCoverArtUrl || missingAudio ? () => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete("missing_library_identifier");
+            params.delete("missing_local_cover_art_url");
+            params.delete("missing_audio");
+            router.replace(`/albums?${params.toString()}`);
+          } : undefined}
         />
 
         {/* Album Results */}

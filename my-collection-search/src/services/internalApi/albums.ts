@@ -7,7 +7,6 @@ import {
   albumSearchResponseSchema,
   albumUpdateBodySchema,
   albumUpdateResponseSchema,
-  albumsCleanupSummaryResponseSchema,
   albumUpsertWithTracksResponseSchema,
   queueAlbumDownloadsResponseSchema,
 } from "@/api-contract/schemas";
@@ -16,7 +15,7 @@ import type {
   UpdateAlbumWithTracksParams,
 } from "@/types/albumMetadata";
 import type { Album, Track } from "@/types/track";
-import { http, streamLines } from "@/services/http";
+import { http } from "@/services/http";
 
 export type AlbumDiscogsRawResponse = z.infer<
   typeof albumDiscogsRawResponseSchema
@@ -43,9 +42,6 @@ export type AlbumUpdateResponse = Omit<AlbumUpdateApiResponse, "album"> & {
 };
 export type QueueAlbumDownloadsResponse = z.infer<
   typeof queueAlbumDownloadsResponseSchema
->;
-export type AlbumsCleanupSummaryResponse = z.infer<
-  typeof albumsCleanupSummaryResponseSchema
 >;
 export type UpsertAlbumWithTracksApiResponse = z.infer<
   typeof albumUpsertWithTracksResponseSchema
@@ -99,6 +95,11 @@ export async function searchAlbums(
   }
   if (typeof params.limit === "number") searchParams.append("limit", String(params.limit));
   if (typeof params.offset === "number") searchParams.append("offset", String(params.offset));
+  if (params.missing_library_identifier) searchParams.append("missing_library_identifier", "1");
+  if (params.missing_audio) searchParams.append("missing_audio", "1");
+  if (params.missing_local_cover_art_url) {
+    searchParams.append("missing_local_cover_art_url", "1");
+  }
 
   const query = searchParams.toString();
   const path = query ? `/api/albums?${query}` : "/api/albums";
@@ -124,7 +125,7 @@ export async function getAlbumWithTracks(
 export async function updateAlbum(
   params: AlbumUpdateParams
 ): Promise<AlbumUpdateResponse> {
-  return await http<AlbumUpdateResponse>("/api/albums/update", {
+  return await http<AlbumUpdateResponse>("/api/albums", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
@@ -160,33 +161,4 @@ export async function upsertAlbumWithTracks(
     method: "POST",
     body: formData,
   });
-}
-
-export async function fetchAlbumsCleanupSummary(): Promise<AlbumsCleanupSummaryResponse> {
-  return await http<AlbumsCleanupSummaryResponse>("/api/albums/cleanup", {
-    method: "GET",
-    cache: "no-store",
-  });
-}
-
-export async function cleanupAlbumsStream(
-  onLine?: (line: string) => void
-): Promise<{ message: string }> {
-  const lines: string[] = [];
-  await streamLines("/api/albums/cleanup", { method: "POST" }, (line) => {
-    lines.push(line);
-    onLine?.(line);
-  });
-  return { message: lines.join("\n") };
-}
-
-export async function backfillAlbumsStream(
-  onLine?: (line: string) => void
-): Promise<{ message: string }> {
-  const lines: string[] = [];
-  await streamLines("/api/albums/backfill", { method: "POST" }, (line) => {
-    lines.push(line);
-    onLine?.(line);
-  });
-  return { message: lines.join("\n") };
 }

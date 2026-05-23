@@ -8,6 +8,7 @@
  * Query params:
  * - track_id (required): Seed track ID
  * - friend_id (required): Seed track's friend ID
+ * - mode (optional, default combined): combined | identity | audio
  * - limit_identity (optional, default 200): Max identity candidates
  * - limit_audio (optional, default 200): Max audio vibe candidates
  * - ivfflat_probes (optional, default 10): Accuracy/speed tradeoff
@@ -44,23 +45,36 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { track_id, friend_id, limit_identity, limit_audio, ivfflat_probes } =
+    const {
+      track_id,
+      friend_id,
+      mode,
+      limit_identity,
+      limit_audio,
+      ivfflat_probes,
+    } =
       parsedQuery.data;
     const friendIdNum = friend_id;
-    const limitIdentity = limit_identity;
-    const limitAudio = limit_audio;
+    let limitIdentity = limit_identity;
+    let limitAudio = limit_audio;
     const ivfflatProbes = ivfflat_probes;
 
+    if (mode === "identity") {
+      limitAudio = 0;
+    } else if (mode === "audio") {
+      limitIdentity = 0;
+    }
+
     // Validate limits
-    if (limitIdentity < 1 || limitIdentity > 1000) {
+    if (limitIdentity < 0 || limitIdentity > 1000) {
       return NextResponse.json(
-        { error: "limit_identity must be between 1 and 1000" },
+        { error: "limit_identity must be between 0 and 1000" },
         { status: 400 }
       );
     }
-    if (limitAudio < 1 || limitAudio > 1000) {
+    if (limitAudio < 0 || limitAudio > 1000) {
       return NextResponse.json(
-        { error: "limit_audio must be between 1 and 1000" },
+        { error: "limit_audio must be between 0 and 1000" },
         { status: 400 }
       );
     }

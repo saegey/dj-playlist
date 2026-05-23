@@ -45,7 +45,7 @@ export async function upsertTracks(tracks: DiscogsTrack[]): Promise<Track[]> {
         track,
         friendId
       );
-      upserted.push(row);
+      if (row) upserted.push(row);
     } catch (error) {
       console.warn(
         `[Discogs Index] Failed to upsert ${track.track_id}@${track.username}: ${

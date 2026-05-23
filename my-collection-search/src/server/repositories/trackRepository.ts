@@ -26,7 +26,6 @@ type UpdatableTrackFields = Partial<
     | "audio_file_album_art_url"
     | "youtube_url"
     | "soundcloud_url"
-    | "spotify_url"
     | "duration_seconds"
     | "notes"
     | "bpm"
@@ -59,11 +58,6 @@ export type OrderedTrackRow = TrackWithLibraryIdentifierRow & {
   ord: number;
 };
 
-export type MissingMusicUrlPageResult = {
-  tracks: Track[];
-  total: number;
-};
-
 export type TrackReindexRow = TrackWithLibraryIdentifierRow;
 export type TrackAnalysisBulkUpdate = Pick<Track, "local_audio_url"> & {
   bpm?: number | null;
@@ -91,7 +85,6 @@ const UPDATABLE_COLUMNS = {
   apple_music_url: "apple_music_url",
   youtube_url: "youtube_url",
   soundcloud_url: "soundcloud_url",
-  spotify_url: "spotify_url",
   local_audio_url: "local_audio_url",
   audio_file_album_art_url: "audio_file_album_art_url",
   duration_seconds: "duration_seconds",
@@ -106,7 +99,7 @@ export class TrackRepository {
   async upsertDiscogsTrackByTrackIdUsername(
     track: DiscogsTrack,
     friendId: number
-  ): Promise<Track> {
+  ): Promise<Track | null> {
     const { rows } = await dbQuery<Track>(
       `
       INSERT INTO tracks (
@@ -134,7 +127,9 @@ export class TrackRepository {
         duration_seconds = EXCLUDED.duration_seconds,
         friend_id        = EXCLUDED.friend_id,
         release_id       = EXCLUDED.release_id
-        -- URL fields are intentionally excluded from updates to preserve manually-added values.
+        -- URL fields intentionally excluded to preserve manually-added values.
+        -- deleted_at intentionally excluded: soft-deleted tracks stay deleted on re-import.
+      WHERE tracks.deleted_at IS NULL
       RETURNING *
       `,
       [
@@ -160,12 +155,21 @@ export class TrackRepository {
         track.release_id,
       ]
     );
-    if (!rows[0]) {
-      throw new Error(
-        `Expected track upsert to return a row for ${track.track_id}@${track.username}`
-      );
-    }
-    return rows[0];
+    // Returns null when the track is soft-deleted (upsert WHERE clause prevents update).
+    return rows[0] ?? null;
+  }
+
+  async softDeleteTrack(trackId: string, friendId: number): Promise<Track | null> {
+    const { rows } = await dbQuery<Track>(
+      `
+      UPDATE tracks
+      SET deleted_at = NOW()
+      WHERE track_id = $1 AND friend_id = $2 AND deleted_at IS NULL
+      RETURNING *
+      `,
+      [trackId, friendId]
+    );
+    return rows[0] ?? null;
   }
 
   async findTrackWithLocalAudio(
@@ -245,18 +249,6 @@ export class TrackRepository {
     const { rows } = await dbQuery<CoverArtBackfillCandidateRow>(
       query,
       friendId !== null ? [friendId] : []
-    );
-    return rows;
-  }
-
-  async getAllTracksWithLibraryIdentifier(): Promise<TrackWithLibraryIdentifierRow[]> {
-    const { rows } = await dbQuery<TrackWithLibraryIdentifierRow>(
-      `
-      SELECT t.*, a.library_identifier
-      FROM tracks t
-      LEFT JOIN albums a ON t.release_id = a.release_id AND t.friend_id = a.friend_id
-      ORDER BY t.id DESC
-      `
     );
     return rows;
   }
@@ -367,42 +359,6 @@ export class TrackRepository {
       params
     );
     return rows;
-  }
-
-  async findMissingMusicUrlTracksPaginated(params: {
-    pageSize: number;
-    offset: number;
-    friendId?: string | null;
-  }): Promise<MissingMusicUrlPageResult> {
-    const { pageSize, offset, friendId } = params;
-    const whereBase =
-      "(apple_music_url IS NULL OR apple_music_url = '') AND (youtube_url IS NULL OR youtube_url = '') AND (soundcloud_url IS NULL OR soundcloud_url = '')";
-
-    const where = friendId ? `${whereBase} AND friend_id = $1` : whereBase;
-    const countValues: Array<string | number> = friendId ? [friendId] : [];
-    const tracksValues: Array<string | number> = friendId
-      ? [friendId, pageSize, offset]
-      : [pageSize, offset];
-
-    const countQuery = `SELECT COUNT(*) FROM tracks WHERE ${where}`;
-    const tracksQuery = `
-      SELECT *
-      FROM tracks
-      WHERE ${where}
-      ORDER BY id DESC
-      LIMIT $${friendId ? 2 : 1}
-      OFFSET $${friendId ? 3 : 2}
-    `;
-
-    const [countResult, tracksResult] = await Promise.all([
-      dbQuery<{ count: string }>(countQuery, countValues),
-      dbQuery<Track>(tracksQuery, tracksValues),
-    ]);
-
-    return {
-      tracks: tracksResult.rows,
-      total: parseInt(countResult.rows[0]?.count ?? "0", 10),
-    };
   }
 
   async findTrackByTrackIdAndFriendId(

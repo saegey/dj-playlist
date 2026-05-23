@@ -18,7 +18,6 @@ type TrackHit = Track;
 const NAV_ITEMS = [
   { href: "/", label: "Tracks" },
   { href: "/albums", label: "Albums" },
-  { href: "/albums/add", label: "Add Album" },
   { href: "/playlists", label: "Playlists" },
   { href: "/jobs", label: "Jobs" },
   { href: "/settings", label: "Settings" },

@@ -19,11 +19,10 @@ The tracks page (`/`) now includes a powerful filter modal that allows you to fi
 - **Missing metadata** - Tracks missing BPM or Key information (`bpm IS NULL OR key IS NULL`)
 
 #### Missing Streaming URLs
-- **Missing all streaming URLs** - Tracks with NO streaming URLs at all (no Apple Music, YouTube, Spotify, OR SoundCloud)
+- **Missing all streaming URLs** - Tracks with NO streaming URLs at all (no Apple Music, YouTube, or SoundCloud)
   - When checked, individual URL filters are disabled (this is an "all or nothing" filter)
 - **Missing Apple Music URL** - Tracks without Apple Music links
 - **Missing YouTube URL** - Tracks without YouTube links
-- **Missing Spotify URL** - Tracks without Spotify links
 - **Missing SoundCloud URL** - Tracks without SoundCloud links
 
 ### Applying Filters
@@ -96,7 +95,7 @@ The filters are converted to Search API filter strings:
 "(bpm IS NULL OR key IS NULL)"
 
 // Missing all streaming URLs
-"(apple_music_url IS NULL AND youtube_url IS NULL AND spotify_url IS NULL AND soundcloud_url IS NULL)"
+"(apple_music_url IS NULL AND youtube_url IS NULL AND soundcloud_url IS NULL)"
 
 // Individual URL filters (combined with AND)
 "apple_music_url IS NULL"

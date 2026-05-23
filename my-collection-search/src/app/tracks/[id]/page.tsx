@@ -1,6 +1,7 @@
 "use client";
 
 import NextLink from "next/link";
+import { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Box, Button, Flex, Heading, Skeleton, Text, VStack } from "@chakra-ui/react";
 import { toaster } from "@/components/ui/toaster";
@@ -8,15 +9,12 @@ import { useTrackStore } from "@/stores/trackStore";
 import { useAlbumStore } from "@/stores/albumStore";
 import TrackResultStore from "@/components/TrackResultStore";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
+import RelatedTracksSection from "@/components/RelatedTracksSection";
 import PageContainer from "@/components/layout/PageContainer";
 import { useTrackDetailQueries } from "@/hooks/useTrackDetailQueries";
 import {
-  AudioMetadataSection,
-  EssentiaSection,
-  EmbeddingPreviewSection,
-  IdentityEmbeddingSection,
-  AudioVibeEmbeddingSection,
   TrackPlaylistsSection,
+  TrackDebugModal,
 } from "@/components/track-detail";
 
 export default function TrackPage() {
@@ -27,6 +25,7 @@ export default function TrackPage() {
   const friendIdRaw = searchParams?.get("friend_id") ?? "";
   const friendId = Number(friendIdRaw);
   const hasValidFriendId = Number.isFinite(friendId) && friendId > 0;
+  const [debugOpen, setDebugOpen] = useState(false);
 
   const {
     trackQuery,
@@ -86,21 +85,49 @@ export default function TrackPage() {
                 buttons={[<TrackActionsMenu key="menu" track={trackQuery.data} />]}
               />
 
-              <AudioMetadataSection
-                query={audioMetadataQuery}
+              <RelatedTracksSection track={trackQuery.data} />
+
+              <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
+                <Flex justify="space-between" align="center" gap={3} wrap="wrap">
+                  <Text color="fg.muted">
+                    Advanced diagnostics and raw analysis data are available in Track Debug.
+                  </Text>
+                  <Button size="sm" variant="outline" onClick={() => setDebugOpen(true)}>
+                    Open Track Debug
+                  </Button>
+                </Flex>
+              </Box>
+
+              <TrackPlaylistsSection query={playlistsQuery} />
+
+              <TrackDebugModal
+                open={debugOpen}
+                onOpenChange={setDebugOpen}
+                audioMetadataQuery={audioMetadataQuery}
+                essentiaQuery={essentiaQuery}
+                embeddingPreviewQuery={embeddingPreviewQuery}
+                identityEmbeddingPreviewQuery={identityEmbeddingPreviewQuery}
+                audioVibeEmbeddingPreviewQuery={audioVibeEmbeddingPreviewQuery}
                 trackAudioCoverUrl={trackQuery.data.audio_file_album_art_url}
-                isExtractingCover={extractCoverMutation.isPending}
+                extractCoverMutation={extractCoverMutation}
                 onExtractCover={async () => {
                   try {
                     const savedUrl = await extractCoverMutation.mutateAsync();
                     const releaseId = trackQuery.data?.release_id;
-                    if (savedUrl && releaseId) {
-                      useTrackStore.getState().updateTracksByRelease(releaseId, friendId, {
+                    if (savedUrl) {
+                      // Always update the current track in store to avoid stale UI when no release_id exists.
+                      useTrackStore.getState().updateTrack(trackId, friendId, {
                         audio_file_album_art_url: savedUrl,
                       });
-                      useAlbumStore.getState().updateAlbum(releaseId, friendId, {
-                        audio_file_album_art_url: savedUrl,
-                      });
+
+                      if (releaseId) {
+                        useTrackStore.getState().updateTracksByRelease(releaseId, friendId, {
+                          audio_file_album_art_url: savedUrl,
+                        });
+                        useAlbumStore.getState().updateAlbum(releaseId, friendId, {
+                          audio_file_album_art_url: savedUrl,
+                        });
+                      }
                     }
                     toaster.create({
                       title: "Album cover updated",
@@ -117,11 +144,6 @@ export default function TrackPage() {
                   }
                 }}
               />
-              <EssentiaSection query={essentiaQuery} />
-              <EmbeddingPreviewSection query={embeddingPreviewQuery} />
-              <IdentityEmbeddingSection query={identityEmbeddingPreviewQuery} />
-              <AudioVibeEmbeddingSection query={audioVibeEmbeddingPreviewQuery} />
-              <TrackPlaylistsSection query={playlistsQuery} />
             </>
           ) : (
             <Text>Track not found.</Text>

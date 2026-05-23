@@ -16,7 +16,6 @@ export type JobTrackRow = {
   album_thumbnail: string | null;
   discogs_url: string | null;
   apple_music_url: string | null;
-  spotify_url: string | null;
   youtube_url: string | null;
   soundcloud_url: string | null;
   local_audio_url: string | null;
@@ -42,7 +41,7 @@ export class JobRepository {
     const result = await dbQuery<JobTrackRow>(
       `
         SELECT track_id, friend_id, release_id, title, artist, album, year, album_thumbnail,
-               discogs_url, apple_music_url, spotify_url, youtube_url, soundcloud_url,
+               discogs_url, apple_music_url, youtube_url, soundcloud_url,
                local_audio_url, library_identifier, username
         FROM tracks
         WHERE (track_id, friend_id) IN (${values.join(", ")})

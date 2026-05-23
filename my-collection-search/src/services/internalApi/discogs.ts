@@ -18,8 +18,6 @@ export type SyncResult = {
   newCount?: number;
   errors?: { releaseId: string; error: string }[];
 };
-export type IndexResult = { message?: string };
-
 export type VerificationResult = {
   username: string;
   totalReleaseIds: number;
@@ -63,10 +61,6 @@ export type DeleteReleasesResponse = {
 export type DiscogsLookupQuery = z.input<typeof discogsLookupQuerySchema>;
 export type DiscogsLookupResponse = z.infer<typeof discogsLookupResponseSchema>;
 
-export function updateDiscogsIndex() {
-  return http<IndexResult>("/api/discogs/update-index", { method: "POST" });
-}
-
 export function verifyManifests() {
   return http<ManifestVerificationResponse>("/api/discogs/verify-manifests", {
     method: "GET",
@@ -106,7 +100,7 @@ export async function lookupDiscogsRelease(
   if (typeof query.friend_id === "number") {
     params.set("friend_id", String(query.friend_id));
   }
-  return await http<DiscogsLookupResponse>(`/api/ai/discogs?${params.toString()}`, {
+  return await http<DiscogsLookupResponse>(`/api/providers/discogs/release-lookup?${params.toString()}`, {
     method: "GET",
     cache: "no-store",
   });

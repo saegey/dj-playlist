@@ -62,52 +62,69 @@ export const discogsLookupResponseSchema = z
   })
   .passthrough();
 
-export const localPlaybackActionSchema = z.enum([
-  "play",
-  "pause",
-  "resume",
-  "stop",
-  "seek",
-  "volume",
-]);
-
-export const playbackModeSchema = z.enum(["browser", "local-dac"]);
-
-export const localPlaybackControlBodySchema = z.object({
-  action: localPlaybackActionSchema,
-  filename: z.string().optional(),
-  seconds: z.number().optional(),
-  volume: z.number().optional(),
+export const discogsDeleteReleasesBodySchema = z.object({
+  username: z.string().min(1),
+  releaseIds: z.array(z.string().min(1)),
 });
 
-export const localPlaybackControlResponseSchema = z.object({
-  success: z.boolean(),
-  status: z.unknown().optional(),
-  volume: z.number().optional(),
+export const discogsDeleteReleasesResponseSchema = z.object({
+  message: z.string(),
+  deletedFiles: z.array(z.string()),
+  failedDeletes: z.array(z.string()),
+  deletedTrackIds: z.array(z.string()),
+  deletedFromDb: z.number().int(),
 });
 
-export const localPlaybackStatusResponseSchema = z.object({
-  enabled: z.boolean(),
-  status: z.unknown(),
+export const providerTrackMetadataBodySchema = z.object({
+  prompt: z.string().min(1),
+  friend_id: intFromInputSchema.optional(),
 });
 
-export const localPlaybackTestResponseSchema = z
+export const providerTrackMetadataResponseSchema = z
   .object({
-    available: z.boolean(),
-    message: z.string().optional(),
-    error: z.string().optional(),
-    config: z
-      .object({
-        ENABLE_AUDIO_PLAYBACK: z.string().optional(),
-        AUDIO_DEVICE: z.string().optional(),
-        MPD_HOST: z.string().optional(),
-        MPD_PORT: z.string().optional(),
-        MPD_PATH_PREFIX: z.string().optional(),
-      })
-      .optional(),
-    testResult: z.unknown().optional(),
+    genre: z.string().optional(),
+    notes: z.string().optional(),
   })
   .passthrough();
+
+export const providerYouTubeMusicSearchBodySchema = z.object({
+  title: z.string().optional(),
+  artist: z.string().optional(),
+});
+
+export const providerYouTubeMusicSearchItemSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  url: z.string(),
+  channel: z.string(),
+  thumbnail: z.string().optional(),
+});
+
+export const providerYouTubeMusicSearchResponseSchema = z.object({
+  results: z.array(providerYouTubeMusicSearchItemSchema),
+});
+
+export const providerAppleMusicSearchBodySchema = z.object({
+  title: z.string().optional(),
+  artist: z.string().optional(),
+  album: z.string().optional(),
+  isrc: z.string().optional(),
+});
+
+export const providerAppleMusicSearchItemSchema = z.object({
+  id: z.string(),
+  title: z.string().optional(),
+  artist: z.string().optional(),
+  album: z.string().optional(),
+  url: z.string().optional(),
+  artwork: z.string().optional(),
+  duration: z.number().optional(),
+  isrc: z.string().optional(),
+});
+
+export const providerAppleMusicSearchResponseSchema = z.object({
+  results: z.array(providerAppleMusicSearchItemSchema),
+});
 
 export const gamdlCookieFileInfoSchema = z
   .object({
@@ -210,6 +227,58 @@ export const gamdlConnectionTestDetailsSchema = z.object({
   error_type: z.string().optional(),
 });
 
+export const backupProviderSchema = z.enum(["restic-b2"]);
+export const backupRetentionPresetSchema = z.enum([
+  "aggressive",
+  "balanced",
+  "archive",
+]);
+
+export const backupPolicySchema = z.object({
+  enabled: z.boolean(),
+  provider: backupProviderSchema,
+  schedule_cron: z.string().min(1),
+  retention_preset: backupRetentionPresetSchema,
+  include_database: z.boolean(),
+  include_audio_files: z.boolean(),
+  include_album_covers: z.boolean(),
+  include_uploads: z.boolean(),
+  updated_at: z.string(),
+});
+
+export const backupPolicyGetResponseSchema = z.object({
+  policy: backupPolicySchema,
+});
+
+export const backupPolicyPutBodySchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    provider: backupProviderSchema.optional(),
+    schedule_cron: z.string().min(1).optional(),
+    retention_preset: backupRetentionPresetSchema.optional(),
+    include_database: z.boolean().optional(),
+    include_audio_files: z.boolean().optional(),
+    include_album_covers: z.boolean().optional(),
+    include_uploads: z.boolean().optional(),
+  })
+  .strict();
+
+export const backupPolicyPutResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  policy: backupPolicySchema,
+});
+
+export const backupCreateResponseSchema = z.object({
+  message: z.string(),
+});
+
+export const backupCreateCustomResponseSchema = z.object({
+  message: z.string(),
+  filename: z.string(),
+  format: z.literal("custom"),
+});
+
 export const gamdlConnectionTestResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
@@ -232,7 +301,6 @@ export const jobDataSchema = z
     release_id: z.string().nullable().optional(),
     job_type: z.string().optional(),
     apple_music_url: z.string().optional(),
-    spotify_url: z.string().optional(),
     youtube_url: z.string().optional(),
     soundcloud_url: z.string().optional(),
     title: z.string().nullable().optional(),
@@ -287,6 +355,21 @@ export const jobsListResponseSchema = z.object({
 export const jobsClearResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
+});
+
+export const jobsEventsSseEnvelopeSchema = z.object({
+  type: z.enum(["job_completed", "error"]),
+  job_id: z.string().optional(),
+  track_id: z.string().optional(),
+  friend_id: z.number().int().optional(),
+  result: z.unknown().optional(),
+  message: z.string().optional(),
+  timestamp: z.number().int(),
+});
+
+export const jobsEventsSseResponseSchema = z.object({
+  stream: z.string(),
+  events: z.array(jobsEventsSseEnvelopeSchema),
 });
 
 export const jobDetailsResponseSchema = jobInfoSchema.extend({
@@ -346,7 +429,6 @@ export const playlistTrackInputSchema = z
     discogs_url: z.string().nullable().optional(),
     apple_music_url: z.string().nullable().optional(),
     youtube_url: z.string().nullable().optional(),
-    spotify_url: z.string().nullable().optional(),
     soundcloud_url: z.string().nullable().optional(),
     album_thumbnail: z.string().nullable().optional(),
     local_tags: z.string().nullable().optional(),
@@ -455,22 +537,8 @@ export const trackSearchGetQuerySchema = z.object({
   q: z.string().optional().default(""),
   limit: nonNegativeIntFromInputSchema.optional().default(20),
   offset: nonNegativeIntFromInputSchema.optional().default(0),
+  friend_id: intFromInputSchema.optional(),
   filter: z.string().optional(),
-});
-
-export const trackSearchPostBodySchema = z.object({
-  query: z.string().optional().default(""),
-  limit: nonNegativeIntFromInputSchema.optional().default(20),
-  offset: nonNegativeIntFromInputSchema.optional().default(0),
-  filters: z
-    .object({
-      bpm_min: z.number().optional(),
-      bpm_max: z.number().optional(),
-      key: z.string().optional(),
-      star_rating: z.number().optional(),
-      friend_id: z.number().int().optional(),
-    })
-    .optional(),
 });
 
 const searchMetaSchema = z.object({
@@ -482,10 +550,6 @@ const searchMetaSchema = z.object({
 
 export const trackSearchGetResponseSchema = searchMetaSchema.extend({
   hits: z.array(z.unknown()),
-});
-
-export const trackSearchPostResponseSchema = searchMetaSchema.extend({
-  tracks: z.array(z.unknown()),
 });
 
 export const trackPlaylistCountRefSchema = z.object({
@@ -545,11 +609,18 @@ export const trackEssentiaResponseSchema = z.object({
 });
 
 export const trackEmbeddingPreviewResponseSchema = z.object({
+  type: z.literal("prompt").optional(),
   track_id: z.string(),
   friend_id: z.number().int(),
   isDefaultTemplate: z.boolean(),
   template: z.string(),
   prompt: z.string(),
+});
+
+export const trackDeleteResponseSchema = z.object({
+  success: z.boolean(),
+  track_id: z.string(),
+  friend_id: z.number().int(),
 });
 
 export const embeddingPreviewTypeSchema = z.enum(["identity", "audio_vibe"]);
@@ -639,6 +710,7 @@ export const bulkNotesResponseSchema = z
 export const recommendationsQuerySchema = z.object({
   track_id: z.string().min(1),
   friend_id: intFromInputSchema,
+  mode: z.enum(["combined", "identity", "audio"]).optional().default("combined"),
   limit_identity: intFromInputSchema.optional().default(200),
   limit_audio: intFromInputSchema.optional().default(200),
   ivfflat_probes: intFromInputSchema.optional().default(10),
@@ -973,6 +1045,9 @@ export const albumSearchQuerySchema = z.object({
   friend_id: intFromInputSchema.optional(),
   limit: nonNegativeIntFromInputSchema.optional().default(20),
   offset: nonNegativeIntFromInputSchema.optional().default(0),
+  missing_library_identifier: z.boolean().optional(),
+  missing_local_cover_art_url: z.boolean().optional(),
+  missing_audio: z.boolean().optional(),
 });
 
 export const albumSearchResponseSchema = z.object({

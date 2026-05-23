@@ -12,7 +12,6 @@ export function buildTrackMetadataPrompt(
     apple_music_url?: string | null;
     youtube_url?: string | null;
     soundcloud_url?: string | null;
-    spotify_url?: string | null;
   },
   basePrompt: string
 ): string {
@@ -45,7 +44,6 @@ export function buildTrackMetadataPrompt(
     args.apple_music_url ? `Apple Music URL: ${args.apple_music_url}` : "",
     args.youtube_url ? `YouTube URL: ${args.youtube_url}` : "",
     args.soundcloud_url ? `SoundCloud URL: ${args.soundcloud_url}` : "",
-    args.spotify_url ? `Spotify URL: ${args.spotify_url}` : "",
     versionMarkers?.length
       ? `Version Markers: ${versionMarkers.join(", ")}`
       : "",

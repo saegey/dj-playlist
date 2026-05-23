@@ -130,7 +130,6 @@ export class JobsApiService {
           album_thumbnail: track?.album_thumbnail || undefined,
           discogs_url: track?.discogs_url || undefined,
           apple_music_url: track?.apple_music_url || undefined,
-          spotify_url: track?.spotify_url || undefined,
           youtube_url: track?.youtube_url || undefined,
           soundcloud_url: track?.soundcloud_url || undefined,
           local_audio_url: track?.local_audio_url || undefined,

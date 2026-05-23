@@ -2,9 +2,6 @@
 
 import PlayerControlsView from "@/components/player/PlayerControlsView";
 import { usePlayerControlsController } from "@/components/player/usePlayerControlsController";
-import { useLocalDacPlaybackSync } from "@/components/player/hooks/useLocalDacPlaybackSync";
-import { useGhostAudioKeepalive } from "@/components/player/hooks/useGhostAudioKeepalive";
-import { useLocalDacMediaSession } from "@/components/player/hooks/useLocalDacMediaSession";
 
 interface PlayerControlsProps {
   /** Whether to show the queue button */
@@ -35,11 +32,6 @@ export default function PlayerControls({
     isAirPlayActive,
     playNext,
     playPrev,
-    mode,
-    setMode,
-    localPlayback,
-    mpdStatus,
-    currentArtwork,
     safeLen,
     canPrev,
     canNext,
@@ -48,36 +40,8 @@ export default function PlayerControls({
     handlePause,
     handleSeek,
     handleAirPlayClick,
+    handleClosePlayer,
   } = usePlayerControlsController();
-
-  useLocalDacPlaybackSync({
-    mode,
-    currentTrack,
-    isPlaying,
-    mpdStatus,
-    localPlayback,
-  });
-
-  useGhostAudioKeepalive({
-    mode,
-    isPlaying,
-    volume,
-  });
-
-  useLocalDacMediaSession({
-    mode,
-    currentTrack,
-    currentArtwork,
-    isPlaying,
-    canPrev,
-    canNext,
-    playPrev,
-    playNext,
-    handlePlay,
-    handlePause,
-    handleSeek,
-    mpdStatus,
-  });
 
   return (
     <PlayerControlsView
@@ -93,8 +57,6 @@ export default function PlayerControls({
       canNext={canNext}
       playPrev={playPrev}
       playNext={playNext}
-      mode={mode}
-      setMode={setMode}
       volume={volume}
       setVolume={setVolume}
       VolumeIcon={VolumeIcon}
@@ -104,6 +66,7 @@ export default function PlayerControls({
       onPlay={handlePlay}
       onPause={handlePause}
       onSeek={handleSeek}
+      onClosePlayer={handleClosePlayer}
     />
   );
 }

@@ -20,8 +20,7 @@ export type SimilarTrackBase = Pick<
   | "position"
   | "discogs_url"
   | "apple_music_url"
-  | "spotify_url"
-  | "youtube_url"
+    | "youtube_url"
   | "local_audio_url"
 >;
 

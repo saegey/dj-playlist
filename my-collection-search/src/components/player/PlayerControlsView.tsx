@@ -19,16 +19,15 @@ import {
   FiSkipForward,
   FiList,
   FiCast,
+  FiX,
 } from "react-icons/fi";
 import type { IconType } from "react-icons";
 import type { Track } from "@/types/track";
-import type { PlaybackMode } from "@/services/internalApi/playback";
 import ProgressSlider from "@/components/player/ProgressSlider";
 import CompactProgressSlider from "@/components/player/CompactProgressSlider";
 import Artwork from "@/components/player/Artwork";
 import ArtistLink from "@/components/ArtistLink";
 import AlbumLink from "@/components/AlbumLink";
-import PlaybackModeSelector from "@/components/PlaybackModeSelector";
 
 interface PlayerControlsViewProps {
   showQueueButton: boolean;
@@ -43,8 +42,6 @@ interface PlayerControlsViewProps {
   canNext: boolean;
   playPrev: () => void;
   playNext: () => void;
-  mode: PlaybackMode;
-  setMode: (mode: PlaybackMode) => void;
   volume: number;
   setVolume: (value: number) => void;
   VolumeIcon: IconType;
@@ -54,6 +51,7 @@ interface PlayerControlsViewProps {
   onPlay: () => void;
   onPause: () => void;
   onSeek: (time: number) => Promise<void>;
+  onClosePlayer: () => void;
 }
 
 export default function PlayerControlsView({
@@ -69,8 +67,6 @@ export default function PlayerControlsView({
   canNext,
   playPrev,
   playNext,
-  mode,
-  setMode,
   volume,
   setVolume,
   VolumeIcon,
@@ -80,6 +76,7 @@ export default function PlayerControlsView({
   onPlay,
   onPause,
   onSeek,
+  onClosePlayer,
 }: PlayerControlsViewProps) {
   const currentArtwork =
     currentTrack?.audio_file_album_art_url ||
@@ -203,24 +200,7 @@ export default function PlayerControlsView({
         </HStack>
 
         <HStack gap={1} justify="flex-end" flex="1">
-          <Box display={{ base: "block", md: "none" }}>
-            <PlaybackModeSelector
-              value={mode}
-              onChange={setMode}
-              disabled={isPlaying}
-              compact={true}
-            />
-          </Box>
-          <Box display={{ base: "none", md: "block" }}>
-            <PlaybackModeSelector
-              value={mode}
-              onChange={setMode}
-              disabled={isPlaying}
-              compact={false}
-            />
-          </Box>
-
-          {showVolumeControls && mode === "browser" && (
+          {showVolumeControls && (
             <Box display={{ base: "none", md: "block" }}>
               <HStack align="center" gap={3}>
                 <Icon
@@ -249,7 +229,7 @@ export default function PlayerControlsView({
             </Box>
           )}
 
-          {mode === "browser" && isAirPlayAvailable && (
+          {isAirPlayAvailable && (
             <IconButton
               aria-label="AirPlay"
               size="sm"
@@ -274,6 +254,16 @@ export default function PlayerControlsView({
               <FiList />
             </IconButton>
           )}
+
+          <IconButton
+            aria-label="Close player"
+            size="sm"
+            variant="ghost"
+            title="Close player"
+            onClick={onClosePlayer}
+          >
+            <FiX />
+          </IconButton>
         </HStack>
       </Flex>
 

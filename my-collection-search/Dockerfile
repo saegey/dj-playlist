@@ -19,6 +19,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   git \
   ffmpeg \
   mediainfo \
+  restic \
   postgresql-client-15 \
   docker-ce-cli \
   && rm -rf /var/lib/apt/lists/*

@@ -44,12 +44,12 @@ vi.mock("@/lib/posthog-server", () => ({
   getPostHogClient: () => ({ capture: mockPostHogCapture }),
 }));
 
-import { PATCH } from "../route";
+import { PATCH } from "../../route";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeReq(body: unknown) {
-  return new Request("http://localhost/api/tracks/update", {
+  return new Request("http://localhost/api/tracks", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -94,7 +94,7 @@ beforeEach(() => {
 
 // ─── Track not found ──────────────────────────────────────────────────────────
 
-describe("PATCH /api/tracks/update — track not found", () => {
+describe("PATCH /api/tracks — track not found", () => {
   it("returns 404 when updateTrackFields returns null", async () => {
     mockFindTrack.mockResolvedValueOnce(baseTrack());
     mockUpdateTrack.mockResolvedValueOnce(null);
@@ -107,7 +107,7 @@ describe("PATCH /api/tracks/update — track not found", () => {
 
 // ─── shouldUpdateEmbedding — scalar fields ────────────────────────────────────
 
-describe("PATCH /api/tracks/update — embedding update (scalar fields)", () => {
+describe("PATCH /api/tracks — embedding update (scalar fields)", () => {
   it("regenerates embedding when bpm changes", async () => {
     mockFindTrack.mockResolvedValueOnce(baseTrack({ bpm: 120 }));
     mockUpdateTrack.mockResolvedValueOnce(baseTrack({ bpm: 130 }));
@@ -158,7 +158,7 @@ describe("PATCH /api/tracks/update — embedding update (scalar fields)", () => 
   });
 });
 
-describe("PATCH /api/tracks/update — track_embeddings updates", () => {
+describe("PATCH /api/tracks — track_embeddings updates", () => {
   it("regenerates identity embedding when identity fields change", async () => {
     mockFindTrack.mockResolvedValueOnce(baseTrack({ title: "Old Title" }));
     mockUpdateTrack.mockResolvedValueOnce(baseTrack({ title: "New Title" }));
@@ -177,7 +177,7 @@ describe("PATCH /api/tracks/update — track_embeddings updates", () => {
 
 // ─── shouldUpdateEmbedding — array fields ─────────────────────────────────────
 
-describe("PATCH /api/tracks/update — embedding update (array fields)", () => {
+describe("PATCH /api/tracks — embedding update (array fields)", () => {
   it("regenerates embedding when styles array changes", async () => {
     mockFindTrack.mockResolvedValueOnce(baseTrack({ styles: ["Deep House"] }));
     mockUpdateTrack.mockResolvedValueOnce(baseTrack({ styles: ["Tech House"] }));
@@ -209,7 +209,7 @@ describe("PATCH /api/tracks/update — embedding update (array fields)", () => {
 
 // ─── Response ─────────────────────────────────────────────────────────────────
 
-describe("PATCH /api/tracks/update — response", () => {
+describe("PATCH /api/tracks — response", () => {
   it("returns 200 with the updated track", async () => {
     const updated = baseTrack({ star_rating: 5, title: "Updated Title" });
     mockFindTrack.mockResolvedValueOnce(baseTrack());

@@ -20,12 +20,17 @@ async function getFriendId(username: string): Promise<number> {
 /**
  * Convert a Discogs release to an AlbumToUpsert object
  */
+function stripDiscogsNumbering(name: string): string {
+  return name.replace(/\s*\(\d+\)\s*$/, "").trim();
+}
+
 export function discogsReleaseToAlbum(
   release: DiscogsRelease,
   friendId: number
 ): AlbumToUpsert {
-  const artist =
-    release.artists_sort || release.artists?.[0]?.name || "Unknown Artist";
+  const artist = stripDiscogsNumbering(
+    release.artists_sort || release.artists?.[0]?.name || "Unknown Artist"
+  );
 
   return {
     release_id: String(release.id),

@@ -4,7 +4,6 @@ export type JobData = {
   release_id?: string | null;
   job_type?: string;
   apple_music_url?: string;
-  spotify_url?: string;
   youtube_url?: string;
   soundcloud_url?: string;
   title?: string | null;
