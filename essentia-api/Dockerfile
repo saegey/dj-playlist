@@ -1,16 +1,18 @@
 # syntax=docker/dockerfile:1.7
 FROM ghcr.io/mgoltzsche/essentia
-RUN apk add --no-cache python3 py3-pip
 
-# create venv & install
-COPY requirements.txt /tmp/requirements.txt
-RUN --mount=type=cache,target=/root/.cache/pip \
-     python3 -m venv /venv \
-     && . /venv/bin/activate \
-     && pip install --no-cache-dir -r /tmp/requirements.txt
-ENV PATH="/venv/bin:$PATH"
+RUN apk add --no-cache python3
 
-WORKDIR /data
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
+
+ENV PATH="/app/.venv/bin:$PATH"
+
 COPY essentia_api.py .
 
 EXPOSE 8001

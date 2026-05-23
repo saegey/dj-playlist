@@ -154,7 +154,10 @@ GRANT ALL ON SCHEMA public TO public;
   } else {
     const sqlContent = fs.readFileSync(restorePath, "utf8");
     const filteredPath = path.join(restoreDir, "restore-filtered.sql");
-    fs.writeFileSync(filteredPath, removePgMigrationsData(sqlContent));
+    // Only strip pgmigrations for data-only backups — migrations run separately for those.
+    // For schema+data backups, pgmigrations is in the dump and must be restored as-is.
+    const finalContent = backupType === "data-only" ? removePgMigrationsData(sqlContent) : sqlContent;
+    fs.writeFileSync(filteredPath, finalContent);
     runShell(
       `psql -U ${pg.user} -h ${pg.host} -p ${pg.port} -d ${pg.db} --single-transaction -v ON_ERROR_STOP=1 -q -f '${filteredPath}'`,
       pg.pass

@@ -1,0 +1,15 @@
+# macOS-specific overrides (Apple Silicon / Docker Desktop)
+# Applied automatically by `just compose-dev` when running on macOS.
+
+services:
+  app:
+    platform: linux/arm64
+
+  essentia:
+    platform: linux/arm64
+
+  ga-service:
+    platform: linux/arm64
+
+  download-worker:
+    platform: linux/arm64
