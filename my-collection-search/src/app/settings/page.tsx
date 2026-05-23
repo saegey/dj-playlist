@@ -8,6 +8,7 @@ import ActionsGrid from "@/components/settings/ActionsGrid";
 import FriendsDiscogsSection from "@/components/settings/FriendsDiscogsSection";
 import DatabaseBackups from "@/components/settings/DatabaseBackups";
 import DatabaseRestore from "@/components/settings/DatabaseRestore";
+import BackupPolicySettingsSection from "@/components/settings/BackupPolicySettingsSection";
 import GamdlSettingsSection from "@/components/settings/GamdlSettingsSection";
 import AiPromptSettingsSection from "@/components/settings/AiPromptSettingsSection";
 import EmbeddingPromptSettingsSection from "@/components/settings/EmbeddingPromptSettingsSection";
@@ -26,6 +27,7 @@ export default function SettingsPage() {
             <AiPromptSettingsSection />
             <EmbeddingPromptSettingsSection />
             <FriendsDiscogsSection />
+            <BackupPolicySettingsSection />
             <DatabaseBackups />
             <DatabaseRestore />
           </Box>

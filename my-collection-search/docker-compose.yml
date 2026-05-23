@@ -28,6 +28,10 @@ services:
       MPD_HOST: ${MPD_HOST:-mpd}
       MPD_PORT: ${MPD_PORT:-6600}
       MPD_PATH_PREFIX: ${MPD_PATH_PREFIX:-}
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
+      B2_ACCOUNT_ID: ${B2_ACCOUNT_ID:-}
+      B2_ACCOUNT_KEY: ${B2_ACCOUNT_KEY:-}
 
     depends_on:
       - db

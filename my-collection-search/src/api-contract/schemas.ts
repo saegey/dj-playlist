@@ -210,6 +210,48 @@ export const gamdlConnectionTestDetailsSchema = z.object({
   error_type: z.string().optional(),
 });
 
+export const backupProviderSchema = z.enum(["restic-b2"]);
+export const backupRetentionPresetSchema = z.enum([
+  "aggressive",
+  "balanced",
+  "archive",
+]);
+
+export const backupPolicySchema = z.object({
+  enabled: z.boolean(),
+  provider: backupProviderSchema,
+  schedule_cron: z.string().min(1),
+  retention_preset: backupRetentionPresetSchema,
+  include_database: z.boolean(),
+  include_audio_files: z.boolean(),
+  include_album_covers: z.boolean(),
+  include_uploads: z.boolean(),
+  updated_at: z.string(),
+});
+
+export const backupPolicyGetResponseSchema = z.object({
+  policy: backupPolicySchema,
+});
+
+export const backupPolicyPutBodySchema = z
+  .object({
+    enabled: z.boolean().optional(),
+    provider: backupProviderSchema.optional(),
+    schedule_cron: z.string().min(1).optional(),
+    retention_preset: backupRetentionPresetSchema.optional(),
+    include_database: z.boolean().optional(),
+    include_audio_files: z.boolean().optional(),
+    include_album_covers: z.boolean().optional(),
+    include_uploads: z.boolean().optional(),
+  })
+  .strict();
+
+export const backupPolicyPutResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  policy: backupPolicySchema,
+});
+
 export const gamdlConnectionTestResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),

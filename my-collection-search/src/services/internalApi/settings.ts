@@ -4,6 +4,10 @@ import {
   aiPromptSettingsPutBodySchema,
   aiPromptSettingsPutResponseSchema,
   aiPromptSettingsQuerySchema,
+  backupPolicyGetResponseSchema,
+  backupPolicyPutBodySchema,
+  backupPolicyPutResponseSchema,
+  backupPolicySchema,
   embeddingPromptSettingsGetResponseSchema,
   embeddingPromptSettingsPutBodySchema,
   embeddingPromptSettingsPutResponseSchema,
@@ -52,6 +56,12 @@ export type ResetGamdlSettingsResponse = z.infer<
 >;
 export type GamdlConnectionTestResponse = z.infer<
   typeof gamdlConnectionTestResponseSchema
+>;
+export type BackupPolicy = z.infer<typeof backupPolicySchema>;
+export type BackupPolicyResponse = z.infer<typeof backupPolicyGetResponseSchema>;
+export type UpdateBackupPolicyBody = z.input<typeof backupPolicyPutBodySchema>;
+export type UpdateBackupPolicyResponse = z.infer<
+  typeof backupPolicyPutResponseSchema
 >;
 
 export async function fetchAiPromptSettings(
@@ -144,5 +154,22 @@ export async function resetGamdlSettings(
 export async function testGamdlConnection(): Promise<GamdlConnectionTestResponse> {
   return await http<GamdlConnectionTestResponse>("/api/settings/gamdl/test", {
     method: "POST",
+  });
+}
+
+export async function fetchBackupPolicy(): Promise<BackupPolicyResponse> {
+  return await http<BackupPolicyResponse>("/api/settings/backup", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export async function updateBackupPolicy(
+  body: UpdateBackupPolicyBody
+): Promise<UpdateBackupPolicyResponse> {
+  return await http<UpdateBackupPolicyResponse>("/api/settings/backup", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
   });
 }

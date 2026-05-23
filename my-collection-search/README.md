@@ -40,8 +40,37 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm migrate
 - `DATABASE_URL`
 - `REDIS_URL`
 - Provider credentials (Apple/Spotify/Discogs/OpenAI) as needed
+- `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY` (for remote backups)
 
 `DATABASE_URL` is compose-configurable via env and defaults to local docker Postgres when not set.
+
+## Remote Backups (Restic + Backblaze B2)
+
+The app can run scheduled remote backups using policy from `config/backup-policy.yml`.
+
+Required environment variables:
+- `RESTIC_REPOSITORY` (B2 format: `b2:<bucket-name>:<path>`)
+- `RESTIC_PASSWORD`
+- `B2_ACCOUNT_ID`
+- `B2_ACCOUNT_KEY`
+
+Example:
+```bash
+RESTIC_REPOSITORY=b2:groovenet-backups:prod/my-collection-search
+RESTIC_PASSWORD=change-this-long-secret
+B2_ACCOUNT_ID=0000000000000000000000001
+B2_ACCOUNT_KEY=K0000000000000000000000000000000000
+```
+
+One-time repository initialization:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec app restic init
+```
+
+Optional connectivity check:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec app restic snapshots
+```
 
 ## State ownership
 
