@@ -40,6 +40,8 @@ services:
     build:
       context: .
     image: node:20
+    profiles:
+      - migrate
     working_dir: /app
     volumes:
       - .:/app

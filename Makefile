@@ -101,10 +101,10 @@ release-localbuild: tag-push deploy-prod-remote-localbuild
 
 # Database migrations
 migrate-up: check-compose
-	$(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml run --rm migrate
+	$(COMPOSE_CMD) --profile migrate -f $(COMPOSE_DIR)/docker-compose.yml run --rm migrate
 
 migrate-down: check-compose
-	$(COMPOSE_CMD) -f $(COMPOSE_DIR)/docker-compose.yml run --rm migrate npx node-pg-migrate down
+	$(COMPOSE_CMD) --profile migrate -f $(COMPOSE_DIR)/docker-compose.yml run --rm migrate npx node-pg-migrate down
 
 migrate-create:
 	@if [ -z "$(NAME)" ]; then echo "Usage: make migrate-create NAME=my-migration-name"; exit 1; fi
