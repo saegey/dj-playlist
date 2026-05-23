@@ -22,8 +22,11 @@ git checkout "${TAG}"
 echo "==> Pulling images for ${TAG}"
 IMAGE_TAG="${TAG}" docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" pull "${SERVICES[@]}"
 
+echo "==> Starting database dependencies"
+IMAGE_TAG="${TAG}" docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d db redis
+
 echo "==> Running migrations"
-IMAGE_TAG="${TAG}" docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" run --rm migrate
+IMAGE_TAG="${TAG}" docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" run --rm --use-aliases migrate
 
 echo "==> Starting services"
 IMAGE_TAG="${TAG}" docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d --remove-orphans

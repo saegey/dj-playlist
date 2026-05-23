@@ -22,8 +22,11 @@ git checkout "${TAG}"
 echo "==> Building images locally on server"
 docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" build "${BUILD_SERVICES[@]}"
 
+echo "==> Starting database dependencies"
+docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d db redis
+
 echo "==> Running migrations"
-docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" run --rm migrate
+docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" run --rm --use-aliases migrate
 
 echo "==> Starting services"
 docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d --force-recreate --remove-orphans
