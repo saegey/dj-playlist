@@ -621,7 +621,7 @@ def analyze_local_audio(job_data: Dict[str, Any]) -> Dict[str, Any]:
 
 def has_download_urls(job_data: Dict[str, Any]) -> bool:
     """Return True if at least one remote source URL is present."""
-    for key in ['apple_music_url', 'spotify_url', 'youtube_url', 'soundcloud_url']:
+    for key in ['apple_music_url', 'youtube_url', 'soundcloud_url']:
         value = job_data.get(key)
         if isinstance(value, str) and value.strip():
             return True
@@ -649,7 +649,7 @@ def download_audio(job_data: Dict[str, Any]) -> Dict[str, Any]:
 
     # Debug: Log the specific URLs being processed
     urls_found = []
-    for url_key in ['apple_music_url', 'spotify_url', 'youtube_url', 'soundcloud_url']:
+    for url_key in ['apple_music_url', 'youtube_url', 'soundcloud_url']:
         if url_key in job_data and job_data[url_key]:
             urls_found.append(f"{url_key}: {job_data[url_key]}")
     logger.info(f"URLs available for download: {urls_found}")

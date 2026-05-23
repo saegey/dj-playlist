@@ -30,7 +30,7 @@
   - docker compose -f docker-compose.yml -f docker-compose.dev.yml up app
 - Key env vars (see docker-compose.yml and .env):
   - DATABASE_URL
-  - Apple/Spotify/Discogs/OpenAI credentials as needed
+  - Apple/Discogs/OpenAI credentials as needed
 
 ## Structure (key folders)
 - src/components — UI (e.g., SearchResults, TrackResult, PlaylistViewer)
@@ -111,7 +111,7 @@ Tracks
   - body: { track_id: string, username: string }
   - res: void
 - POST /api/tracks/analyze
-  - body: { track_id: string, apple_music_url?, youtube_url?, soundcloud_url?, spotify_url? }
+  - body: { track_id: string, apple_music_url?, youtube_url?, soundcloud_url?,  }
   - res: { rhythm?, tonal?, metadata?, ... }
 - POST /api/tracks/upload (multipart/form-data)
   - body: file, track_id
@@ -134,10 +134,10 @@ AI
 - POST /api/ai/apple-music-search
   - body: { title?, artist?, album?, isrc? }
   - res: { results: AppleMusicResult[] }
-- POST /api/ai/spotify-track-search
+- POST /api/ai/apple-music-search
   - body: { title?, artist? }
-  - res: { results: SpotifyTrackSearchItem[] }
-  - 401 triggers redirect to /api/spotify/login
+  - res: { results: AppleMusicTrackSearchItem[] }
+  - 401 triggers redirect to /api/ai/apple-music-search
 
 Playlists
 - POST /api/playlists
@@ -154,7 +154,7 @@ Playlists
   - res: 204 on success
 
 Friends
-- GET /api/friends?showCurrentUser=&showSpotifyUsernames=
+- GET /api/friends?showCurrentUser=&showCurrentUser=
   - res: { friends: string[] }
 - POST /api/friends
   - body: { username: string }
@@ -163,10 +163,9 @@ Friends
   - res: any
   - also supports SSE via DELETE with streaming helper
 
-Spotify integration
-- POST /api/spotify/index → { message }
-- GET /api/spotify/download?spotify_username=
-  - 401 → redirect to /api/spotify/login
+Streaming integration
+- GET /api/albums/[releaseId]/download?friend_id=
+  - 401 → redirect to /api/ai/apple-music-search
   - res: { newReleases: string[], alreadyHave: string[], total? }
 
 Backups
@@ -177,7 +176,7 @@ Backups
 Error shape & status codes
 - http<T>() throws Error(message) when !res.ok.
   - Message taken from { error } or { message } JSON field, else `HTTP <status>`.
-  - Expect 400 for bad inputs, 401 for auth flows (Spotify), 500 for server errors.
+  - Expect 400 for bad inputs, 401 for , 500 for server errors.
 
 ## Conventions
 - TS strict, path alias @/* (see tsconfig paths)
@@ -208,7 +207,7 @@ Tables
     - position varchar(20)
     - discogs_url text
     - apple_music_url text
-    - spotify_url text (indexed)
+    - 
     - youtube_url text
     - soundcloud_url text
     - album_thumbnail text
@@ -225,7 +224,7 @@ Tables
   - Indexes/constraints:
     - tracks_compound_pk on (track_id, username)
     - Non-unique index on track_id (tracks_track_id_idx)
-    - Index on spotify_url
+    - 
     - Index on friend_id (idx_tracks_friend_id)
     - Foreign key: friend_id → friends.id
 

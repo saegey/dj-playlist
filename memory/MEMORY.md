@@ -18,7 +18,6 @@ Separated backend/frontend code into distinct directories:
 `src/scripts/` uses relative imports (not `@/` aliases):
 - `backfill-essentia.ts` → `../server/services/trackOpsService`
 - `backfill-identity.ts` → `../server/repositories/embeddingsRepository`
-- `reindex-meilisearch.ts` → uses `@/` aliases (works fine)
 
 ## Workspace Structure (2026-03-01)
 npm workspaces set up at root `dj-playlist/package.json`:

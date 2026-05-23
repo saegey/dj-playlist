@@ -581,7 +581,6 @@ const remainingTracksContracts: ApiContractRoute[] = [
               track_id: { type: "string" },
               friend_id: { type: "integer" },
               apple_music_url: { type: "string" },
-              spotify_url: { type: "string" },
               youtube_url: { type: "string" },
               soundcloud_url: { type: "string" },
               preferred_downloader: { type: "string" },

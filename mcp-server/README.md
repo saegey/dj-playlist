@@ -99,7 +99,7 @@ claude mcp list
 ## Architecture
 
 ```
-Claude Code → MCP Server → @groovenet/client → Next.js API → PostgreSQL / MeiliSearch
+Claude Code → MCP Server → @groovenet/client → Next.js API → PostgreSQL
 ```
 
 All tools delegate to `GroovenetClient` methods — no API logic is duplicated in the MCP server.

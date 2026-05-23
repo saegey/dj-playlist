@@ -6,7 +6,7 @@ This guide explains how to add AirPlay receiver functionality to your GrooveNET 
 
 With AirPlay receiver enabled, your Intel NUC becomes a network audio endpoint that appears in the AirPlay menu on your Apple devices. You can:
 
-- Stream music from Apple Music, Spotify, or any iOS app to your USB DAC
+- Stream music from Apple Music or any iOS app to your USB DAC
 - Use your high-quality DAC for AirPlay without needing additional hardware
 - Optionally run AirPlay and the Next.js app playback simultaneously (with dmix)
 

@@ -89,7 +89,6 @@ export function useTrackEditSearchIntegrations({
           apple_music_url: form.apple_music_url || null,
           youtube_url: form.youtube_url || null,
           soundcloud_url: form.soundcloud_url || null,
-          spotify_url: track?.spotify_url,
         },
         aiPrompt
       );

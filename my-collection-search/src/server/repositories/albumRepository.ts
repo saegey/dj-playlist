@@ -314,14 +314,14 @@ export class AlbumRepository {
       `INSERT INTO tracks (
         track_id, friend_id, username, title, artist, album, year,
         styles, genres, duration, duration_seconds, position,
-        discogs_url, apple_music_url, spotify_url, youtube_url, soundcloud_url,
+        discogs_url, apple_music_url, youtube_url, soundcloud_url,
         album_thumbnail, local_tags, bpm, key, notes, star_rating, release_id,
         library_identifier
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
         $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-        $21, $22, $23, $24, $25
+        $21, $22, $23, $24
       )
       RETURNING *`,
       values
@@ -337,14 +337,14 @@ export class AlbumRepository {
       `INSERT INTO tracks (
         track_id, friend_id, username, title, artist, album, year,
         styles, genres, duration, duration_seconds, position,
-        discogs_url, apple_music_url, spotify_url, youtube_url, soundcloud_url,
+        discogs_url, apple_music_url, youtube_url, soundcloud_url,
         album_thumbnail, local_tags, bpm, key, notes, star_rating, release_id,
         library_identifier
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
         $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-        $21, $22, $23, $24, $25
+        $21, $22, $23, $24
       )
       ON CONFLICT (track_id, username)
       DO UPDATE SET
@@ -358,7 +358,6 @@ export class AlbumRepository {
         duration_seconds = EXCLUDED.duration_seconds,
         position = EXCLUDED.position,
         apple_music_url = EXCLUDED.apple_music_url,
-        spotify_url = EXCLUDED.spotify_url,
         youtube_url = EXCLUDED.youtube_url,
         soundcloud_url = EXCLUDED.soundcloud_url,
         album_thumbnail = EXCLUDED.album_thumbnail,

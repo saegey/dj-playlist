@@ -26,7 +26,6 @@ type UpdatableTrackFields = Partial<
     | "audio_file_album_art_url"
     | "youtube_url"
     | "soundcloud_url"
-    | "spotify_url"
     | "duration_seconds"
     | "notes"
     | "bpm"
@@ -91,7 +90,6 @@ const UPDATABLE_COLUMNS = {
   apple_music_url: "apple_music_url",
   youtube_url: "youtube_url",
   soundcloud_url: "soundcloud_url",
-  spotify_url: "spotify_url",
   local_audio_url: "local_audio_url",
   audio_file_album_art_url: "audio_file_album_art_url",
   duration_seconds: "duration_seconds",

@@ -6,8 +6,7 @@ import { FiDatabase, FiBriefcase, FiTrash2, FiMoreVertical, FiImage } from "reac
 import { SiDiscogs } from "react-icons/si";
 import { toaster } from "@/components/ui/toaster";
 import {
-  useUpdateDiscogsIndex,
-  useSyncDiscogs,
+    useSyncDiscogs,
   useVerifyManifests,
   useCleanupManifests,
   useDeleteReleases,
@@ -30,10 +29,7 @@ type ActionsGridProps = {
 export default function ActionsGrid({ showTitle = true }: ActionsGridProps) {
   const [removedReleasesOpen, setRemovedReleasesOpen] = useState(false);
   const [removedReleases, setRemovedReleases] = useState<string[]>([]);
-  const [removedUsername, setRemovedUsername] = useState<string>("");
-
-  const discogsIndex = useUpdateDiscogsIndex();
-  const deleteReleases = useDeleteReleases();
+  const [removedUsername, setRemovedUsername] = useState<string>("");  const deleteReleases = useDeleteReleases();
   const discogsSync = useSyncDiscogs((data) => {
     // Called when removed releases are detected during sync
     if (data.removedIds.length > 0) {
@@ -56,7 +52,6 @@ export default function ActionsGrid({ showTitle = true }: ActionsGridProps) {
   >([]);
 
   const disableAll =
-    discogsIndex.isPending ||
     discogsSync.isPending ||
     addBackupLoading ||
     verifyManifests.isPending ||
@@ -257,30 +252,6 @@ export default function ActionsGrid({ showTitle = true }: ActionsGridProps) {
               >
                 <SiDiscogs /> Sync Discogs
               </Menu.Item>
-
-              <Menu.Item
-                value="ingest-discogs"
-                onClick={() =>
-                  discogsIndex.mutate(undefined, {
-                    onSuccess: (data) =>
-                      toaster.create({
-                        title: "Discogs Ingest Complete",
-                        type: "success",
-                        description: data?.message || "Done",
-                      }),
-                    onError: (e) =>
-                      toaster.create({
-                        title: "Discogs Ingest Failed",
-                        type: "error",
-                        description: e.message,
-                      }),
-                  })
-                }
-                disabled={disableAll || discogsIndex.isPending}
-              >
-                <FiDatabase /> Ingest Discogs Data
-              </Menu.Item>
-
               <Menu.Separator />
 
               <Menu.Item

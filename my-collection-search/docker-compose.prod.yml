@@ -16,7 +16,6 @@ services:
       - ${APP_AUDIO_MOUNT:-music_data:/app/audio}
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
-      - spotify_exports:/app/spotify_exports
       - cookie_data:/app/cookies
       - album_covers:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
@@ -89,9 +88,6 @@ volumes:
     external: true
   discogs_exports:
     name: teststack_discogs_exports
-    external: true
-  spotify_exports:
-    name: teststack_spotify_exports
     external: true
   redis_data:
     name: teststack_redis_data

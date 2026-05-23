@@ -143,11 +143,20 @@ export default function SettingsPage() {
                         px={3}
                         mb={2}
                         w="full"
+                        minW={0}
+                        whiteSpace="normal"
                         onClick={() => setActiveSectionId(section.id)}
                       >
-                        <Box textAlign="left">
-                          <Text fontWeight="semibold">{section.label}</Text>
-                          <Text fontSize="xs" color={isActive ? "blue.100" : "gray.500"}>
+                        <Box textAlign="left" w="full" minW={0}>
+                          <Text fontWeight="semibold" whiteSpace="normal">
+                            {section.label}
+                          </Text>
+                          <Text
+                            fontSize="xs"
+                            color={isActive ? "blue.100" : "gray.500"}
+                            whiteSpace="normal"
+                            overflowWrap="anywhere"
+                          >
                             {section.description}
                           </Text>
                         </Box>

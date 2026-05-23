@@ -26,7 +26,6 @@ export interface TrackMetadata {
   local_tags?: string;
   star_rating?: number;
   apple_music_url?: string;
-  spotify_url?: string;
   youtube_url?: string;
   soundcloud_url?: string;
 }

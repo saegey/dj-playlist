@@ -430,7 +430,6 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           discogs_url: t.discogs_url,
           apple_music_url: t.apple_music_url,
           youtube_url: t.youtube_url,
-          spotify_url: t.spotify_url,
           soundcloud_url: t.soundcloud_url,
           album_thumbnail: t.album_thumbnail,
           local_tags: t.local_tags,

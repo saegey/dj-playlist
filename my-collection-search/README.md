@@ -39,7 +39,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm migrate
 
 - `DATABASE_URL`
 - `REDIS_URL`
-- Provider credentials (Apple/Spotify/Discogs/OpenAI) as needed
+- Provider credentials (Apple/Discogs/OpenAI) as needed
 - `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY` (for remote backups)
 
 `DATABASE_URL` is compose-configurable via env and defaults to local docker Postgres when not set.

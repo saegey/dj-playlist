@@ -1,9 +1,11 @@
 import * as Sentry from "@sentry/nextjs";
-import { startBackupScheduler } from "@/server/services/backupRunnerService";
 
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("../sentry.server.config");
+    const { startBackupScheduler } = await import(
+      "@/server/services/backupRunnerService"
+    );
     startBackupScheduler();
   }
 

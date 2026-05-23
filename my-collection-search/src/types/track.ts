@@ -16,7 +16,6 @@ export type Track = {
   discogs_url: string;
   apple_music_url: string;
   youtube_url?: string;
-  spotify_url?: string;
   soundcloud_url?: string;
   album_thumbnail?: string;
   local_tags?: string | undefined;
@@ -119,7 +118,6 @@ export interface ProcessedTrack {
   artists: DiscogsSimpleArtist[];
   duration_seconds?: number | null;
   apple_music_url?: string | null;
-  spotify_url?: string | null;
   youtube_url?: string | null;
   soundcloud_url?: string | null;
   local_audio_url?: string | null;

@@ -95,7 +95,6 @@ export default function EnrichmentTrackStep({
             apple_music_url: track.apple_music_url ?? null,
             youtube_url: track.youtube_url ?? null,
             soundcloud_url: track.soundcloud_url ?? null,
-            spotify_url: track.spotify_url ?? null,
           },
           aiPrompt
         );

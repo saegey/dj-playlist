@@ -51,8 +51,6 @@ jobs:
             APPLE_MUSIC_KEY_ID=dummykid
             APPLE_MUSIC_PRIVATE_KEY_PATH=/path/to/dummy/private/key.pem
             DATABASE_URL=postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
-            MEILISEARCH_HOST=http://meili:7700
-            MEILISEARCH_API_KEY=mysupersecretkey
             YOUTUBE_API_KEY=dummyyoutubeapikey
 
       - name: Image digest
