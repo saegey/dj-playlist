@@ -64,10 +64,24 @@ Use helper script:
 ./scripts/restore-restic-assets.sh --restore-target /tmp/restore
 ```
 
+The script auto-detects whether `app` uses bind mounts or named volumes for:
+
+- `/app/audio`
+- `/app/public/uploads/album-covers`
+- `/app/dumps`
+
+If mount inspection fails, it falls back to default volume names.
+
 Dry run:
 
 ```bash
 ./scripts/restore-restic-assets.sh --restore-target /tmp/restore --dry-run
+```
+
+If your app container name is not `myapp`:
+
+```bash
+./scripts/restore-restic-assets.sh --restore-target /tmp/restore --app-container <container_name>
 ```
 
 If your volume names differ:
