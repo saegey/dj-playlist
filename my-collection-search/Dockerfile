@@ -24,6 +24,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   docker-ce-cli \
   && rm -rf /var/lib/apt/lists/*
 
+RUN npm install -g npm@latest
+
 WORKDIR /app
 
 # Install Node deps (cache npm downloads)

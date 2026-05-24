@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
 import jwt from "jsonwebtoken";
 
 const APPLE_MUSIC_API_URL = "https://api.music.apple.com/v1/catalog/us/search";
@@ -8,11 +6,11 @@ const APPLE_MUSIC_API_URL = "https://api.music.apple.com/v1/catalog/us/search";
 function generateAppleMusicDeveloperToken() {
   const teamId = process.env.APPLE_MUSIC_TEAM_ID;
   const keyId = process.env.APPLE_MUSIC_KEY_ID;
-  const privateKeyPath = process.env.APPLE_MUSIC_PRIVATE_KEY_PATH || path.resolve(process.cwd(), `AuthKey_${keyId}.p8`);
-  if (!teamId || !keyId || !privateKeyPath) {
-    throw new Error("Missing Apple Music credentials (TEAM_ID, KEY_ID, or PRIVATE_KEY_PATH)");
+  const privateKeyRaw = process.env.APPLE_MUSIC_PRIVATE_KEY;
+  if (!teamId || !keyId || !privateKeyRaw) {
+    throw new Error("Missing Apple Music credentials (APPLE_MUSIC_TEAM_ID, APPLE_MUSIC_KEY_ID, or APPLE_MUSIC_PRIVATE_KEY)");
   }
-  const privateKey = fs.readFileSync(privateKeyPath, "utf8");
+  const privateKey = privateKeyRaw.replace(/\\n/g, "\n");
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     iss: teamId,

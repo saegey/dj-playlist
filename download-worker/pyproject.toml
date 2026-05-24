@@ -1,0 +1,11 @@
+[project]
+name = "download-worker"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = [
+    "redis==5.0.1",
+    "yt-dlp==2025.10.14",
+    "gamdl==2.6.5",
+    "requests==2.31.0",
+    "psycopg2-binary==2.9.9",
+]

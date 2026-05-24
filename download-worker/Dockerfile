@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1.7
 FROM python:3.12-slim
 
-# Install system dependencies
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock && \
@@ -13,19 +12,19 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements first for better caching
-COPY worker/requirements.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir -r requirements.txt
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Copy worker scripts
-COPY worker/ .
+COPY pyproject.toml uv.lock ./
 
-# Create audio output and download directories
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
+
+ENV PATH="/app/.venv/bin:$PATH"
+
+COPY . .
+
 RUN mkdir -p /app/audio /app/downloads
 
-# Run the RQ worker
 CMD ["python", "download_worker.py"]
