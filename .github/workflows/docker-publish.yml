@@ -163,7 +163,7 @@ jobs:
       - name: Build and push Download Worker
         uses: docker/build-push-action@v5
         with:
-          context: ./download-worker
+          context: .
           file: ./download-worker/Dockerfile
           push: ${{ env.SHOULD_PUSH == 'true' }}
           platforms: linux/amd64,linux/arm64

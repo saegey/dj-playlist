@@ -93,7 +93,8 @@ services:
 
   download-worker:
     build:
-      context: ../download-worker
+      context: ../
+      dockerfile: download-worker/Dockerfile
     container_name: download-worker
     environment:
       REDIS_URL: redis://redis:6379
