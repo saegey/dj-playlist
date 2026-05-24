@@ -6,7 +6,7 @@ function safePart(value: string): string {
 }
 
 export function getEssentiaDataDir(): string {
-  return process.env.ESSENTIA_DATA_DIR || path.join(process.cwd(), "essentia-data");
+  return process.env.ESSENTIA_DATA_DIR || path.join(/* turbopackIgnore: true */ process.cwd(), "essentia-data");
 }
 
 function assertWithinDataDir(filePath: string): void {

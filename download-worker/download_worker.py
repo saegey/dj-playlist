@@ -283,7 +283,7 @@ def update_track_analysis(track_id: str, friend_id: int, analysis_data: Dict[str
 
         # Call the tracks update API
         app_url = os.getenv('APP_URL', 'http://app:3000')
-        update_url = f"{app_url}/api/tracks/update"
+        update_url = f"{app_url}/api/tracks"
 
         logger.info(f"Updating track via API: {update_url}")
         response = requests.patch(
@@ -355,7 +355,7 @@ def ensure_local_audio_file(job_data: Dict[str, Any]) -> str:
 def update_track_duration(track_id: str, friend_id: int, duration_seconds: int):
     """Update track duration via app API."""
     app_url = os.getenv('APP_URL', 'http://app:3000')
-    update_url = f"{app_url}/api/tracks/update"
+    update_url = f"{app_url}/api/tracks"
     update_data = {
         'track_id': track_id,
         'friend_id': friend_id,
@@ -374,7 +374,7 @@ def update_track_duration(track_id: str, friend_id: int, duration_seconds: int):
 def update_track_album_art_url(track_id: str, friend_id: int, album_art_url: str):
     """Update track audio_file_album_art_url via app API."""
     app_url = os.getenv('APP_URL', 'http://app:3000')
-    update_url = f"{app_url}/api/tracks/update"
+    update_url = f"{app_url}/api/tracks"
     update_data = {
         'track_id': track_id,
         'friend_id': friend_id,
@@ -750,7 +750,7 @@ def download_audio(job_data: Dict[str, Any]) -> Dict[str, Any]:
             }
 
             app_url = os.getenv('APP_URL', 'http://app:3000')
-            update_url = f"{app_url}/api/tracks/update"
+            update_url = f"{app_url}/api/tracks"
 
             logger.info(f"Updating track with local_audio_url: {audio_filename}")
             logger.info(f"Update URL: {update_url}")
