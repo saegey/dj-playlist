@@ -23,10 +23,6 @@ services:
       - discogs_exports:/app/discogs_exports
     command: sh -c "npm install && npm run dev -- -H 0.0.0.0 -p 3000"
 
-  migrate:
-    volumes:
-      - .:/app:ro
-
   essentia:
     container_name: essentia-api-dev
 

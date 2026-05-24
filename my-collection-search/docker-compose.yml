@@ -39,15 +39,12 @@ services:
   migrate:
     build:
       context: .
-    image: node:20
     profiles:
       - migrate
     working_dir: /app
-    volumes:
-      - .:/app
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-djplaylist}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-djplaylist}
-    entrypoint: ["sh", "-c", "npx wait-port db:5432 && npx node-pg-migrate up"]
+    entrypoint: ["sh", "-c", "until pg_isready -h db -U ${POSTGRES_USER:-djplaylist}; do sleep 1; done && npm run migrate -- up"]
     depends_on:
       - db
 
