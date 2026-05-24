@@ -104,7 +104,15 @@ release: tag-push push-images deploy-prod-remote
 deploy-prod-remote-localbuild:
   ssh {{prod_host}} 'set -euo pipefail; cd {{prod_stack_dir}}; if [ -x ./scripts/deploy-prod-localbuild.sh ]; then ./scripts/deploy-prod-localbuild.sh {{tag}}; elif [ -x ./my-collection-search/scripts/deploy-prod-localbuild.sh ]; then ./my-collection-search/scripts/deploy-prod-localbuild.sh {{tag}}; else echo "deploy-prod-localbuild.sh not found"; exit 127; fi'
 
-release-localbuild: tag-push deploy-prod-remote-localbuild
+release-localbuild server="vinyl": tag-push
+  #!/usr/bin/env bash
+  set -euo pipefail
+  case "{{server}}" in
+    vinyl)   host=vinyl.local;   dir=/opt/stacks/dj-playlist ;;
+    beelink) host=beelink.local; dir=/srv/docker/groovenet ;;
+    *) echo "Unknown server: {{server}}. Known servers: vinyl, beelink"; exit 1 ;;
+  esac
+  TAG="{{tag}}" just prod_host="$host" prod_stack_dir="$dir" deploy-prod-remote-localbuild
 
 migrate-up: check-compose
   {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml run --rm migrate
