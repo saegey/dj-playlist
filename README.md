@@ -1,7 +1,7 @@
 # GrooveNET
 ## Vinyl collection management for DJs
 
-![screenshot](https://github.com/saegey/personal-blog/blob/main/content/grooveNetdemo.gif?raw=true)
+![screenshot](https://raw.githubusercontent.com/saegey/dj-playlist/refs/heads/main/content/grooveNetdemo.gif)
 
 A self-hosted, full-stack app for managing your vinyl collection. Import from Discogs, enrich metadata with Apple Music and YouTube, analyze audio for BPM/key/mood, and generate intelligent playlists — all from a web UI or terminal.
 
