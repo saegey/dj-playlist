@@ -64,7 +64,7 @@ build-ga-service:
   {{buildkit_env}} docker buildx build -t ghcr.io/saegey/ga-service:{{tag}} -f ga-service/Dockerfile ga-service
 
 build-download-worker:
-  {{buildkit_env}} docker buildx build -t ghcr.io/saegey/download-worker:{{tag}} -f {{compose_dir}}/Dockerfile.download-worker {{compose_dir}}
+  {{buildkit_env}} docker buildx build -t ghcr.io/saegey/download-worker:{{tag}} -f download-worker/Dockerfile download-worker
 
 build-all: build-app build-essentia build-ga-service build-download-worker
 
@@ -77,7 +77,7 @@ push-images:
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/myapp:{{tag}} -f {{compose_dir}}/Dockerfile {{compose_dir}}
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/essentia-api:{{tag}} -f essentia-api/Dockerfile essentia-api
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/ga-service:{{tag}} -f ga-service/Dockerfile ga-service
-  {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/download-worker:{{tag}} -f {{compose_dir}}/Dockerfile.download-worker {{compose_dir}}
+  {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/download-worker:{{tag}} -f download-worker/Dockerfile download-worker
 
 deploy-prod-local:
   cd {{compose_dir}} && ./scripts/deploy-prod.sh {{tag}}
