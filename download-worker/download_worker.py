@@ -14,6 +14,14 @@ import subprocess
 import logging
 import requests
 
+from groovenet_client import Client
+from groovenet_client.api.tracks import patch_api_tracks
+from groovenet_client.models import PatchApiTracksBody
+
+
+def get_groovenet_client() -> Client:
+    return Client(base_url=os.getenv("APP_URL", "http://app:3000"), timeout=30)
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -237,7 +245,6 @@ def get_audio_metadata_year(file_path: str) -> Optional[int]:
 def update_track_analysis(track_id: str, friend_id: int, analysis_data: Dict[str, Any], audio_year: Optional[int] = None):
     """Update track with analysis results via app API"""
     try:
-        # Extract relevant fields from analysis
         bpm = None
         key = None
         danceability = None
@@ -264,43 +271,27 @@ def update_track_analysis(track_id: str, friend_id: int, analysis_data: Dict[str
                 if 'length' in audio_props and isinstance(audio_props['length'], (int, float)):
                     duration_seconds = int(round(audio_props['length']))
 
-        # Call app API to update track
-        update_data = {
-            'track_id': track_id,
-            'friend_id': friend_id
-        }
-
+        body = PatchApiTracksBody(track_id=track_id, friend_id=friend_id)
         if bpm is not None:
-            update_data['bpm'] = bpm
+            body["bpm"] = bpm
         if key:
-            update_data['key'] = key
+            body["key"] = key
         if danceability is not None:
-            update_data['danceability'] = danceability
+            body["danceability"] = danceability
         if duration_seconds is not None:
-            update_data['duration_seconds'] = duration_seconds
+            body["duration_seconds"] = duration_seconds
         if audio_year is not None:
-            update_data['year'] = str(audio_year)
+            body["year"] = str(audio_year)
 
-        # Call the tracks update API
-        app_url = os.getenv('APP_URL', 'http://app:3000')
-        update_url = f"{app_url}/api/tracks"
-
-        logger.info(f"Updating track via API: {update_url}")
-        response = requests.patch(
-            update_url,
-            json=update_data,
-            headers={'Content-Type': 'application/json'},
-            timeout=30
-        )
-
-        if response.ok:
+        response = patch_api_tracks.sync(client=get_groovenet_client(), body=body)
+        if response is not None:
             logger.info(f"Track {track_id} updated successfully with analysis data")
         else:
-            logger.warning(f"Failed to update track {track_id}: {response.status_code} {response.text}")
+            logger.warning(f"Failed to update track {track_id} with analysis data")
 
     except Exception as e:
         logger.error(f"Failed to update track analysis: {e}")
-        # Don't raise - this is not critical enough to fail the whole job
+        # Don't raise - analysis update failure should not fail the whole job
 
 def get_duration_seconds(file_path: str) -> int:
     """Get duration in seconds using ffprobe."""
@@ -354,41 +345,21 @@ def ensure_local_audio_file(job_data: Dict[str, Any]) -> str:
 
 def update_track_duration(track_id: str, friend_id: int, duration_seconds: int):
     """Update track duration via app API."""
-    app_url = os.getenv('APP_URL', 'http://app:3000')
-    update_url = f"{app_url}/api/tracks"
-    update_data = {
-        'track_id': track_id,
-        'friend_id': friend_id,
-        'duration_seconds': duration_seconds,
-    }
-    logger.info(f"Updating track duration via API: {update_url}")
-    response = requests.patch(
-        update_url,
-        json=update_data,
-        headers={'Content-Type': 'application/json'},
-        timeout=30
-    )
-    if not response.ok:
-        raise Exception(f"Failed to update duration: {response.status_code} {response.text}")
+    logger.info(f"Updating track duration for {track_id}")
+    body = PatchApiTracksBody(track_id=track_id, friend_id=friend_id)
+    body["duration_seconds"] = duration_seconds
+    response = patch_api_tracks.sync(client=get_groovenet_client(), body=body)
+    if response is None:
+        raise Exception(f"Failed to update duration for track {track_id}")
 
 def update_track_album_art_url(track_id: str, friend_id: int, album_art_url: str):
     """Update track audio_file_album_art_url via app API."""
-    app_url = os.getenv('APP_URL', 'http://app:3000')
-    update_url = f"{app_url}/api/tracks"
-    update_data = {
-        'track_id': track_id,
-        'friend_id': friend_id,
-        'audio_file_album_art_url': album_art_url,
-    }
-    logger.info(f"Updating track album art via API: {update_url}")
-    response = requests.patch(
-        update_url,
-        json=update_data,
-        headers={'Content-Type': 'application/json'},
-        timeout=30
-    )
-    if not response.ok:
-        raise Exception(f"Failed to update album art url: {response.status_code} {response.text}")
+    logger.info(f"Updating track album art for {track_id}")
+    body = PatchApiTracksBody(track_id=track_id, friend_id=friend_id)
+    body["audio_file_album_art_url"] = album_art_url
+    response = patch_api_tracks.sync(client=get_groovenet_client(), body=body)
+    if response is None:
+        raise Exception(f"Failed to update album art url for track {track_id}")
 
 def get_embedded_art_stream_index(file_path: str) -> Optional[int]:
     """Return the ffprobe stream index for embedded album art, if present."""
@@ -741,39 +712,15 @@ def download_audio(job_data: Dict[str, Any]) -> Dict[str, Any]:
 
         # Update track with local audio URL
         try:
-            # Get just the filename for the database
             audio_filename = os.path.basename(downloaded_file)
-            update_data = {
-                'track_id': track_id,
-                'friend_id': friend_id,
-                'local_audio_url': audio_filename
-            }
-
-            app_url = os.getenv('APP_URL', 'http://app:3000')
-            update_url = f"{app_url}/api/tracks"
-
             logger.info(f"Updating track with local_audio_url: {audio_filename}")
-            logger.info(f"Update URL: {update_url}")
-            logger.info(f"Update data: {update_data}")
-
-            response = requests.patch(
-                update_url,
-                json=update_data,
-                headers={'Content-Type': 'application/json'},
-                timeout=30
-            )
-
-            logger.info(f"Database update response: {response.status_code}")
-            if response.ok:
+            body = PatchApiTracksBody(track_id=track_id, friend_id=friend_id)
+            body["local_audio_url"] = audio_filename
+            response = patch_api_tracks.sync(client=get_groovenet_client(), body=body)
+            if response is not None:
                 logger.info(f"Successfully updated database with local_audio_url: {audio_filename}")
-                try:
-                    response_data = response.json()
-                    logger.info(f"Response data: {response_data}")
-                except:
-                    logger.info("Response body not JSON")
             else:
-                logger.error(f"Failed to update local_audio_url: {response.status_code} {response.text}")
-
+                logger.error(f"Failed to update local_audio_url for track {track_id}")
         except Exception as e:
             logger.warning(f"Failed to update local_audio_url: {e}")
 
@@ -790,21 +737,6 @@ def download_audio(job_data: Dict[str, Any]) -> Dict[str, Any]:
             # Analysis failure doesn't fail the whole job - download was successful
 
         update_job_status(job_id, 'processing', 95)
-
-        # Trigger MPD database update so new file is available for playback
-        try:
-            app_url = os.getenv('APP_URL', 'http://app:3000')
-            update_db_url = f"{app_url}/api/playback/update-db"
-            logger.info(f"Triggering MPD database update: {update_db_url}")
-
-            response = requests.post(update_db_url, timeout=10)
-            if response.ok:
-                logger.info("MPD database update triggered successfully")
-            else:
-                logger.warning(f"MPD database update failed: {response.status_code} {response.text}")
-        except Exception as e:
-            logger.warning(f"Could not trigger MPD database update: {e}")
-            # Don't fail the job if MPD update fails
 
         # Return success result
         result = {

@@ -20,7 +20,8 @@
     "backfill-identity": "tsx src/scripts/backfill-identity.ts",
     "backfill-audio-vibe": "tsx src/scripts/backfill-identity.ts -- --type=audio_vibe",
     "backfill-essentia": "tsx src/scripts/backfill-essentia.ts",
-    "openapi:check": "node --import tsx/esm scripts/check-openapi.ts"
+    "openapi:check": "node --import tsx/esm scripts/check-openapi.ts",
+    "openapi:generate-spec": "node --import tsx/esm scripts/generate-openapi-json.ts ../openapi-generated.json"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.33.0",

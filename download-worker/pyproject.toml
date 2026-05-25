@@ -8,4 +8,8 @@ dependencies = [
     "gamdl==2.6.5",
     "requests==2.31.0",
     "psycopg2-binary==2.9.9",
+    "groovenet-python-client",
 ]
+
+[tool.uv.sources]
+groovenet-python-client = { path = "../packages/groovenet-python", editable = true }
