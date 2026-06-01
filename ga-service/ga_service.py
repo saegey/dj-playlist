@@ -80,6 +80,7 @@ def run_optimizer(tracks, mode):
 async def optimize(req: OptimizeRequest):
     # Convert Pydantic models to plain dicts
     tracks = [_model_to_dict(t) for t in req.tracks]
+    print(f"Optimize request mode={req.mode} tracks={len(tracks)}", flush=True)
 
     # Offload CPU‐bound work to a thread
     try:
