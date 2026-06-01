@@ -1953,7 +1953,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
     operationId: "generateGeneticPlaylist",
     method: "post",
     path: "/api/playlists/genetic",
-    summary: "Generate genetic ordering for playlist tracks",
+    summary: "Generate optimized ordering for playlist tracks",
     tags: ["Playlists"],
     bodySchema: playlistGeneticBodySchema,
     successSchema: playlistGeneticResponseSchema,
@@ -1994,6 +1994,14 @@ export const apiContractRoutes: ApiContractRoute[] = [
                   },
                   minItems: 1,
                 },
+                mode: {
+                  type: "string",
+                  enum: ["genetic", "greedy", "cohesive_blocks"],
+                  default: "genetic",
+                  example: "cohesive_blocks",
+                  description:
+                    "Optimizer mode. cohesive_blocks favors genre/vibe blocks and fade-friendly transitions.",
+                },
               },
               required: ["playlist"],
               additionalProperties: false,
@@ -2009,6 +2017,11 @@ export const apiContractRoutes: ApiContractRoute[] = [
               schema: {
                 type: "object",
                 properties: {
+                  mode: {
+                    type: "string",
+                    enum: ["genetic", "greedy", "cohesive_blocks"],
+                    example: "cohesive_blocks",
+                  },
                   result: {
                     oneOf: [
                       {

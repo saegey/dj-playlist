@@ -2467,7 +2467,7 @@
     "/api/playlists/genetic": {
       "post": {
         "operationId": "generateGeneticPlaylist",
-        "summary": "Generate genetic ordering for playlist tracks",
+        "summary": "Generate optimized ordering for playlist tracks",
         "tags": [
           "Playlists"
         ],
@@ -2531,6 +2531,17 @@
                       "additionalProperties": true
                     },
                     "minItems": 1
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "genetic",
+                      "greedy",
+                      "cohesive_blocks"
+                    ],
+                    "default": "genetic",
+                    "example": "cohesive_blocks",
+                    "description": "Optimizer mode. cohesive_blocks favors genre/vibe blocks and fade-friendly transitions."
                   }
                 },
                 "required": [
@@ -2549,6 +2560,15 @@
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "genetic",
+                        "greedy",
+                        "cohesive_blocks"
+                      ],
+                      "example": "cohesive_blocks"
+                    },
                     "result": {
                       "oneOf": [
                         {
@@ -2574,6 +2594,7 @@
                   "additionalProperties": true
                 },
                 "example": {
+                  "mode": "cohesive_blocks",
                   "result": [
                     {
                       "exampleKey": "string"

@@ -44,7 +44,7 @@ services:
     working_dir: /app
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-djplaylist}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-djplaylist}
-    entrypoint: ["sh", "-c", "until pg_isready -h db -U ${POSTGRES_USER:-djplaylist}; do sleep 1; done && npm run migrate -- up"]
+    entrypoint: ["sh", "-c", "until pg_isready -h db -U ${POSTGRES_USER:-djplaylist}; do sleep 1; done && sh /app/scripts/migrate-preflight.sh && npm run migrate -- up"]
     depends_on:
       - db
 

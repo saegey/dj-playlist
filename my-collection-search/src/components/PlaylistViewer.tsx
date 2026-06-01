@@ -75,7 +75,10 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     addToPlaylist,
     sortGreedy,
     sortGenetic,
+    sortCohesiveBlocks,
     isGeneticSorting,
+    isCohesiveBlocksSorting,
+    sortPositionChanges,
   } = usePlaylistMutations(playlistId, () => setHasUnsavedChanges(true));
 
   const { replacePlaylist } = usePlaylistPlayer();
@@ -570,6 +573,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
               sortGreedy();
             }}
             onSortGenetic={sortGenetic}
+            onSortCohesiveBlocks={sortCohesiveBlocks}
             onExportJson={exportPlaylist}
           onImportJson={() => fileInputRef.current?.click()}
           onExportPdf={() =>
@@ -577,6 +581,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           }
           onOpenSaveDialog={playlistId ? saveExisting : openSaveDialog}
           isGeneticSorting={isGeneticSorting}
+          isCohesiveBlocksSorting={isCohesiveBlocksSorting}
           onDuplicate={playlistId ? () => setDuplicateDialogOpen(true) : undefined}
           onRename={playlistId ? () => setRenameDialogOpen(true) : undefined}
           onEnqueueMissingDownloads={
@@ -680,6 +685,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
             playlistMode: true,
             playlistCount: playlistCounts,
           }}
+          sortPositionChanges={sortPositionChanges}
         />
         {/* <PlaylistRecommendations
           playlist={tracks}

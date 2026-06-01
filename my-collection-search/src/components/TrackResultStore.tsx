@@ -5,6 +5,7 @@ import PlaylistTrackItem from './PlaylistTrackItem';
 import { useTrack } from '@/hooks/useTrack';
 import type { Track } from '@/types/track';
 import { useTrackStore } from '@/stores/trackStore';
+import type { SortPositionChange } from '@/hooks/usePlaylistMutations';
 
 interface TrackResultStoreProps extends Omit<TrackResultProps, 'track'> {
   trackId: string;
@@ -15,6 +16,7 @@ interface TrackResultStoreProps extends Omit<TrackResultProps, 'track'> {
   fetchIfMissing?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
+  sortPositionChange?: SortPositionChange;
 }
 
 /**

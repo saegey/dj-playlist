@@ -2,7 +2,16 @@
 
 import React from "react";
 import { Button, Menu, Flex, Box } from "@chakra-ui/react";
-import { FiMoreVertical, FiPlay, FiSave, FiEdit, FiCopy, FiDownload, FiZap } from "react-icons/fi";
+import {
+  FiCopy,
+  FiDownload,
+  FiEdit,
+  FiLayers,
+  FiMoreVertical,
+  FiPlay,
+  FiSave,
+  FiZap,
+} from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
 // import { MdOutlineClearAll } from "react-icons/md";
@@ -12,6 +21,7 @@ export interface PlaylistActionsMenuProps {
   disabled?: boolean;
   onSortGreedy: () => void;
   onSortGenetic: () => void;
+  onSortCohesiveBlocks: () => void;
   onExportJson: () => void;
   onImportJson: () => void;
   onExportPdf: () => void;
@@ -21,6 +31,7 @@ export interface PlaylistActionsMenuProps {
   onEnqueueMissingDownloads?: () => void;
   onOpenRecommendations?: () => void;
   isGeneticSorting?: boolean;
+  isCohesiveBlocksSorting?: boolean;
   enqueuePlaylist: () => void;
 }
 
@@ -32,6 +43,7 @@ export default function PlaylistActionsMenu({
   disabled,
   onSortGreedy,
   onSortGenetic,
+  onSortCohesiveBlocks,
   onExportJson,
   onImportJson,
   onExportPdf,
@@ -42,6 +54,7 @@ export default function PlaylistActionsMenu({
   onOpenRecommendations,
   enqueuePlaylist,
   isGeneticSorting,
+  isCohesiveBlocksSorting,
 }: PlaylistActionsMenuProps) {
   return (
     <Menu.Root>
@@ -77,6 +90,14 @@ export default function PlaylistActionsMenu({
             disabled={isGeneticSorting}
           >
             <PiDna /> {isGeneticSorting ? "Sorting..." : "Genetic Order"}
+          </Menu.Item>
+          <Menu.Item
+            value="sort-cohesive-blocks"
+            onSelect={onSortCohesiveBlocks}
+            disabled={isCohesiveBlocksSorting}
+          >
+            <FiLayers />{" "}
+            {isCohesiveBlocksSorting ? "Sorting..." : "Cohesive Blocks"}
           </Menu.Item>
           {onOpenRecommendations && (
             <Menu.Item value="recommendations" onSelect={onOpenRecommendations}>

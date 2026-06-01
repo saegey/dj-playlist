@@ -505,6 +505,7 @@ export const playlistGeneticTrackSchema = z
 
 export const playlistGeneticBodySchema = z.object({
   playlist: z.array(playlistGeneticTrackSchema).min(1),
+  mode: z.enum(["genetic", "greedy", "cohesive_blocks"]).optional(),
 });
 
 export const playlistGeneticResultTrackSchema = z
@@ -515,6 +516,7 @@ export const playlistGeneticResultTrackSchema = z
 
 export const playlistGeneticResponseSchema = z
   .object({
+    mode: z.enum(["genetic", "greedy", "cohesive_blocks"]).optional(),
     result: z.union([
       z.array(playlistGeneticResultTrackSchema),
       z.record(playlistGeneticResultTrackSchema),

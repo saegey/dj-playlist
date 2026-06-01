@@ -1,11 +1,21 @@
+import json
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.exception_handlers import RequestValidationError
 from fastapi.exceptions import RequestValidationError as FastAPIRequestValidationError
 from pydantic import BaseModel
-from typing import List
+try:
+    from pydantic import ConfigDict
+except ImportError:
+    ConfigDict = None
+from typing import List, Literal, Optional
 from starlette.concurrency import run_in_threadpool
-from optimizer import run_genetic_algorithm
+from optimizer import (
+    run_cohesive_blocks_optimizer,
+    run_genetic_algorithm,
+    run_greedy_algorithm,
+)
 
 app = FastAPI()
 
@@ -21,27 +31,61 @@ async def validation_exception_handler(request: Request, exc: FastAPIRequestVali
 
 
 class Track(BaseModel):
-    embedding: str
-    bpm: float
+    if ConfigDict is not None and hasattr(BaseModel, "model_validate"):
+        model_config = ConfigDict(extra="allow")
 
-    class Config:
-        extra = 'allow'    # ← this tells Pydantic “anything else you see, keep it”
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    album: Optional[str] = None
+    genres: Optional[List[str]] = None
+    styles: Optional[List[str]] = None
+    local_tags: Optional[str] = None
+    notes: Optional[str] = None
+    bpm: Optional[float] = None
+    key: Optional[str] = None
+    danceability: Optional[float] = None
+    mood_happy: Optional[float] = None
+    mood_relaxed: Optional[float] = None
+    mood_aggressive: Optional[float] = None
+    star_rating: Optional[float] = None
+    embedding: Optional[str] = None
+
+    if ConfigDict is None or not hasattr(BaseModel, "model_validate"):
+        class Config:
+            extra = "allow"
 
 
 class OptimizeRequest(BaseModel):
     tracks: List[Track]
+    mode: Literal["genetic", "greedy", "cohesive_blocks"] = "genetic"
+
+
+def _model_to_dict(model: BaseModel):
+    if hasattr(model, "model_dump"):
+        return model.model_dump()
+    return model.dict()
+
+
+def run_optimizer(tracks, mode):
+    if mode == "genetic":
+        return run_genetic_algorithm(tracks)
+    if mode == "greedy":
+        return run_greedy_algorithm(tracks)
+    if mode == "cohesive_blocks":
+        return run_cohesive_blocks_optimizer(tracks)
+    raise ValueError(f"Unsupported optimizer mode: {mode}")
 
 
 @app.post("/optimize")
 async def optimize(req: OptimizeRequest):
     # Convert Pydantic models to plain dicts
-    tracks = [t.dict() for t in req.tracks]
+    tracks = [_model_to_dict(t) for t in req.tracks]
 
     # Offload CPU‐bound work to a thread
     try:
-        optimized = await run_in_threadpool(run_genetic_algorithm, tracks)
-    except ValueError as e:
+        optimized = await run_in_threadpool(run_optimizer, tracks, req.mode)
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as e:
         # For example, if your algorithm raises on malformed data
         raise HTTPException(status_code=400, detail=str(e))
 
-    return {"result": optimized}
+    return {"result": optimized, "mode": req.mode}
