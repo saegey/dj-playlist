@@ -9,39 +9,40 @@ import {
   Text,
   Link,
   Image,
-  Button,
   Icon,
   RatingGroup,
   Badge,
   Checkbox,
+  Popover,
 } from "@chakra-ui/react";
-import ExpandableMarkdown from "./ExpandableMarkdown";
 import { Track } from "@/types/track";
 import { FaPlay } from "react-icons/fa";
+import { FiFileText } from "react-icons/fi";
 import { keyToCamelot } from "@/lib/playlistOrder";
 import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import { useTracksQuery } from "@/hooks/useTracksQuery";
+import type { SortPositionChange } from "@/hooks/usePlaylistMutations";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
   if (h > 0) {
-    return `${h}:${m.toString().padStart(2, "0")}:${s
-      .toString()
-      .padStart(2, "0")}`;
+    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   }
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+const PLACEHOLDER_SRC =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23374151' width='100' height='100'/%3E%3Ctext fill='%23ffffff' font-family='Arial' font-size='14' x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle'%3E%F0%9F%8E%B5%3C/text%3E%3C/svg%3E";
+
 export type TrackResultProps = {
   track: Track | (Track & { camelot_key?: string });
   buttons?: React.ReactNode;
-  minimized?: boolean;
-  allowMinimize?: boolean;
   footer?: React.ReactNode;
   playlistCount?: number;
-  showUsername?: boolean; // Whether to show friend/username badge
+  showUsername?: boolean;
   showRating?: boolean;
   showDetails?: boolean;
   showGenres?: boolean;
@@ -50,13 +51,14 @@ export type TrackResultProps = {
   showPlaylistCount?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
+  // Playlist mode: compact artwork, data-issue indicator, no minimize
+  playlistMode?: boolean;
+  sortPositionChange?: SortPositionChange;
 };
 
 export default function TrackResult({
   track,
   buttons,
-  minimized = false,
-  allowMinimize = true,
   footer,
   playlistCount,
   showUsername = true,
@@ -67,109 +69,295 @@ export default function TrackResult({
   showPlaylistCount = true,
   isSelected,
   onToggleSelect,
+  playlistMode = false,
+  sortPositionChange,
 }: TrackResultProps) {
-  const [expanded, setExpanded] = useState(false);
-  const [hasMounted, setHasMounted] = React.useState(false);
   const [imageError, setImageError] = React.useState(false);
+  const [localRating, setLocalRating] = useState(track.star_rating ?? 0);
 
-  React.useEffect(() => {
-    setHasMounted(true);
-  }, []);
+  const { saveTrack } = useTracksQuery();
 
-  // Reset image error when track changes
   React.useEffect(() => {
     setImageError(false);
   }, [track.track_id, track.audio_file_album_art_url, track.album_thumbnail]);
 
+  React.useEffect(() => {
+    setLocalRating(track.star_rating ?? 0);
+  }, [track.star_rating]);
+
   const { replacePlaylist } = usePlaylistPlayer();
 
-  const placeholderSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23374151' width='100' height='100'/%3E%3Ctext fill='%23ffffff' font-family='Arial' font-size='14' x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle'%3E%F0%9F%8E%B5%3C/text%3E%3C/svg%3E";
-
   const artworkSrc = imageError
-    ? placeholderSrc
-    : (track.audio_file_album_art_url || track.album_thumbnail || placeholderSrc);
+    ? PLACEHOLDER_SRC
+    : (track.audio_file_album_art_url || track.album_thumbnail || PLACEHOLDER_SRC);
 
   const trackHref = `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`;
+  const hasNotes = Boolean(track.notes?.trim());
 
-  // Prevent hydration mismatch: render a placeholder for minimized view until after mount
-  if (minimized && !expanded && !hasMounted) {
-    // Adjust minH to match your minimized card height for best results
-    return <Box minH="56px" />;
-  }
-  // Minimized view (only render after mount to avoid hydration mismatch)
-  if (minimized && !expanded && hasMounted) {
-    return (
-      <Box borderWidth="1px" borderRadius="md" p={3} mb={2} position="relative"
-        borderColor={isSelected ? "blue.500" : undefined}
-      >
-        <Flex alignItems="center" gap={2}>
-          {onToggleSelect && (
-            <Box flexShrink={0} onClick={(e) => e.stopPropagation()}>
-              <Checkbox.Root checked={isSelected} onChange={onToggleSelect}>
-                <Checkbox.HiddenInput />
-                <Checkbox.Control />
-              </Checkbox.Root>
-            </Box>
-          )}
-          {/* Track summary (clickable to expand) */}
+  // Data quality indicators for playlist mode
+  const t = track as Track & { _vectors?: { default?: number[] }; embedding?: string | number[] | null };
+  const embeddingRaw = t._vectors?.default ?? t.embedding;
+  const hasEmbedding = Array.isArray(embeddingRaw)
+    ? embeddingRaw.length > 0
+    : typeof embeddingRaw === "string" && embeddingRaw.length > 0;
+  const bpmNum = typeof track.bpm === "number" ? track.bpm : parseFloat(track.bpm as string);
+  const hasBpm = Number.isFinite(bpmNum) && bpmNum > 0;
+  const hasDataIssue = playlistMode && (!hasEmbedding || !hasBpm);
+
+  const handleRatingChange = (value: number) => {
+    setLocalRating(value);
+    saveTrack({ track_id: track.track_id, friend_id: track.friend_id, star_rating: value });
+  };
+
+  const hasTags =
+    (Array.isArray(track.local_tags) && track.local_tags.length > 0) ||
+    (typeof track.local_tags === "string" && track.local_tags !== "{}" && track.local_tags !== "");
+
+  const artworkSize = playlistMode
+    ? { base: "50px", md: "70px" }
+    : { base: "70px", md: "80px", lg: "90px" };
+
+  // --- Album art block (shared) ---
+  const artworkBlock = (
+    <Box position="relative" flexShrink={0} width={artworkSize} height={artworkSize}>
+      {track.local_audio_url ? (
+        <Box
+          position="relative"
+          borderRadius="md"
+          overflow="hidden"
+          cursor="pointer"
+          width="100%"
+          height="100%"
+          tabIndex={0}
+          onClick={() => replacePlaylist([track], { autoplay: true, startIndex: 0 })}
+          _hover={{ "& .overlay": { opacity: 1 } }}
+        >
+          <Image
+            src={artworkSrc}
+            alt={track.title}
+            width="100%"
+            height="100%"
+            objectFit="cover"
+            borderRadius="md"
+            transition="opacity 0.2s ease"
+            draggable={false}
+            onError={() => setImageError(true)}
+          />
           <Box
-            flex="1"
-            cursor={allowMinimize ? "pointer" : undefined}
-            onClick={allowMinimize ? () => setExpanded(true) : undefined}
+            className="overlay"
+            position="absolute"
+            top={0} left={0} right={0} bottom={0}
+            display="flex" alignItems="center" justifyContent="center"
+            opacity={0}
+            transition="opacity 0.15s ease"
+            pointerEvents="none"
+            bg="blackAlpha.500"
+            borderRadius="md"
           >
-            <Text fontWeight="bold" fontSize={["sm", "sm", "sm"]}>
-              <Link
-                as={NextLink}
-                href={trackHref}
-                onClick={(e) => e.stopPropagation()}
-                _hover={{ textDecoration: "underline" }}
-              >
-                {track.title}
-              </Link>
-            </Text>
-            <Text fontSize="sm">
-              <AlbumLink releaseId={track.release_id} friendId={track.friend_id} stopPropagation>
-                {track.album}
-              </AlbumLink>{" "}
-              - {" "}
-              <ArtistLink artist={track.artist} friendId={track.friend_id} stopPropagation>
-                {track.artist}
-              </ArtistLink>
-            </Text>
-            <Flex fontSize="sm" color="gray.600" gap={2} flexWrap="wrap" alignItems="center">
-              {track.library_identifier && (
-                <Badge colorPalette="blue" size="sm">
-                  {track.library_identifier}
-                </Badge>
-              )}
-              {getTrackDurationSeconds(track) && (
-                <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
-              )}
-              <Text>{track.position}</Text>
-              {track.bpm && <Text>{track.bpm} bpm</Text>}
-              {track.key && (
-                <Text>
-                  {track.key} - {keyToCamelot(track.key)}
-                </Text>
-              )}
-              {showUsername && track.username && (
-                <Text fontSize="sm">User: {track.username}</Text>
-              )}
-            </Flex>
+            <Icon as={FaPlay} boxSize={{ base: 5, md: 7 }} color="white" />
           </Box>
+        </Box>
+      ) : (
+        <Image
+          src={artworkSrc}
+          alt={track.title}
+          width="100%"
+          height="100%"
+          objectFit="cover"
+          borderRadius="md"
+          onError={() => setImageError(true)}
+        />
+      )}
+    </Box>
+  );
 
-          {/* Actions */}
-          <Flex align="center">{buttons}</Flex>
+  // --- Details row (shared) ---
+  const detailsRow = showDetails && (
+    <Flex gap={3} fontSize="xs" flexWrap="wrap" alignItems="center" color="gray.500" mt={0.5}>
+      {playlistMode && !hasEmbedding && (
+        <Badge colorPalette="red" size="sm">No embedding</Badge>
+      )}
+      {playlistMode && !hasBpm && (
+        <Badge colorPalette="orange" size="sm">No BPM</Badge>
+      )}
+      {track.library_identifier && (
+        <Badge colorPalette="blue" size="sm" fontWeight="bold">{track.library_identifier}</Badge>
+      )}
+      {sortPositionChange && (
+        <Badge colorPalette="purple" size="sm">
+          #{sortPositionChange.currentPosition} was #{sortPositionChange.previousPosition}
+        </Badge>
+      )}
+      {track.position && (
+        <Text color="gray.400" display={{ base: "none", md: "block" }}>{track.position}</Text>
+      )}
+      {getTrackDurationSeconds(track) && (
+        <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
+      )}
+      {track.bpm && <Text>{track.bpm} BPM</Text>}
+      {track.key && (
+        <Text display={{ base: "none", md: "block" }}>
+          {track.key} ({keyToCamelot(track.key)})
+        </Text>
+      )}
+      {showNotes && (
+        <Popover.Root>
+          <Popover.Trigger asChild>
+            <Box
+              as="button"
+              display="flex"
+              alignItems="center"
+              color={hasNotes ? "yellow.400" : "gray.300"}
+              cursor={hasNotes ? "pointer" : "default"}
+              pointerEvents={hasNotes ? "auto" : "none"}
+              _hover={hasNotes ? { color: "yellow.300" } : undefined}
+            >
+              <FiFileText size={13} />
+            </Box>
+          </Popover.Trigger>
+          {hasNotes && (
+            <Popover.Positioner>
+              <Popover.Content maxW="320px">
+                <Popover.Body>
+                  <Text fontSize="sm" whiteSpace="pre-wrap">{track.notes}</Text>
+                </Popover.Body>
+              </Popover.Content>
+            </Popover.Positioner>
+          )}
+        </Popover.Root>
+      )}
+    </Flex>
+  );
+
+  // --- Main content rows (shared) ---
+  const score = track._semanticScore !== undefined ? track._semanticScore * 100 : undefined;
+
+  const mainContent = (
+    <Flex direction="column" flex={1} minW={0} gap={1}>
+      {/* Title */}
+      <Flex alignItems="baseline" gap={2} pr={10}>
+        <Text
+          fontSize={{ base: "sm", md: playlistMode ? "md" : "lg" }}
+          fontWeight={playlistMode ? "semibold" : "bold"}
+          overflow="hidden"
+          textOverflow="ellipsis"
+          whiteSpace="nowrap"
+          flex="1 1 auto"
+          minW={0}
+        >
+          <Link
+            as={NextLink}
+            href={trackHref}
+            onMouseDown={playlistMode ? (e) => e.stopPropagation() : undefined}
+            onPointerDown={playlistMode ? (e) => e.stopPropagation() : undefined}
+            _hover={{ textDecoration: "underline" }}
+          >
+            {track.title}
+          </Link>
+          {score && (
+            <Badge
+              ml={2}
+              colorPalette={score > 90 ? "green" : score > 75 ? "yellow" : "red"}
+              size="sm"
+            >
+              {score.toFixed(1)}%
+            </Badge>
+          )}
+        </Text>
+      </Flex>
+
+      {/* Artist + rating */}
+      <Flex gap={2} alignItems="center" flexWrap="wrap">
+        <ArtistLink artist={track.artist} friendId={track.friend_id}>
+          <Text fontSize={{ base: "xs", md: "sm" }} fontWeight="medium">{track.artist}</Text>
+        </ArtistLink>
+        {showRating && (
+          <RatingGroup.Root
+            value={localRating}
+            onValueChange={(details) => handleRatingChange(details.value)}
+            count={5}
+            size="xs"
+          >
+            {[1, 2, 3, 4, 5].map((index) => (
+              <RatingGroup.Item key={index} index={index}>
+                <RatingGroup.ItemIndicator />
+              </RatingGroup.Item>
+            ))}
+          </RatingGroup.Root>
+        )}
+      </Flex>
+
+      {/* Album + secondary meta */}
+      <Flex gap={2} fontSize="xs" color="gray.500" alignItems="center" flexWrap="wrap">
+        <Box overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" minW={0}>
+          <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
+            <Text as="span">{track.album}{track.year && ` (${track.year})`}</Text>
+          </AlbumLink>
+        </Box>
+        {showUsername && track.username && (
+          <>
+            <Text color="gray.400">·</Text>
+            <Text color="gray.400">{track.username}</Text>
+          </>
+        )}
+        {showPlaylistCount && typeof playlistCount === "number" && playlistCount > 0 && (
+          <>
+            <Text color="gray.400">·</Text>
+            <Text color="gray.400">{playlistCount} playlist{playlistCount === 1 ? "" : "s"}</Text>
+          </>
+        )}
+      </Flex>
+
+      {detailsRow}
+
+      {/* Genres/Styles/Tags — desktop only, non-playlist mode */}
+      {!playlistMode && showGenres &&
+        ((Array.isArray(track.genres) && track.genres.length > 0) ||
+          (Array.isArray(track.styles) && track.styles.length > 0) ||
+          hasTags) && (
+        <Flex gap={2} flexWrap="wrap" display={{ base: "none", md: "flex" }} mt={0.5}>
+          {Array.isArray(track.genres) && track.genres.map((g) => (
+            <Badge key={g} size="sm" variant="surface">{g}</Badge>
+          ))}
+          {Array.isArray(track.styles) && track.styles.map((s) => (
+            <Badge key={s} size="sm" variant="outline">{s}</Badge>
+          ))}
+          {hasTags && (
+            <Badge size="sm" variant="solid">
+              {Array.isArray(track.local_tags) ? track.local_tags.join(", ") : track.local_tags}
+            </Badge>
+          )}
         </Flex>
-        {/* Floating Chevron Icon for expand */}
-      </Box>
+      )}
+    </Flex>
+  );
+
+  // ---- PLAYLIST MODE ----
+  if (playlistMode) {
+    return (
+      <Flex
+        borderBottomWidth="1px"
+        borderLeftWidth={hasDataIssue ? "3px" : "0"}
+        borderLeftColor={hasDataIssue ? "red.400" : "transparent"}
+        p={{ base: 2, md: 3 }}
+        gap={{ base: 2, md: 3 }}
+        position="relative"
+        width="100%"
+        bg={hasDataIssue ? "red.50" : undefined}
+        _dark={{ bg: hasDataIssue ? "red.900" : undefined }}
+        _hover={{ bg: hasDataIssue ? undefined : "bg.muted" }}
+      >
+        {artworkBlock}
+        {mainContent}
+        <Flex position="absolute" top={2} right={2} gap={1} alignItems="center">
+          {buttons}
+        </Flex>
+        {footer && <Box mt={2} width="100%">{footer}</Box>}
+      </Flex>
     );
   }
 
-  const score =
-    track._semanticScore !== undefined ? track._semanticScore * 100 : undefined;
-
-  // Expanded view
+  // ---- EXPANDED / DEFAULT VIEW ----
   return (
     <Flex
       borderWidth={[0, "1px"]}
@@ -179,7 +367,7 @@ export default function TrackResult({
       mb={2}
       gap={3}
       position="relative"
-      width={"100%"}
+      width="100%"
       borderColor={isSelected ? "blue.500" : undefined}
     >
       {onToggleSelect && (
@@ -190,253 +378,11 @@ export default function TrackResult({
           </Checkbox.Root>
         </Box>
       )}
-      {/* Album Art with Play Overlay */}
-      <Box
-        position="relative"
-        flexShrink={0}
-        width={["70px", "80px", "90px"]}
-        height={["70px", "80px", "90px"]}
-      >
-        {track.local_audio_url ? (
-          <Box
-            position="relative"
-            borderRadius="md"
-            overflow="hidden"
-            cursor="pointer"
-            width="100%"
-            height="100%"
-            tabIndex={0}
-            onClick={() =>
-              replacePlaylist([track], { autoplay: true, startIndex: 0 })
-            }
-            _hover={{ "& .overlay": { opacity: 1 } }}
-          >
-            <Image
-              src={artworkSrc}
-              alt={track.title}
-              width="100%"
-              height="100%"
-              objectFit="cover"
-              borderRadius="md"
-              transition="opacity 0.2s ease"
-              draggable={false}
-              onError={() => setImageError(true)}
-            />
-
-            <Box
-              className="overlay"
-              position="absolute"
-              top={0}
-              left={0}
-              right={0}
-              bottom={0}
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              opacity={0}
-              transition="opacity 0.15s ease"
-              pointerEvents="none"
-              bg="blackAlpha.500"
-              borderRadius="md"
-            >
-              <Icon as={FaPlay} boxSize={8} color="white" />
-            </Box>
-          </Box>
-        ) : (
-          <Image
-            src={artworkSrc}
-            alt={track.title}
-            width="100%"
-            height="100%"
-            objectFit="cover"
-            borderRadius="md"
-            onError={() => setImageError(true)}
-          />
-        )}
-      </Box>
-
-      {/* Main Content - Now using grid layout for better space utilization */}
-      <Flex direction="column" flex={1} minW={0} gap={2}>
-        {/* Row 1: Title, Artist, Album in a more compact layout */}
-        <Box>
-          <Flex alignItems="baseline" gap={2} flexWrap="wrap" pr={10}>
-            <Text
-              fontSize={["md", "lg", "lg"]}
-              fontWeight="bold"
-              overflow="hidden"
-              textOverflow="ellipsis"
-              whiteSpace="nowrap"
-              flex="1 1 auto"
-              minW="200px"
-            >
-              <Link
-                as={NextLink}
-                href={trackHref}
-                _hover={{ textDecoration: "underline" }}
-              >
-                {track.title}
-              </Link>
-              {score && (
-                <Badge
-                  ml={2}
-                  colorPalette={
-                    score > 90 ? "green" : score > 75 ? "yellow" : "red"
-                  }
-                  size={["xs", "sm", "sm"]}
-                >
-                  {score.toFixed(1)}%
-                </Badge>
-              )}
-            </Text>
-          </Flex>
-          <Flex gap={2} fontSize={["sm", "md", "md"]} color="gray.600" mt={0.5} flexWrap="wrap" alignItems="center" pr={10}>
-            <ArtistLink artist={track.artist} friendId={track.friend_id}>
-              <Text fontWeight="medium">{track.artist}</Text>
-            </ArtistLink>
-            <Text color="gray.400">•</Text>
-            <Box overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" flex="1 1 auto" minW="150px">
-              <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
-                {track.release_id ? (
-                  <Text as="span">
-                    {track.album} {track.year && `(${track.year})`}
-                  </Text>
-                ) : (
-                  <Text as="span">
-                    {track.album} {track.year && `(${track.year})`}
-                  </Text>
-                )}
-              </AlbumLink>
-            </Box>
-            {showRating && (
-              <Box display={{ base: "none", md: "block" }}>
-                <RatingGroup.Root value={track.star_rating ?? 0} readOnly size="xs">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <RatingGroup.Item key={index} index={index + 1}>
-                      <RatingGroup.ItemIndicator />
-                    </RatingGroup.Item>
-                  ))}
-                </RatingGroup.Root>
-              </Box>
-            )}
-            {showUsername && track.username && (
-              <>
-                <Text color="gray.400">•</Text>
-                <Text fontSize="sm" color="gray.500">
-                  {track.username}
-                </Text>
-              </>
-            )}
-            {showPlaylistCount && typeof playlistCount === "number" && playlistCount > 0 && (
-              <>
-                <Text color="gray.400">•</Text>
-                <Text fontSize="sm" color="gray.500">
-                  {playlistCount} playlist{playlistCount === 1 ? "" : "s"}
-                </Text>
-              </>
-            )}
-          </Flex>
-        </Box>
-
-        {/* Row 2: Technical details */}
-        {showDetails && (
-          <Flex gap={3} fontSize={["xs", "sm", "sm"]} flexWrap="wrap" alignItems="center" color="gray.600">
-            {track.library_identifier && (
-              <Badge colorPalette="blue" size="sm" fontWeight="bold">
-                {track.library_identifier}
-              </Badge>
-            )}
-            {track.position && <Text display={{ base: "none", md: "block" }}>Pos: {track.position}</Text>}
-            {getTrackDurationSeconds(track) && (
-              <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
-            )}
-            {track.bpm && <Text>{track.bpm} BPM</Text>}
-            {track.key && (
-              <Text display={{ base: "none", md: "block" }}>
-                {track.key} ({keyToCamelot(track.key)})
-              </Text>
-            )}
-            {track.danceability && <Text display={{ base: "none", md: "block" }}>Dance: {track.danceability}</Text>}
-            {track.mood_happy && <Text display={{ base: "none", md: "block" }}>Happy: {track.mood_happy}</Text>}
-            {track.mood_aggressive && <Text display={{ base: "none", md: "block" }}>Agg: {track.mood_aggressive}</Text>}
-          </Flex>
-        )}
-
-        {/* Row 3: Genres/Styles (desktop only) */}
-        {showGenres &&
-        ((Array.isArray(track.genres) && track.genres.length > 0) ||
-          (Array.isArray(track.styles) && track.styles.length > 0) ||
-          ((typeof track.local_tags === "string" &&
-            track.local_tags !== "{}" &&
-            track.local_tags !== "") ||
-            (Array.isArray(track.local_tags) && track.local_tags.length > 0))) ? (
-            <Flex gap={2} flexWrap="wrap" display={{ base: "none", md: "flex" }}>
-              {Array.isArray(track.genres) &&
-                track.genres.map((genre) => (
-                  <Badge key={genre} size={["xs", "sm", "sm"]} variant="surface">
-                    {genre}
-                  </Badge>
-                ))}
-              {Array.isArray(track.styles) &&
-                track.styles.map((style) => (
-                  <Badge key={style} size={["xs", "sm", "sm"]} variant="outline">
-                    {style}
-                  </Badge>
-                ))}
-              {((typeof track.local_tags === "string" &&
-                track.local_tags !== "{}" &&
-                track.local_tags !== "") ||
-                (Array.isArray(track.local_tags) &&
-                  track.local_tags.length > 0)) && (
-                <Badge
-                  key={
-                    Array.isArray(track.local_tags)
-                      ? track.local_tags.join(",")
-                      : track.local_tags
-                  }
-                  size={["xs", "sm", "sm"]}
-                  variant="solid"
-                >
-                  {Array.isArray(track.local_tags)
-                    ? track.local_tags.join(", ")
-                    : track.local_tags}
-                </Badge>
-              )}
-            </Flex>
-          ) : null}
-
-        {/* Row 4: Notes (desktop only) */}
-        {showNotes && track.notes && (
-          <Box display={{ base: "none", md: "block" }}>
-            <ExpandableMarkdown text={track.notes} maxLength={100} />
-          </Box>
-        )}
-
-        {/* Hide button - only if minimizable */}
-        {allowMinimize && (
-          <Box>
-            <Button
-              size="xs"
-              variant="ghost"
-              onClick={() => setExpanded(false)}
-            >
-              Collapse
-            </Button>
-          </Box>
-        )}
-      </Flex>
-
-      {/* Action Menu - Absolute positioned top-right */}
-      <Box
-        position="absolute"
-        top={2}
-        right={2}
-        display="flex"
-        gap={2}
-      >
+      {artworkBlock}
+      {mainContent}
+      <Flex position="absolute" top={2} right={2} gap={1} alignItems="center">
         {buttons}
-      </Box>
-
-      {/* Footer */}
+      </Flex>
       {footer && <Box mt={2} width="100%">{footer}</Box>}
     </Flex>
   );

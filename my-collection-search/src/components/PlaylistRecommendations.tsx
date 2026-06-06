@@ -31,7 +31,6 @@ export default function PlaylistRecommendations({
       <Box display="flex" flexDirection="column" gap={2}>
         {recs.map((rec: RecommendedTrack, i: number) => (
           <TrackResultStore
-            allowMinimize={false}
             key={`recommendation-${rec.track_id}-${i}`}
             trackId={rec.track_id}
             friendId={rec.friend_id}

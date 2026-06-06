@@ -41,7 +41,6 @@ const TrackResultItem: React.FC<{
       trackId={trackId}
       friendId={friendId}
       fallbackTrack={track}
-      allowMinimize={false}
       playlistCount={playlistCount}
       buttons={[<TrackActionsMenu key="menu" track={track} />]}
       compact={compact}

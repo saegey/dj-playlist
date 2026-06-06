@@ -1,7 +1,6 @@
 import React from 'react';
 import TrackResult, { type TrackResultProps } from './TrackResult';
 import TrackResultCompact from './TrackResultCompact';
-import PlaylistTrackItem from './PlaylistTrackItem';
 import { useTrack } from '@/hooks/useTrack';
 import type { Track } from '@/types/track';
 import { useTrackStore } from '@/stores/trackStore';
@@ -73,11 +72,7 @@ export default function TrackResultStore({
     return null; // Could render a skeleton or placeholder here
   }
 
-  const Component = playlistMode
-    ? PlaylistTrackItem
-    : compact
-    ? TrackResultCompact
-    : TrackResult;
+  const Component = compact ? TrackResultCompact : TrackResult;
 
   return <Component track={track} isSelected={isSelected} onToggleSelect={onToggleSelect} {...props} />;
 }

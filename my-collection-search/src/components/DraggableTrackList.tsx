@@ -31,7 +31,7 @@ interface DraggableTrackListProps {
   ) => React.ReactNode;
   /** Additional props for TrackResultStore */
   trackResultProps?: {
-    minimized?: boolean;
+    compact?: boolean;
     playlistCount?: Record<string, number>;
     playlistMode?: boolean;
   };
@@ -100,7 +100,7 @@ export default function DraggableTrackList({
                             ? renderTrackButtons(track, idx)
                             : undefined
                         }
-                        minimized={trackResultProps?.minimized}
+                        compact={trackResultProps?.compact}
                         playlistCount={
                           trackResultProps?.playlistCount?.[
                             `${trackPlay.track_id}:${trackPlay.friend_id}`

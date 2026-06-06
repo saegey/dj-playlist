@@ -81,7 +81,6 @@ export default function TrackPage() {
                 trackId={trackId}
                 friendId={friendId}
                 fallbackTrack={trackQuery.data}
-                allowMinimize={false}
                 buttons={[<TrackActionsMenu key="menu" track={trackQuery.data} />]}
               />
 

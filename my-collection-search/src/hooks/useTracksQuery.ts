@@ -9,7 +9,9 @@ import { useTrackStore } from "@/stores/trackStore";
 // Shape returned by saveTrack is void; customize if API starts returning a Track
 
 export function useTracksQuery() {
-  const { updateTrack, getTrack, setTrack } = useTrackStore();
+  const updateTrack = useTrackStore((s) => s.updateTrack);
+  const getTrack = useTrackStore((s) => s.getTrack);
+  const setTrack = useTrackStore((s) => s.setTrack);
 
   const saveTrackMutation = useMutation({
     mutationFn: async (data: TrackEditFormProps) => {
@@ -25,8 +27,9 @@ export function useTracksQuery() {
       // Get current track from store for rollback
       const currentTrack = getTrack(track_id, friend_id);
 
-      // Build optimistic updates
-      const updates: Partial<Track> = {
+      // Build optimistic updates — only include defined values to avoid
+      // clobbering existing track fields with undefined on partial saves
+      const raw: Partial<Track> = {
         title: form.title,
         artist: form.artist,
         album: form.album,
@@ -43,6 +46,9 @@ export function useTracksQuery() {
         duration_seconds:
           form.duration_seconds === null ? undefined : form.duration_seconds,
       };
+      const updates = Object.fromEntries(
+        Object.entries(raw).filter(([, v]) => v !== undefined)
+      ) as Partial<Track>;
 
       // Apply optimistic update to Zustand
       updateTrack(track_id, friend_id, updates);
