@@ -11,6 +11,7 @@ import {
   FiPlay,
   FiSave,
   FiZap,
+  FiClock,
 } from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
@@ -29,6 +30,7 @@ export interface PlaylistActionsMenuProps {
   onDuplicate?: () => void;
   onRename?: () => void;
   onEnqueueMissingDownloads?: () => void;
+  onBackfillDuration?: () => void;
   onOpenRecommendations?: () => void;
   isGeneticSorting?: boolean;
   isCohesiveBlocksSorting?: boolean;
@@ -51,6 +53,7 @@ export default function PlaylistActionsMenu({
   onDuplicate,
   onRename,
   onEnqueueMissingDownloads,
+  onBackfillDuration,
   onOpenRecommendations,
   enqueuePlaylist,
   isGeneticSorting,
@@ -150,7 +153,7 @@ export default function PlaylistActionsMenu({
               )}
             </>
           )}
-          {(onEnqueueMissingDownloads) && (
+          {(onEnqueueMissingDownloads || onBackfillDuration) && (
             <>
               <Box
                 as="hr"
@@ -159,9 +162,16 @@ export default function PlaylistActionsMenu({
                 borderWidth={0}
                 borderTopWidth={1}
               />
-              <Menu.Item value="enqueue-missing" onSelect={onEnqueueMissingDownloads}>
-                <FiDownload /> Enqueue Missing Downloads
-              </Menu.Item>
+              {onEnqueueMissingDownloads && (
+                <Menu.Item value="enqueue-missing" onSelect={onEnqueueMissingDownloads}>
+                  <FiDownload /> Enqueue Missing Downloads
+                </Menu.Item>
+              )}
+              {onBackfillDuration && (
+                <Menu.Item value="backfill-duration" onSelect={onBackfillDuration}>
+                  <FiClock /> Backfill Duration from Audio
+                </Menu.Item>
+              )}
             </>
           )}
           <Box

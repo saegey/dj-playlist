@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import { Box, Button, Menu } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, Menu } from "@chakra-ui/react";
 import TrackResultStore from "@/components/TrackResultStore";
 import type { Track } from "@/types/track";
 import { FiEdit, FiMoreVertical, FiPlus, FiPlusSquare } from "react-icons/fi";
-import { useRecommendationsQuery } from "@/hooks/useRecommendations";
+import { useRecommendationsQuery, type RecommendedTrack } from "@/hooks/useRecommendations";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 
 export interface PlaylistRecommendationsProps {
@@ -29,7 +29,7 @@ export default function PlaylistRecommendations({
   return (
     <Box mt={0}>
       <Box display="flex" flexDirection="column" gap={2}>
-        {recs.map((rec: Track, i: number) => (
+        {recs.map((rec: RecommendedTrack, i: number) => (
           <TrackResultStore
             allowMinimize={false}
             key={`recommendation-${rec.track_id}-${i}`}
@@ -37,33 +37,37 @@ export default function PlaylistRecommendations({
             friendId={rec.friend_id}
             fallbackTrack={rec}
             buttons={[
-              <Menu.Root key="menu">
-                <Menu.Trigger asChild>
-                  <Button variant="plain" size={["xs", "sm", "sm"]}>
-                    <FiMoreVertical />
-                  </Button>
-                </Menu.Trigger>
-
-                <Menu.Positioner>
-                  <Menu.Content>
-                    <Menu.Item
-                      onSelect={() => onAddToPlaylist(rec)}
-                      value="add"
-                    >
-                      <FiPlus /> Add to Playlist
-                    </Menu.Item>
-                    <Menu.Item onSelect={() => onEditTrack(rec)} value="edit">
-                      <FiEdit /> Edit Track
-                    </Menu.Item>
-                    <Menu.Item
-                      onSelect={() => appendToQueue(rec)}
-                      value="queue"
-                    >
-                      <FiPlusSquare /> Add to Queue
-                    </Menu.Item>
-                  </Menu.Content>
-                </Menu.Positioner>
-              </Menu.Root>,
+              <Flex key="badges-menu" align="center" gap={1} wrap="wrap">
+                {rec._simIdentity != null && rec._simAudio != null && (
+                  <Badge colorPalette="purple" size="sm">Identity + Vibe</Badge>
+                )}
+                {rec._simIdentity != null && rec._simAudio == null && (
+                  <Badge colorPalette="blue" size="sm">Identity</Badge>
+                )}
+                {rec._simAudio != null && rec._simIdentity == null && (
+                  <Badge colorPalette="cyan" size="sm">Vibe</Badge>
+                )}
+                <Menu.Root>
+                  <Menu.Trigger asChild>
+                    <Button variant="plain" size={["xs", "sm", "sm"]}>
+                      <FiMoreVertical />
+                    </Button>
+                  </Menu.Trigger>
+                  <Menu.Positioner>
+                    <Menu.Content>
+                      <Menu.Item onSelect={() => onAddToPlaylist(rec)} value="add">
+                        <FiPlus /> Add to Playlist
+                      </Menu.Item>
+                      <Menu.Item onSelect={() => onEditTrack(rec)} value="edit">
+                        <FiEdit /> Edit Track
+                      </Menu.Item>
+                      <Menu.Item onSelect={() => appendToQueue(rec)} value="queue">
+                        <FiPlusSquare /> Add to Queue
+                      </Menu.Item>
+                    </Menu.Content>
+                  </Menu.Positioner>
+                </Menu.Root>
+              </Flex>,
             ]}
           />
         ))}

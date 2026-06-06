@@ -39,9 +39,10 @@ import {
   updatePlaylist,
   type PlaylistTrackPayload,
 } from "@/services/internalApi/playlists";
-import { analyzeTrackAsync } from "@/services/internalApi/tracks";
+import { analyzeTrackAsync, fixTrackDuration } from "@/services/internalApi/tracks";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { queryKeys } from "@/lib/queryKeys";
+import { getTrackDurationSeconds } from "@/lib/trackUtils";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
@@ -97,6 +98,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameName, setRenameName] = useState("");
   const [isEnqueuingDownloads, setIsEnqueuingDownloads] = useState(false);
+  const [isBackfillingDuration, setIsBackfillingDuration] = useState(false);
   const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false);
   const [recommendationsPlaylistSnapshot, setRecommendationsPlaylistSnapshot] = useState<Track[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -125,7 +127,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   }, [hasUnsavedChanges]);
 
   // Get total playtime for display
-  const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
+  const { formatted: totalPlaytimeFormatted, missingCount: durationMissingCount } = getTotalPlaytime();
   const playlistStats = useMemo(() => {
     const genreCounts = new Map<string, number>();
     const styleCounts = new Map<string, number>();
@@ -311,6 +313,51 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
 
     toaster.create({
       title: `Enqueued ${enqueued} track${enqueued === 1 ? "" : "s"} for download${
+        failed ? ` (${failed} failed)` : ""
+      }`,
+      type: failed ? "warning" : "success",
+    });
+  };
+
+  const handleBackfillDuration = async () => {
+    if (!tracks || tracks.length === 0) {
+      toaster.create({ title: "No tracks in playlist", type: "info" });
+      return;
+    }
+
+    const eligible = tracks.filter(
+      (t) => t.local_audio_url && getTrackDurationSeconds(t) === null
+    );
+
+    if (eligible.length === 0) {
+      toaster.create({
+        title: "All tracks with audio already have duration",
+        type: "info",
+      });
+      return;
+    }
+
+    setIsBackfillingDuration(true);
+    let enqueued = 0;
+    let failed = 0;
+
+    for (const track of eligible) {
+      try {
+        await fixTrackDuration({
+          track_id: track.track_id,
+          friend_id: track.friend_id!,
+          local_audio_url: track.local_audio_url,
+        });
+        enqueued += 1;
+      } catch (err) {
+        console.error("Failed to queue fix-duration for track", track.track_id, err);
+        failed += 1;
+      }
+    }
+
+    setIsBackfillingDuration(false);
+    toaster.create({
+      title: `Queued ${enqueued} track${enqueued === 1 ? "" : "s"} for duration backfill${
         failed ? ` (${failed} failed)` : ""
       }`,
       type: failed ? "warning" : "success",
@@ -553,7 +600,9 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           </Flex>
           <Text fontSize="sm" color="gray.500" mb={2}>
             Total Playtime: {totalPlaytimeFormatted}
-            {/* Playlist Recommendations */}
+            {durationMissingCount > 0 && (
+              <Text as="span" color="gray.400"> ({durationMissingCount} track{durationMissingCount !== 1 ? "s" : ""} missing timing)</Text>
+            )}
           </Text>
         </Box>
         <Flex gap={2} align="flex-start">
@@ -586,6 +635,9 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           onRename={playlistId ? () => setRenameDialogOpen(true) : undefined}
           onEnqueueMissingDownloads={
             isEnqueuingDownloads ? undefined : handleEnqueueMissingDownloads
+          }
+          onBackfillDuration={
+            isBackfillingDuration ? undefined : handleBackfillDuration
           }
           onOpenRecommendations={() => {
             setRecommendationsPlaylistSnapshot([...tracks]);
