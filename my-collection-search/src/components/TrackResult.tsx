@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import NextLink from "next/link";
 import ArtistLink from "./ArtistLink";
 import AlbumLink from "./AlbumLink";
+import TrackPlaylistUsage from "./TrackPlaylistUsage";
 import {
   Box,
   Flex,
@@ -19,7 +20,7 @@ import { Track } from "@/types/track";
 import { FaPlay } from "react-icons/fa";
 import { FiFileText } from "react-icons/fi";
 import { keyToCamelot } from "@/lib/playlistOrder";
-import { getTrackDurationSeconds } from "@/lib/trackUtils";
+import { explodeDisplayTags, getTrackDurationSeconds } from "@/lib/trackUtils";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useTracksQuery } from "@/hooks/useTracksQuery";
 import type { SortPositionChange } from "@/hooks/usePlaylistMutations";
@@ -109,9 +110,9 @@ export default function TrackResult({
     saveTrack({ track_id: track.track_id, friend_id: track.friend_id, star_rating: value });
   };
 
-  const hasTags =
-    (Array.isArray(track.local_tags) && track.local_tags.length > 0) ||
-    (typeof track.local_tags === "string" && track.local_tags !== "{}" && track.local_tags !== "");
+  const displayGenres = explodeDisplayTags(track.genres);
+  const displayStyles = explodeDisplayTags(track.styles);
+  const displayLocalTags = explodeDisplayTags(track.local_tags);
 
   const artworkSize = playlistMode
     ? { base: "50px", md: "70px" }
@@ -303,7 +304,7 @@ export default function TrackResult({
         {showPlaylistCount && typeof playlistCount === "number" && playlistCount > 0 && (
           <>
             <Text color="gray.400">·</Text>
-            <Text color="gray.400">{playlistCount} playlist{playlistCount === 1 ? "" : "s"}</Text>
+            <TrackPlaylistUsage track={track} count={playlistCount} />
           </>
         )}
       </Flex>
@@ -312,21 +313,21 @@ export default function TrackResult({
 
       {/* Genres/Styles/Tags — desktop only, non-playlist mode */}
       {!playlistMode && showGenres &&
-        ((Array.isArray(track.genres) && track.genres.length > 0) ||
-          (Array.isArray(track.styles) && track.styles.length > 0) ||
-          hasTags) && (
+        (displayGenres.length > 0 ||
+          displayStyles.length > 0 ||
+          displayLocalTags.length > 0) && (
         <Flex gap={2} flexWrap="wrap" display={{ base: "none", md: "flex" }} mt={0.5}>
-          {Array.isArray(track.genres) && track.genres.map((g) => (
+          {displayGenres.map((g) => (
             <Badge key={g} size="sm" variant="surface">{g}</Badge>
           ))}
-          {Array.isArray(track.styles) && track.styles.map((s) => (
+          {displayStyles.map((s) => (
             <Badge key={s} size="sm" variant="outline">{s}</Badge>
           ))}
-          {hasTags && (
-            <Badge size="sm" variant="solid">
-              {Array.isArray(track.local_tags) ? track.local_tags.join(", ") : track.local_tags}
+          {displayLocalTags.map((tag) => (
+            <Badge key={tag} size="sm" variant="solid">
+              {tag}
             </Badge>
-          )}
+          ))}
         </Flex>
       )}
     </Flex>

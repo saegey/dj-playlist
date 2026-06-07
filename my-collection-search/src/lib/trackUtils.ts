@@ -34,3 +34,27 @@ export function getTrackDurationSeconds(track: { duration_seconds?: number | nul
   }
   return null;
 }
+
+export function explodeDisplayTags(values: unknown): string[] {
+  const rawValues = Array.isArray(values) ? values : [values];
+  const tags: string[] = [];
+  const seen = new Set<string>();
+
+  rawValues.forEach((value) => {
+    if (typeof value !== "string") return;
+    if (value.trim() === "{}") return;
+
+    value
+      .split(/\s*(?:,|\/|·|•)\s*/g)
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0 && tag !== "{}")
+      .forEach((tag) => {
+        const key = tag.toLocaleLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        tags.push(tag);
+      });
+  });
+
+  return tags;
+}

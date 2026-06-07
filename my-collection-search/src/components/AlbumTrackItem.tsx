@@ -19,6 +19,7 @@ import { keyToCamelot } from "@/lib/playlistOrder";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import { useColorModeValue } from "@/components/ui/color-mode";
+import TrackPlaylistUsage from "@/components/TrackPlaylistUsage";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -35,12 +36,14 @@ function formatSeconds(seconds: number): string {
 export type AlbumTrackItemProps = {
   track: Track;
   albumArtist: string;
+  playlistCount?: number;
   buttons?: React.ReactNode;
 };
 
 export default function AlbumTrackItem({
   track,
   albumArtist,
+  playlistCount = 0,
   buttons,
 }: AlbumTrackItemProps) {
   const { replacePlaylist } = usePlaylistPlayer();
@@ -144,6 +147,7 @@ export default function AlbumTrackItem({
               {track.library_identifier}
             </Badge>
           )}
+          <TrackPlaylistUsage track={track} count={playlistCount} />
           {getTrackDurationSeconds(track) && (
             <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
           )}
