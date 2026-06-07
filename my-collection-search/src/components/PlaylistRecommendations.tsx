@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import NextLink from "next/link";
 import { Badge, Box, Button, Flex, Menu } from "@chakra-ui/react";
 import TrackResultStore from "@/components/TrackResultStore";
 import type { Track } from "@/types/track";
@@ -12,14 +13,12 @@ export interface PlaylistRecommendationsProps {
   playlist: Track[];
   limit?: number;
   onAddToPlaylist: (track: Track) => void;
-  onEditTrack: (track: Track) => void;
 }
 
 export default function PlaylistRecommendations({
   playlist,
   limit = 50,
   onAddToPlaylist,
-  onEditTrack,
 }: PlaylistRecommendationsProps) {
   const { data: recs = [] } = useRecommendationsQuery(playlist, limit);
   const { appendToQueue } = usePlaylistPlayer();
@@ -57,8 +56,10 @@ export default function PlaylistRecommendations({
                       <Menu.Item onSelect={() => onAddToPlaylist(rec)} value="add">
                         <FiPlus /> Add to Playlist
                       </Menu.Item>
-                      <Menu.Item onSelect={() => onEditTrack(rec)} value="edit">
-                        <FiEdit /> Edit Track
+                      <Menu.Item value="edit" asChild>
+                        <NextLink href={`/tracks/${encodeURIComponent(rec.track_id)}/edit?friend_id=${rec.friend_id}`}>
+                          <FiEdit /> Edit Track
+                        </NextLink>
                       </Menu.Item>
                       <Menu.Item onSelect={() => appendToQueue(rec)} value="queue">
                         <FiPlusSquare /> Add to Queue

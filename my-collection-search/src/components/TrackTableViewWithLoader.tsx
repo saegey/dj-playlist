@@ -1,29 +1,62 @@
 "use client";
 
-import React from "react";
-import { Box, Table, Badge, RatingGroup, Link, Icon, Flex, Checkbox } from "@chakra-ui/react";
+import React, { useState } from "react";
+import NextLink from "next/link";
+import {
+  Box, Table, Badge, RatingGroup, Link, Icon, Flex,
+  Image, Checkbox, Popover, Text,
+} from "@chakra-ui/react";
+
 import { Track } from "@/types/track";
-import { SiDiscogs, SiApplemusic, SiYoutube, SiSoundcloud } from "react-icons/si";
 import { FaPlay } from "react-icons/fa";
+import { FiFileText } from "react-icons/fi";
 import { keyToCamelot } from "@/lib/playlistOrder";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useTrack } from "@/hooks/useTrack";
+import { useTracksQuery } from "@/hooks/useTracksQuery";
 import { getTrackDurationSeconds } from "@/lib/trackUtils";
+
+const PLACEHOLDER_SRC =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23374151' width='100' height='100'/%3E%3Ctext fill='%23ffffff' font-family='Arial' font-size='14' x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle'%3E%F0%9F%8E%B5%3C/text%3E%3C/svg%3E";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  if (h > 0) {
-    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  }
+  if (h > 0) return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function InlineRatingCell({ track }: { track: Track }) {
+  const [localRating, setLocalRating] = useState(track.star_rating ?? 0);
+  const { saveTrack } = useTracksQuery();
+
+  React.useEffect(() => {
+    setLocalRating(track.star_rating ?? 0);
+  }, [track.star_rating]);
+
+  return (
+    <RatingGroup.Root
+      value={localRating}
+      onValueChange={({ value }) => {
+        setLocalRating(value);
+        saveTrack({ track_id: track.track_id, friend_id: track.friend_id, star_rating: value });
+      }}
+      count={5}
+      size="xs"
+    >
+      {[1, 2, 3, 4, 5].map((i) => (
+        <RatingGroup.Item key={i} index={i}>
+          <RatingGroup.ItemIndicator />
+        </RatingGroup.Item>
+      ))}
+    </RatingGroup.Root>
+  );
 }
 
 const TrackTableRow: React.FC<{
   trackId: string;
   friendId: number;
-  playlistCount?: number;
   buttons?: (track: Track) => React.ReactNode;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -31,18 +64,19 @@ const TrackTableRow: React.FC<{
   const track = useTrack(trackId, friendId);
   const { replacePlaylist } = usePlaylistPlayer();
 
-  if (!track) {
-    return null;
-  }
+  if (!track) return null;
 
   const genres = Array.isArray(track.genres) ? track.genres : [];
   const styles = Array.isArray(track.styles) ? track.styles : [];
   const allGenres = [...genres, ...styles];
+  const artworkSrc = track.audio_file_album_art_url || track.album_thumbnail || PLACEHOLDER_SRC;
+  const trackHref = `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`;
+  const hasNotes = Boolean(track.notes?.trim());
 
   return (
     <Table.Row bg={isSelected ? "blue.subtle" : undefined}>
       {/* Checkbox */}
-      <Table.Cell onClick={(e) => e.stopPropagation()}>
+      <Table.Cell p={1} onClick={(e) => e.stopPropagation()}>
         {onToggleSelect && (
           <Checkbox.Root checked={isSelected} onChange={onToggleSelect}>
             <Checkbox.HiddenInput />
@@ -50,114 +84,123 @@ const TrackTableRow: React.FC<{
           </Checkbox.Root>
         )}
       </Table.Cell>
-      {/* Play button */}
-      <Table.Cell>
-        {track.local_audio_url && (
-          <Icon
-            as={FaPlay}
-            boxSize={4}
-            cursor="pointer"
-            color="gray.600"
-            _hover={{ color: "gray.800" }}
-            onClick={() =>
-              replacePlaylist([track], { autoplay: true, startIndex: 0 })
-            }
-          />
-        )}
+
+      {/* Artwork + play overlay */}
+      <Table.Cell p={1}>
+        <Box
+          position="relative"
+          width="44px"
+          height="44px"
+          borderRadius="sm"
+          overflow="hidden"
+          cursor={track.local_audio_url ? "pointer" : "default"}
+          onClick={track.local_audio_url
+            ? () => replacePlaylist([track], { autoplay: true, startIndex: 0 })
+            : undefined}
+          _hover={track.local_audio_url ? { "& .play-overlay": { opacity: 1 } } : undefined}
+        >
+          <Image src={artworkSrc} alt={track.title} width="100%" height="100%" objectFit="cover" />
+          {track.local_audio_url && (
+            <Box
+              className="play-overlay"
+              position="absolute"
+              inset={0}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              bg="blackAlpha.600"
+              opacity={0}
+              transition="opacity 0.15s ease"
+            >
+              <Icon as={FaPlay} boxSize={3} color="white" />
+            </Box>
+          )}
+        </Box>
       </Table.Cell>
 
-      {/* Title */}
-      <Table.Cell fontWeight="medium" maxW="300px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-        {track.title}
+      {/* Title + notes icon */}
+      <Table.Cell maxW="280px">
+        <Flex align="center" gap={1.5} overflow="hidden">
+          <Link
+            as={NextLink}
+            href={trackHref}
+            fontWeight="medium"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            whiteSpace="nowrap"
+            flex="1"
+            _hover={{ textDecoration: "underline" }}
+          >
+            {track.title}
+          </Link>
+          {hasNotes && (
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <Box
+                  as="button"
+                  flexShrink={0}
+                  color="yellow.400"
+                  _hover={{ color: "yellow.300" }}
+                  display="flex"
+                  alignItems="center"
+                >
+                  <FiFileText size={12} />
+                </Box>
+              </Popover.Trigger>
+              <Popover.Positioner>
+                <Popover.Content maxW="280px">
+                  <Popover.Body>
+                    <Text fontSize="sm" whiteSpace="pre-wrap">{track.notes}</Text>
+                  </Popover.Body>
+                </Popover.Content>
+              </Popover.Positioner>
+            </Popover.Root>
+          )}
+        </Flex>
       </Table.Cell>
 
       {/* Artist */}
-      <Table.Cell maxW="200px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+      <Table.Cell maxW="160px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
         {track.artist}
       </Table.Cell>
 
       {/* Album */}
-      <Table.Cell maxW="200px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+      <Table.Cell maxW="160px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
         {track.album}
       </Table.Cell>
 
-      {/* Genre */}
+      {/* Genre — 1 badge, no wrap */}
       <Table.Cell>
-        <Flex gap={1} flexWrap="wrap" maxW="200px">
-          {allGenres.slice(0, 2).map((genre, idx) => (
-            <Badge key={idx} size="xs" variant="subtle">
+        <Flex gap={1} flexWrap="nowrap" overflow="hidden" maxW="120px">
+          {allGenres.slice(0, 1).map((genre, idx) => (
+            <Badge key={idx} size="xs" variant="subtle" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" maxW="90px">
               {genre}
             </Badge>
           ))}
-          {allGenres.length > 2 && (
-            <Badge size="xs" variant="outline">
-              +{allGenres.length - 2}
-            </Badge>
+          {allGenres.length > 1 && (
+            <Badge size="xs" variant="outline" flexShrink={0}>+{allGenres.length - 1}</Badge>
           )}
         </Flex>
       </Table.Cell>
 
       {/* Duration */}
-      <Table.Cell>
-        {getTrackDurationSeconds(track)
-          ? formatSeconds(getTrackDurationSeconds(track) || 0)
-          : "-"}
+      <Table.Cell whiteSpace="nowrap" color="gray.600" fontSize="xs">
+        {getTrackDurationSeconds(track) ? formatSeconds(getTrackDurationSeconds(track) || 0) : "-"}
       </Table.Cell>
 
       {/* BPM */}
-      <Table.Cell>{track.bpm || "-"}</Table.Cell>
+      <Table.Cell color="gray.600" fontSize="xs">{track.bpm || "-"}</Table.Cell>
 
       {/* Key */}
-      <Table.Cell>
+      <Table.Cell whiteSpace="nowrap" color="gray.600" fontSize="xs">
         {track.key ? `${track.key} (${keyToCamelot(track.key)})` : "-"}
       </Table.Cell>
 
       {/* Rating */}
-      <Table.Cell>
-        <RatingGroup.Root value={track.star_rating ?? 0} readOnly size="xs">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <RatingGroup.Item key={index} index={index + 1}>
-              <RatingGroup.ItemIndicator />
-            </RatingGroup.Item>
-          ))}
-        </RatingGroup.Root>
-      </Table.Cell>
-
-      {/* User */}
-      <Table.Cell fontSize="xs" color="gray.600">
-        {track.username || "-"}
-      </Table.Cell>
-
-      {/* Links */}
-      <Table.Cell>
-        <Flex gap={2}>
-          {track.discogs_url && (
-            <Link href={track.discogs_url} target="_blank" aria-label="Discogs">
-              <SiDiscogs size={16} />
-            </Link>
-          )}
-          {track.apple_music_url && (
-            <Link href={track.apple_music_url} target="_blank" aria-label="Apple Music">
-              <SiApplemusic size={16} />
-            </Link>
-          )}
-          {track.youtube_url && (
-            <Link href={track.youtube_url} target="_blank" aria-label="YouTube">
-              <SiYoutube size={16} />
-            </Link>
-          )}
-          {track.soundcloud_url && (
-            <Link href={track.soundcloud_url} target="_blank" aria-label="SoundCloud">
-              <SiSoundcloud size={16} />
-            </Link>
-          )}
-        </Flex>
-      </Table.Cell>
+      <Table.Cell><InlineRatingCell track={track} /></Table.Cell>
 
       {/* Actions */}
-      <Table.Cell>
-        {buttons && buttons(track)}
-      </Table.Cell>
+      <Table.Cell>{buttons && buttons(track)}</Table.Cell>
     </Table.Row>
   );
 };
@@ -172,7 +215,6 @@ export type TrackTableViewWithLoaderProps = {
 
 export default function TrackTableViewWithLoader({
   trackInfo,
-  playlistCounts = {},
   buttons,
   selectedTracks,
   onToggleTrack,
@@ -182,19 +224,17 @@ export default function TrackTableViewWithLoader({
       <Table.Root size="sm" variant="outline" interactive>
         <Table.Header>
           <Table.Row>
-            <Table.ColumnHeader width="40px"></Table.ColumnHeader>
-            <Table.ColumnHeader width="40px"></Table.ColumnHeader>
-            <Table.ColumnHeader>Title</Table.ColumnHeader>
-            <Table.ColumnHeader>Artist</Table.ColumnHeader>
-            <Table.ColumnHeader>Album</Table.ColumnHeader>
-            <Table.ColumnHeader>Genre</Table.ColumnHeader>
-            <Table.ColumnHeader>Duration</Table.ColumnHeader>
-            <Table.ColumnHeader>BPM</Table.ColumnHeader>
-            <Table.ColumnHeader>Key</Table.ColumnHeader>
-            <Table.ColumnHeader>Rating</Table.ColumnHeader>
-            <Table.ColumnHeader>User</Table.ColumnHeader>
-            <Table.ColumnHeader>Links</Table.ColumnHeader>
-            <Table.ColumnHeader width="60px"></Table.ColumnHeader>
+            <Table.ColumnHeader width="40px" />
+            <Table.ColumnHeader width="52px" />
+            <Table.ColumnHeader minW="200px">Title</Table.ColumnHeader>
+            <Table.ColumnHeader minW="140px">Artist</Table.ColumnHeader>
+            <Table.ColumnHeader minW="140px">Album</Table.ColumnHeader>
+            <Table.ColumnHeader width="130px">Genre</Table.ColumnHeader>
+            <Table.ColumnHeader width="64px">Time</Table.ColumnHeader>
+            <Table.ColumnHeader width="60px">BPM</Table.ColumnHeader>
+            <Table.ColumnHeader width="90px">Key</Table.ColumnHeader>
+            <Table.ColumnHeader width="110px">Rating</Table.ColumnHeader>
+            <Table.ColumnHeader width="52px" />
           </Table.Row>
         </Table.Header>
         <Table.Body>
@@ -203,14 +243,9 @@ export default function TrackTableViewWithLoader({
               key={`${info.trackId}-${info.friendId}`}
               trackId={info.trackId}
               friendId={info.friendId}
-              playlistCount={playlistCounts[`${info.trackId}:${info.friendId}`]}
               buttons={buttons}
               isSelected={selectedTracks?.has(`${info.trackId}:${info.friendId}`)}
-              onToggleSelect={
-                onToggleTrack
-                  ? () => onToggleTrack(info.trackId, info.friendId)
-                  : undefined
-              }
+              onToggleSelect={onToggleTrack ? () => onToggleTrack(info.trackId, info.friendId) : undefined}
             />
           ))}
         </Table.Body>

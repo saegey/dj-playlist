@@ -12,7 +12,7 @@ export type Track = {
   genres?: string[];
   duration: string;
   duration_seconds?: number;
-  position: number;
+  position: string | number;
   discogs_url: string;
   apple_music_url: string;
   youtube_url?: string;

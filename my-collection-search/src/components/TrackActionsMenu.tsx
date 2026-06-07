@@ -5,9 +5,9 @@ import { Button, Menu, Portal, Dialog, Flex, Box, Icon, Link } from "@chakra-ui/
 import { FiDownload, FiEdit, FiMoreVertical, FiPlus, FiPlusSquare, FiTrash2 } from "react-icons/fi";
 import { useQueryClient } from "@tanstack/react-query";
 import { SiApplemusic, SiYoutube, SiSoundcloud } from "react-icons/si";
+import NextLink from "next/link";
 
 import type { Track } from "@/types/track";
-import { useTrackEditor } from "@/providers/TrackEditProvider";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
 import { analyzeTrackAsync, softDeleteTrack } from "@/services/internalApi/tracks";
@@ -20,8 +20,8 @@ type Props = {
 };
 
 export default function TrackActionsMenu({ track }: Props) {
-  const { openTrackEditor } = useTrackEditor();
   const { appendToQueue } = usePlaylistPlayer();
+  const editHref = `/tracks/${encodeURIComponent(track.track_id)}/edit?friend_id=${track.friend_id}`;
   const { openForTrack, playlistDialog, nameDialog } = useAddToPlaylistDialog();
   const queryClient = useQueryClient();
 
@@ -108,8 +108,10 @@ export default function TrackActionsMenu({ track }: Props) {
               <Menu.Item onSelect={() => openForTrack(track)} value="add">
                 <FiPlus /> Add to Playlist
               </Menu.Item>
-              <Menu.Item onSelect={() => openTrackEditor(track)} value="edit">
-                <FiEdit /> Edit Track
+              <Menu.Item value="edit" asChild>
+                <NextLink href={editHref}>
+                  <FiEdit /> Edit Track
+                </NextLink>
               </Menu.Item>
               <Menu.Item onSelect={() => appendToQueue(track)} value="queue">
                 <FiPlusSquare /> Add to Queue

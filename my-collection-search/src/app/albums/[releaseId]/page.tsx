@@ -33,6 +33,10 @@ import { toaster } from "@/components/ui/toaster";
 import { useColorModeValue } from "@/components/ui/color-mode";
 import PageContainer from "@/components/layout/PageContainer";
 import {
+  compareTrackPositions,
+  getTrackSideLabel,
+} from "@/lib/albumTrackPosition";
+import {
   fetchAlbumDiscogsRawRelease,
   queueAlbumDownloads,
 } from "@/services/internalApi/albums";
@@ -75,7 +79,33 @@ function AlbumDetailContent() {
   const mutedText = useColorModeValue("gray.600", "gray.400");
   const subtleText = useColorModeValue("gray.500", "gray.500");
   const album = albumFromStore;
-  const tracks = tracksFromStore;
+  const tracks = React.useMemo(() => {
+    return [...tracksFromStore].sort((a, b) =>
+      compareTrackPositions(a.position, b.position)
+    );
+  }, [tracksFromStore]);
+  const trackSections = React.useMemo(() => {
+    const sections: Array<{ label: string; tracks: typeof tracks }> = [];
+    const sectionByLabel = new Map<string, { label: string; tracks: typeof tracks }>();
+
+    tracks.forEach((track) => {
+      const label = getTrackSideLabel(track.position) ?? "Tracklist";
+      let section = sectionByLabel.get(label);
+
+      if (!section) {
+        section = { label, tracks: [] };
+        sectionByLabel.set(label, section);
+        sections.push(section);
+      }
+
+      section.tracks.push(track);
+    });
+
+    return sections;
+  }, [tracks]);
+  const hasSideSections = trackSections.some((section) =>
+    section.label.startsWith("Side ")
+  );
 
   React.useEffect(() => {
     if (album) {
@@ -453,19 +483,46 @@ function AlbumDetailContent() {
         {tracks.length === 0 ? (
           <Text color={subtleText}>No tracks found for this album.</Text>
         ) : (
-          <Flex direction="column" gap={{ base: 1, md: 2 }}>
-            {tracks.map((track, idx) => (
-              <AlbumTrackItem
-                key={`${track.track_id}:${track.friend_id}:${idx}`}
-                track={track}
-                albumArtist={album.artist}
-                buttons={
-                  <TrackActionsMenu
-                    key={`${track.track_id}:${track.friend_id}:${idx}:actions`}
-                    track={track}
-                  />
-                }
-              />
+          <Flex direction="column" gap={{ base: 4, md: 6 }}>
+            {trackSections.map((section) => (
+              <Box key={section.label}>
+                {(hasSideSections || section.label !== "Tracklist") && (
+                  <Flex
+                    alignItems="center"
+                    gap={3}
+                    mb={{ base: 2, md: 3 }}
+                  >
+                    <Heading size={{ base: "sm", md: "md" }}>
+                      {section.label}
+                    </Heading>
+                    <Box flex="1" borderTopWidth="1px" />
+                    <Text fontSize="xs" color={subtleText} whiteSpace="nowrap">
+                      {section.tracks.length}{" "}
+                      {section.tracks.length === 1 ? "track" : "tracks"}
+                    </Text>
+                  </Flex>
+                )}
+                <Flex
+                  direction="column"
+                  borderWidth="1px"
+                  borderRadius="md"
+                  overflow="hidden"
+                >
+                  {section.tracks.map((track, idx) => (
+                    <AlbumTrackItem
+                      key={`${track.track_id}:${track.friend_id}:${idx}`}
+                      track={track}
+                      albumArtist={album.artist}
+                      buttons={
+                        <TrackActionsMenu
+                          key={`${track.track_id}:${track.friend_id}:${idx}:actions`}
+                          track={track}
+                        />
+                      }
+                    />
+                  ))}
+                </Flex>
+              </Box>
             ))}
           </Flex>
         )}

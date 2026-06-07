@@ -42,9 +42,18 @@ export default function TrackPage() {
     <PageContainer size="standard">
       <Flex justify="space-between" align="center" mb={4} gap={3} wrap="wrap">
         <Heading size="lg">Track Details</Heading>
-        <Button asChild variant="outline" size="sm">
-          <NextLink href="/">Back to Search</NextLink>
-        </Button>
+        <Flex gap={2}>
+          <Button asChild variant="outline" size="sm">
+            <NextLink href="/">Back to Search</NextLink>
+          </Button>
+          {hasValidFriendId && (
+            <Button asChild size="sm">
+              <NextLink href={`/tracks/${encodeURIComponent(trackId)}/edit?friend_id=${friendId}`}>
+                Edit
+              </NextLink>
+            </Button>
+          )}
+        </Flex>
       </Flex>
 
       {!hasValidFriendId && (

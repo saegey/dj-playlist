@@ -60,19 +60,20 @@ export default function YouTubePickerDialog({
     <Dialog.Root
       open={open}
       onOpenChange={(d) => onOpenChange(d.open)}
-      size={["full", "lg", "lg"]}
+      size={["full", "md", "md"]}
+      scrollBehavior="inside"
     >
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content>
+          <Dialog.Content style={{ maxHeight: "65vh" }}>
             <Dialog.Header>
               <Dialog.Title>Select YouTube Video</Dialog.Title>
               <Dialog.CloseTrigger asChild>
                 <CloseButton size="sm" />
               </Dialog.CloseTrigger>
             </Dialog.Header>
-            <Dialog.Body>
+            <Dialog.Body overflowY="auto">
               <VStack align="stretch" gap={4}>
                 {/* Search Query Section */}
                 {onSearch && (

@@ -137,13 +137,13 @@ export default function UsernameSelect({
           justifyContent="space-between"
           px={3}
           py={2}
-          bg="bg.subtle"
+          bg="bg.panel"
           borderWidth="1px"
           borderColor="border.subtle"
           borderRadius="md"
           cursor={isLoading && disableWhileLoading ? "not-allowed" : "pointer"}
           opacity={isLoading && disableWhileLoading ? 0.5 : 1}
-          _hover={isLoading && disableWhileLoading ? {} : { bg: "bg.muted" }}
+          _hover={isLoading && disableWhileLoading ? {} : { bg: "bg.subtle" }}
           minH={resolvedSize === "sm" ? 8 : resolvedSize === "md" ? 10 : 12}
         >
           <HStack w="100%" justify="space-between">

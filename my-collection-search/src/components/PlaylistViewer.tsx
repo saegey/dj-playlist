@@ -21,7 +21,6 @@ import { FiHeadphones } from "react-icons/fi";
 
 import DraggableTrackList from "@/components/DraggableTrackList";
 import { useSearchResults } from "@/hooks/useSearchResults";
-import { useTrackEditor } from "@/providers/TrackEditProvider";
 import PlaylistItemMenu from "@/components/PlaylistItemMenu";
 import { usePlaylistTrackIdsQuery } from "@/hooks/usePlaylistTrackIdsQuery";
 import { usePlaylistTracksQuery } from "@/hooks/usePlaylistTracksQuery";
@@ -87,7 +86,6 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { exportPlaylist, exportToPDF, getTotalPlaytime } =
     usePlaylistActions(playlistId);
 
-  const { openTrackEditor } = useTrackEditor();
   const {
     Dialog: SaveDialog,
     open: openSaveDialog,
@@ -443,12 +441,11 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           track={track}
           moveTrack={moveTrack}
           removeFromPlaylist={removeFromPlaylist}
-          openTrackEditor={openTrackEditor}
           size="xs"
         />
       ) : null;
     },
-    [tracksPlaylist.length, moveTrack, removeFromPlaylist, openTrackEditor]
+    [tracksPlaylist.length, moveTrack, removeFromPlaylist]
   );
 
   // Import JSON and append to this playlist
@@ -742,7 +739,6 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
         {/* <PlaylistRecommendations
           playlist={tracks}
           onAddToPlaylist={addToPlaylist}
-          onEditTrack={openTrackEditor}
         /> */}
         <SaveDialog />
         <NamePlaylistDialog
@@ -807,7 +803,6 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
                       playlist={recommendationsPlaylistSnapshot}
                       limit={50}
                       onAddToPlaylist={addToPlaylist}
-                      onEditTrack={openTrackEditor}
                     />
                   )}
                 </Dialog.Body>
