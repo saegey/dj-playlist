@@ -118,7 +118,7 @@ export class PlaylistManagementService {
 
     return {
       ...playlist,
-      tracks: tracks.map((track) => ({
+      tracks: resolvedTracks.map((track) => ({
         track_id: track.track_id,
         friend_id: track.friend_id,
         position: track.position,

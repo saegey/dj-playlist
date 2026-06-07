@@ -57,7 +57,8 @@ export default function UnifiedSearchControls({
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            variant="subtle"
+            variant="outline"
+            bg="bg.panel"
             fontSize="16px"
             placeholder={placeholder}
           />
@@ -82,7 +83,8 @@ export default function UnifiedSearchControls({
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              variant="subtle"
+              variant="outline"
+            bg="bg.panel"
               fontSize="16px"
               size="sm"
               placeholder={placeholder}

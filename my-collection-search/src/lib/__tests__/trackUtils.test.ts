@@ -3,6 +3,7 @@ import {
   parseDurationToSeconds,
   formatSeconds,
   getTrackDurationSeconds,
+  explodeDisplayTags,
 } from "../trackUtils";
 
 describe("parseDurationToSeconds", () => {
@@ -71,5 +72,31 @@ describe("getTrackDurationSeconds", () => {
 
   it("returns null when duration parses to 0", () => {
     expect(getTrackDurationSeconds({ duration: "0:00" })).toBeNull();
+  });
+});
+
+describe("explodeDisplayTags", () => {
+  it("splits comma, slash, and middle-dot separated tags for display", () => {
+    expect(
+      explodeDisplayTags([
+        "House, Deep House",
+        "psychedelic soul · cinematic funk · instrumental groove",
+        "Disco/Funk",
+      ])
+    ).toEqual([
+      "House",
+      "Deep House",
+      "psychedelic soul",
+      "cinematic funk",
+      "instrumental groove",
+      "Disco",
+      "Funk",
+    ]);
+  });
+
+  it("dedupes tags and ignores empty placeholders", () => {
+    expect(explodeDisplayTags(["House", "house, {}", "", null])).toEqual([
+      "House",
+    ]);
   });
 });

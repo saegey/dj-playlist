@@ -35,11 +35,11 @@ export default function DiscogsVideosModal({
   onVideoSelect,
 }: DiscogsVideosModalProps) {
   return (
-    <Dialog.Root open={open} onOpenChange={(e: { open: boolean }) => !e.open && onClose()} size={["full", "lg", "lg"]}>
+    <Dialog.Root open={open} onOpenChange={(e: { open: boolean }) => !e.open && onClose()} size={["full", "md", "md"]} scrollBehavior="inside">
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content>
+          <Dialog.Content style={{ maxHeight: "65vh" }}>
             <Dialog.Header>
               <Dialog.Title>Discogs Videos</Dialog.Title>
               <Dialog.CloseTrigger asChild>
@@ -47,7 +47,7 @@ export default function DiscogsVideosModal({
               </Dialog.CloseTrigger>
             </Dialog.Header>
 
-            <Dialog.Body>
+            <Dialog.Body overflowY="auto">
               {loading ? (
                 <Flex justify="center" py={8}>
                   <Spinner size="lg" />

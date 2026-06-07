@@ -14,6 +14,7 @@ export type PlaylistTrackIdsResponse = z.infer<typeof playlistDetailResponseSche
 export type CreatePlaylistTracks = string[] | PlaylistTrackPayload[];
 
 type PlaylistGeneticResponse = z.infer<typeof playlistGeneticResponseSchema>;
+export type PlaylistOptimizerMode = "genetic" | "greedy" | "cohesive_blocks";
 
 export async function importPlaylist(
   name: string,
@@ -55,12 +56,15 @@ export async function fetchPlaylistTrackIds(
   );
 }
 
-export async function generateGeneticPlaylist(playlist: Track[]): Promise<Track[]> {
+export async function generateOptimizedPlaylist(
+  playlist: Track[],
+  mode: PlaylistOptimizerMode = "genetic"
+): Promise<Track[]> {
   try {
     const data = await http<PlaylistGeneticResponse>("/api/playlists/genetic", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ playlist }),
+      body: JSON.stringify({ playlist, mode }),
     });
 
     return Array.isArray(data.result)
@@ -84,6 +88,10 @@ export async function generateGeneticPlaylist(playlist: Track[]): Promise<Track[
     }
     throw error;
   }
+}
+
+export async function generateGeneticPlaylist(playlist: Track[]): Promise<Track[]> {
+  return generateOptimizedPlaylist(playlist, "genetic");
 }
 
 export async function updatePlaylist(

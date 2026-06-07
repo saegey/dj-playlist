@@ -200,7 +200,7 @@ export default function QueueDrawer({
                       renderTrackButtons={renderQueueButtons}
                       currentTrackIndex={currentTrackIndex}
                       trackResultProps={{
-                        minimized: true,
+                        compact: true,
                       }}
                     />
                   </Flex>

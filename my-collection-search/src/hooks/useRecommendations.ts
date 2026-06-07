@@ -1,50 +1,57 @@
+"use client";
+
 import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Track } from "@/types/track";
 import { useUsername } from "@/providers/UsernameProvider";
 import { fetchRecommendationCandidates } from "@/services/internalApi/recommendations";
+import { fetchTracksByIds } from "@/services/internalApi/tracks";
 
 export type TrackWithEmbedding = Track;
+
+export type RecommendedTrack = Track & {
+  _simIdentity: number | null;
+  _simAudio: number | null;
+};
 
 async function fetchRecommendationsFromApi(
   seeds: Array<{ track_id: string; friend_id: number }>,
   limit: number
-): Promise<Track[]> {
+): Promise<RecommendedTrack[]> {
   const payload = await fetchRecommendationCandidates({
     tracks: seeds,
     limit_identity: limit,
     limit_audio: limit,
   });
   const candidates = payload.candidates ?? [];
-  return candidates.map((candidate) => {
-    const metadata = candidate.metadata ?? {};
-    return {
-      id: 0,
-      track_id: candidate.trackId,
-      friend_id: candidate.friendId,
-      title: metadata.title ?? candidate.trackId,
-      artist: metadata.artist ?? "Unknown artist",
-      album: metadata.album ?? "Unknown album",
-      year: metadata.year ?? "",
-      styles: Array.isArray(metadata.styles) ? metadata.styles : [],
-      genres: Array.isArray(metadata.genres) ? metadata.genres : [],
-      duration: "",
-      position: 0,
-      discogs_url: "",
-      apple_music_url: "",
-      bpm: metadata.bpm != null ? String(metadata.bpm) : undefined,
-      key: metadata.key ?? undefined,
-      local_tags: undefined,
-      notes: undefined,
-    } as Track;
-  });
+  if (candidates.length === 0) return [];
+
+  // Hydrate full track data (fixes album art and all missing fields)
+  const refs = candidates.map((c) => ({ track_id: c.trackId, friend_id: c.friendId }));
+  const hydrated = await fetchTracksByIds(refs);
+
+  const hydratedMap = new Map(
+    hydrated.map((t) => [`${t.track_id}:${t.friend_id}`, t])
+  );
+
+  return candidates
+    .map((candidate): RecommendedTrack | null => {
+      const full = hydratedMap.get(`${candidate.trackId}:${candidate.friendId}`);
+      if (!full) return null;
+      return {
+        ...full,
+        _simIdentity: candidate.simIdentity ?? null,
+        _simAudio: candidate.simAudio ?? null,
+      };
+    })
+    .filter((t): t is RecommendedTrack => t !== null);
 }
 
 export function useRecommendations() {
   const { friend: selectedFriend } = useUsername();
 
   const getRecommendations = useCallback(
-    async (k: number = 25, playlist: TrackWithEmbedding[] = []): Promise<Track[]> => {
+    async (k: number = 25, playlist: TrackWithEmbedding[] = []): Promise<RecommendedTrack[]> => {
       const seeds = playlist
         .map((track) => ({
           track_id: track.track_id,
@@ -92,7 +99,7 @@ export function useRecommendationsQuery(
 
   return useQuery({
     queryKey: ["recommendations", { seeds: seedKey, limit }],
-    queryFn: async (): Promise<Track[]> => {
+    queryFn: async (): Promise<RecommendedTrack[]> => {
       if (dedupedSeeds.length === 0) return [];
       try {
         return await fetchRecommendationsFromApi(dedupedSeeds, limit);

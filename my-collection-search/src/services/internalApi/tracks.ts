@@ -145,6 +145,18 @@ export async function analyzeTrackAsync(
   });
 }
 
+export async function fixTrackDuration(args: {
+  track_id: string;
+  friend_id: number;
+  local_audio_url?: string | null;
+}): Promise<{ success: boolean; jobId: string }> {
+  return await http<{ success: boolean; jobId: string }>("/api/tracks/fix-duration", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+  });
+}
+
 export async function uploadTrackAudio(
   args: UploadTrackAudioArgs
 ): Promise<UploadTrackAudioResponse> {

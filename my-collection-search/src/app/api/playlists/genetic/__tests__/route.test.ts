@@ -86,6 +86,13 @@ describe("POST /api/playlists/genetic — embedding normalization", () => {
     expect(callBody.tracks[0].embedding).toBe(JSON.stringify([0.1, 0.2, 0.3]));
   });
 
+  it("forwards cohesive_blocks mode to GA service", async () => {
+    const track = makeTrack();
+    await POST(makeReq({ playlist: [track], mode: "cohesive_blocks" }));
+    const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(callBody.mode).toBe("cohesive_blocks");
+  });
+
   it("accepts string embedding and passes it through unchanged", async () => {
     const embStr = JSON.stringify([0.1, 0.2]);
     const track = makeTrack({ embedding: embStr });
@@ -108,6 +115,18 @@ describe("POST /api/playlists/genetic — embedding normalization", () => {
     const body = await res.json();
     expect(body.invalid[0].reason).toBe("missing_embedding");
     expect(body.invalid[0].track_id).toBe("track-1");
+  });
+
+  it("allows cohesive_blocks when embedding is missing", async () => {
+    const track = makeTrack({
+      embedding: null,
+      genres: ["Electronic"],
+      styles: ["House"],
+    });
+    const res = await POST(makeReq({ playlist: [track], mode: "cohesive_blocks" }));
+    expect(res.status).toBe(200);
+    const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(callBody.tracks[0].embedding).toBeUndefined();
   });
 
   it("returns 400 with missing_embedding when embedding array is empty", async () => {
@@ -150,6 +169,18 @@ describe("POST /api/playlists/genetic — BPM normalization", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.invalid[0].reason).toBe("missing_bpm");
+  });
+
+  it("allows cohesive_blocks when BPM is missing", async () => {
+    const track = makeTrack({
+      bpm: null,
+      genres: ["Electronic"],
+      styles: ["House"],
+    });
+    const res = await POST(makeReq({ playlist: [track], mode: "cohesive_blocks" }));
+    expect(res.status).toBe(200);
+    const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(callBody.tracks[0].bpm).toBeUndefined();
   });
 
   it("returns 400 with missing_bpm when BPM is a non-numeric string", async () => {

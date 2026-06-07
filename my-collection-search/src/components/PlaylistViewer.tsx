@@ -21,7 +21,6 @@ import { FiHeadphones } from "react-icons/fi";
 
 import DraggableTrackList from "@/components/DraggableTrackList";
 import { useSearchResults } from "@/hooks/useSearchResults";
-import { useTrackEditor } from "@/providers/TrackEditProvider";
 import PlaylistItemMenu from "@/components/PlaylistItemMenu";
 import { usePlaylistTrackIdsQuery } from "@/hooks/usePlaylistTrackIdsQuery";
 import { usePlaylistTracksQuery } from "@/hooks/usePlaylistTracksQuery";
@@ -39,9 +38,10 @@ import {
   updatePlaylist,
   type PlaylistTrackPayload,
 } from "@/services/internalApi/playlists";
-import { analyzeTrackAsync } from "@/services/internalApi/tracks";
+import { analyzeTrackAsync, fixTrackDuration } from "@/services/internalApi/tracks";
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { queryKeys } from "@/lib/queryKeys";
+import { getTrackDurationSeconds } from "@/lib/trackUtils";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
@@ -75,7 +75,10 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     addToPlaylist,
     sortGreedy,
     sortGenetic,
+    sortCohesiveBlocks,
     isGeneticSorting,
+    isCohesiveBlocksSorting,
+    sortPositionChanges,
   } = usePlaylistMutations(playlistId, () => setHasUnsavedChanges(true));
 
   const { replacePlaylist } = usePlaylistPlayer();
@@ -83,7 +86,6 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { exportPlaylist, exportToPDF, getTotalPlaytime } =
     usePlaylistActions(playlistId);
 
-  const { openTrackEditor } = useTrackEditor();
   const {
     Dialog: SaveDialog,
     open: openSaveDialog,
@@ -94,6 +96,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameName, setRenameName] = useState("");
   const [isEnqueuingDownloads, setIsEnqueuingDownloads] = useState(false);
+  const [isBackfillingDuration, setIsBackfillingDuration] = useState(false);
   const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false);
   const [recommendationsPlaylistSnapshot, setRecommendationsPlaylistSnapshot] = useState<Track[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -122,7 +125,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   }, [hasUnsavedChanges]);
 
   // Get total playtime for display
-  const { formatted: totalPlaytimeFormatted } = getTotalPlaytime();
+  const { formatted: totalPlaytimeFormatted, missingCount: durationMissingCount } = getTotalPlaytime();
   const playlistStats = useMemo(() => {
     const genreCounts = new Map<string, number>();
     const styleCounts = new Map<string, number>();
@@ -314,6 +317,51 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     });
   };
 
+  const handleBackfillDuration = async () => {
+    if (!tracks || tracks.length === 0) {
+      toaster.create({ title: "No tracks in playlist", type: "info" });
+      return;
+    }
+
+    const eligible = tracks.filter(
+      (t) => t.local_audio_url && getTrackDurationSeconds(t) === null
+    );
+
+    if (eligible.length === 0) {
+      toaster.create({
+        title: "All tracks with audio already have duration",
+        type: "info",
+      });
+      return;
+    }
+
+    setIsBackfillingDuration(true);
+    let enqueued = 0;
+    let failed = 0;
+
+    for (const track of eligible) {
+      try {
+        await fixTrackDuration({
+          track_id: track.track_id,
+          friend_id: track.friend_id!,
+          local_audio_url: track.local_audio_url,
+        });
+        enqueued += 1;
+      } catch (err) {
+        console.error("Failed to queue fix-duration for track", track.track_id, err);
+        failed += 1;
+      }
+    }
+
+    setIsBackfillingDuration(false);
+    toaster.create({
+      title: `Queued ${enqueued} track${enqueued === 1 ? "" : "s"} for duration backfill${
+        failed ? ` (${failed} failed)` : ""
+      }`,
+      type: failed ? "warning" : "success",
+    });
+  };
+
   const handleDuplicatePlaylist = async (name: string) => {
     const finalName = name.trim();
     if (!finalName) {
@@ -393,12 +441,11 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           track={track}
           moveTrack={moveTrack}
           removeFromPlaylist={removeFromPlaylist}
-          openTrackEditor={openTrackEditor}
           size="xs"
         />
       ) : null;
     },
-    [tracksPlaylist.length, moveTrack, removeFromPlaylist, openTrackEditor]
+    [tracksPlaylist.length, moveTrack, removeFromPlaylist]
   );
 
   // Import JSON and append to this playlist
@@ -550,7 +597,9 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           </Flex>
           <Text fontSize="sm" color="gray.500" mb={2}>
             Total Playtime: {totalPlaytimeFormatted}
-            {/* Playlist Recommendations */}
+            {durationMissingCount > 0 && (
+              <Text as="span" color="gray.400"> ({durationMissingCount} track{durationMissingCount !== 1 ? "s" : ""} missing timing)</Text>
+            )}
           </Text>
         </Box>
         <Flex gap={2} align="flex-start">
@@ -570,6 +619,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
               sortGreedy();
             }}
             onSortGenetic={sortGenetic}
+            onSortCohesiveBlocks={sortCohesiveBlocks}
             onExportJson={exportPlaylist}
           onImportJson={() => fileInputRef.current?.click()}
           onExportPdf={() =>
@@ -577,10 +627,14 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           }
           onOpenSaveDialog={playlistId ? saveExisting : openSaveDialog}
           isGeneticSorting={isGeneticSorting}
+          isCohesiveBlocksSorting={isCohesiveBlocksSorting}
           onDuplicate={playlistId ? () => setDuplicateDialogOpen(true) : undefined}
           onRename={playlistId ? () => setRenameDialogOpen(true) : undefined}
           onEnqueueMissingDownloads={
             isEnqueuingDownloads ? undefined : handleEnqueueMissingDownloads
+          }
+          onBackfillDuration={
+            isBackfillingDuration ? undefined : handleBackfillDuration
           }
           onOpenRecommendations={() => {
             setRecommendationsPlaylistSnapshot([...tracks]);
@@ -680,11 +734,11 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
             playlistMode: true,
             playlistCount: playlistCounts,
           }}
+          sortPositionChanges={sortPositionChanges}
         />
         {/* <PlaylistRecommendations
           playlist={tracks}
           onAddToPlaylist={addToPlaylist}
-          onEditTrack={openTrackEditor}
         /> */}
         <SaveDialog />
         <NamePlaylistDialog
@@ -749,7 +803,6 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
                       playlist={recommendationsPlaylistSnapshot}
                       limit={50}
                       onAddToPlaylist={addToPlaylist}
-                      onEditTrack={openTrackEditor}
                     />
                   )}
                 </Dialog.Body>

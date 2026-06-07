@@ -425,7 +425,7 @@ export const playlistTrackInputSchema = z
     genres: z.array(z.string()).nullable().optional(),
     duration: z.string().nullable().optional(),
     duration_seconds: z.number().nullable().optional(),
-    position: z.number().int().nullable().optional(),
+    position: z.union([z.string(), z.number()]).nullable().optional(),
     discogs_url: z.string().nullable().optional(),
     apple_music_url: z.string().nullable().optional(),
     youtube_url: z.string().nullable().optional(),
@@ -505,6 +505,7 @@ export const playlistGeneticTrackSchema = z
 
 export const playlistGeneticBodySchema = z.object({
   playlist: z.array(playlistGeneticTrackSchema).min(1),
+  mode: z.enum(["genetic", "greedy", "cohesive_blocks"]).optional(),
 });
 
 export const playlistGeneticResultTrackSchema = z
@@ -515,6 +516,7 @@ export const playlistGeneticResultTrackSchema = z
 
 export const playlistGeneticResponseSchema = z
   .object({
+    mode: z.enum(["genetic", "greedy", "cohesive_blocks"]).optional(),
     result: z.union([
       z.array(playlistGeneticResultTrackSchema),
       z.record(playlistGeneticResultTrackSchema),

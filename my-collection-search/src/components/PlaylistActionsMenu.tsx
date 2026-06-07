@@ -2,7 +2,17 @@
 
 import React from "react";
 import { Button, Menu, Flex, Box } from "@chakra-ui/react";
-import { FiMoreVertical, FiPlay, FiSave, FiEdit, FiCopy, FiDownload, FiZap } from "react-icons/fi";
+import {
+  FiCopy,
+  FiDownload,
+  FiEdit,
+  FiLayers,
+  FiMoreVertical,
+  FiPlay,
+  FiSave,
+  FiZap,
+  FiClock,
+} from "react-icons/fi";
 import { GiTakeMyMoney } from "react-icons/gi";
 import { PiDna, PiFilePdf } from "react-icons/pi";
 // import { MdOutlineClearAll } from "react-icons/md";
@@ -12,6 +22,7 @@ export interface PlaylistActionsMenuProps {
   disabled?: boolean;
   onSortGreedy: () => void;
   onSortGenetic: () => void;
+  onSortCohesiveBlocks: () => void;
   onExportJson: () => void;
   onImportJson: () => void;
   onExportPdf: () => void;
@@ -19,8 +30,10 @@ export interface PlaylistActionsMenuProps {
   onDuplicate?: () => void;
   onRename?: () => void;
   onEnqueueMissingDownloads?: () => void;
+  onBackfillDuration?: () => void;
   onOpenRecommendations?: () => void;
   isGeneticSorting?: boolean;
+  isCohesiveBlocksSorting?: boolean;
   enqueuePlaylist: () => void;
 }
 
@@ -32,6 +45,7 @@ export default function PlaylistActionsMenu({
   disabled,
   onSortGreedy,
   onSortGenetic,
+  onSortCohesiveBlocks,
   onExportJson,
   onImportJson,
   onExportPdf,
@@ -39,9 +53,11 @@ export default function PlaylistActionsMenu({
   onDuplicate,
   onRename,
   onEnqueueMissingDownloads,
+  onBackfillDuration,
   onOpenRecommendations,
   enqueuePlaylist,
   isGeneticSorting,
+  isCohesiveBlocksSorting,
 }: PlaylistActionsMenuProps) {
   return (
     <Menu.Root>
@@ -77,6 +93,14 @@ export default function PlaylistActionsMenu({
             disabled={isGeneticSorting}
           >
             <PiDna /> {isGeneticSorting ? "Sorting..." : "Genetic Order"}
+          </Menu.Item>
+          <Menu.Item
+            value="sort-cohesive-blocks"
+            onSelect={onSortCohesiveBlocks}
+            disabled={isCohesiveBlocksSorting}
+          >
+            <FiLayers />{" "}
+            {isCohesiveBlocksSorting ? "Sorting..." : "Cohesive Blocks"}
           </Menu.Item>
           {onOpenRecommendations && (
             <Menu.Item value="recommendations" onSelect={onOpenRecommendations}>
@@ -129,7 +153,7 @@ export default function PlaylistActionsMenu({
               )}
             </>
           )}
-          {(onEnqueueMissingDownloads) && (
+          {(onEnqueueMissingDownloads || onBackfillDuration) && (
             <>
               <Box
                 as="hr"
@@ -138,9 +162,16 @@ export default function PlaylistActionsMenu({
                 borderWidth={0}
                 borderTopWidth={1}
               />
-              <Menu.Item value="enqueue-missing" onSelect={onEnqueueMissingDownloads}>
-                <FiDownload /> Enqueue Missing Downloads
-              </Menu.Item>
+              {onEnqueueMissingDownloads && (
+                <Menu.Item value="enqueue-missing" onSelect={onEnqueueMissingDownloads}>
+                  <FiDownload /> Enqueue Missing Downloads
+                </Menu.Item>
+              )}
+              {onBackfillDuration && (
+                <Menu.Item value="backfill-duration" onSelect={onBackfillDuration}>
+                  <FiClock /> Backfill Duration from Audio
+                </Menu.Item>
+              )}
             </>
           )}
           <Box

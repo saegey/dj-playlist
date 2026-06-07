@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import NextLink from "next/link";
 import { Button, Menu, Dialog, Portal, Flex } from "@chakra-ui/react";
 import {
   FiArrowDown,
@@ -24,7 +25,6 @@ export interface PlaylistItemMenuProps {
   track: Track;
   moveTrack: (fromIdx: number, toIdx: number) => void;
   removeFromPlaylist: (indexToRemove: number) => void;
-  openTrackEditor: (track: Track) => void;
   size?: "xs" | "sm" | "md" | "lg";
 }
 
@@ -34,7 +34,6 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
   track,
   moveTrack,
   removeFromPlaylist,
-  openTrackEditor,
   size = "xs",
 }) => {
   const { openForTrack, playlistDialog } = useAddToPlaylistDialog();
@@ -106,9 +105,11 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
               <FiArrowDown />
               Move Down
             </Menu.Item>
-            <Menu.Item onSelect={() => openTrackEditor(track)} value="edit">
-              <FiEdit />
-              Edit
+            <Menu.Item value="edit" asChild>
+              <NextLink href={`/tracks/${encodeURIComponent(track.track_id)}/edit?friend_id=${track.friend_id}`}>
+                <FiEdit />
+                Edit
+              </NextLink>
             </Menu.Item>
             <Menu.Item onSelect={() => openForTrack(track)} value="add">
               <FiPlus /> Add to Playlist
@@ -175,7 +176,6 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
                     playlist={recommendationsTrackSnapshot}
                     limit={50}
                     onAddToPlaylist={(t) => openForTrack(t)}
-                    onEditTrack={openTrackEditor}
                   />
                 )}
               </Dialog.Body>

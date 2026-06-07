@@ -124,33 +124,39 @@ export default function AlbumResult({
                 </Badge>
               )}
               <Link
-                as={NextLink}
-                href={`/albums/${resolvedAlbum.release_id}?friend_id=${resolvedAlbum.friend_id}`}
+                asChild
                 _hover={{ textDecoration: "underline" }}
               >
-                <Text
-                  fontWeight="bold"
-                  fontSize={{ base: "sm", md: "lg" }}
-                  color={titleColor}
-                  lineClamp={{ base: 2, md: 3 }}
-                  lineHeight={{ base: "1.3", md: "1.4" }}
+                <NextLink
+                  href={`/albums/${resolvedAlbum.release_id}?friend_id=${resolvedAlbum.friend_id}`}
                 >
-                  {resolvedAlbum.title}
-                </Text>
+                  <Text
+                    fontWeight="bold"
+                    fontSize={{ base: "sm", md: "lg" }}
+                    color={titleColor}
+                    lineClamp={{ base: 2, md: 3 }}
+                    lineHeight={{ base: "1.3", md: "1.4" }}
+                  >
+                    {resolvedAlbum.title}
+                  </Text>
+                </NextLink>
               </Link>
             </Flex>
             <Link
-              as={NextLink}
-              href={`/albums?q=${encodeURIComponent(resolvedAlbum.artist)}&friend_id=${resolvedAlbum.friend_id}`}
+              asChild
               _hover={{ textDecoration: "underline" }}
             >
-              <Text
-                fontSize={{ base: "xs", md: "md" }}
-                color={mutedText}
-                lineClamp={1}
+              <NextLink
+                href={`/albums?q=${encodeURIComponent(resolvedAlbum.artist)}&friend_id=${resolvedAlbum.friend_id}`}
               >
-                {resolvedAlbum.artist}
-              </Text>
+                <Text
+                  fontSize={{ base: "xs", md: "md" }}
+                  color={mutedText}
+                  lineClamp={1}
+                >
+                  {resolvedAlbum.artist}
+                </Text>
+              </NextLink>
             </Link>
           </Flex>
 

@@ -13,6 +13,7 @@ import {
 import TrackResultStore from "@/components/TrackResultStore";
 import { useDragAndDropList } from "@/hooks/useDragAndDropList";
 import type { Track } from "@/types/track";
+import type { SortPositionChange } from "@/hooks/usePlaylistMutations";
 
 interface DraggableTrackListProps {
   /** Array of track IDs in order */
@@ -30,12 +31,13 @@ interface DraggableTrackListProps {
   ) => React.ReactNode;
   /** Additional props for TrackResultStore */
   trackResultProps?: {
-    minimized?: boolean;
+    compact?: boolean;
     playlistCount?: Record<string, number>;
     playlistMode?: boolean;
   };
   /** Current playing track index (for highlighting) */
   currentTrackIndex?: number | null;
+  sortPositionChanges?: Record<string, SortPositionChange>;
 }
 
 export default function DraggableTrackList({
@@ -46,6 +48,7 @@ export default function DraggableTrackList({
   renderTrackButtons,
   trackResultProps = {},
   currentTrackIndex,
+  sortPositionChanges = {},
 }: DraggableTrackListProps) {
   const { onDragEnd } = useDragAndDropList(moveTrack);
 
@@ -64,6 +67,10 @@ export default function DraggableTrackList({
               // Playlists can contain duplicate track refs; include index to ensure uniqueness.
               const draggableKey = `${trackPlay.track_id}:${trackPlay.friend_id}:${idx}`;
               const isCurrentTrack = currentTrackIndex === idx;
+              const sortPositionChange =
+                sortPositionChanges[
+                  `${trackPlay.track_id}:${trackPlay.friend_id}:${idx}`
+                ];
 
               return (
                 <Draggable
@@ -93,13 +100,14 @@ export default function DraggableTrackList({
                             ? renderTrackButtons(track, idx)
                             : undefined
                         }
-                        minimized={trackResultProps?.minimized}
+                        compact={trackResultProps?.compact}
                         playlistCount={
                           trackResultProps?.playlistCount?.[
                             `${trackPlay.track_id}:${trackPlay.friend_id}`
                           ]
                         }
                         playlistMode={trackResultProps?.playlistMode}
+                        sortPositionChange={sortPositionChange}
                       />
                     </Box>
                   )}

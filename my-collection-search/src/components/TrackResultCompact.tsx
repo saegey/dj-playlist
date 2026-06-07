@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import NextLink from "next/link";
+import TrackPlaylistUsage from "./TrackPlaylistUsage";
 import {
   Box,
   Flex,
@@ -18,7 +19,7 @@ import { Track } from "@/types/track";
 import { FaPlay } from "react-icons/fa";
 import { keyToCamelot } from "@/lib/playlistOrder";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
-import { getTrackDurationSeconds } from "@/lib/trackUtils";
+import { explodeDisplayTags, getTrackDurationSeconds } from "@/lib/trackUtils";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -74,9 +75,10 @@ export default function TrackResultCompact({
     track._semanticScore !== undefined ? track._semanticScore * 100 : undefined;
 
   // Collect all genres and styles
-  const genres = Array.isArray(track.genres) ? track.genres : [];
-  const styles = Array.isArray(track.styles) ? track.styles : [];
+  const genres = explodeDisplayTags(track.genres);
+  const styles = explodeDisplayTags(track.styles);
   const allGenres = [...genres, ...styles];
+  const localTags = explodeDisplayTags(track.local_tags);
 
   // Collect technical details
   const details: Array<{ icon: string; value: string | number }> = [];
@@ -242,9 +244,7 @@ export default function TrackResultCompact({
           {showPlaylistCount && typeof playlistCount === "number" && playlistCount > 0 && (
             <>
               <Text color="gray.400">•</Text>
-              <Text fontSize="xs" color="gray.500">
-                {playlistCount} playlist{playlistCount === 1 ? "" : "s"}
-              </Text>
+              <TrackPlaylistUsage track={track} count={playlistCount} />
             </>
           )}
         </Flex>
@@ -276,21 +276,16 @@ export default function TrackResultCompact({
             )}
 
             {showGenres &&
-              ((typeof track.local_tags === "string" &&
-                track.local_tags !== "{}" &&
-                track.local_tags !== "") ||
-                (Array.isArray(track.local_tags) &&
-                  track.local_tags.length > 0)) && (
+              localTags.map((tag) => (
                 <Badge
+                  key={tag}
                   size="xs"
                   variant="solid"
                   colorPalette="blue"
                 >
-                  {Array.isArray(track.local_tags)
-                    ? track.local_tags.join(", ")
-                    : track.local_tags}
+                  {tag}
                 </Badge>
-              )}
+              ))}
 
             {showLinks && (
               <Flex gap={1.5} ml="auto">

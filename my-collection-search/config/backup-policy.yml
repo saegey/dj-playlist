@@ -1,9 +1,9 @@
-enabled: false
+enabled: true
 provider: restic-b2
 schedule_cron: 0 */6 * * *
 retention_preset: balanced
-include_database: false
-include_audio_files: false
-include_album_covers: false
-include_uploads: false
-updated_at: 2026-05-23T20:40:50.804Z
+include_database: true
+include_audio_files: true
+include_album_covers: true
+include_uploads: true
+updated_at: 2026-06-07T02:00:20.895Z

@@ -111,8 +111,6 @@ export default function SimilarVibeTracks({
                 track={trackWithArtwork}
                 showUsername={true}
                 showRating={true}
-                minimized={index > 4} // Minimize after first 5
-                allowMinimize={true}
                 buttons={
                   <Flex gap={2} align="center">
                     {/* Distance badge */}

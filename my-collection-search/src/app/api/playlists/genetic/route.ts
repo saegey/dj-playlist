@@ -18,6 +18,7 @@ export async function POST(req: Request) {
     }
 
     const inputTracks = parsedBody.data.playlist;
+    const mode = parsedBody.data.mode ?? "genetic";
     const invalid: Array<{ track_id?: string; reason: string }> = [];
 
     const normalizedTracks = inputTracks
@@ -43,19 +44,19 @@ export async function POST(req: Request) {
         const trackId =
           typeof track.track_id === "string" ? track.track_id : undefined;
 
-        if (!embedding) {
+        if (mode === "genetic" && !embedding) {
           invalid.push({ track_id: trackId, reason: "missing_embedding" });
           return null;
         }
-        if (!Number.isFinite(bpm)) {
+        if (mode === "genetic" && !Number.isFinite(bpm)) {
           invalid.push({ track_id: trackId, reason: "missing_bpm" });
           return null;
         }
 
         return {
           ...track,
-          bpm,
-          embedding,
+          bpm: Number.isFinite(bpm) ? bpm : undefined,
+          embedding: embedding ?? undefined,
         };
       })
       .filter(Boolean);
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         tracks: normalizedTracks,
+        mode,
       }),
     });
     const responseJson = await res.json();

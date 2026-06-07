@@ -109,7 +109,7 @@ release-localbuild server="vinyl": tag-push
   set -euo pipefail
   case "{{server}}" in
     vinyl)   host=vinyl.local;   dir=/opt/stacks/dj-playlist ;;
-    beelink) host=beelink.local; dir=/srv/docker/groovenet ;;
+    beelink) host=100.117.118.15; dir=/srv/docker/groovenet ;;
     *) echo "Unknown server: {{server}}. Known servers: vinyl, beelink"; exit 1 ;;
   esac
   TAG="{{tag}}" just prod_host="$host" prod_stack_dir="$dir" deploy-prod-remote-localbuild

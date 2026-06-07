@@ -1,6 +1,11 @@
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queryKeys";
-import { generateGeneticPlaylist, updatePlaylist } from "@/services/internalApi/playlists";
+import {
+  generateOptimizedPlaylist,
+  type PlaylistOptimizerMode,
+  updatePlaylist,
+} from "@/services/internalApi/playlists";
 import type { Track } from "@/types/track";
 import { useTrackStore } from "@/stores/trackStore";
 import { toaster } from "@/components/ui/toaster";
@@ -12,6 +17,11 @@ import {
 } from "@/lib/playlistOrder";
 import posthog from "posthog-js";
 
+export type SortPositionChange = {
+  previousPosition: number;
+  currentPosition: number;
+};
+
 /**
  * Hook for playlist mutation operations (sort, clear, reorder)
  * Works with query-based playlist data
@@ -19,6 +29,9 @@ import posthog from "posthog-js";
 export function usePlaylistMutations(playlistId?: number, onModified?: () => void) {
   const queryClient = useQueryClient();
   const { getTrack } = useTrackStore();
+  const [sortPositionChanges, setSortPositionChanges] = useState<
+    Record<string, SortPositionChange>
+  >({});
 
   // Get current track refs (track_id + friend_id) from cache
   type TrackRef = { track_id: string; friend_id: number };
@@ -80,8 +93,43 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
     );
   };
 
+  const clearSortPositionChanges = () => {
+    setSortPositionChanges({});
+  };
+
+  const getPositionChangeKey = (ref: TrackRef, index: number) =>
+    `${ref.track_id}:${ref.friend_id}:${index}`;
+
+  const buildPositionChanges = (
+    previousRefs: TrackRef[],
+    sortedRefs: TrackRef[]
+  ) => {
+    const previousPositionQueues = new Map<string, number[]>();
+    previousRefs.forEach((ref, index) => {
+      const key = `${ref.track_id}:${ref.friend_id}`;
+      const queue = previousPositionQueues.get(key) ?? [];
+      queue.push(index + 1);
+      previousPositionQueues.set(key, queue);
+    });
+
+    const changes: Record<string, SortPositionChange> = {};
+    sortedRefs.forEach((ref, index) => {
+      const key = `${ref.track_id}:${ref.friend_id}`;
+      const previousPosition = previousPositionQueues.get(key)?.shift();
+      const currentPosition = index + 1;
+      if (previousPosition && previousPosition !== currentPosition) {
+        changes[getPositionChangeKey(ref, index)] = {
+          previousPosition,
+          currentPosition,
+        };
+      }
+    });
+    return changes;
+  };
+
   // Move track from one position to another
   const moveTrack = (fromIdx: number, toIdx: number) => {
+    clearSortPositionChanges();
     const trackRefs = getTrackIds();
     if (
       fromIdx < 0 ||
@@ -149,22 +197,26 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
 
   // Remove track from playlist (with server persistence)
   const removeFromPlaylist = (indexToRemove: number) => {
+    clearSortPositionChanges();
     removeTrackMutation.mutate(indexToRemove);
   };
 
   // Add track to playlist (with server persistence) 
   const addToPlaylist = (track: Track) => {
+    clearSortPositionChanges();
     addTrackMutation.mutate(track);
   };
 
   // Clear entire playlist
   const clearPlaylist = () => {
+    clearSortPositionChanges();
     updateTrackRefs([]);
   };
 
   // Sort playlist using greedy algorithm
   const sortGreedy = () => {
     const trackRefs = getTrackIds();
+    const previousRefs = [...trackRefs];
     console.log("Greedy sort track refs:", trackRefs);
     if (trackRefs.length === 0) return;
 
@@ -211,6 +263,7 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
     });
     console.log("Greedy sorted track refs:", sortedTrackRefs);
 
+    setSortPositionChanges(buildPositionChanges(previousRefs, sortedTrackRefs));
     updateTrackRefs(sortedTrackRefs);
     onModified?.(); // Mark as modified
 
@@ -222,11 +275,14 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
     });
   };
 
-  // Genetic sort mutation
-  const geneticSortMutation = useMutation({
-    mutationFn: async () => {
+  // Server-backed optimizer mutation
+  const optimizerMutation = useMutation({
+    mutationFn: async (mode: PlaylistOptimizerMode) => {
       const trackRefs = getTrackIds();
-      if (trackRefs.length === 0) return [];
+      if (trackRefs.length === 0) {
+        return { mode, previousRefs: trackRefs, sortedTracks: [] };
+      }
+      const previousRefs = [...trackRefs];
 
       // Get full track objects from track store for genetic algorithm
       const tracks = trackRefs
@@ -241,16 +297,22 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
         })
         .filter(Boolean) as Track[];
 
-      if (tracks.length === 0) return [];
+      if (tracks.length === 0) {
+        return { mode, previousRefs, sortedTracks: [] };
+      }
 
-      return await generateGeneticPlaylist(tracks);
+      const sortedTracks = await generateOptimizedPlaylist(tracks, mode);
+      return { mode, previousRefs, sortedTracks };
     },
-    onSuccess: (sortedTracks) => {
+    onSuccess: ({ mode, previousRefs, sortedTracks }) => {
       if (sortedTracks.length > 0) {
         const sortedTrackRefs = sortedTracks.map((track) => ({
           track_id: track.track_id,
           friend_id: track.friend_id!
         }));
+        setSortPositionChanges(
+          buildPositionChanges(previousRefs, sortedTrackRefs)
+        );
         updateTrackRefs(sortedTrackRefs);
         onModified?.(); // Mark as modified
 
@@ -258,12 +320,12 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
         posthog.capture("playlist_sorted", {
           playlist_id: playlistId,
           track_count: sortedTracks.length,
-          sort_algorithm: "genetic",
+          sort_algorithm: mode,
         });
       }
     },
-    onError: (error) => {
-      console.error("Error during genetic sort:", error);
+    onError: (error, mode) => {
+      console.error(`Error during ${mode} sort:`, error);
       let details = "";
       if (error instanceof Error) {
         try {
@@ -288,7 +350,10 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
         }
       }
       toaster.create({
-        title: "Genetic sort failed",
+        title:
+          mode === "cohesive_blocks"
+            ? "Cohesive blocks sort failed"
+            : "Genetic sort failed",
         description: details || (error instanceof Error ? error.message : String(error)),
         type: "error",
       });
@@ -296,7 +361,11 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
   });
 
   const sortGenetic = () => {
-    geneticSortMutation.mutate();
+    optimizerMutation.mutate("genetic");
+  };
+
+  const sortCohesiveBlocks = () => {
+    optimizerMutation.mutate("cohesive_blocks");
   };
 
   return {
@@ -306,6 +375,12 @@ export function usePlaylistMutations(playlistId?: number, onModified?: () => voi
     clearPlaylist,
     sortGreedy,
     sortGenetic,
-    isGeneticSorting: geneticSortMutation.isPending,
+    sortCohesiveBlocks,
+    isGeneticSorting:
+      optimizerMutation.isPending && optimizerMutation.variables === "genetic",
+    isCohesiveBlocksSorting:
+      optimizerMutation.isPending &&
+      optimizerMutation.variables === "cohesive_blocks",
+    sortPositionChanges,
   };
 }

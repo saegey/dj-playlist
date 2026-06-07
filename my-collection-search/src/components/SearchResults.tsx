@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Box, Text, IconButton, Flex, Spinner, Badge } from "@chakra-ui/react";
-import { LuLayoutGrid, LuTable, LuMaximize2, LuMinimize2 } from "react-icons/lu";
+import { LuLayoutGrid, LuTable } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
 import TrackSelectionBar from "@/components/TrackSelectionBar";
@@ -41,7 +41,6 @@ const TrackResultItem: React.FC<{
       trackId={trackId}
       friendId={friendId}
       fallbackTrack={track}
-      allowMinimize={false}
       playlistCount={playlistCount}
       buttons={[<TrackActionsMenu key="menu" track={track} />]}
       compact={compact}
@@ -174,28 +173,17 @@ const SearchResults: React.FC = () => {
 
   // View mode state with localStorage persistence
   const [viewMode, setViewMode] = React.useState<"card" | "table">("card");
-  const [compactMode, setCompactMode] = React.useState(false);
 
   React.useEffect(() => {
     const saved = localStorage.getItem("searchViewMode");
     if (saved === "card" || saved === "table") {
       setViewMode(saved);
     }
-    const savedCompact = localStorage.getItem("searchCompactMode");
-    if (savedCompact === "true") {
-      setCompactMode(true);
-    }
   }, []);
 
   const handleViewModeChange = (mode: "card" | "table") => {
     setViewMode(mode);
     localStorage.setItem("searchViewMode", mode);
-  };
-
-  const handleCompactModeToggle = () => {
-    const newCompact = !compactMode;
-    setCompactMode(newCompact);
-    localStorage.setItem("searchCompactMode", String(newCompact));
   };
 
   const handleFilterToggle = React.useCallback((key: string) => {
@@ -325,16 +313,6 @@ const SearchResults: React.FC = () => {
             >
               <LuTable />
             </IconButton>
-            {viewMode === "card" && (
-              <IconButton
-                aria-label={compactMode ? "Expand cards" : "Compact cards"}
-                size="sm"
-                variant={compactMode ? "solid" : "ghost"}
-                onClick={handleCompactModeToggle}
-              >
-                {compactMode ? <LuMaximize2 /> : <LuMinimize2 />}
-              </IconButton>
-            )}
           </>
         }
         mobileSecondaryControls={
@@ -355,16 +333,6 @@ const SearchResults: React.FC = () => {
             >
               <LuTable />
             </IconButton>
-            {viewMode === "card" && (
-              <IconButton
-                aria-label={compactMode ? "Expand cards" : "Compact cards"}
-                size="sm"
-                variant={compactMode ? "solid" : "ghost"}
-                onClick={handleCompactModeToggle}
-              >
-                {compactMode ? <LuMaximize2 /> : <LuMinimize2 />}
-              </IconButton>
-            )}
           </>
         }
       />
@@ -411,7 +379,6 @@ const SearchResults: React.FC = () => {
                   trackId={info.trackId}
                   friendId={info.friendId}
                   playlistCount={playlistCounts[key]}
-                  compact={compactMode}
                   isSelected={selectedTracks.has(key)}
                   onToggleSelect={() => toggleTrack(info.trackId, info.friendId)}
                 />

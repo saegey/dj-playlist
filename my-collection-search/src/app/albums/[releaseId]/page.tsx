@@ -18,9 +18,12 @@ import {
   Textarea,
   Input,
   Menu,
+  Dialog,
+  Portal,
+  CloseButton,
 } from "@chakra-ui/react";
 import { SiDiscogs } from "react-icons/si";
-import { FiPlay, FiDownload, FiEdit, FiMoreVertical } from "react-icons/fi";
+import { FiPlay, FiDownload, FiEdit, FiMoreVertical, FiFileText } from "react-icons/fi";
 import NextLink from "next/link";
 
 import { useAlbumDetailQuery, useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
@@ -33,9 +36,19 @@ import { toaster } from "@/components/ui/toaster";
 import { useColorModeValue } from "@/components/ui/color-mode";
 import PageContainer from "@/components/layout/PageContainer";
 import {
+  compareTrackPositions,
+  getTrackSideLabel,
+} from "@/lib/albumTrackPosition";
+import {
+  formatSeconds,
+  getTrackDurationSeconds,
+} from "@/lib/trackUtils";
+import {
   fetchAlbumDiscogsRawRelease,
   queueAlbumDownloads,
 } from "@/services/internalApi/albums";
+import { fetchPlaylistCounts } from "@/services/internalApi/tracks";
+import { queryKeys } from "@/lib/queryKeys";
 
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
@@ -70,12 +83,60 @@ function AlbumDetailContent() {
   const [condition, setCondition] = React.useState("");
   const [libraryIdentifier, setLibraryIdentifier] = React.useState("");
   const [isDownloading, setIsDownloading] = React.useState(false);
+  const [discogsRawModalOpen, setDiscogsRawModalOpen] = React.useState(false);
 
   const panelBg = useColorModeValue("gray.50", "gray.800");
   const mutedText = useColorModeValue("gray.600", "gray.400");
   const subtleText = useColorModeValue("gray.500", "gray.500");
   const album = albumFromStore;
-  const tracks = tracksFromStore;
+  const tracks = React.useMemo(() => {
+    return [...tracksFromStore].sort((a, b) =>
+      compareTrackPositions(a.position, b.position)
+    );
+  }, [tracksFromStore]);
+  const trackRefs = React.useMemo(
+    () =>
+      tracks.map((track) => ({
+        track_id: track.track_id,
+        friend_id: track.friend_id,
+      })),
+    [tracks]
+  );
+  const playlistCountsQuery = useQuery({
+    queryKey: queryKeys.playlistCounts(
+      trackRefs.map((track) => `${track.track_id}:${track.friend_id}`)
+    ),
+    queryFn: () => fetchPlaylistCounts(trackRefs),
+    enabled: trackRefs.length > 0,
+    staleTime: 30_000,
+  });
+  const trackSections = React.useMemo(() => {
+    const sections: Array<{ label: string; tracks: typeof tracks }> = [];
+    const sectionByLabel = new Map<string, { label: string; tracks: typeof tracks }>();
+
+    tracks.forEach((track) => {
+      const label = getTrackSideLabel(track.position) ?? "Tracklist";
+      let section = sectionByLabel.get(label);
+
+      if (!section) {
+        section = { label, tracks: [] };
+        sectionByLabel.set(label, section);
+        sections.push(section);
+      }
+
+      section.tracks.push(track);
+    });
+
+    return sections;
+  }, [tracks]);
+  const hasSideSections = trackSections.some((section) =>
+    section.label.startsWith("Side ")
+  );
+  const albumDurationSeconds = React.useMemo(() => {
+    return tracks.reduce((total, track) => {
+      return total + (getTrackDurationSeconds(track) ?? 0);
+    }, 0);
+  }, [tracks]);
 
   React.useEffect(() => {
     if (album) {
@@ -192,45 +253,62 @@ function AlbumDetailContent() {
     <PageContainer size="standard" mb="100px">
 
       {/* Album header */}
-      <Flex gap={{ base: 3, md: 6 }} direction={{ base: "column", md: "row" }} mb={{ base: 4, md: 8 }}>
-        {/* Album artwork */}
+      <Flex
+        borderWidth={[0, "1px"]}
+        borderBottomWidth={["1px", "1px"]}
+        borderRadius={[0, "md"]}
+        p={[0, 3]}
+        mb={{ base: 4, md: 6 }}
+        gap={3}
+        position="relative"
+        width="100%"
+        direction={{ base: "row", md: "row" }}
+      >
         {albumArtwork && (
-          <Box flexShrink={0}>
+          <Box
+            flexShrink={0}
+            width={{ base: "90px", md: "130px" }}
+            height={{ base: "90px", md: "130px" }}
+          >
             <Image
               src={albumArtwork}
               alt={album.title}
-              boxSize={{ base: "140px", md: "300px" }}
+              width="100%"
+              height="100%"
               objectFit="cover"
-              borderRadius="lg"
+              borderRadius="md"
             />
           </Box>
         )}
 
-        {/* Album info */}
-        <Flex flex="1" direction="column" gap={{ base: 2, md: 3 }}>
+        <Flex flex="1" direction="column" gap={1.5} minW={0} pr={{ base: 9, md: 10 }}>
           <Box>
-            <Flex alignItems="center" gap={{ base: 2, md: 3 }} mb={2} flexWrap="wrap">
+            <Flex alignItems="center" gap={2} flexWrap="wrap">
               {album.library_identifier && (
-                <Badge colorPalette="blue" size={{ base: "md", md: "lg" }} variant="solid" fontWeight="bold">
+                <Badge colorPalette="blue" size={{ base: "sm", md: "md" }} variant="solid" fontWeight="bold">
                   {album.library_identifier}
                 </Badge>
               )}
-              <Heading size={{ base: "lg", md: "2xl" }}>
+              <Heading
+                size={{ base: "md", md: "lg" }}
+                lineClamp={{ base: 2, md: 3 }}
+                lineHeight={{ base: "1.3", md: "1.4" }}
+              >
                 {album.title}
               </Heading>
             </Flex>
             <Link
-              as={NextLink}
-              href={`/albums?q=${encodeURIComponent(album.artist)}`}
+              asChild
               _hover={{ textDecoration: "underline" }}
             >
-              <Heading size={{ base: "md", md: "lg" }} color={mutedText} fontWeight="normal">
-                {album.artist}
-              </Heading>
+              <NextLink href={`/albums?q=${encodeURIComponent(album.artist)}`}>
+                <Text fontSize={{ base: "xs", md: "sm" }} color={mutedText} fontWeight="medium">
+                  {album.artist}
+                </Text>
+              </NextLink>
             </Link>
           </Box>
 
-          {/* Rating */}
           <Flex alignItems="center" gap={2}>
             <RatingGroup.Root
               value={rating}
@@ -246,7 +324,7 @@ function AlbumDetailContent() {
                 }
               }}
               count={5}
-              size={{ base: "sm", md: "lg" }}
+              size="xs"
             >
               {[1, 2, 3, 4, 5].map((index) => (
                 <RatingGroup.Item key={index} index={index}>
@@ -254,52 +332,48 @@ function AlbumDetailContent() {
                 </RatingGroup.Item>
               ))}
             </RatingGroup.Root>
-            <Text fontSize={{ base: "sm", md: "md" }} color={subtleText}>
+            <Text fontSize="xs" color={subtleText}>
               ({rating}/5)
             </Text>
           </Flex>
 
-          {/* Metadata */}
-          <Flex gap={{ base: 2, md: 4 }} flexWrap="wrap" fontSize={{ base: "xs", md: "md" }} color={mutedText}>
+          <Flex gap={2} flexWrap="wrap" fontSize="xs" color={mutedText}>
             {album.year && <Text fontWeight="semibold">{album.year}</Text>}
             {album.format && <Text>{album.format}</Text>}
-            {album.label && <Text>{album.label}</Text>}
-            {album.catalog_number && <Text>Cat: {album.catalog_number}</Text>}
-            {album.country && <Text>{album.country}</Text>}
+            {album.label && <Text display={{ base: "none", md: "block" }}>{album.label}</Text>}
+            {album.catalog_number && <Text display={{ base: "none", md: "block" }}>Cat: {album.catalog_number}</Text>}
+            {album.country && <Text display={{ base: "none", md: "block" }}>{album.country}</Text>}
           </Flex>
 
-          {/* Genres and Styles */}
           {(album.genres || album.styles) && (
-            <Flex gap={1} flexWrap="wrap">
+            <Flex gap={1} flexWrap="wrap" display={{ base: "none", md: "flex" }}>
               {album.genres?.map((genre) => (
-                <Badge key={genre} colorScheme="blue" size={{ base: "sm", md: "md" }}>
+                <Badge key={genre} colorScheme="blue" size="sm">
                   {genre}
                 </Badge>
               ))}
               {album.styles?.map((style) => (
-                <Badge key={style} colorScheme="purple" size={{ base: "sm", md: "md" }}>
+                <Badge key={style} colorScheme="purple" size="sm">
                   {style}
                 </Badge>
               ))}
             </Flex>
           )}
 
-          {/* Track count and date added */}
-          <Flex gap={{ base: 2, md: 4 }} fontSize={{ base: "xs", md: "sm" }} color={subtleText}>
+          <Flex gap={2} fontSize="xs" color={subtleText} flexWrap="wrap">
             {album.track_count && <Text>{album.track_count} tracks</Text>}
-            {album.date_added && <Text>Added: {formatDate(album.date_added)}</Text>}
+            {albumDurationSeconds > 0 && <Text>{formatSeconds(albumDurationSeconds)}</Text>}
+            {album.date_added && <Text display={{ base: "none", md: "block" }}>Added: {formatDate(album.date_added)}</Text>}
           </Flex>
 
-          {/* Notes display (when not editing) */}
           {!isEditing && album.album_notes && (
-            <Box p={{ base: 2, md: 3 }} bg={panelBg} borderRadius="md" borderWidth="1px">
-              <Text fontSize={{ base: "sm", md: "md" }}>{album.album_notes}</Text>
+            <Box p={3} bg={panelBg} borderRadius="md" borderWidth="1px" mt={1}>
+              <Text fontSize="sm">{album.album_notes}</Text>
             </Box>
           )}
 
-          {/* Purchase info display */}
           {!isEditing && (album.purchase_price || album.condition) && (
-            <Flex gap={{ base: 2, md: 4 }} fontSize={{ base: "xs", md: "md" }} color={mutedText}>
+            <Flex gap={2} fontSize="xs" color={mutedText}>
               {album.purchase_price && <Text>Price: ${album.purchase_price}</Text>}
               {album.condition && <Text>Condition: {album.condition}</Text>}
             </Flex>
@@ -384,66 +458,75 @@ function AlbumDetailContent() {
             </Box>
           )}
 
-          {/* Action menu */}
-          <Box mt={2}>
-            <Menu.Root>
-              <Menu.Trigger asChild>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  aria-label="Album actions"
-                >
-                  <FiMoreVertical />
-                  <Box ml={2}>Actions</Box>
-                </Button>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content>
-                  {tracks.length > 0 && (
-                    <Menu.Item value="play" onSelect={handleEnqueueAlbum}>
-                      <FiPlay /> Play Album
-                    </Menu.Item>
-                  )}
+        </Flex>
 
-                  {tracks.length > 0 && (
-                    <Menu.Item
-                      value="download"
-                      onSelect={handleDownloadAlbum}
-                      disabled={isDownloading}
-                    >
-                      <FiDownload /> {isDownloading ? "Downloading..." : "Download Missing"}
-                    </Menu.Item>
-                  )}
+        <Flex position="absolute" top={2} right={2} gap={1} alignItems="center">
+          <Menu.Root>
+            <Menu.Trigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label="Album actions"
+                minW="32px"
+                h="32px"
+                p={0}
+              >
+                <FiMoreVertical />
+              </Button>
+            </Menu.Trigger>
+            <Menu.Positioner>
+              <Menu.Content>
+                {tracks.length > 0 && (
+                  <Menu.Item value="play" onSelect={handleEnqueueAlbum}>
+                    <FiPlay /> Play Album
+                  </Menu.Item>
+                )}
 
-                  {album.discogs_url && (
-                    <Menu.Item
-                      value="discogs"
-                      asChild
-                    >
-                      <Link href={album.discogs_url} target="_blank" rel="noopener noreferrer">
-                        <Icon as={SiDiscogs} /> View on Discogs
-                      </Link>
-                    </Menu.Item>
-                  )}
-
-                  {!isEditing && (
-                    <Menu.Item value="edit" onSelect={() => setIsEditing(true)}>
-                      <FiEdit /> Edit Details
-                    </Menu.Item>
-                  )}
-
+                {tracks.length > 0 && (
                   <Menu.Item
-                    value="edit-album"
+                    value="download"
+                    onSelect={handleDownloadAlbum}
+                    disabled={isDownloading}
+                  >
+                    <FiDownload /> {isDownloading ? "Downloading..." : "Download Missing"}
+                  </Menu.Item>
+                )}
+
+                {album.discogs_url && (
+                  <Menu.Item
+                    value="discogs"
                     asChild
                   >
-                    <Link href={`/albums/${releaseId}/edit?friend_id=${friendId}`}>
-                      <FiEdit /> Edit Album & Tracks
+                    <Link href={album.discogs_url} target="_blank" rel="noopener noreferrer">
+                      <Icon as={SiDiscogs} /> View on Discogs
                     </Link>
                   </Menu.Item>
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
-          </Box>
+                )}
+
+                <Menu.Item
+                  value="discogs-raw"
+                  onSelect={() => setDiscogsRawModalOpen(true)}
+                >
+                  <FiFileText /> View Raw Discogs File
+                </Menu.Item>
+
+                {!isEditing && (
+                  <Menu.Item value="edit" onSelect={() => setIsEditing(true)}>
+                    <FiEdit /> Edit Details
+                  </Menu.Item>
+                )}
+
+                <Menu.Item
+                  value="edit-album"
+                  asChild
+                >
+                  <Link href={`/albums/${releaseId}/edit?friend_id=${friendId}`}>
+                    <FiEdit /> Edit Album & Tracks
+                  </Link>
+                </Menu.Item>
+              </Menu.Content>
+            </Menu.Positioner>
+          </Menu.Root>
         </Flex>
       </Flex>
 
@@ -453,58 +536,111 @@ function AlbumDetailContent() {
         {tracks.length === 0 ? (
           <Text color={subtleText}>No tracks found for this album.</Text>
         ) : (
-          <Flex direction="column" gap={{ base: 1, md: 2 }}>
-            {tracks.map((track, idx) => (
-              <AlbumTrackItem
-                key={`${track.track_id}:${track.friend_id}:${idx}`}
-                track={track}
-                albumArtist={album.artist}
-                buttons={
-                  <TrackActionsMenu
-                    key={`${track.track_id}:${track.friend_id}:${idx}:actions`}
-                    track={track}
-                  />
-                }
-              />
+          <Flex direction="column" gap={{ base: 4, md: 6 }}>
+            {trackSections.map((section) => (
+              <Box key={section.label}>
+                {(hasSideSections || section.label !== "Tracklist") && (
+                  <Flex
+                    alignItems="center"
+                    gap={3}
+                    mb={{ base: 2, md: 3 }}
+                  >
+                    <Heading size={{ base: "sm", md: "md" }}>
+                      {section.label}
+                    </Heading>
+                    <Box flex="1" borderTopWidth="1px" />
+                    <Text fontSize="xs" color={subtleText} whiteSpace="nowrap">
+                      {section.tracks.length}{" "}
+                      {section.tracks.length === 1 ? "track" : "tracks"}
+                    </Text>
+                  </Flex>
+                )}
+                <Flex
+                  direction="column"
+                  borderWidth="1px"
+                  borderRadius="md"
+                  overflow="hidden"
+                >
+                  {section.tracks.map((track, idx) => (
+                    <AlbumTrackItem
+                      key={`${track.track_id}:${track.friend_id}:${idx}`}
+                      track={track}
+                      albumArtist={album.artist}
+                      playlistCount={
+                        playlistCountsQuery.data?.[
+                          `${track.track_id}:${track.friend_id}`
+                        ] ?? 0
+                      }
+                      buttons={
+                        <TrackActionsMenu
+                          key={`${track.track_id}:${track.friend_id}:${idx}:actions`}
+                          track={track}
+                        />
+                      }
+                    />
+                  ))}
+                </Flex>
+              </Box>
             ))}
           </Flex>
         )}
       </Box>
 
-      <Box mt={8} borderWidth="1px" borderRadius="md" p={4}>
-        <Heading size="sm" mb={3}>
-          Discogs Raw Release File
-        </Heading>
-        {discogsRawQuery.isLoading ? (
-          <Spinner size="sm" />
-        ) : discogsRawQuery.error ? (
-          <Text color={subtleText}>
-            {discogsRawQuery.error instanceof Error
-              ? discogsRawQuery.error.message
-              : "No Discogs raw file found"}
-          </Text>
-        ) : discogsRawQuery.data ? (
-          <Box>
-            <Badge variant="outline" mb={3}>
-              {discogsRawQuery.data.file_path}
-            </Badge>
-            <Box
-              as="pre"
-              p={3}
-              borderRadius="md"
-              borderWidth="1px"
-              overflow="auto"
-              maxH="420px"
-              fontSize="xs"
-              whiteSpace="pre-wrap"
-            >
-              {JSON.stringify(discogsRawQuery.data.data, null, 2)}
-            </Box>
-          </Box>
-        ) : (
-          <Text color={subtleText}>No Discogs raw file available.</Text>
-        )}
-      </Box>
+      <Dialog.Root
+        open={discogsRawModalOpen}
+        onOpenChange={(details) => setDiscogsRawModalOpen(details.open)}
+        size="xl"
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content maxW="980px" maxH="90vh">
+              <Dialog.Header>
+                <Dialog.Title>Discogs Raw Release File</Dialog.Title>
+                <Dialog.CloseTrigger asChild>
+                  <CloseButton size="sm" />
+                </Dialog.CloseTrigger>
+              </Dialog.Header>
+              <Dialog.Body overflowY="auto" pb={6}>
+                {discogsRawQuery.isLoading ? (
+                  <Spinner size="sm" />
+                ) : discogsRawQuery.error ? (
+                  <Text color={subtleText}>
+                    {discogsRawQuery.error instanceof Error
+                      ? discogsRawQuery.error.message
+                      : "No Discogs raw file found"}
+                  </Text>
+                ) : discogsRawQuery.data ? (
+                  <Box>
+                    <Badge variant="outline" mb={3}>
+                      {discogsRawQuery.data.file_path}
+                    </Badge>
+                    <Box
+                      as="pre"
+                      p={3}
+                      borderRadius="md"
+                      borderWidth="1px"
+                      overflow="auto"
+                      maxH="65vh"
+                      fontSize="xs"
+                      whiteSpace="pre-wrap"
+                    >
+                      {JSON.stringify(discogsRawQuery.data.data, null, 2)}
+                    </Box>
+                  </Box>
+                ) : (
+                  <Text color={subtleText}>No Discogs raw file available.</Text>
+                )}
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Button variant="outline" onClick={() => setDiscogsRawModalOpen(false)}>
+                  Close
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
     </PageContainer>
   );
 }

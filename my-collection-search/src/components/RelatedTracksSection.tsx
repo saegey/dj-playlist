@@ -174,8 +174,6 @@ export default function RelatedTracksSection({ track }: Props) {
                 track={item}
                 showUsername={true}
                 showRating={true}
-                minimized={false}
-                allowMinimize={false}
                 buttons={
                   <Flex gap={2} align="center" wrap="wrap">
                     {item._sources.includes("ai") && (

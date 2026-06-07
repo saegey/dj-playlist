@@ -43,10 +43,13 @@ export function usePlaylistActions(playlistId?: number) {
   };
 
   // Calculate total playtime
-  const getTotalPlaytime = (): { seconds: number; formatted: string } => {
+  const getTotalPlaytime = (): { seconds: number; formatted: string; missingCount: number } => {
     const tracks = getTracks();
+    let missingCount = 0;
     const totalSeconds = tracks.reduce((sum, track) => {
-      return sum + (getTrackDurationSeconds(track) || 0);
+      const d = getTrackDurationSeconds(track);
+      if (d === null) missingCount++;
+      return sum + (d || 0);
     }, 0);
 
     const hours = Math.floor(totalSeconds / 3600);
@@ -62,7 +65,7 @@ export function usePlaylistActions(playlistId?: number) {
       formatted = `${minutes}:${seconds.toString().padStart(2, "0")}`;
     }
 
-    return { seconds: totalSeconds, formatted };
+    return { seconds: totalSeconds, formatted, missingCount };
   };
 
   // Export playlist as JSON

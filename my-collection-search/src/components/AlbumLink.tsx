@@ -27,15 +27,18 @@ export default function AlbumLink({
 
   return (
     <Link
-      as={NextLink}
-      href={href}
+      asChild
       _hover={{ textDecoration: "underline" }}
-      onClick={(e) => {
-        if (stopPropagation) e.stopPropagation();
-      }}
       className={className}
     >
-      {children}
+      <NextLink
+        href={href}
+        onClick={(e) => {
+          if (stopPropagation) e.stopPropagation();
+        }}
+      >
+        {children}
+      </NextLink>
     </Link>
   );
 }

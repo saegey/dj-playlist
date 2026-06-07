@@ -21,6 +21,7 @@ import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { Track } from "@/types/track";
 import ExpandableMarkdown from "./ExpandableMarkdown";
+import type { SortPositionChange } from "@/hooks/usePlaylistMutations";
 
 function formatSeconds(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -38,12 +39,14 @@ type PlaylistTrackItemProps = {
   track: Track;
   buttons?: React.ReactNode;
   showUsername?: boolean;
+  sortPositionChange?: SortPositionChange;
 };
 
 export default function PlaylistTrackItem({
   track,
   buttons,
   showUsername = false,
+  sortPositionChange,
 }: PlaylistTrackItemProps) {
   const { replacePlaylist } = usePlaylistPlayer();
   const [notesModalOpen, setNotesModalOpen] = React.useState(false);
@@ -218,6 +221,12 @@ export default function PlaylistTrackItem({
             {track.library_identifier && (
               <Badge colorPalette="blue" size={{ base: "xs", md: "sm" }}>
                 {track.library_identifier}
+              </Badge>
+            )}
+            {sortPositionChange && (
+              <Badge colorPalette="purple" size={{ base: "xs", md: "sm" }}>
+                #{sortPositionChange.currentPosition} was #
+                {sortPositionChange.previousPosition}
               </Badge>
             )}
             {getTrackDurationSeconds(track) && (
