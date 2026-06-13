@@ -63,7 +63,6 @@ export default function AlbumResult({
   const subtleText = useColorModeValue("gray.500", "gray.400");
   const panelBg = useColorModeValue("gray.50", "gray.900");
   const panelBorder = useColorModeValue("gray.200", "gray.700");
-  const titleColor = useColorModeValue("blue.600", "blue.300");
 
   const updateMutation = useUpdateAlbumMutation();
 
@@ -98,69 +97,111 @@ export default function AlbumResult({
     setIsEditing(false);
   };
 
+  const resetForm = () => {
+    setIsEditing(false);
+    setNotes(resolvedAlbum?.album_notes || "");
+    setPurchasePrice(resolvedAlbum?.purchase_price?.toString() || "");
+    setCondition(resolvedAlbum?.condition || "");
+    setLibraryIdentifier(resolvedAlbum?.library_identifier || "");
+  };
+
   if (!resolvedAlbum) return null;
 
-  return (
-    <Box borderWidth="1px" borderRadius="md" p={{ base: 2, md: 4 }} mb={{ base: 2, md: 3 }} position="relative">
-      <Flex gap={{ base: 2, md: 4 }} direction={{ base: "row", md: "row" }} flexWrap={{ base: "wrap", md: "nowrap" }}>
-        {artworkSrc && (
-          <Box flexShrink={0}>
-            <Image
-              src={artworkSrc}
-              alt={resolvedAlbum.title}
-              boxSize={{ base: "80px", md: "150px" }}
-              objectFit="cover"
-              borderRadius="md"
-            />
-          </Box>
-        )}
+  const displayGenres = resolvedAlbum.genres ?? [];
+  const displayStyles = resolvedAlbum.styles ?? [];
 
-        <Flex flex="1" direction="column" gap={{ base: 1, md: 2 }} minW={0}>
-          <Flex direction="column" gap={0.5}>
-            <Flex alignItems="center" gap={1} flexWrap="wrap">
-              {resolvedAlbum.library_identifier && (
-                <Badge colorPalette="blue" size={{ base: "sm", md: "md" }} variant="solid" fontWeight="bold">
-                  {resolvedAlbum.library_identifier}
-                </Badge>
-              )}
+  return (
+    <Box
+      borderWidth={[0, "1px"]}
+      borderBottomWidth={["1px", "1px"]}
+      borderRadius={[0, "md"]}
+      p={[0, 3]}
+      mb={2}
+      width="100%"
+    >
+      <Flex gap={3} position="relative" width="100%">
+        <Box
+          flexShrink={0}
+          width={{ base: "70px", md: "80px", lg: "90px" }}
+          height={{ base: "70px", md: "80px", lg: "90px" }}
+        >
+          <Image
+            src={artworkSrc}
+            alt={resolvedAlbum.title}
+            width="100%"
+            height="100%"
+            objectFit="cover"
+            borderRadius="md"
+          />
+        </Box>
+
+        <Flex direction="column" flex={1} minW={0} gap={1}>
+          <Flex alignItems="center" gap={2} pr={{ base: 14, lg: 24 }}>
+            {resolvedAlbum.library_identifier && (
+              <Badge colorPalette="blue" size="sm" fontWeight="bold" flexShrink={0}>
+                {resolvedAlbum.library_identifier}
+              </Badge>
+            )}
+            <Text
+              fontSize={{ base: "sm", md: "lg" }}
+              fontWeight="bold"
+              overflow="hidden"
+              textOverflow="ellipsis"
+              whiteSpace="nowrap"
+              flex="1 1 auto"
+              minW={0}
+            >
               <Link
-                asChild
+                as={NextLink}
+                href={`/albums/${resolvedAlbum.release_id}?friend_id=${resolvedAlbum.friend_id}`}
                 _hover={{ textDecoration: "underline" }}
               >
-                <NextLink
-                  href={`/albums/${resolvedAlbum.release_id}?friend_id=${resolvedAlbum.friend_id}`}
-                >
-                  <Text
-                    fontWeight="bold"
-                    fontSize={{ base: "sm", md: "lg" }}
-                    color={titleColor}
-                    lineClamp={{ base: 2, md: 3 }}
-                    lineHeight={{ base: "1.3", md: "1.4" }}
-                  >
-                    {resolvedAlbum.title}
-                  </Text>
-                </NextLink>
+                {resolvedAlbum.title}
               </Link>
-            </Flex>
-            <Link
-              asChild
-              _hover={{ textDecoration: "underline" }}
-            >
-              <NextLink
-                href={`/albums?q=${encodeURIComponent(resolvedAlbum.artist)}&friend_id=${resolvedAlbum.friend_id}`}
-              >
-                <Text
-                  fontSize={{ base: "xs", md: "md" }}
-                  color={mutedText}
-                  lineClamp={1}
-                >
-                  {resolvedAlbum.artist}
-                </Text>
-              </NextLink>
-            </Link>
+            </Text>
           </Flex>
 
-          <Flex alignItems="center" gap={1}>
+          <Link
+            as={NextLink}
+            href={`/albums?q=${encodeURIComponent(resolvedAlbum.artist)}&friend_id=${resolvedAlbum.friend_id}`}
+            _hover={{ textDecoration: "underline" }}
+          >
+            <Text
+              fontSize={{ base: "xs", md: "sm" }}
+              fontWeight="medium"
+              color={mutedText}
+              lineClamp={1}
+            >
+              {resolvedAlbum.artist}
+            </Text>
+          </Link>
+
+          <Flex gap={2} fontSize="xs" color="gray.500" alignItems="center" flexWrap="wrap">
+            {resolvedAlbum.year && <Text>{resolvedAlbum.year}</Text>}
+            {resolvedAlbum.track_count > 0 && (
+              <>
+                <Text color="gray.400">·</Text>
+                <Text>
+                  {resolvedAlbum.track_count} track{resolvedAlbum.track_count !== 1 ? "s" : ""}
+                </Text>
+              </>
+            )}
+            {resolvedAlbum.username && (
+              <>
+                <Text color="gray.400">·</Text>
+                <Text>{resolvedAlbum.username}</Text>
+              </>
+            )}
+          </Flex>
+
+          <Flex
+            gap={3}
+            fontSize="xs"
+            flexWrap="wrap"
+            alignItems="center"
+            color="gray.500"
+            mt={0.5}
+          >
             <RatingGroup.Root
               value={rating}
               onValueChange={(details) => {
@@ -174,7 +215,7 @@ export default function AlbumResult({
                 }
               }}
               count={5}
-              size={{ base: "xs", md: "sm" }}
+              size="xs"
             >
               {[1, 2, 3, 4, 5].map((index) => (
                 <RatingGroup.Item key={index} index={index}>
@@ -182,184 +223,87 @@ export default function AlbumResult({
                 </RatingGroup.Item>
               ))}
             </RatingGroup.Root>
-            <Text fontSize="xs" color={subtleText} display={{ base: "none", md: "block" }}>
-              ({rating}/5)
-            </Text>
-          </Flex>
-
-          <Flex gap={2} flexWrap="wrap" fontSize={{ base: "xs", md: "sm" }} color={mutedText}>
-            {resolvedAlbum.username && (
-              <Badge colorPalette="purple" variant="subtle">
-                {resolvedAlbum.username}
-              </Badge>
+            {resolvedAlbum.format && <Text>{resolvedAlbum.format}</Text>}
+            {resolvedAlbum.label && (
+              <Text display={{ base: "none", md: "block" }}>{resolvedAlbum.label}</Text>
             )}
-            {resolvedAlbum.year && <Text>{resolvedAlbum.year}</Text>}
-            {resolvedAlbum.format && <Text display={{ base: "none", md: "block" }}>{resolvedAlbum.format}</Text>}
-            {resolvedAlbum.label && <Text display={{ base: "none", md: "block" }}>{resolvedAlbum.label}</Text>}
-            {resolvedAlbum.catalog_number && <Text display={{ base: "none", md: "block" }}>Cat: {resolvedAlbum.catalog_number}</Text>}
-            {resolvedAlbum.country && <Text display={{ base: "none", md: "block" }}>{resolvedAlbum.country}</Text>}
-            {resolvedAlbum.track_count && (
-              <Text>{resolvedAlbum.track_count} track{resolvedAlbum.track_count !== 1 ? "s" : ""}</Text>
+            {resolvedAlbum.catalog_number && (
+              <Text display={{ base: "none", md: "block" }}>Cat: {resolvedAlbum.catalog_number}</Text>
+            )}
+            {resolvedAlbum.country && (
+              <Text display={{ base: "none", md: "block" }}>{resolvedAlbum.country}</Text>
+            )}
+            {resolvedAlbum.date_added && (
+              <Text display={{ base: "none", md: "block" }}>
+                Added: {formatDate(resolvedAlbum.date_added)}
+              </Text>
             )}
           </Flex>
 
-          {(resolvedAlbum.genres || resolvedAlbum.styles) && (
-            <Flex gap={1} flexWrap="wrap" display={{ base: "none", md: "flex" }}>
-              {resolvedAlbum.genres?.map((genre) => (
-                <Badge key={genre} colorScheme="blue" size="sm">
+          {(displayGenres.length > 0 || displayStyles.length > 0) && (
+            <Flex gap={2} flexWrap="wrap" display={{ base: "none", md: "flex" }} mt={0.5}>
+              {displayGenres.map((genre) => (
+                <Badge key={genre} size="sm" variant="surface">
                   {genre}
                 </Badge>
               ))}
-              {resolvedAlbum.styles?.map((style) => (
-                <Badge key={style} colorScheme="purple" size="sm">
+              {displayStyles.map((style) => (
+                <Badge key={style} size="sm" variant="outline">
                   {style}
                 </Badge>
               ))}
             </Flex>
           )}
+        </Flex>
 
-          {resolvedAlbum.date_added && (
-            <Text fontSize="sm" color={subtleText} display={{ base: "none", md: "block" }}>
-              Added: {formatDate(resolvedAlbum.date_added)}
-            </Text>
-          )}
-
-          {showEditFields && isEditing && (
-            <Box
-              display={{ base: "none", md: "block" }}
-              mt={2}
-              p={3}
-              borderWidth="1px"
-              borderRadius="md"
-              bg={panelBg}
-              borderColor={panelBorder}
-            >
-              <Flex direction="column" gap={2}>
-                <Box>
-                  <Text fontSize="sm" fontWeight="bold" mb={1}>
-                    Notes
-                  </Text>
-                  <Textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add notes about this album..."
-                    size="sm"
-                  />
-                </Box>
-
-                <Flex gap={2}>
-                  <Box flex="1">
-                    <Text fontSize="sm" fontWeight="bold" mb={1}>
-                      Purchase Price
-                    </Text>
-                    <Input
-                      value={purchasePrice}
-                      onChange={(e) => setPurchasePrice(e.target.value)}
-                      placeholder="25.99"
-                      size="sm"
-                      type="number"
-                      step="0.01"
-                    />
-                  </Box>
-
-                  <Box flex="1">
-                    <Text fontSize="sm" fontWeight="bold" mb={1}>
-                      Condition
-                    </Text>
-                    <Input
-                      value={condition}
-                      onChange={(e) => setCondition(e.target.value)}
-                      placeholder="Near Mint, VG+, etc."
-                      size="sm"
-                    />
-                  </Box>
-                </Flex>
-
-                <Box>
-                  <Text fontSize="sm" fontWeight="bold" mb={1}>
-                    Library Identifier (e.g., LP001)
-                  </Text>
-                  <Input
-                    value={libraryIdentifier}
-                    onChange={(e) => setLibraryIdentifier(e.target.value)}
-                    placeholder="LP001"
-                    size="sm"
-                    maxLength={50}
-                  />
-                </Box>
-
-                <Flex gap={2} mt={2}>
-                  <Button size="sm" colorScheme="blue" onClick={handleSave}>
-                    Save
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setIsEditing(false);
-                      setNotes(resolvedAlbum.album_notes || "");
-                      setPurchasePrice(resolvedAlbum.purchase_price?.toString() || "");
-                      setCondition(resolvedAlbum.condition || "");
-                      setLibraryIdentifier(resolvedAlbum.library_identifier || "");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </Flex>
-              </Flex>
-            </Box>
-          )}
-
-          {!isEditing && resolvedAlbum.album_notes && (
-            <Box p={2} bg={panelBg} borderRadius="md" borderWidth="1px" borderColor={panelBorder}>
-              <Text fontSize="sm">{resolvedAlbum.album_notes}</Text>
-            </Box>
-          )}
-
-          {!isEditing && (resolvedAlbum.purchase_price || resolvedAlbum.condition) && (
-            <Flex gap={3} fontSize="sm" color={mutedText}>
-              {resolvedAlbum.purchase_price && (
-                <Text>Price: ${resolvedAlbum.purchase_price}</Text>
-              )}
-              {resolvedAlbum.condition && <Text>Condition: {resolvedAlbum.condition}</Text>}
-            </Flex>
-          )}
-
-          <Flex gap={1} mt={{ base: 1, md: 2 }} alignItems="center" flexWrap="wrap">
-            {resolvedAlbum.discogs_url && (
-              <Link href={resolvedAlbum.discogs_url} target="_blank" rel="noopener noreferrer">
-                <Button size={{ base: "xs", md: "sm" }} variant="ghost" px={{ base: 2, md: 3 }}>
-                  <Icon as={SiDiscogs} />
-                  <Box display={{ base: "none", md: "inline" }} ml={2}>
-                    Discogs
-                  </Box>
-                </Button>
-              </Link>
-            )}
-
-            {showEditFields && !isEditing && (
-              <Button
-                size={{ base: "xs", md: "sm" }}
-                variant="outline"
-                onClick={() => setIsEditing(true)}
-                px={{ base: 2, md: 3 }}
-              >
-                <Icon as={FiEdit} />
-                <Box display={{ base: "none", md: "inline" }} ml={2}>
-                  Edit Details
+        <Flex position="absolute" top={2} right={2} gap={1} alignItems="center">
+          {resolvedAlbum.discogs_url && (
+            <Link href={resolvedAlbum.discogs_url} target="_blank" rel="noopener noreferrer">
+              <Button size="xs" variant="ghost" px={2}>
+                <Icon as={SiDiscogs} />
+                <Box display={{ base: "none", lg: "inline" }} ml={2}>
+                  Discogs
                 </Box>
               </Button>
-            )}
+            </Link>
+          )}
 
-            {buttons}
-          </Flex>
+          {showEditFields && !isEditing && (
+            <Button size="xs" variant="outline" onClick={() => setIsEditing(true)} px={2}>
+              <Icon as={FiEdit} />
+              <Box display={{ base: "none", lg: "inline" }} ml={2}>
+                Edit
+              </Box>
+            </Button>
+          )}
+
+          {buttons}
         </Flex>
       </Flex>
 
+      {!isEditing && resolvedAlbum.album_notes && (
+        <Box
+          mt={3}
+          p={2}
+          bg={panelBg}
+          borderRadius="md"
+          borderWidth="1px"
+          borderColor={panelBorder}
+        >
+          <Text fontSize="sm">{resolvedAlbum.album_notes}</Text>
+        </Box>
+      )}
+
+      {!isEditing && (resolvedAlbum.purchase_price || resolvedAlbum.condition) && (
+        <Flex mt={3} gap={3} fontSize="sm" color={subtleText} flexWrap="wrap">
+          {resolvedAlbum.purchase_price && <Text>Price: ${resolvedAlbum.purchase_price}</Text>}
+          {resolvedAlbum.condition && <Text>Condition: {resolvedAlbum.condition}</Text>}
+        </Flex>
+      )}
+
       {showEditFields && isEditing && (
         <Box
-          display={{ base: "block", md: "none" }}
-          mt={2}
+          mt={3}
           p={3}
           borderWidth="1px"
           borderRadius="md"
@@ -379,7 +323,7 @@ export default function AlbumResult({
               />
             </Box>
 
-            <Flex gap={2}>
+            <Flex gap={2} direction={{ base: "column", md: "row" }}>
               <Box flex="1">
                 <Text fontSize="sm" fontWeight="bold" mb={1}>
                   Purchase Price
@@ -424,17 +368,7 @@ export default function AlbumResult({
               <Button size="sm" colorScheme="blue" onClick={handleSave}>
                 Save
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setIsEditing(false);
-                  setNotes(resolvedAlbum.album_notes || "");
-                  setPurchasePrice(resolvedAlbum.purchase_price?.toString() || "");
-                  setCondition(resolvedAlbum.condition || "");
-                  setLibraryIdentifier(resolvedAlbum.library_identifier || "");
-                }}
-              >
+              <Button size="sm" variant="ghost" onClick={resetForm}>
                 Cancel
               </Button>
             </Flex>
