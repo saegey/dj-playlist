@@ -15,7 +15,7 @@ import {
   Portal,
 } from "@chakra-ui/react";
 import { Tooltip } from "@/components/ui/tooltip";
-import { FiMenu, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiMenu, FiChevronLeft, FiChevronRight, FiSearch } from "react-icons/fi";
 import { TbPlaylist } from "react-icons/tb";
 import { LuCloudDownload } from "react-icons/lu";
 import {
@@ -26,6 +26,7 @@ import {
 } from "react-icons/io5";
 import { usePathname } from "next/navigation";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import { useCommandPalette } from "@/providers/CommandPaletteProvider";
 import CommandPalette from "@/components/CommandPalette";
 
 const menuItems = [
@@ -56,6 +57,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { setPaletteOpen } = useCommandPalette();
 
   // Keep initial render deterministic across SSR/CSR; hydrate from storage after mount.
   const [isExpanded, setIsExpanded] = useState(false);
@@ -123,6 +125,61 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Flex>
 
           <VStack align="stretch" gap={1} mt={2} px={isExpanded ? 2 : 1}>
+            {isExpanded ? (
+              <Box
+                as="button"
+                onClick={() => setPaletteOpen(true)}
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                px={3}
+                py="7px"
+                w="100%"
+                borderRadius="md"
+                bg="bg.subtle"
+                border="1px solid"
+                borderColor="border"
+                cursor="pointer"
+                color="fg.muted"
+                fontSize="sm"
+                mb={1}
+                _hover={{ bg: "bg.muted" }}
+              >
+                <HStack gap={2}>
+                  <Icon as={FiSearch} boxSize={4} />
+                  <Text fontSize="xs" color="fg.muted">Search…</Text>
+                </HStack>
+                <HStack gap={1}>
+                  <Box
+                    as="span"
+                    fontSize="10px"
+                    px="4px"
+                    py="1px"
+                    borderRadius="4px"
+                    bg="bg"
+                    border="1px solid"
+                    borderColor="border"
+                    color="fg.muted"
+                    fontWeight="500"
+                    lineHeight="1.4"
+                  >
+                    ⌘K
+                  </Box>
+                </HStack>
+              </Box>
+            ) : (
+              <Tooltip content="Search  ⌘K" openDelay={250}>
+                <IconButton
+                  aria-label="Open command palette"
+                  size="sm"
+                  variant="ghost"
+                  mb={1}
+                  onClick={() => setPaletteOpen(true)}
+                >
+                  <Icon as={FiSearch} boxSize={5} color="fg.muted" />
+                </IconButton>
+              </Tooltip>
+            )}
             {menuItems.map((item) => {
               const active = current === item.href;
               const ItemIcon = getItemIcon(item.href);

@@ -11,6 +11,7 @@ import { PlaylistPlayerProvider } from "@/providers/PlaylistPlayerProvider";
 import TrackEditProvider from "@/providers/TrackEditProvider";
 import PlaylistsProvider from "@/providers/PlaylistsProvider";
 import { JobWatcherProvider } from "@/providers/JobWatcherProvider";
+import { CommandPaletteProvider } from "@/providers/CommandPaletteProvider";
 
 const ReactQueryDevtools: React.ComponentType<{ initialIsOpen?: boolean }> =
   process.env.NODE_ENV === "development"
@@ -33,6 +34,7 @@ export default function ClientProviders({
   return (
     <ChakraProvider>
       <QueryClientProvider client={client}>
+        <CommandPaletteProvider>
         <JobWatcherProvider>
           <UsernameProvider>
             <TrackEditProvider>
@@ -45,6 +47,7 @@ export default function ClientProviders({
             </TrackEditProvider>
           </UsernameProvider>
         </JobWatcherProvider>
+        </CommandPaletteProvider>
         {process.env.NODE_ENV === "development" && (
           <ReactQueryDevtools initialIsOpen={false} />
         )}
