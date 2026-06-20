@@ -4,7 +4,7 @@ compose_dir := env_var_or_default("COMPOSE_DIR", "my-collection-search")
 buildkit_env := env_var_or_default("BUILDKIT_ENV", "DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1")
 registry := env_var_or_default("REGISTRY", "ghcr.io/saegey")
 platform := env_var_or_default("PLATFORM", "linux/amd64")
-prod_host := env_var_or_default("PROD_HOST", "vinyl.local")
+prod_host := env_var_or_default("PROD_HOST", "beelink.tail0bdbb0.ts.net")
 prod_stack_dir := env_var_or_default("PROD_STACK_DIR", "/opt/stacks/dj-playlist")
 ssh_user := env_var_or_default("SSH_USER", "saegey")
 tag_prefix := env_var_or_default("TAG_PREFIX", "v")
@@ -108,7 +108,7 @@ release-localbuild server="vinyl": tag-push
   #!/usr/bin/env bash
   set -euo pipefail
   case "{{server}}" in
-    vinyl)   host=vinyl.local;   dir=/opt/stacks/dj-playlist ;;
+    vinyl)   host=beelink.tail0bdbb0.ts.net;   dir=/opt/stacks/dj-playlist ;;
     beelink) host=100.117.118.15; dir=/srv/docker/groovenet ;;
     *) echo "Unknown server: {{server}}. Known servers: vinyl, beelink"; exit 1 ;;
   esac

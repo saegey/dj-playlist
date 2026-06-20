@@ -15,7 +15,7 @@ TAG ?= $(TAG_PREFIX)$(TAG_TIME)
 
 REGISTRY ?= ghcr.io/saegey
 PLATFORM ?= linux/amd64
-PROD_HOST ?= vinyl.local
+PROD_HOST ?= beelink.tail0bdbb0.ts.net
 PROD_STACK_DIR ?= /opt/stacks/dj-playlist
 SSH_USER ?= saegey
 ALBUM_COVERS_REMOTE_HOST ?= $(SSH_USER)@$(PROD_HOST)
