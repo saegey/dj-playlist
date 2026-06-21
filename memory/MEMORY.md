@@ -40,8 +40,8 @@ npm workspaces set up at root `dj-playlist/package.json`:
 - Build: `npm run build --workspace=packages/groovenet-cli`
 - Link globally: `cd packages/groovenet-cli && npm link`
 
-### Makefile
-- `make build-packages` — builds client → CLI → mcp-server in order
+### justfile
+- `just build-packages` — builds client → CLI → mcp-server in order
 
 ### MCP Server
 - Uses `GroovenetClient` from `@groovenet/client` instead of raw `apiCall()` + `any` types

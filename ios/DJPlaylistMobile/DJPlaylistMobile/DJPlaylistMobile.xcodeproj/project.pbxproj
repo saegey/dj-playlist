@@ -72,11 +72,11 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
-		70EFCB664172FD5394481501 /* DJPlaylist​Mobile */ = {
+		70EFCB664172FD5394481501 /* DJPlaylistMobile */ = {
 			isa = PBXGroup;
 			children = (
 			);
-			name = "DJPlaylist​Mobile";
+			name = "DJPlaylistMobile";
 			path = .;
 			sourceTree = "<group>";
 		};
@@ -169,7 +169,7 @@
 			children = (
 				A9A88EA5AC41C0A94E601C18 /* App */,
 				8964CF13AE79966159398B3B /* Core */,
-				70EFCB664172FD5394481501 /* DJPlaylist​Mobile */,
+				70EFCB664172FD5394481501 /* DJPlaylistMobile */,
 				8DB4816362C27BCCAB8CF3CC /* Features */,
 				F1B366892BA9057060A2576A /* Models */,
 				51B9C84184C2027CD6F90C46 /* Services */,

@@ -473,7 +473,7 @@ When working across services:
 5. Add migrations for schema changes
 6. Update both AGENTS.md files (root + my-collection-search/) if relevant
 7. When adding new API endpoints: add the method to `packages/groovenet-client/src/client.ts`, then wire into CLI and/or MCP server — types in `my-collection-search/src/types/track.ts` are the source of truth, copy to `packages/groovenet-client/src/types.ts` if they change
-8. Build order matters: client → cli → mcp-server (`make build-packages`)
+8. Build order matters: client → cli → mcp-server (`just build-packages`)
 
 ## See Also
 

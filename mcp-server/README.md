@@ -49,7 +49,7 @@ From the repo root, install all workspace dependencies and build:
 
 ```bash
 npm install
-make build-packages
+just build-packages
 ```
 
 Or build only the MCP server:

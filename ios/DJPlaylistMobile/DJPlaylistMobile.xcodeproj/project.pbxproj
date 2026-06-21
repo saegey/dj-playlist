@@ -9,14 +9,14 @@
 /* Begin PBXFileReference section */
 		716B3CD52FAAAE03004DBA15 /* DJPlaylistMobile.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = DJPlaylistMobile.xcodeproj; sourceTree = "<group>"; };
 		716B3D212FAAB06F004DBA15 /* DJPlaylistMobile.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = DJPlaylistMobile.xcodeproj; sourceTree = "<group>"; };
-		71A0FCCC2FAA429D00481B1B /* DJPlaylist​Mobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DJPlaylist​Mobile.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		71A0FCCC2FAA429D00481B1B /* DJPlaylistMobile.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DJPlaylistMobile.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		71CF7B772FAAACFF00B6DE69 /* DJPlaylistMobile.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = DJPlaylistMobile.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		71A0FCCE2FAA429D00481B1B /* DJPlaylist​Mobile */ = {
+		71A0FCCE2FAA429D00481B1B /* DJPlaylistMobile */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "DJPlaylist​Mobile";
+			path = "DJPlaylistMobile";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -49,7 +49,7 @@
 		71A0FCC32FAA429D00481B1B = {
 			isa = PBXGroup;
 			children = (
-				71A0FCCE2FAA429D00481B1B /* DJPlaylist​Mobile */,
+				71A0FCCE2FAA429D00481B1B /* DJPlaylistMobile */,
 				71A0FCCD2FAA429D00481B1B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -57,7 +57,7 @@
 		71A0FCCD2FAA429D00481B1B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				71A0FCCC2FAA429D00481B1B /* DJPlaylist​Mobile.app */,
+				71A0FCCC2FAA429D00481B1B /* DJPlaylistMobile.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -72,9 +72,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		71A0FCCB2FAA429D00481B1B /* DJPlaylist​Mobile */ = {
+		71A0FCCB2FAA429D00481B1B /* DJPlaylistMobile */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 71A0FCD72FAA429E00481B1B /* Build configuration list for PBXNativeTarget "DJPlaylist​Mobile" */;
+			buildConfigurationList = 71A0FCD72FAA429E00481B1B /* Build configuration list for PBXNativeTarget "DJPlaylistMobile" */;
 			buildPhases = (
 				71A0FCC82FAA429D00481B1B /* Sources */,
 				71A0FCC92FAA429D00481B1B /* Frameworks */,
@@ -85,13 +85,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				71A0FCCE2FAA429D00481B1B /* DJPlaylist​Mobile */,
+				71A0FCCE2FAA429D00481B1B /* DJPlaylistMobile */,
 			);
-			name = "DJPlaylist​Mobile";
+			name = "DJPlaylistMobile";
 			packageProductDependencies = (
 			);
-			productName = "DJPlaylist​Mobile";
-			productReference = 71A0FCCC2FAA429D00481B1B /* DJPlaylist​Mobile.app */;
+			productName = "DJPlaylistMobile";
+			productReference = 71A0FCCC2FAA429D00481B1B /* DJPlaylistMobile.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -109,7 +109,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 71A0FCC72FAA429D00481B1B /* Build configuration list for PBXProject "DJPlaylist​Mobile" */;
+			buildConfigurationList = 71A0FCC72FAA429D00481B1B /* Build configuration list for PBXProject "DJPlaylistMobile" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -137,7 +137,7 @@
 			);
 			projectRoot = "";
 			targets = (
-				71A0FCCB2FAA429D00481B1B /* DJPlaylist​Mobile */,
+				71A0FCCB2FAA429D00481B1B /* DJPlaylistMobile */,
 			);
 		};
 /* End PBXProject section */
@@ -353,7 +353,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		71A0FCC72FAA429D00481B1B /* Build configuration list for PBXProject "DJPlaylist​Mobile" */ = {
+		71A0FCC72FAA429D00481B1B /* Build configuration list for PBXProject "DJPlaylistMobile" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				71A0FCD52FAA429E00481B1B /* Debug */,
@@ -362,7 +362,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		71A0FCD72FAA429E00481B1B /* Build configuration list for PBXNativeTarget "DJPlaylist​Mobile" */ = {
+		71A0FCD72FAA429E00481B1B /* Build configuration list for PBXNativeTarget "DJPlaylistMobile" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				71A0FCD82FAA429E00481B1B /* Debug */,

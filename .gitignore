@@ -8,18 +8,28 @@ discogs_exports/
 .env
 .DS_Store
 tmp/
+openapi-generated.json
 my-collection-search/public/audio*
 my-collection-search/dumps/*
 my-collection-search/spotify_exports
+my-collection-search/.posthog-events.json
+my-collection-search/.claude/settings.local.json
 
 djplaylist_backup_*
+__pycache__/
 *.pyc
+xcuserdata/
+*.xcuserstate
 
 # IMPORTANT: Never commit MCP config with production API keys!
 .mcp.json
 
 # Claude Code working files
+.claude/
 .claude/scratch/
 .claude/questions.txt
 .claude/notes/
 *.claude-temp.md
+
+# Editor-local project settings
+.vscode/
