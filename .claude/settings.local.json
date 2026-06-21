@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /Users/saegey/Projects/dj-playlist/my-collection-search && mkdir -p src/server/repositories src/server/services)",
+      "Bash(gh pr view 93 --json reviews,comments 2>/dev/null)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "groovenet"
+  ]
+}

@@ -95,7 +95,7 @@ Pre-built images are x86_64 only. Mac users build locally from source.
 #### Remote deploy (via SSH)
 
 ```bash
-just release-localbuild   # tag + deploy to vinyl.local (builds on server)
+just release-localbuild   # tag + deploy to beelink.tail0bdbb0.ts.net (builds on server)
 just release              # tag + push images to registry + deploy
 ```
 

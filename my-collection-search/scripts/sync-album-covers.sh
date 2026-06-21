@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [ "${1:-}" = "" ] || [ "${2:-}" = "" ]; then
   echo "Usage: $0 <remote-host> <remote-volume-path> [local-dir]"
-  echo "Example: $0 saegey@vinyl.local /var/lib/docker/volumes/teststack_album_covers/_data /Users/saegey/groovenet-covers"
+  echo "Example: $0 saegey@beelink.tail0bdbb0.ts.net /var/lib/docker/volumes/teststack_album_covers/_data /Users/saegey/groovenet-covers"
   exit 1
 fi
 

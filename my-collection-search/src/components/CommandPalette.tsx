@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useUsername } from "@/providers/UsernameProvider";
 import { usePlaylistsQuery } from "@/hooks/usePlaylistsQuery";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import { useCommandPalette } from "@/providers/CommandPaletteProvider";
 import { importPlaylist } from "@/services/internalApi/playlists";
 import { searchTracks } from "@/services/internalApi/tracks";
 import type { Track } from "@/types/track";
@@ -23,10 +24,17 @@ const NAV_ITEMS = [
   { href: "/settings", label: "Settings" },
 ];
 
-const isEditableTarget = (el: EventTarget | null) => {
+const isEditableTarget = (el: EventTarget | null): boolean => {
   if (!el || !(el as HTMLElement).closest) return false;
-  const node = el as HTMLElement;
-  return !!node.closest("input, textarea, [contenteditable='true']");
+  return !!(el as HTMLElement).closest("input, textarea, [contenteditable='true']");
+};
+
+// Broader guard for Space — also skip buttons/links so they still activate normally
+const isInteractiveTarget = (el: EventTarget | null): boolean => {
+  if (!el || !(el as HTMLElement).closest) return false;
+  return !!(el as HTMLElement).closest(
+    "input, textarea, [contenteditable='true'], button, a, select, [role='button'], [role='menuitem'], [role='option'], [role='tab']"
+  );
 };
 
 export default function CommandPalette() {
@@ -46,7 +54,8 @@ export default function CommandPalette() {
     replacePlaylist,
   } = usePlaylistPlayer();
 
-  const [open, setOpen] = React.useState(false);
+  const { paletteOpen: open, setPaletteOpen: setOpen } = useCommandPalette();
+
   const [query, setQuery] = React.useState("");
   const [trackHits, setTrackHits] = React.useState<TrackHit[]>([]);
   const [loadingTracks, setLoadingTracks] = React.useState(false);
@@ -54,19 +63,50 @@ export default function CommandPalette() {
   const close = React.useCallback(() => {
     setOpen(false);
     setQuery("");
-  }, []);
+  }, [setOpen]);
 
   React.useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // ⌘K / Ctrl+K — toggle palette
       if (e.key.toLowerCase() === "k" && (e.metaKey || e.ctrlKey)) {
         if (isEditableTarget(e.target)) return;
         e.preventDefault();
         setOpen((v) => !v);
+        return;
+      }
+
+      // Player shortcuts — skip when palette is open (so typing in the palette doesn't trigger them)
+      if (open) return;
+
+      // Space — play/pause (only when queue has tracks)
+      if (e.key === " ") {
+        if (isInteractiveTarget(e.target)) return;
+        if (playlist && playlist.length > 0) {
+          e.preventDefault();
+          if (isPlaying) pause();
+          else play();
+        }
+        return;
+      }
+
+      // ] — next track
+      if (e.key === "]") {
+        if (isEditableTarget(e.target)) return;
+        playNext();
+        return;
+      }
+
+      // [ — previous track
+      if (e.key === "[") {
+        if (isEditableTarget(e.target)) return;
+        playPrev();
+        return;
       }
     };
+
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [open, isPlaying, play, pause, playNext, playPrev, playlist, setOpen]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -242,7 +282,9 @@ export default function CommandPalette() {
               <span className={styles.itemTitle}>
                 {isPlaying ? "Pause" : "Play"}
               </span>
-              <span className={styles.shortcut}>Space</span>
+              <span className={styles.shortcutGroup}>
+                <kbd className={styles.kbd}>Space</kbd>
+              </span>
             </Command.Item>
             <Command.Item
               value="Next track"
@@ -253,6 +295,9 @@ export default function CommandPalette() {
               className={styles.item}
             >
               <span className={styles.itemTitle}>Next Track</span>
+              <span className={styles.shortcutGroup}>
+                <kbd className={styles.kbd}>]</kbd>
+              </span>
             </Command.Item>
             <Command.Item
               value="Previous track"
@@ -263,6 +308,9 @@ export default function CommandPalette() {
               className={styles.item}
             >
               <span className={styles.itemTitle}>Previous Track</span>
+              <span className={styles.shortcutGroup}>
+                <kbd className={styles.kbd}>[</kbd>
+              </span>
             </Command.Item>
             <Command.Item
               value="Clear queue"
@@ -350,6 +398,32 @@ export default function CommandPalette() {
             ))}
           </Command.Group>
         </Command.List>
+
+        <div className={styles.footer}>
+          <span className={styles.footerHint}>
+            <kbd className={styles.kbd}>↑</kbd>
+            <kbd className={styles.kbd}>↓</kbd>
+            navigate
+          </span>
+          <span className={styles.footerHint}>
+            <kbd className={styles.kbd}>↵</kbd>
+            select
+          </span>
+          <span className={styles.footerHint}>
+            <kbd className={styles.kbd}>esc</kbd>
+            dismiss
+          </span>
+          <span className={styles.footerSpacer} />
+          <span className={styles.footerHint}>
+            <kbd className={styles.kbd}>Space</kbd>
+            play/pause
+          </span>
+          <span className={styles.footerHint}>
+            <kbd className={styles.kbd}>[</kbd>
+            <kbd className={styles.kbd}>]</kbd>
+            prev / next
+          </span>
+        </div>
       </Command>
     </Command.Dialog>
   );
