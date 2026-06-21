@@ -14,23 +14,24 @@ export const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
   return (
     <Box
       position="fixed"
-      left={0}
-      right={0}
-      bottom={0}
+      bottom={{ base: 3, md: 4 }}
+      left="50%"
+      transform="translateX(-50%)"
       zIndex={100}
-      bg={"bg"}
-      borderTopWidth="1px"
-      borderColor={"brand.0"}
-      background={"bg"}
+      width={{ base: "calc(100% - 32px)", md: "calc(100% - 80px)" }}
+      maxW="920px"
+      borderRadius="2xl"
+      overflow="hidden"
+      borderWidth="1px"
+      borderColor="border.subtle"
+      boxShadow="0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)"
+      _light={{ bg: "rgba(255,255,255,0.82)" }}
+      _dark={{ bg: "rgba(18,18,24,0.82)" }}
+      style={{ backdropFilter: "blur(20px) saturate(180%)" }}
+      px={{ base: 3, md: 5 }}
+      py={{ base: 2, md: 3 }}
     >
-      <Box
-        maxW="1200px"
-        mx="auto"
-        px={{ base: 3, md: 6 }}
-        py={{ base: 2, md: 3 }}
-      >
-        {children}
-      </Box>
+      {children}
     </Box>
   );
 };
@@ -47,8 +48,8 @@ const PlaylistPlayer: React.FC = () => {
 
   return (
     <>
-      {/* Spacer so your page content isn't hidden behind the fixed bar */}
-      <Box h={{ base: "72px", md: "84px" }} />
+      {/* Spacer so page content scrolls clear of the floating player */}
+      <Box h={{ base: "88px", md: "100px" }} />
 
       {/* Original Player - hide when queue drawer is open */}
       {!isOpen && (

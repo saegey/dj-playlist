@@ -18,7 +18,6 @@ import PlayerControls from "@/components/PlayerControls";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useQueueSaveDialog } from "@/hooks/useQueueSaveDialog";
 import type { Track } from "@/types/track";
-import { PlayerContainer } from "./PlaylistPlayer";
 import { formatSeconds, getTrackDurationSeconds } from "@/lib/trackUtils";
 
 interface QueueDrawerProps {
@@ -214,17 +213,16 @@ export default function QueueDrawer({
               borderTopWidth="1px"
               borderColor="border.muted"
               bg="bg.surface"
-              p={4}
+              px={4}
+              py={3}
             >
-              <PlayerContainer>
-                <PlayerControls
-                  showQueueButton={true}
-                  onQueueToggle={onQueueToggle}
-                  isQueueOpen={isQueueOpen}
-                  compact={false}
-                  showVolumeControls={true}
-                />
-              </PlayerContainer>
+              <PlayerControls
+                showQueueButton={true}
+                onQueueToggle={onQueueToggle}
+                isQueueOpen={isQueueOpen}
+                compact={false}
+                showVolumeControls={true}
+              />
             </Box>
           </Drawer.Content>
         </Drawer.Positioner>

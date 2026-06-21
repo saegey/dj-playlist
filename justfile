@@ -13,8 +13,11 @@ tag := env_var_or_default("TAG", tag_prefix + tag_time)
 album_covers_remote_host := env_var_or_default("ALBUM_COVERS_REMOTE_HOST", ssh_user + "@" + prod_host)
 album_covers_remote_path := env_var_or_default("ALBUM_COVERS_REMOTE_PATH", "/var/lib/docker/volumes/teststack_album_covers/_data")
 album_covers_local_dir := env_var_or_default("ALBUM_COVERS_LOCAL_DIR", "/Users/saegey/groovenet-covers")
+beelink_host := env_var_or_default("BEELINK_HOST", "saegey@100.117.118.15")
+music_mount := env_var_or_default("MUSIC_MOUNT", "/Volumes/music")
 compose_cmd := `if docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; fi`
 platform_override := if os() == "macos" { "-f " + compose_dir + "/docker-compose.mac.yml" } else { "" }
+op_env := "op run --env-file=" + compose_dir + "/.env.tpl --"
 
 default:
   @just --list
@@ -35,24 +38,46 @@ tag:
 tag-push: tag
   git push origin {{tag}}
 
-compose-dev: check-compose
-  {{buildkit_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml {{platform_override}} up --remove-orphans
+mount-music:
+  @sudo mkdir -p {{music_mount}}
+  @if mount | grep -q '{{music_mount}}'; then \
+    echo "→ {{music_mount}} already mounted"; \
+  else \
+    echo "→ Mounting beelink.local:/srv/music at {{music_mount}}..."; \
+    sudo mount -t nfs -o resvport,ro beelink:/srv/music {{music_mount}}; \
+  fi
 
-compose-dev-mac: check-compose
-  {{buildkit_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml -f {{compose_dir}}/docker-compose.mac.yml up --remove-orphans
+unmount-music:
+  @if mount | grep -q '{{music_mount}}'; then \
+    echo "→ Unmounting {{music_mount}}..."; \
+    sudo umount {{music_mount}}; \
+  else \
+    echo "→ {{music_mount}} not mounted, skipping"; \
+  fi
 
-compose-dev-reset: check-compose
-  {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml {{platform_override}} down --remove-orphans
-  {{buildkit_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml {{platform_override}} up --build --force-recreate --remove-orphans
+sync-dev-assets:
+  BEELINK_HOST={{beelink_host}} COVERS_LOCAL_DIR={{album_covers_local_dir}} \
+    ./{{compose_dir}}/scripts/sync-dev-assets.sh
+
+compose-dev: check-compose mount-music sync-dev-assets
+  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml {{platform_override}} up --remove-orphans
+
+compose-dev-mac: check-compose mount-music sync-dev-assets
+  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml -f {{compose_dir}}/docker-compose.mac.yml up --remove-orphans
+
+compose-dev-reset: check-compose mount-music
+  {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml {{platform_override}} down --remove-orphans
+  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml {{platform_override}} up --build --force-recreate --remove-orphans
 
 compose-prod: check-compose
-  {{buildkit_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.prod.yml up
+  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.prod.yml up
 
 compose-down: check-compose
-  {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.prod.yml down
+  {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.prod.yml down
+  just unmount-music
 
 compose-logs: check-compose
-  {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.prod.yml logs -f
+  {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.prod.yml logs -f
 
 build-app:
   {{buildkit_env}} docker buildx build -t ghcr.io/saegey/myapp:{{tag}} -f {{compose_dir}}/Dockerfile {{compose_dir}}
@@ -115,10 +140,10 @@ release-localbuild server="vinyl": tag-push
   TAG="{{tag}}" just prod_host="$host" prod_stack_dir="$dir" deploy-prod-remote-localbuild
 
 migrate-up: check-compose
-  {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml run --rm migrate
+  {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml run --rm migrate
 
 migrate-down: check-compose
-  {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml run --rm migrate npx node-pg-migrate down
+  {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml run --rm migrate npx node-pg-migrate down
 
 migrate-create NAME:
   @if [ -z "{{NAME}}" ]; then echo "Usage: just migrate-create <name>"; exit 1; fi

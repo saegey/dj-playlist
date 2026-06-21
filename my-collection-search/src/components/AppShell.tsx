@@ -180,7 +180,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         colorPalette="gray"
         display={{ base: "inline-flex", md: "none" }}
         position="fixed"
-        bottom={{ base: playlistLength > 0 ? "128px" : "16px" }}
+        bottom={{ base: playlistLength > 0 ? "112px" : "16px" }}
         right={4}
         zIndex={90}
         borderRadius="full"
