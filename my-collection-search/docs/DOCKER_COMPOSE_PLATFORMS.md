@@ -5,9 +5,9 @@
 MPD (Music Player Daemon) requires Linux audio devices (`/dev/snd`) which don't exist on macOS. Use the macOS override to disable MPD:
 
 ### Automatic (Recommended)
-The Makefile automatically detects macOS and applies the override:
+The `justfile` automatically detects macOS and applies the override:
 ```bash
-make compose-dev
+just compose-dev
 ```
 
 ### Manual
@@ -20,7 +20,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose
 MPD works natively on Linux with audio device passthrough:
 
 ```bash
-make compose-dev
+just compose-dev
 # or
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
@@ -66,7 +66,7 @@ Since MPD doesn't work on macOS, the app falls back to browser-based audio playb
 ### Error: "no such file or directory" for /dev/snd
 This means you're running on macOS without the override. Use:
 ```bash
-make compose-dev  # Auto-detects macOS
+just compose-dev  # Auto-detects macOS
 # or
 docker compose -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.mac.yml up
 ```
