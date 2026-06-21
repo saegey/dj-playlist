@@ -194,18 +194,47 @@ export default function PlaylistManager() {
     <Box minW="240px">
       {/* Header + filter */}
       <VStack align="stretch" mb={2} gap={2}>
-        <HStack justify="space-between">
-          <Text fontWeight="bold">Playlists</Text>
-          <HStack gap={2}>
-            {playlists.length > 0 && (
-              <Badge colorPalette="gray" variant="surface">
-                {playlists.length}
-              </Badge>
-            )}
+        <UnifiedSearchControls
+          query={filter}
+          onQueryChange={setFilter}
+          friends={friends}
+          selectedFriend={selectedFriend}
+          onFriendChange={(friendId) =>
+            setSelectedLibraryFriendId(friendId > 0 ? friendId : null)
+          }
+          includeAllOption={true}
+          placeholder="Filter playlists..."
+          desktopControls={
+            <>
+              {playlists.length > 0 && (
+                <Badge colorPalette="gray" variant="surface" flexShrink={0}>
+                  {playlists.length}
+                </Badge>
+              )}
+              <Menu.Root>
+                <Menu.Trigger asChild>
+                  <Button size="sm" variant="outline" flexShrink={0}>
+                    <TbFileImport /> Import
+                  </Button>
+                </Menu.Trigger>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    <Menu.Item
+                      value="import-json"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <TbFileImport /> Import JSON
+                    </Menu.Item>
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Menu.Root>
+            </>
+          }
+          mobilePrimaryControl={
             <Menu.Root>
               <Menu.Trigger asChild>
-                <Button size="xs" variant="outline">
-                  <TbFileImport /> Import
+                <Button size="sm" variant="outline" flexShrink={0} px={2}>
+                  <TbFileImport />
                 </Button>
               </Menu.Trigger>
               <Menu.Positioner>
@@ -219,18 +248,7 @@ export default function PlaylistManager() {
                 </Menu.Content>
               </Menu.Positioner>
             </Menu.Root>
-          </HStack>
-        </HStack>
-        <UnifiedSearchControls
-          query={filter}
-          onQueryChange={setFilter}
-          friends={friends}
-          selectedFriend={selectedFriend}
-          onFriendChange={(friendId) =>
-            setSelectedLibraryFriendId(friendId > 0 ? friendId : null)
           }
-          includeAllOption={true}
-          placeholder="Filter playlists..."
         />
       </VStack>
 
