@@ -24,7 +24,11 @@ const MOBILE_OPENAPI_PATHS = new Set([
   "/api/playlists",
   "/api/playlists/{id}/tracks",
   "/api/playlists/genetic",
+  "/api/albums/{releaseId}/playable-structure",
   "/api/albums/{releaseId}/download",
+  "/api/spins",
+  "/api/spins/top-tracks",
+  "/api/spins/{id}",
   "/api/discogs/verify-manifests",
 ]);
 

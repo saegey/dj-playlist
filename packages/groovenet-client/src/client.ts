@@ -7,8 +7,16 @@ import type {
   AlbumSearchQuery,
   AlbumSearchResponse,
   AlbumDetail,
+  AlbumPlayableStructure,
   AlbumUpdate,
   AlbumDownloadResult,
+  SpinCreateInput,
+  SpinCreateResponse,
+  SpinDeleteResponse,
+  SpinListQuery,
+  SpinListResponse,
+  SpinTopTracksQuery,
+  SpinTopTracksResponse,
   TrackSearchQuery,
   TrackSearchResponse,
   TrackUpdate,
@@ -130,6 +138,18 @@ export class GroovenetClient {
     );
   }
 
+  async getAlbumPlayableStructure(
+    releaseId: string,
+    friendId: number
+  ): Promise<AlbumPlayableStructure> {
+    return this.request<AlbumPlayableStructure>(
+      "GET",
+      `/albums/${releaseId}/playable-structure`,
+      undefined,
+      { friend_id: friendId }
+    );
+  }
+
   async updateAlbum(
     releaseId: string,
     friendId: number,
@@ -148,6 +168,49 @@ export class GroovenetClient {
       `/albums/${releaseId}/download`,
       undefined,
       { friend_id: friendId }
+    );
+  }
+
+  // ── Spins ──────────────────────────────────────────────────────────────────
+
+  async listSpins(query: SpinListQuery): Promise<SpinListResponse> {
+    const params: Record<string, string | number | boolean | undefined> = {
+      friend_id: query.friend_id,
+      release_id: query.release_id,
+      track_id: query.track_id,
+      from: query.from,
+      to: query.to,
+      limit: query.limit ?? 50,
+      offset: query.offset ?? 0,
+    };
+    return this.request<SpinListResponse>("GET", "/spins", undefined, params);
+  }
+
+  async createSpin(input: SpinCreateInput): Promise<SpinCreateResponse> {
+    return this.request<SpinCreateResponse>("POST", "/spins", input);
+  }
+
+  async deleteSpin(id: number, friendId: number): Promise<SpinDeleteResponse> {
+    return this.request<SpinDeleteResponse>(
+      "DELETE",
+      `/spins/${id}`,
+      undefined,
+      { friend_id: friendId }
+    );
+  }
+
+  async listTopSpinTracks(query: SpinTopTracksQuery): Promise<SpinTopTracksResponse> {
+    const params: Record<string, string | number | boolean | undefined> = {
+      friend_id: query.friend_id,
+      release_id: query.release_id,
+      limit: query.limit ?? 20,
+      offset: query.offset ?? 0,
+    };
+    return this.request<SpinTopTracksResponse>(
+      "GET",
+      "/spins/top-tracks",
+      undefined,
+      params
     );
   }
 

@@ -6,6 +6,25 @@ export const queryKeys = {
   playlists: () => ["playlists"] as const,
   friends: () => ["friends"] as const,
   backups: () => ["backups"] as const,
+  spins: (args: {
+    friend_id: number;
+    release_id?: string;
+    track_id?: string;
+    from?: string;
+    to?: string;
+    limit?: number;
+    offset?: number;
+  }) => ["spins", args] as const,
+  spinsRoot: () => ["spins"] as const,
+  spinTopTracks: (args: {
+    friend_id: number;
+    release_id?: string;
+    limit?: number;
+    offset?: number;
+  }) => ["spins", "top-tracks", args] as const,
+  spinTopTracksRoot: () => ["spins", "top-tracks"] as const,
+  albumPlayableStructure: (releaseId: string, friendId: number) =>
+    ["album", releaseId, friendId, "playable-structure"] as const,
   playlistTrackIds: (playlistId: number | string) =>
     ["playlist", Number(playlistId), "track-ids"] as const,
   playlistTracks: (

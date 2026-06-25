@@ -159,6 +159,27 @@ export interface AlbumDetail {
   tracks: Track[];
 }
 
+export interface AlbumPlayableStructureTrack {
+  track_id: string;
+  friend_id: number;
+  position?: string | number | null;
+  title: string;
+  artist: string;
+}
+
+export interface AlbumPlayableStructureSide {
+  side_key: string;
+  side_label: string;
+  ordinal: number;
+  track_count: number;
+  tracks: AlbumPlayableStructureTrack[];
+}
+
+export interface AlbumPlayableStructure {
+  album: Album;
+  sides: AlbumPlayableStructureSide[];
+}
+
 export interface AlbumUpdate {
   album_rating?: number;
   album_notes?: string;
@@ -172,6 +193,138 @@ export interface AlbumDownloadResult {
   message: string;
   jobIds: string[];
   tracksQueued: number;
+}
+
+export interface SpinTrackRef {
+  track_id: string;
+  friend_id: number;
+}
+
+export interface SpinSession {
+  id: number;
+  friend_id: number;
+  release_id: string;
+  medium: "vinyl";
+  selection_mode: "sides" | "tracks";
+  played_at: string;
+  note?: string | null;
+  context_type?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SpinSelection {
+  id?: number;
+  session_id?: number;
+  ordinal: number;
+  selection_type: "side" | "track";
+  side_key?: string | null;
+  track_id?: string | null;
+  friend_id?: number | null;
+  position_snapshot?: string | null;
+  created_at?: string;
+}
+
+export interface TrackSpinEvent {
+  id?: number;
+  session_id?: number;
+  friend_id: number;
+  release_id: string;
+  track_id: string;
+  played_at: string;
+  ordinal: number;
+  side_key?: string | null;
+  position_snapshot?: string | null;
+  title_snapshot?: string;
+  artist_snapshot?: string;
+  album_snapshot?: string;
+  created_at?: string;
+}
+
+export interface SpinDerived {
+  is_full_album_spin: boolean;
+  selected_side_count: number;
+  album_side_count: number;
+  track_count: number;
+}
+
+export interface SpinCreateBodyBase {
+  friend_id: number;
+  release_id: string;
+  played_at: string;
+  note?: string | null;
+  context_type?: string | null;
+}
+
+export type SpinCreateInput =
+  | (SpinCreateBodyBase & {
+      side_keys: string[];
+      track_refs?: never;
+    })
+  | (SpinCreateBodyBase & {
+      side_keys?: never;
+      track_refs: SpinTrackRef[];
+    });
+
+export interface SpinSessionDetail {
+  session: SpinSession;
+  selections: SpinSelection[];
+  track_events: TrackSpinEvent[];
+  derived: SpinDerived;
+}
+
+export interface SpinCreateResponse {
+  session: SpinSession;
+  selections: SpinSelection[];
+  expanded_tracks: TrackSpinEvent[];
+  derived: SpinDerived;
+}
+
+export interface SpinListQuery {
+  friend_id: number;
+  release_id?: string;
+  track_id?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface SpinListResponse {
+  items: SpinSessionDetail[];
+  limit: number;
+  offset: number;
+}
+
+export interface SpinDeleteResponse {
+  success: boolean;
+  session: SpinSession;
+}
+
+export interface SpinTopTracksQuery {
+  friend_id: number;
+  release_id?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface SpinTopTrack {
+  friend_id: number;
+  release_id: string;
+  track_id: string;
+  play_count: number;
+  last_played_at: string;
+  title_snapshot: string;
+  artist_snapshot: string;
+  album_snapshot: string;
+  side_key?: string | null;
+  position_snapshot?: string | null;
+}
+
+export interface SpinTopTracksResponse {
+  items: SpinTopTrack[];
+  limit: number;
+  offset: number;
 }
 
 export interface SimilarTrack extends Record<string, unknown> {

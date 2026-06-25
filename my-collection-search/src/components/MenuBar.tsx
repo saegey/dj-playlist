@@ -18,7 +18,7 @@ import {
 import { TbPlaylist } from "react-icons/tb";
 import { LuCloudDownload } from "react-icons/lu";
 import { IoBookSharp, IoMusicalNotes, IoSettings, IoAlbums } from "react-icons/io5";
-import { FiMenu } from "react-icons/fi";
+import { FiDisc, FiMenu } from "react-icons/fi";
 // import { usePlaylistDrawer } from "@/providers/PlaylistDrawer";
 
 interface TopMenuBarProps {
@@ -28,6 +28,7 @@ interface TopMenuBarProps {
 const menuItems = [
   { href: "/", label: "Tracks" },
   { href: "/albums", label: "Albums" },
+  { href: "/spins", label: "Spins" },
   { href: "/playlists", label: "Playlists" },
   { href: "/jobs", label: "Jobs" },
   { href: "/settings", label: "Settings" },
@@ -109,6 +110,8 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
                         ? IoMusicalNotes
                         : item.href === "/albums"
                         ? IoAlbums
+                        : item.href === "/spins"
+                        ? FiDisc
                         :item.href === "/settings"
                         ? IoSettings
                         : item.href === "/playlists"

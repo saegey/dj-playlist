@@ -1066,6 +1066,174 @@ export const albumDetailResponseSchema = z.object({
   tracks: z.array(z.object({}).passthrough()),
 });
 
+export const albumPlayableStructureTrackSchema = z
+  .object({
+    track_id: z.string(),
+    friend_id: z.number().int(),
+    position: z.union([z.string(), z.number()]).nullable().optional(),
+    title: z.string(),
+    artist: z.string(),
+  })
+  .passthrough();
+
+export const albumPlayableStructureSideSchema = z.object({
+  side_key: z.string(),
+  side_label: z.string(),
+  ordinal: z.number().int(),
+  track_count: z.number().int(),
+  tracks: z.array(albumPlayableStructureTrackSchema),
+});
+
+export const albumPlayableStructureResponseSchema = z.object({
+  album: albumEntitySchema,
+  sides: z.array(albumPlayableStructureSideSchema),
+});
+
+export const spinTrackRefSchema = z.object({
+  track_id: z.string().min(1),
+  friend_id: z.number().int(),
+});
+
+export const spinSessionSchema = z.object({
+  id: z.number().int(),
+  friend_id: z.number().int(),
+  release_id: z.string(),
+  medium: z.literal("vinyl"),
+  selection_mode: z.enum(["sides", "tracks"]),
+  played_at: z.string(),
+  note: z.string().nullable().optional(),
+  context_type: z.string().nullable().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const spinSelectionSchema = z.object({
+  id: z.number().int().optional(),
+  session_id: z.number().int().optional(),
+  ordinal: z.number().int(),
+  selection_type: z.enum(["side", "track"]),
+  side_key: z.string().nullable().optional(),
+  track_id: z.string().nullable().optional(),
+  friend_id: z.number().int().nullable().optional(),
+  position_snapshot: z.string().nullable().optional(),
+  created_at: z.string().optional(),
+});
+
+export const trackSpinEventSchema = z.object({
+  id: z.number().int().optional(),
+  session_id: z.number().int().optional(),
+  friend_id: z.number().int(),
+  release_id: z.string(),
+  track_id: z.string(),
+  played_at: z.string(),
+  ordinal: z.number().int(),
+  side_key: z.string().nullable().optional(),
+  position_snapshot: z.string().nullable().optional(),
+  title_snapshot: z.string().optional(),
+  artist_snapshot: z.string().optional(),
+  album_snapshot: z.string().optional(),
+  created_at: z.string().optional(),
+});
+
+export const spinDerivedSchema = z.object({
+  is_full_album_spin: z.boolean(),
+  selected_side_count: z.number().int(),
+  album_side_count: z.number().int(),
+  track_count: z.number().int(),
+});
+
+export const spinCreateBodySchema = z
+  .object({
+    friend_id: intFromInputSchema,
+    release_id: z.string().min(1),
+    played_at: z.string().min(1),
+    note: z.string().nullable().optional(),
+    context_type: z.string().nullable().optional(),
+    side_keys: z.array(z.string().min(1)).optional(),
+    track_refs: z.array(spinTrackRefSchema).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const hasSides = Array.isArray(value.side_keys) && value.side_keys.length > 0;
+    const hasTracks = Array.isArray(value.track_refs) && value.track_refs.length > 0;
+
+    if (hasSides === hasTracks) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Provide exactly one of side_keys or track_refs",
+      });
+    }
+  });
+
+export const spinCreateResponseSchema = z.object({
+  session: spinSessionSchema,
+  selections: z.array(spinSelectionSchema),
+  track_events: z.array(trackSpinEventSchema).optional(),
+  expanded_tracks: z.array(trackSpinEventSchema),
+  derived: spinDerivedSchema,
+});
+
+export const spinListQuerySchema = z.object({
+  friend_id: intFromInputSchema,
+  release_id: z.string().optional(),
+  track_id: z.string().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  limit: nonNegativeIntFromInputSchema.optional().default(50),
+  offset: nonNegativeIntFromInputSchema.optional().default(0),
+});
+
+export const spinListItemSchema = z.object({
+  session: spinSessionSchema,
+  selections: z.array(spinSelectionSchema),
+  track_events: z.array(trackSpinEventSchema),
+  derived: spinDerivedSchema,
+});
+
+export const spinListResponseSchema = z.object({
+  items: z.array(spinListItemSchema),
+  limit: z.number().int(),
+  offset: z.number().int(),
+});
+
+export const spinTopTracksQuerySchema = z.object({
+  friend_id: intFromInputSchema,
+  release_id: z.string().optional(),
+  limit: nonNegativeIntFromInputSchema.optional().default(20),
+  offset: nonNegativeIntFromInputSchema.optional().default(0),
+});
+
+export const spinTopTrackItemSchema = z.object({
+  friend_id: z.number().int(),
+  release_id: z.string(),
+  track_id: z.string(),
+  play_count: z.number().int(),
+  last_played_at: z.string(),
+  title_snapshot: z.string(),
+  artist_snapshot: z.string(),
+  album_snapshot: z.string(),
+  side_key: z.string().nullable().optional(),
+  position_snapshot: z.string().nullable().optional(),
+});
+
+export const spinTopTracksResponseSchema = z.object({
+  items: z.array(spinTopTrackItemSchema),
+  limit: z.number().int(),
+  offset: z.number().int(),
+});
+
+export const spinSessionParamsSchema = z.object({
+  id: intFromInputSchema,
+});
+
+export const spinDeleteQuerySchema = z.object({
+  friend_id: intFromInputSchema,
+});
+
+export const spinDeleteResponseSchema = z.object({
+  success: z.boolean(),
+  session: spinSessionSchema,
+});
+
 export const albumUpdateBodySchema = z
   .object({
     release_id: z.string().min(1),
