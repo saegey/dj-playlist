@@ -7,6 +7,7 @@ import {
   albumCreateResponseSchema,
   albumDetailResponseSchema,
   albumDiscogsRawResponseSchema,
+  albumPlayableStructureResponseSchema,
   albumFriendQuerySchema,
   albumReleaseParamsSchema,
   albumSearchQuerySchema,
@@ -65,6 +66,15 @@ import {
   recommendationsQuerySchema,
   recommendationsBatchBodySchema,
   recommendationsResponseSchema,
+  spinCreateBodySchema,
+  spinCreateResponseSchema,
+  spinDeleteQuerySchema,
+  spinDeleteResponseSchema,
+  spinListQuerySchema,
+  spinListResponseSchema,
+  spinTopTracksQuerySchema,
+  spinTopTracksResponseSchema,
+  spinSessionParamsSchema,
   trackSearchGetQuerySchema,
   trackSearchGetResponseSchema,
 } from "@/api-contract/schemas";
@@ -2865,6 +2875,90 @@ export const apiContractRoutes: ApiContractRoute[] = [
     },
   },
   {
+    operationId: "getAlbumPlayableStructure",
+    method: "get",
+    path: "/api/albums/{releaseId}/playable-structure",
+    summary: "Fetch normalized playable album side structure",
+    tags: ["Albums", "Spins"],
+    paramsSchema: albumReleaseParamsSchema,
+    querySchema: albumFriendQuerySchema,
+    successSchema: albumPlayableStructureResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "releaseId",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+        },
+        {
+          name: "friend_id",
+          in: "query",
+          required: true,
+          schema: { type: "integer" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Normalized playable album structure",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  album: { type: "object", additionalProperties: true },
+                  sides: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        side_key: { type: "string" },
+                        side_label: { type: "string" },
+                        ordinal: { type: "integer" },
+                        track_count: { type: "integer" },
+                        tracks: {
+                          type: "array",
+                          items: { type: "object", additionalProperties: true },
+                        },
+                      },
+                      required: [
+                        "side_key",
+                        "side_label",
+                        "ordinal",
+                        "track_count",
+                        "tracks",
+                      ],
+                    },
+                  },
+                },
+                required: ["album", "sides"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Missing or invalid query parameter",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "404": {
+          description: "Album not found",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
     operationId: "getAlbumDetail",
     method: "get",
     path: "/api/albums/{releaseId}",
@@ -3293,6 +3387,246 @@ export const apiContractRoutes: ApiContractRoute[] = [
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
+        },
+      },
+    },
+  },
+  {
+    operationId: "listSpinSessions",
+    method: "get",
+    path: "/api/spins",
+    summary: "List manual vinyl spin sessions",
+    tags: ["Spins"],
+    querySchema: spinListQuerySchema,
+    successSchema: spinListResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
+        { name: "release_id", in: "query", required: false, schema: { type: "string" } },
+        { name: "track_id", in: "query", required: false, schema: { type: "string" } },
+        { name: "from", in: "query", required: false, schema: { type: "string", format: "date-time" } },
+        { name: "to", in: "query", required: false, schema: { type: "string", format: "date-time" } },
+        { name: "limit", in: "query", required: false, schema: { type: "integer", default: 50 } },
+        { name: "offset", in: "query", required: false, schema: { type: "integer", default: 0 } },
+      ],
+      responses: {
+        "200": {
+          description: "Spin session list",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  items: {
+                    type: "array",
+                    items: { type: "object", additionalProperties: true },
+                  },
+                  limit: { type: "integer" },
+                  offset: { type: "integer" },
+                },
+                required: ["items", "limit", "offset"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid query",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "createSpinSession",
+    method: "post",
+    path: "/api/spins",
+    summary: "Create a manual vinyl spin session",
+    tags: ["Spins"],
+    bodySchema: spinCreateBodySchema,
+    successSchema: spinCreateResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                friend_id: { type: "integer" },
+                release_id: { type: "string" },
+                played_at: { type: "string", format: "date-time" },
+                note: { type: ["string", "null"] },
+                context_type: { type: ["string", "null"] },
+                side_keys: {
+                  type: "array",
+                  items: { type: "string" },
+                },
+                track_refs: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      track_id: { type: "string" },
+                      friend_id: { type: "integer" },
+                    },
+                    required: ["track_id", "friend_id"],
+                  },
+                },
+              },
+              required: ["friend_id", "release_id", "played_at"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Spin session created",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  session: { type: "object", additionalProperties: true },
+                  selections: {
+                    type: "array",
+                    items: { type: "object", additionalProperties: true },
+                  },
+                  expanded_tracks: {
+                    type: "array",
+                    items: { type: "object", additionalProperties: true },
+                  },
+                  derived: {
+                    type: "object",
+                    properties: {
+                      is_full_album_spin: { type: "boolean" },
+                      selected_side_count: { type: "integer" },
+                      album_side_count: { type: "integer" },
+                      track_count: { type: "integer" },
+                    },
+                    required: [
+                      "is_full_album_spin",
+                      "selected_side_count",
+                      "album_side_count",
+                      "track_count",
+                    ],
+                  },
+                },
+                required: ["session", "selections", "expanded_tracks", "derived"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid payload",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "404": {
+          description: "Album not found",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "listTopSpinTracks",
+    method: "get",
+    path: "/api/spins/top-tracks",
+    summary: "List most-played vinyl tracks",
+    tags: ["Spins"],
+    querySchema: spinTopTracksQuerySchema,
+    successSchema: spinTopTracksResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
+        { name: "release_id", in: "query", required: false, schema: { type: "string" } },
+        { name: "limit", in: "query", required: false, schema: { type: "integer", default: 20 } },
+        { name: "offset", in: "query", required: false, schema: { type: "integer", default: 0 } },
+      ],
+      responses: {
+        "200": {
+          description: "Most-played vinyl tracks",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  items: {
+                    type: "array",
+                    items: { type: "object", additionalProperties: true },
+                  },
+                  limit: { type: "integer" },
+                  offset: { type: "integer" },
+                },
+                required: ["items", "limit", "offset"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid query",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "deleteSpinSession",
+    method: "delete",
+    path: "/api/spins/{id}",
+    summary: "Delete a manual vinyl spin session",
+    tags: ["Spins"],
+    paramsSchema: spinSessionParamsSchema,
+    querySchema: spinDeleteQuerySchema,
+    successSchema: spinDeleteResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        { name: "id", in: "path", required: true, schema: { type: "integer" } },
+        { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
+      ],
+      responses: {
+        "200": {
+          description: "Spin session deleted",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean" },
+                  session: { type: "object", additionalProperties: true },
+                },
+                required: ["success", "session"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid request",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "404": {
+          description: "Session not found",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
         },
       },
     },

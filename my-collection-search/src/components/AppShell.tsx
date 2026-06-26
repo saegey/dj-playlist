@@ -15,7 +15,7 @@ import {
   Portal,
 } from "@chakra-ui/react";
 import { Tooltip } from "@/components/ui/tooltip";
-import { FiMenu, FiChevronLeft, FiChevronRight, FiSearch } from "react-icons/fi";
+import { FiMenu, FiChevronLeft, FiChevronRight, FiSearch, FiDisc } from "react-icons/fi";
 import { TbPlaylist } from "react-icons/tb";
 import { LuCloudDownload } from "react-icons/lu";
 import {
@@ -32,6 +32,7 @@ import CommandPalette from "@/components/CommandPalette";
 const menuItems = [
   { href: "/", label: "Tracks" },
   { href: "/albums", label: "Albums" },
+  { href: "/spins", label: "Spins" },
   { href: "/playlists", label: "Playlists" },
   { href: "/jobs", label: "Jobs" },
   { href: "/settings", label: "Settings" },
@@ -40,6 +41,7 @@ const menuItems = [
 function getItemIcon(href: string) {
   if (href === "/") return IoMusicalNotes;
   if (href === "/albums") return IoAlbums;
+  if (href === "/spins") return FiDisc;
   if (href === "/settings") return IoSettings;
   if (href === "/playlists") return TbPlaylist;
   if (href === "/jobs") return LuCloudDownload;

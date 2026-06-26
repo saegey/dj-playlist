@@ -30,6 +30,7 @@ import { useAlbumDetailQuery, useUpdateAlbumMutation } from "@/hooks/useAlbumsQu
 import { useAlbum, useAlbumHydrated } from "@/hooks/useAlbum";
 import { useTracksByRelease, useTracksByReleaseHydrated } from "@/hooks/useTrack";
 import AlbumTrackItem from "@/components/AlbumTrackItem";
+import AlbumSpinPanel from "@/components/spins/AlbumSpinPanel";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { toaster } from "@/components/ui/toaster";
@@ -37,7 +38,7 @@ import { useColorModeValue } from "@/components/ui/color-mode";
 import PageContainer from "@/components/layout/PageContainer";
 import {
   compareTrackPositions,
-  getTrackSideLabel,
+  normalizeAlbumTrackSides,
 } from "@/lib/albumTrackPosition";
 import {
   formatSeconds,
@@ -111,26 +112,13 @@ function AlbumDetailContent() {
     staleTime: 30_000,
   });
   const trackSections = React.useMemo(() => {
-    const sections: Array<{ label: string; tracks: typeof tracks }> = [];
-    const sectionByLabel = new Map<string, { label: string; tracks: typeof tracks }>();
-
-    tracks.forEach((track) => {
-      const label = getTrackSideLabel(track.position) ?? "Tracklist";
-      let section = sectionByLabel.get(label);
-
-      if (!section) {
-        section = { label, tracks: [] };
-        sectionByLabel.set(label, section);
-        sections.push(section);
-      }
-
-      section.tracks.push(track);
-    });
-
-    return sections;
+    return normalizeAlbumTrackSides(tracks).map((group) => ({
+      label: group.side_label,
+      tracks: group.tracks,
+    }));
   }, [tracks]);
   const hasSideSections = trackSections.some((section) =>
-    section.label.startsWith("Side ")
+    section.label.startsWith("Side ") || section.label.startsWith("Disc ")
   );
   const albumDurationSeconds = React.useMemo(() => {
     return tracks.reduce((total, track) => {
@@ -529,6 +517,12 @@ function AlbumDetailContent() {
           </Menu.Root>
         </Flex>
       </Flex>
+
+      <AlbumSpinPanel
+        releaseId={releaseId}
+        friendId={friendId}
+        albumTitle={album.title}
+      />
 
       {/* Track list */}
       <Box>

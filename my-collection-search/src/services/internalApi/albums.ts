@@ -3,6 +3,7 @@ import {
   albumCreateResponseSchema,
   albumDetailResponseSchema,
   albumDiscogsRawResponseSchema,
+  albumPlayableStructureResponseSchema,
   albumSearchQuerySchema,
   albumSearchResponseSchema,
   albumUpdateBodySchema,
@@ -19,6 +20,9 @@ import { http } from "@/services/http";
 
 export type AlbumDiscogsRawResponse = z.infer<
   typeof albumDiscogsRawResponseSchema
+>;
+export type AlbumPlayableStructureResponse = z.infer<
+  typeof albumPlayableStructureResponseSchema
 >;
 export type CreateAlbumApiResponse = z.infer<typeof albumCreateResponseSchema>;
 export type CreateAlbumResponse = Omit<CreateAlbumApiResponse, "album" | "tracks"> & {
@@ -115,6 +119,19 @@ export async function getAlbumWithTracks(
 ): Promise<AlbumDetailResponse> {
   return await http<AlbumDetailResponse>(
     `/api/albums/${encodeURIComponent(releaseId)}?friend_id=${friendId}`,
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+}
+
+export async function getAlbumPlayableStructure(
+  releaseId: string,
+  friendId: number
+): Promise<AlbumPlayableStructureResponse> {
+  return await http<AlbumPlayableStructureResponse>(
+    `/api/albums/${encodeURIComponent(releaseId)}/playable-structure?friend_id=${friendId}`,
     {
       method: "GET",
       cache: "no-store",
