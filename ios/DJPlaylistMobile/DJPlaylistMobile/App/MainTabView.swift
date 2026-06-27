@@ -69,7 +69,7 @@ struct MainTabView: View {
         .overlay(alignment: .bottom) {
             if audioPlayer.currentTrack != nil {
                 MiniPlayerView()
-                    .padding(.bottom, tabBarHeight)
+                    .padding(.bottom, tabBarHeight + 8)
                     .ignoresSafeArea(.keyboard, edges: .bottom)
             }
         }

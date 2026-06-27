@@ -757,6 +757,7 @@ export const recommendationCandidateSchema = z.object({
       year: z.string().nullable(),
       genres: z.array(z.string()),
       starRating: z.number().nullable(),
+      albumThumbnail: z.string().nullable(),
       moodHappy: z.number().nullable(),
       moodSad: z.number().nullable(),
       moodRelaxed: z.number().nullable(),

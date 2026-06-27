@@ -9,7 +9,7 @@ private struct MiniPlayerSpacerModifier: ViewModifier {
         content
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if audioPlayer.currentTrack != nil {
-                    Color.clear.frame(height: 56)
+                    Color.clear.frame(height: 76)
                 }
             }
     }
@@ -41,96 +41,97 @@ struct MiniPlayerView: View {
     @State private var artworkImage: UIImage?
 
     var body: some View {
-        HStack(spacing: 12) {
+        VStack(spacing: 0) {
             HStack(spacing: 12) {
-                Group {
-                    if let artworkImage {
-                        Image(uiImage: artworkImage)
-                            .resizable()
-                            .scaledToFill()
-                    } else {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(.quaternary)
-                            Image(systemName: "music.note")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                HStack(spacing: 12) {
+                    Group {
+                        if let artworkImage {
+                            Image(uiImage: artworkImage)
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(.quaternary)
+                                Image(systemName: "music.note")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
+                    .frame(width: 42, height: 42)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .task(id: audioPlayer.currentTrack?.id) {
+                        artworkImage = nil
+                        guard let url = audioPlayer.currentTrack?.albumArtURL(relativeTo: appState.normalizedServerURL) else { return }
+                        do {
+                            let (data, _) = try await URLSession.shared.data(from: url)
+                            if !Task.isCancelled {
+                                artworkImage = UIImage(data: data)
+                            }
+                        } catch {}
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(audioPlayer.currentTrack?.displayTitle ?? "")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .lineLimit(1)
+
+                        Text(audioPlayer.currentTrack?.displayArtist ?? "")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 0)
                 }
-                .frame(width: 40, height: 40)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .task(id: audioPlayer.currentTrack?.id) {
-                    artworkImage = nil
-                    guard let url = audioPlayer.currentTrack?.albumArtURL(relativeTo: appState.normalizedServerURL) else { return }
-                    do {
-                        let (data, _) = try await URLSession.shared.data(from: url)
-                        if !Task.isCancelled {
-                            artworkImage = UIImage(data: data)
-                        }
-                    } catch {}
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    showNowPlaying = true
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(audioPlayer.currentTrack?.displayTitle ?? "")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .lineLimit(1)
-
-                    Text(audioPlayer.currentTrack?.displayArtist ?? "")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: 0)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                showNowPlaying = true
-            }
-
-            AirPlayRoutePickerView()
-                .frame(width: 36, height: 36)
-
-            Button {
-                if audioPlayer.isPlaying {
-                    audioPlayer.pause()
-                } else {
-                    audioPlayer.resume()
-                }
-            } label: {
-                Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
-                    .font(.title3)
+                AirPlayRoutePickerView()
                     .frame(width: 36, height: 36)
-            }
-            .buttonStyle(.plain)
 
-            if audioPlayer.hasNext {
                 Button {
-                    audioPlayer.skipToNext()
+                    if audioPlayer.isPlaying {
+                        audioPlayer.pause()
+                    } else {
+                        audioPlayer.resume()
+                    }
                 } label: {
-                    Image(systemName: "forward.fill")
-                        .font(.subheadline)
+                    Image(systemName: audioPlayer.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.title2)
                         .frame(width: 36, height: 36)
                 }
                 .buttonStyle(.plain)
-            }
 
-            Button {
-                audioPlayer.stop()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.subheadline)
-                    .frame(width: 28, height: 28)
-                    .foregroundStyle(.secondary)
+                if audioPlayer.hasNext {
+                    Button {
+                        audioPlayer.skipToNext()
+                    } label: {
+                        Image(systemName: "forward.fill")
+                            .font(.subheadline)
+                            .frame(width: 36, height: 36)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Button {
+                    audioPlayer.stop()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .frame(width: 28, height: 28)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .bottom) {
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+
             if progress.totalDuration > 0 {
                 GeometryReader { geo in
                     Rectangle()
@@ -140,6 +141,10 @@ struct MiniPlayerView: View {
                 .frame(height: 2)
             }
         }
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 4)
+        .padding(.horizontal, 12)
         .fullScreenCover(isPresented: $showNowPlaying) {
             NowPlayingView()
                 .environmentObject(audioPlayer)
