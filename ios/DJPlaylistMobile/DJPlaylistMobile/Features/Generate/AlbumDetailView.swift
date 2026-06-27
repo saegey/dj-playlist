@@ -25,8 +25,38 @@ struct AlbumDetailView: View {
     @State private var editCondition = ""
     @State private var isSavingAlbum = false
     @State private var editAlbumError: String?
+    @State private var showLogSpinSheet = false
+    @State private var playableStructure: AlbumPlayableStructureResponse?
+    @State private var recentSpins: [SpinListItem] = []
+    @State private var isLoadingSpins = false
+    @State private var spinError: String?
+    @State private var spinMode: SpinLoggingMode = .sides
+    @State private var selectedSideKeys: Set<String> = []
+    @State private var selectedTrackIDs: Set<String> = []
+    @State private var spinPlayedAt = Date()
+    @State private var spinContextType = ""
+    @State private var spinNote = ""
+    @State private var isSavingSpin = false
+    @State private var spinSaveFeedbackToken = 0
 
     private var displayAlbum: Album { detailAlbum ?? album }
+    private var currentReleaseID: String? { displayAlbum.releaseID ?? album.releaseID }
+    private var currentFriendID: Int? { displayAlbum.friendID ?? album.friendID }
+    private static let spinRequestDateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    private static let spinResponseDateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+    private static let spinResponseFallbackDateFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 
     var body: some View {
         Group {
@@ -57,6 +87,12 @@ struct AlbumDetailView: View {
                         prepareAlbumEdit()
                         showEditAlbum = true
                     }
+
+                    Button("Log Spin", systemImage: "opticaldisc") {
+                        prepareSpinLogging()
+                        showLogSpinSheet = true
+                    }
+                    .disabled(currentReleaseID == nil || currentFriendID == nil)
 
                     if !tracks.isEmpty {
                         Button("Play", systemImage: "play.fill") {
@@ -91,6 +127,10 @@ struct AlbumDetailView: View {
         .sheet(isPresented: $showEditAlbum) {
             editAlbumSheet
         }
+        .sheet(isPresented: $showLogSpinSheet) {
+            logSpinSheet
+        }
+        .sensoryFeedback(.success, trigger: spinSaveFeedbackToken)
         .miniPlayerSpacer()
     }
 
@@ -402,6 +442,170 @@ struct AlbumDetailView: View {
         }
     }
 
+    private var logSpinSheet: some View {
+        NavigationStack {
+            Form {
+                if let spinError {
+                    Section {
+                        Text(spinError)
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                Section("Spin Details") {
+                    DatePicker("Played At", selection: $spinPlayedAt)
+                    TextField("Context", text: $spinContextType)
+                        .textInputAutocapitalization(.never)
+                    TextEditor(text: $spinNote)
+                        .frame(minHeight: 100)
+                }
+
+                Section("Selection Mode") {
+                    Picker("Mode", selection: $spinMode) {
+                        ForEach(SpinLoggingMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                if let playableStructure {
+                    if spinMode == .sides {
+                        Section("Sides") {
+                            if playableStructure.sides.isEmpty {
+                                Text("No normalized sides were returned for this album.")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(playableStructure.sides) { side in
+                                    Button {
+                                        toggleSideSelection(side.sideKey)
+                                    } label: {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(side.displayLabel)
+                                                    .foregroundStyle(.primary)
+                                                Text("\(side.trackCount ?? side.tracks.count) tracks")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                            Image(systemName: selectedSideKeys.contains(side.sideKey) ? "checkmark.circle.fill" : "circle")
+                                                .foregroundStyle(selectedSideKeys.contains(side.sideKey) ? Color.accentColor : Color.secondary)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    } else {
+                        Section("Tracks") {
+                            if playableStructure.tracks.isEmpty {
+                                Text("No playable tracks were returned for this album.")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(playableStructure.tracks) { track in
+                                    Button {
+                                        toggleTrackSelection(track.trackID)
+                                    } label: {
+                                        HStack(alignment: .center, spacing: 12) {
+                                            if let position = track.position?.nonEmpty {
+                                                Text(position)
+                                                    .font(.caption)
+                                                    .foregroundStyle(.tertiary)
+                                                    .frame(width: 28, alignment: .trailing)
+                                            }
+
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(track.displayTitle)
+                                                    .foregroundStyle(.primary)
+                                                if let artist = track.displayArtist,
+                                                   artist != displayAlbum.displayArtist {
+                                                    Text(artist)
+                                                        .font(.caption)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                            }
+
+                                            Spacer()
+
+                                            Image(systemName: selectedTrackIDs.contains(track.trackID) ? "checkmark.circle.fill" : "circle")
+                                                .foregroundStyle(selectedTrackIDs.contains(track.trackID) ? Color.accentColor : Color.secondary)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                } else if isLoadingSpins {
+                    Section {
+                        ProgressView("Loading spin data...")
+                    }
+                }
+
+                Section("Recent Spins") {
+                    if isLoadingSpins && recentSpins.isEmpty {
+                        ProgressView("Loading recent spins...")
+                    } else if recentSpins.isEmpty {
+                        Text("No recent spins logged for this album.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(recentSpins.prefix(5)) { spin in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(formattedSpinPlayedAt(spin.playedAt))
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    Spacer()
+                                    if let context = spin.contextType?.nonEmpty {
+                                        Text(context)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+
+                                Text(spinSelectionSummary(spin))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+
+                                if let note = spin.note?.nonEmpty {
+                                    Text(note)
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                        .lineLimit(3)
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+            }
+            .disabled(isSavingSpin)
+            .navigationTitle("Log Spin")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showLogSpinSheet = false }
+                        .disabled(isSavingSpin)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        Task { await saveSpin() }
+                    }
+                    .disabled(isSavingSpin || !hasValidSpinSelection)
+                }
+            }
+            .overlay {
+                if isSavingSpin {
+                    ProgressView("Saving spin...")
+                }
+            }
+            .task {
+                await loadSpinSheetDataIfNeeded(force: false)
+            }
+        }
+    }
+
     private var editAlbumSheet: some View {
         NavigationStack {
             Form {
@@ -558,6 +762,144 @@ struct AlbumDetailView: View {
         }
     }
 
+    private func prepareSpinLogging() {
+        spinMode = .sides
+        spinPlayedAt = Date()
+        spinContextType = ""
+        spinNote = ""
+        selectedSideKeys = []
+        selectedTrackIDs = []
+        spinError = nil
+    }
+
+    private func loadSpinSheetDataIfNeeded(force: Bool) async {
+        guard let service,
+              let releaseID = currentReleaseID,
+              let friendID = currentFriendID else {
+            spinError = "Album identifiers are missing."
+            return
+        }
+
+        if !force, playableStructure != nil, !recentSpins.isEmpty {
+            return
+        }
+
+        isLoadingSpins = true
+        spinError = nil
+        defer { isLoadingSpins = false }
+
+        do {
+            async let structure = service.fetchAlbumPlayableStructure(releaseID: releaseID, friendID: friendID)
+            async let spins = service.fetchSpins(friendID: friendID, releaseID: releaseID, limit: 20, offset: 0)
+            playableStructure = try await structure
+            recentSpins = try await spins
+        } catch is CancellationError {
+            return
+        } catch {
+            spinError = error.localizedDescription
+        }
+    }
+
+    private var hasValidSpinSelection: Bool {
+        switch spinMode {
+        case .sides:
+            return !selectedSideKeys.isEmpty
+        case .tracks:
+            return !selectedTrackIDs.isEmpty
+        }
+    }
+
+    private func toggleSideSelection(_ sideKey: String) {
+        if selectedSideKeys.contains(sideKey) {
+            selectedSideKeys.remove(sideKey)
+        } else {
+            selectedSideKeys.insert(sideKey)
+        }
+    }
+
+    private func toggleTrackSelection(_ trackID: String) {
+        if selectedTrackIDs.contains(trackID) {
+            selectedTrackIDs.remove(trackID)
+        } else {
+            selectedTrackIDs.insert(trackID)
+        }
+    }
+
+    private func saveSpin() async {
+        guard let service,
+              let releaseID = currentReleaseID,
+              let friendID = currentFriendID else {
+            spinError = "Album identifiers are missing."
+            return
+        }
+
+        guard hasValidSpinSelection else {
+            spinError = "Select at least one side or track."
+            return
+        }
+
+        let trimmedContext = spinContextType.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedNote = spinNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        let request = SpinCreateRequest(
+            friend_id: friendID,
+            release_id: releaseID,
+            played_at: Self.spinRequestDateFormatter.string(from: spinPlayedAt),
+            note: trimmedNote.isEmpty ? nil : trimmedNote,
+            context_type: trimmedContext.isEmpty ? nil : trimmedContext,
+            side_keys: spinMode == .sides ? Array(selectedSideKeys).sorted() : nil,
+            track_refs: spinMode == .tracks ? selectedTrackRefs(friendID: friendID) : nil
+        )
+
+        isSavingSpin = true
+        spinError = nil
+        defer { isSavingSpin = false }
+
+        do {
+            _ = try await service.createSpin(request: request)
+            spinSaveFeedbackToken += 1
+            showLogSpinSheet = false
+            await loadSpinSheetDataIfNeeded(force: true)
+        } catch is CancellationError {
+            return
+        } catch {
+            spinError = error.localizedDescription
+        }
+    }
+
+    private func selectedTrackRefs(friendID: Int) -> [PlaylistTrackRef] {
+        let sourceTracks = playableStructure?.tracks ?? []
+        return sourceTracks
+            .filter { selectedTrackIDs.contains($0.trackID) }
+            .map { PlaylistTrackRef(track_id: $0.trackID, friend_id: $0.friendID ?? friendID) }
+    }
+
+    private func spinSelectionSummary(_ spin: SpinListItem) -> String {
+        let sideKeys = spin.selection?.sideKeys ?? spin.derived?.sideKeys ?? []
+        if !sideKeys.isEmpty {
+            return "Sides: " + sideKeys.joined(separator: ", ")
+        }
+
+        let trackCount = spin.selection?.trackRefs.count ?? spin.trackEvents.count
+        if trackCount > 0 {
+            return "\(trackCount) tracks logged"
+        }
+
+        if let sideCount = spin.derived?.sideCount, sideCount > 0 {
+            return "\(sideCount) sides logged"
+        }
+
+        return "Spin logged"
+    }
+
+    private func formattedSpinPlayedAt(_ rawValue: String?) -> String {
+        guard let rawValue,
+              let date = Self.spinResponseDateFormatter.date(from: rawValue)
+            ?? Self.spinResponseFallbackDateFormatter.date(from: rawValue) else {
+            return rawValue?.nonEmpty ?? "Unknown time"
+        }
+        return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
     private func formatPurchasePrice(_ value: Double) -> String {
         "$" + formatEditableNumber(value)
     }
@@ -567,6 +909,22 @@ struct AlbumDetailView: View {
             return String(format: "%.0f", value)
         }
         return String(format: "%.2f", value)
+    }
+}
+
+private enum SpinLoggingMode: String, CaseIterable, Identifiable {
+    case sides
+    case tracks
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .sides:
+            return "Sides"
+        case .tracks:
+            return "Tracks"
+        }
     }
 }
 

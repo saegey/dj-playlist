@@ -498,6 +498,16 @@ struct PlaylistTrackRef: Encodable {
     let friend_id: Int
 }
 
+struct PlaylistTrackRefDecodable: Decodable, Hashable {
+    let trackID: String
+    let friendID: Int
+
+    enum CodingKeys: String, CodingKey {
+        case trackID = "track_id"
+        case friendID = "friend_id"
+    }
+}
+
 struct PatchPlaylistRequest: Encodable {
     let id: Int
     let tracks: [PlaylistTrackRef]
@@ -566,6 +576,380 @@ struct AlbumDetailResponse: Decodable {
     let tracks: [Track]
 }
 
+struct AlbumPlayableStructureResponse: Decodable {
+    let releaseID: String?
+    let friendID: Int?
+    let sides: [AlbumPlayableStructureSide]
+    let tracks: [AlbumPlayableStructureTrack]
+
+    enum CodingKeys: String, CodingKey {
+        case releaseID = "release_id"
+        case friendID = "friend_id"
+        case sides
+        case tracks
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        releaseID = try container.decodeIfPresent(String.self, forKey: .releaseID)
+        friendID = try container.decodeIfPresent(Int.self, forKey: .friendID)
+        sides = try container.decodeIfPresent([AlbumPlayableStructureSide].self, forKey: .sides) ?? []
+        tracks = try container.decodeIfPresent([AlbumPlayableStructureTrack].self, forKey: .tracks)
+            ?? sides.flatMap(\.tracks)
+    }
+}
+
+struct AlbumPlayableStructureSide: Decodable, Hashable, Identifiable {
+    let sideKey: String
+    let label: String?
+    let trackCount: Int?
+    let tracks: [AlbumPlayableStructureTrack]
+
+    var id: String { sideKey }
+    var displayLabel: String { label?.nonEmpty ?? sideKey }
+
+    enum CodingKeys: String, CodingKey {
+        case sideKey = "side_key"
+        case key
+        case label
+        case trackCount = "track_count"
+        case tracks
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sideKey = try container.decodeIfPresent(String.self, forKey: .sideKey)
+            ?? container.decode(String.self, forKey: .key)
+        label = try container.decodeIfPresent(String.self, forKey: .label)
+        trackCount = try container.decodeIfPresent(Int.self, forKey: .trackCount)
+        tracks = try container.decodeIfPresent([AlbumPlayableStructureTrack].self, forKey: .tracks) ?? []
+    }
+}
+
+struct AlbumPlayableStructureTrack: Decodable, Hashable, Identifiable {
+    let trackID: String
+    let friendID: Int?
+    let position: String?
+    let title: String?
+    let artist: String?
+    let sideKey: String?
+    let duration: String?
+
+    var id: String { trackID }
+    var displayTitle: String { title?.nonEmpty ?? trackID }
+    var displayArtist: String? { artist?.nonEmpty }
+
+    enum CodingKeys: String, CodingKey {
+        case trackID = "track_id"
+        case friendID = "friend_id"
+        case position
+        case title
+        case artist
+        case artistName = "artist_name"
+        case sideKey = "side_key"
+        case duration
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        trackID = try container.decode(String.self, forKey: .trackID)
+        friendID = try container.decodeIfPresent(Int.self, forKey: .friendID)
+        position = try container.decodeIfPresent(String.self, forKey: .position)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        duration = try container.decodeIfPresent(String.self, forKey: .duration)
+        sideKey = try container.decodeIfPresent(String.self, forKey: .sideKey)
+
+        if let artist = try container.decodeIfPresent(String.self, forKey: .artist), !artist.isEmpty {
+            self.artist = artist
+        } else if let artistName = try container.decodeIfPresent(String.self, forKey: .artistName), !artistName.isEmpty {
+            artist = artistName
+        } else {
+            artist = nil
+        }
+    }
+}
+
+struct SpinSession: Decodable, Hashable, Identifiable {
+    let serverID: Int?
+    let friendID: Int?
+    let releaseID: String?
+    let playedAt: String?
+    let note: String?
+    let contextType: String?
+    let selection: SpinSelection?
+    let trackEvents: [TrackSpinEvent]
+    let derived: SpinDerived?
+
+    var id: String {
+        if let serverID {
+            return "spin-\(serverID)"
+        }
+        return spinFallbackIdentifier(
+            friendID: friendID,
+            releaseID: releaseID,
+            playedAt: playedAt,
+            contextType: contextType,
+            note: note
+        )
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case spinID = "spin_id"
+        case sessionID = "session_id"
+        case friendID = "friend_id"
+        case releaseID = "release_id"
+        case playedAt = "played_at"
+        case createdAt = "created_at"
+        case loggedAt = "logged_at"
+        case timestamp
+        case note
+        case contextType = "context_type"
+        case selection
+        case trackEvents = "track_events"
+        case derived
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        serverID = try container.decodeLossyIntIfPresent(forKeys: [.id, .spinID, .sessionID])
+        friendID = try container.decodeIfPresent(Int.self, forKey: .friendID)
+        releaseID = try container.decodeIfPresent(String.self, forKey: .releaseID)
+        playedAt = try container.decodeFlexibleDateStringIfPresent(
+            forKeys: [.playedAt, .createdAt, .loggedAt, .timestamp]
+        )
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        contextType = try container.decodeIfPresent(String.self, forKey: .contextType)
+        selection = try container.decodeIfPresent(SpinSelection.self, forKey: .selection)
+        trackEvents = try container.decodeIfPresent([TrackSpinEvent].self, forKey: .trackEvents) ?? []
+        derived = try container.decodeIfPresent(SpinDerived.self, forKey: .derived)
+    }
+}
+
+struct SpinSelection: Decodable, Hashable {
+    let sideKeys: [String]
+    let trackRefs: [PlaylistTrackRefDecodable]
+
+    enum CodingKeys: String, CodingKey {
+        case sideKeys = "side_keys"
+        case trackRefs = "track_refs"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sideKeys = try container.decodeIfPresent([String].self, forKey: .sideKeys) ?? []
+        trackRefs = try container.decodeIfPresent([PlaylistTrackRefDecodable].self, forKey: .trackRefs) ?? []
+    }
+}
+
+struct TrackSpinEvent: Decodable, Hashable, Identifiable {
+    let trackID: String
+    let friendID: Int?
+    let position: String?
+    let title: String?
+    let artist: String?
+
+    var id: String { trackID }
+
+    enum CodingKeys: String, CodingKey {
+        case trackID = "track_id"
+        case friendID = "friend_id"
+        case position
+        case title
+        case artist
+        case artistName = "artist_name"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        trackID = try container.decode(String.self, forKey: .trackID)
+        friendID = try container.decodeIfPresent(Int.self, forKey: .friendID)
+        position = try container.decodeIfPresent(String.self, forKey: .position)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+
+        if let artist = try container.decodeIfPresent(String.self, forKey: .artist), !artist.isEmpty {
+            self.artist = artist
+        } else if let artistName = try container.decodeIfPresent(String.self, forKey: .artistName), !artistName.isEmpty {
+            artist = artistName
+        } else {
+            artist = nil
+        }
+    }
+}
+
+struct SpinDerived: Decodable, Hashable {
+    let trackCount: Int?
+    let sideCount: Int?
+    let sideKeys: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case trackCount = "track_count"
+        case sideCount = "side_count"
+        case sideKeys = "side_keys"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        trackCount = try container.decodeIfPresent(Int.self, forKey: .trackCount)
+        sideCount = try container.decodeIfPresent(Int.self, forKey: .sideCount)
+        sideKeys = try container.decodeIfPresent([String].self, forKey: .sideKeys) ?? []
+    }
+}
+
+struct SpinListItem: Decodable, Hashable, Identifiable {
+    let serverID: Int?
+    let friendID: Int?
+    let releaseID: String?
+    let playedAt: String?
+    let note: String?
+    let contextType: String?
+    let selection: SpinSelection?
+    let trackEvents: [TrackSpinEvent]
+    let derived: SpinDerived?
+
+    var id: String {
+        if let serverID {
+            return "spin-\(serverID)"
+        }
+        return spinFallbackIdentifier(
+            friendID: friendID,
+            releaseID: releaseID,
+            playedAt: playedAt,
+            contextType: contextType,
+            note: note
+        )
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case spinID = "spin_id"
+        case sessionID = "session_id"
+        case friendID = "friend_id"
+        case releaseID = "release_id"
+        case playedAt = "played_at"
+        case createdAt = "created_at"
+        case loggedAt = "logged_at"
+        case timestamp
+        case note
+        case contextType = "context_type"
+        case selection
+        case trackEvents = "track_events"
+        case derived
+    }
+
+    init(from decoder: Decoder) throws {
+        if let nested = try SpinListItem.decodeFromNestedContainerIfPresent(decoder) {
+            self = nested
+            return
+        }
+
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        serverID = try container.decodeLossyIntIfPresent(forKeys: [.id, .spinID, .sessionID])
+        friendID = try container.decodeIfPresent(Int.self, forKey: .friendID)
+        releaseID = try container.decodeIfPresent(String.self, forKey: .releaseID)
+        playedAt = try container.decodeFlexibleDateStringIfPresent(
+            forKeys: [.playedAt, .createdAt, .loggedAt, .timestamp]
+        )
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        contextType = try container.decodeIfPresent(String.self, forKey: .contextType)
+        selection = try container.decodeIfPresent(SpinSelection.self, forKey: .selection)
+        trackEvents = try container.decodeIfPresent([TrackSpinEvent].self, forKey: .trackEvents) ?? []
+        derived = try container.decodeIfPresent(SpinDerived.self, forKey: .derived)
+    }
+
+    private static func decodeFromNestedContainerIfPresent(_ decoder: Decoder) throws -> SpinListItem? {
+        let container = try decoder.container(keyedBy: DynamicCodingKeys.self)
+        let nestedKeys = ["spin", "session", "item", "data"]
+
+        for keyName in nestedKeys {
+            let key = DynamicCodingKeys(keyName)
+            if container.contains(key),
+               let nestedItem = try container.decodeIfPresent(SpinListItem.self, forKey: key) {
+                return nestedItem
+            }
+        }
+
+        return nil
+    }
+}
+
+struct SpinListResponse: Decodable {
+    let items: [SpinListItem]
+
+    enum CodingKeys: String, CodingKey {
+        case items
+        case spins
+        case results
+        case data
+    }
+
+    init(from decoder: Decoder) throws {
+        if let singleValueContainer = try? decoder.singleValueContainer(),
+           let items = try? singleValueContainer.decode([SpinListItem].self) {
+            self.items = items
+            return
+        }
+
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        items = try container.decodeIfPresent([SpinListItem].self, forKey: .items)
+            ?? container.decodeIfPresent([SpinListItem].self, forKey: .spins)
+            ?? container.decodeIfPresent([SpinListItem].self, forKey: .results)
+            ?? container.decodeIfPresent([SpinListItem].self, forKey: .data)
+            ?? []
+    }
+}
+
+struct SpinCreateRequest: Encodable {
+    let friend_id: Int
+    let release_id: String
+    let played_at: String
+    let note: String?
+    let context_type: String?
+    let side_keys: [String]?
+    let track_refs: [PlaylistTrackRef]?
+}
+
+struct SpinCreateResponse: Decodable {
+    let spin: SpinSession?
+
+    init(spin: SpinSession?) {
+        self.spin = spin
+    }
+
+    init(from decoder: Decoder) throws {
+        if let singleValueContainer = try? decoder.singleValueContainer(),
+           let spin = try? singleValueContainer.decode(SpinSession.self) {
+            self.spin = spin
+            return
+        }
+
+        let container = try decoder.container(keyedBy: DynamicCodingKeys.self)
+        spin = try container.decodeIfPresent(SpinSession.self, forKey: DynamicCodingKeys("spin"))
+            ?? container.decodeIfPresent(SpinSession.self, forKey: DynamicCodingKeys("session"))
+            ?? container.decodeIfPresent(SpinSession.self, forKey: DynamicCodingKeys("item"))
+    }
+}
+
+struct RecommendationCandidateMetadata: Decodable {
+    let title: String
+    let artist: String
+    let album: String
+    let bpm: Double?
+    let albumThumbnail: String?
+}
+
+struct RecommendationCandidate: Decodable {
+    let trackId: String
+    let friendId: Int
+    let simIdentity: Double?
+    let simAudio: Double?
+    let metadata: RecommendationCandidateMetadata
+}
+
+struct RecommendationsResponse: Decodable {
+    let candidates: [RecommendationCandidate]
+}
+
 struct Friend: Decodable, Identifiable, Hashable {
     let id: Int
     let username: String
@@ -578,4 +962,84 @@ struct FriendsResponse: Decodable {
 struct APIErrorResponse: Decodable {
     let error: String
     let message: String?
+}
+
+private struct DynamicCodingKeys: CodingKey {
+    var stringValue: String
+    var intValue: Int?
+
+    init(_ stringValue: String) {
+        self.stringValue = stringValue
+        intValue = nil
+    }
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        intValue = nil
+    }
+
+    init?(intValue: Int) {
+        stringValue = String(intValue)
+        self.intValue = intValue
+    }
+}
+
+private extension KeyedDecodingContainer {
+    func decodeLossyIntIfPresent(forKeys keys: [Key]) throws -> Int? {
+        for key in keys {
+            if let intValue = try decodeIfPresent(Int.self, forKey: key) {
+                return intValue
+            }
+            if let stringValue = try decodeIfPresent(String.self, forKey: key),
+               let intValue = Int(stringValue) {
+                return intValue
+            }
+        }
+        return nil
+    }
+
+    func decodeFlexibleDateStringIfPresent(forKeys keys: [Key]) throws -> String? {
+        for key in keys {
+            if let stringValue = try decodeIfPresent(String.self, forKey: key),
+               !stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return stringValue
+            }
+            if let intValue = try decodeIfPresent(Int.self, forKey: key) {
+                return Self.iso8601String(fromUnixTimestamp: Double(intValue))
+            }
+            if let doubleValue = try decodeIfPresent(Double.self, forKey: key) {
+                return Self.iso8601String(fromUnixTimestamp: doubleValue)
+            }
+        }
+        return nil
+    }
+
+    private static func iso8601String(fromUnixTimestamp timestamp: Double) -> String {
+        let normalizedTimestamp = timestamp > 9_999_999_999 ? timestamp / 1000 : timestamp
+        return spinDecodedDateFormatter.string(from: Date(timeIntervalSince1970: normalizedTimestamp))
+    }
+}
+
+private let spinDecodedDateFormatter: ISO8601DateFormatter = {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    return formatter
+}()
+
+private func spinFallbackIdentifier(
+    friendID: Int?,
+    releaseID: String?,
+    playedAt: String?,
+    contextType: String?,
+    note: String?
+) -> String {
+    [
+        friendID.map(String.init),
+        releaseID?.nonEmpty,
+        playedAt?.nonEmpty,
+        contextType?.nonEmpty,
+        note?.nonEmpty
+    ]
+    .compactMap { $0 }
+    .joined(separator: "|")
 }

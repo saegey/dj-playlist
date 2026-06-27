@@ -24,6 +24,7 @@ export type RecommendationCandidateRow = {
   mood_relaxed: number | null;
   mood_aggressive: number | null;
   star_rating: number | null;
+  album_thumbnail: string | null;
 };
 
 type RecommendationCandidateRowRaw = Omit<RecommendationCandidateRow, "distance"> & {
@@ -98,6 +99,7 @@ export class RecommendationRepository {
           t.mood_relaxed,
           t.mood_aggressive,
           t.star_rating,
+          t.album_thumbnail,
           te.embedding <=> $1 AS distance
         FROM track_embeddings te
         JOIN tracks t ON te.track_id = t.track_id AND te.friend_id = t.friend_id
@@ -155,6 +157,7 @@ export class RecommendationRepository {
           t.mood_relaxed,
           t.mood_aggressive,
           t.star_rating,
+          t.album_thumbnail,
           te.embedding <=> $1 AS distance
         FROM track_embeddings te
         JOIN tracks t ON te.track_id = t.track_id AND te.friend_id = t.friend_id
@@ -217,6 +220,7 @@ export class RecommendationRepository {
           t.mood_relaxed,
           t.mood_aggressive,
           t.star_rating,
+          t.album_thumbnail,
           te.embedding <=> se.embedding AS distance
         FROM track_embeddings te
         JOIN tracks t ON te.track_id = t.track_id AND te.friend_id = t.friend_id
@@ -285,6 +289,7 @@ export class RecommendationRepository {
           t.mood_relaxed,
           t.mood_aggressive,
           t.star_rating,
+          t.album_thumbnail,
           te.embedding <=> se.embedding AS distance
         FROM track_embeddings te
         JOIN tracks t ON te.track_id = t.track_id AND te.friend_id = t.friend_id

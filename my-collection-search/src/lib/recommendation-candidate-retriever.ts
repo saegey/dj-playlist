@@ -241,6 +241,7 @@ function buildCandidateMetadata(row: EmbeddingQueryResult) {
     year: row.year,
     genres: row.genres || [],
     starRating: row.star_rating,
+    albumThumbnail: row.album_thumbnail,
     moodHappy: row.mood_happy,
     moodSad: row.mood_sad,
     moodRelaxed: row.mood_relaxed,

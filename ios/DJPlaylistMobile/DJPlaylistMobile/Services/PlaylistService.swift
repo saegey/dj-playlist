@@ -44,6 +44,39 @@ struct PlaylistService {
         return try await client.request(path: path, method: "GET")
     }
 
+    func fetchAlbumPlayableStructure(releaseID: String, friendID: Int) async throws -> AlbumPlayableStructureResponse {
+        let encodedReleaseID = releaseID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? releaseID
+        let path = "/api/albums/\(encodedReleaseID)/playable-structure?friend_id=\(friendID)"
+        return try await client.request(path: path, method: "GET")
+    }
+
+    func createSpin(request: SpinCreateRequest) async throws -> SpinCreateResponse {
+        let body = try JSONEncoder().encode(request)
+        let data = try await client.rawRequest(path: "/api/spins", method: "POST", body: body)
+        if data.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return SpinCreateResponse(spin: nil)
+        }
+        return (try? JSONDecoder().decode(SpinCreateResponse.self, from: data)) ?? SpinCreateResponse(spin: nil)
+    }
+
+    func fetchSpins(friendID: Int, releaseID: String, limit: Int = 20, offset: Int = 0) async throws -> [SpinListItem] {
+        let encodedReleaseID = releaseID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? releaseID
+        let path = "/api/spins?friend_id=\(friendID)&release_id=\(encodedReleaseID)&limit=\(limit)&offset=\(offset)"
+        let data = try await client.rawRequest(path: path)
+
+        do {
+            return try JSONDecoder().decode(SpinListResponse.self, from: data).items
+        } catch let error as DecodingError {
+            throw APIError.decodingError(message(for: error))
+        } catch {
+            throw APIError.decodingError(error.localizedDescription)
+        }
+    }
+
+    func deleteSpin(id: Int, friendID: Int) async throws {
+        _ = try await client.rawRequest(path: "/api/spins/\(id)?friend_id=\(friendID)", method: "DELETE")
+    }
+
     func updateAlbum(
         releaseID: String,
         friendID: Int,
@@ -123,17 +156,31 @@ struct PlaylistService {
 
     func fetchSimilarTracks(trackID: String, friendID: Int, limit: Int = 50) async throws -> [Track] {
         let encodedTrackID = trackID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trackID
-        let path = "/api/embeddings/similar?track_id=\(encodedTrackID)&friend_id=\(friendID)&limit=\(limit)"
+        let path = "/api/recommendations/candidates?track_id=\(encodedTrackID)&friend_id=\(friendID)&limit_identity=\(limit)&limit_audio=\(limit)"
         let data = try await client.rawRequest(path: path)
-
-        if let tracks = try? JSONDecoder().decode([Track].self, from: data) {
-            return tracks
+        let response = try JSONDecoder().decode(RecommendationsResponse.self, from: data)
+        return response.candidates.map { candidate in
+            Track(
+                trackID: candidate.trackId,
+                friendID: candidate.friendId,
+                releaseID: nil,
+                position: nil,
+                title: candidate.metadata.title,
+                artist: candidate.metadata.artist,
+                albumName: candidate.metadata.album,
+                physicalIdentifier: nil,
+                duration: nil,
+                albumThumbnailURL: candidate.metadata.albumThumbnail,
+                audioFileAlbumArtURL: nil,
+                localAudioURL: nil,
+                bpm: candidate.metadata.bpm,
+                embedding: nil,
+                durationSeconds: nil,
+                appleMusicURL: nil,
+                discogsURL: nil,
+                youtubeURL: nil
+            )
         }
-        if let response = try? JSONDecoder().decode(TracksResponse.self, from: data) {
-            return response.tracks
-        }
-        let response = try JSONDecoder().decode(TrackSearchResponse.self, from: data)
-        return response.hits
     }
 
     func addTrackToPlaylist(playlistID: Int, trackID: String, friendID: Int) async throws {
@@ -267,5 +314,11 @@ struct PlaylistService {
     private func codingPathDescription(_ codingPath: [CodingKey]) -> String {
         guard !codingPath.isEmpty else { return "the top level" }
         return codingPath.map(\.stringValue).joined(separator: ".")
+    }
+}
+
+private extension Data {
+    func trimmingCharacters(in characterSet: CharacterSet) -> String {
+        String(decoding: self, as: UTF8.self).trimmingCharacters(in: characterSet)
     }
 }
