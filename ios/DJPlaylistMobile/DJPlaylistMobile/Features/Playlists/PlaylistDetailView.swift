@@ -1,3 +1,4 @@
+import SafariServices
 import SwiftUI
 
 struct PlaylistDetailView: View {
@@ -20,6 +21,12 @@ struct PlaylistDetailView: View {
     @State private var isSavingPlaylistOrder = false
     @State private var showDeleteConfirmation = false
     @State private var isDeletingPlaylist = false
+    @State private var showWebApp = false
+    @State private var showRecommendations = false
+    @State private var recommendedTracks: [Track] = []
+    @State private var isLoadingRecommendations = false
+    @State private var recommendationsError: String?
+    @State private var addedRecommendationIDs: Set<String> = []
 
     private var hasUnsavedOrderChanges: Bool {
         !originalTrackOrder.isEmpty && trackOrderIDs(for: tracks) != originalTrackOrder
@@ -28,6 +35,11 @@ struct PlaylistDetailView: View {
     private var service: PlaylistService? {
         guard let url = appState.normalizedServerURL else { return nil }
         return PlaylistService(client: APIClient(serverURL: url))
+    }
+
+    private var webAppPlaylistURL: URL? {
+        guard let serverURL = appState.normalizedServerURL else { return nil }
+        return URL(string: "\(serverURL)/playlists/\(playlist.id)")
     }
 
     var body: some View {
@@ -84,10 +96,23 @@ struct PlaylistDetailView: View {
                         playPlaylist()
                     }
 
+                    Button("Get Recommendations", systemImage: "wand.and.sparkles") {
+                        addedRecommendationIDs = []
+                        showRecommendations = true
+                        Task { await loadRecommendations() }
+                    }
+                    .disabled(tracks.isEmpty)
+
                     Button("Delete Playlist", systemImage: "trash", role: .destructive) {
                         showDeleteConfirmation = true
                     }
                     .disabled(isDeletingPlaylist)
+
+                    if webAppPlaylistURL != nil {
+                        Button("Open in Web App", systemImage: "safari") {
+                            showWebApp = true
+                        }
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -108,6 +133,15 @@ struct PlaylistDetailView: View {
         }
         .sheet(isPresented: $showSimilarVibes) {
             similarVibesSheet
+        }
+        .sheet(isPresented: $showRecommendations) {
+            recommendationsSheet
+        }
+        .sheet(isPresented: $showWebApp) {
+            if let url = webAppPlaylistURL {
+                SafariView(url: url)
+                    .ignoresSafeArea()
+            }
         }
         .confirmationDialog(
             "Delete Playlist?",
@@ -385,6 +419,120 @@ struct PlaylistDetailView: View {
         }
     }
 
+    private var recommendationsSheet: some View {
+        NavigationStack {
+            List(recommendedTracks) { track in
+                NavigationLink {
+                    TrackDetailView(track: track)
+                        .environmentObject(appState)
+                        .environmentObject(audioPlayer)
+                } label: {
+                    HStack(alignment: .top, spacing: 12) {
+                        AsyncImage(url: track.albumArtURL(relativeTo: appState.normalizedServerURL)) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 8).fill(.quaternary)
+                                Image(systemName: "music.note").foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(width: 48, height: 48)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(track.displayTitle)
+                                .font(.headline)
+                                .lineLimit(1)
+                            Text(track.displayArtist)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            HStack(spacing: 8) {
+                                if let bpm = track.bpm {
+                                    Text("\(String(format: "%.0f", bpm)) BPM")
+                                }
+                                if let identifier = track.displayPhysicalIdentifier {
+                                    Text(identifier)
+                                        .fontWeight(.bold)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(.blue)
+                                        .foregroundStyle(.white)
+                                        .clipShape(Capsule())
+                                }
+                                if addedRecommendationIDs.contains(track.id) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                }
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+                .contextMenu {
+                    let alreadyAdded = addedRecommendationIDs.contains(track.id)
+                    Button(alreadyAdded ? "Added" : "Add to Playlist", systemImage: alreadyAdded ? "checkmark.circle.fill" : "text.badge.plus") {
+                        Task { await addRecommendedTrack(track) }
+                    }
+                    .disabled(alreadyAdded)
+                }
+            }
+            .overlay {
+                if isLoadingRecommendations {
+                    ProgressView("Finding recommendations...")
+                } else if let recommendationsError {
+                    ContentUnavailableView("Error", systemImage: "exclamationmark.triangle", description: Text(recommendationsError))
+                } else if recommendedTracks.isEmpty {
+                    ContentUnavailableView("No Recommendations", systemImage: "wand.and.sparkles", description: Text("No recommendations found for this playlist."))
+                }
+            }
+            .navigationTitle("Recommendations")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { showRecommendations = false }
+                }
+            }
+        }
+    }
+
+    private func loadRecommendations() async {
+        guard let service else { return }
+        isLoadingRecommendations = true
+        recommendationsError = nil
+        recommendedTracks = []
+        defer { isLoadingRecommendations = false }
+        do {
+            recommendedTracks = try await service.fetchPlaylistRecommendations(tracks: tracks)
+        } catch is CancellationError {
+            return
+        } catch {
+            recommendationsError = error.localizedDescription
+        }
+    }
+
+    private func addRecommendedTrack(_ track: Track) async {
+        guard let service, let friendID = track.friendID else { return }
+        do {
+            try await service.addTrackToPlaylist(playlistID: playlist.id, trackID: track.trackID, friendID: friendID)
+            addedRecommendationIDs.insert(track.id)
+            await loadTracks()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private struct SafariView: UIViewControllerRepresentable {
+        let url: URL
+
+        func makeUIViewController(context: Context) -> SFSafariViewController {
+            SFSafariViewController(url: url)
+        }
+
+        func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+    }
+
     private func trackRow(for track: Track) -> some View {
         HStack(alignment: .top, spacing: 12) {
             NavigationLink {
@@ -410,24 +558,12 @@ struct PlaylistDetailView: View {
                         Text(track.displayTitle)
                             .font(.headline)
                             .foregroundStyle(.primary)
-                            .lineLimit(2)
+                            .lineLimit(1)
 
                         Text(track.displayArtist)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
-
-                        if let identifier = track.displayPhysicalIdentifier {
-                            Text(identifier)
-                                .font(.caption)
-                                .fontWeight(.bold)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(.blue)
-                                .foregroundStyle(.white)
-                                .clipShape(Capsule())
-                                .textSelection(.enabled)
-                        }
 
                         HStack(spacing: 8) {
                             if let position = track.displayPosition {
@@ -435,6 +571,16 @@ struct PlaylistDetailView: View {
                             }
                             if let duration = track.displayDuration {
                                 Label(duration, systemImage: "clock")
+                            }
+                            if let identifier = track.displayPhysicalIdentifier {
+                                Text(identifier)
+                                    .fontWeight(.bold)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(.blue)
+                                    .foregroundStyle(.white)
+                                    .clipShape(Capsule())
+                                    .textSelection(.enabled)
                             }
                         }
                         .font(.caption)

@@ -1,3 +1,4 @@
+import SafariServices
 import SwiftUI
 
 struct TrackDetailView: View {
@@ -23,6 +24,7 @@ struct TrackDetailView: View {
     @State private var isLoadingAllPlaylists = false
     @State private var addToPlaylistError: String?
     @State private var addedToPlaylistName: String?
+    @State private var showWebApp = false
 
     private var displayTrack: Track { detailTrack ?? track }
 
@@ -140,6 +142,12 @@ struct TrackDetailView: View {
                     Button("Add to Playlist", systemImage: "text.badge.plus") {
                         showAddToPlaylist = true
                     }
+
+                    if webAppTrackURL != nil {
+                        Button("Open in Web App", systemImage: "safari") {
+                            showWebApp = true
+                        }
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -165,6 +173,12 @@ struct TrackDetailView: View {
         }
         .sheet(isPresented: $showAddToPlaylist) {
             addToPlaylistSheet
+        }
+        .sheet(isPresented: $showWebApp) {
+            if let url = webAppTrackURL {
+                SafariView(url: url)
+                    .ignoresSafeArea()
+            }
         }
         .miniPlayerSpacer()
     }
@@ -250,6 +264,13 @@ struct TrackDetailView: View {
 
     private var isTrackDownloadable: Bool {
         downloadFilename(for: displayTrack) != nil
+    }
+
+    private var webAppTrackURL: URL? {
+        guard let serverURL = appState.normalizedServerURL,
+              let friendID = displayTrack.friendID else { return nil }
+        let encodedID = displayTrack.trackID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? displayTrack.trackID
+        return URL(string: "\(serverURL)/tracks/\(encodedID)?friend_id=\(friendID)")
     }
 
     private func loadTrackDetail() async {
@@ -574,6 +595,16 @@ struct TrackDetailView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private struct SafariView: UIViewControllerRepresentable {
+        let url: URL
+
+        func makeUIViewController(context: Context) -> SFSafariViewController {
+            SFSafariViewController(url: url)
+        }
+
+        func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
     }
 
     private func downloadFilename(for track: Track) -> String? {

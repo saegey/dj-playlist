@@ -49,6 +49,14 @@ struct SettingsView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
+
+                Section {
+                    Toggle("Autoplay", isOn: $appState.autoplayEnabled)
+                } header: {
+                    Text("Playback")
+                } footer: {
+                    Text("When the queue runs out, automatically fetch similar tracks to keep the music going.")
+                }
             }
             .navigationTitle("Settings")
             .task {
