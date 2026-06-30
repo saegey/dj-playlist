@@ -117,7 +117,7 @@ export function useAddToPlaylistDialog() {
     setIsNameDialogOpen(false);
     setPlaylistName("");
     setIsPlaylistDialogOpen(true);
-  }, [addToPlaylistMutation.isPending, createPlaylistMutation.isPending]);
+  }, [addToPlaylistMutation, createPlaylistMutation]);
 
   // Handle playlist selection
   const handlePlaylistSelect = React.useCallback((playlist: Playlist) => {
@@ -140,7 +140,7 @@ export function useAddToPlaylistDialog() {
       // Otherwise show name dialog
       setIsNameDialogOpen(true);
     }
-  }, [currentTrack, createPlaylistMutation, addToPlaylistMutation.isPending, createPlaylistMutation.isPending]);
+  }, [currentTrack, createPlaylistMutation, addToPlaylistMutation]);
 
   // Handle new playlist name confirmation
   const handleNameConfirm = React.useCallback((name: string) => {
@@ -149,7 +149,7 @@ export function useAddToPlaylistDialog() {
     }
     setIsNameDialogOpen(false);
     setPlaylistName("");
-  }, [currentTrack, createPlaylistMutation, addToPlaylistMutation.isPending, createPlaylistMutation.isPending]);
+  }, [currentTrack, createPlaylistMutation, addToPlaylistMutation]);
 
   // Handle dialog close
   const handleClose = React.useCallback(() => {

@@ -92,7 +92,7 @@ export default function SimilarVibeTracks({
 
       {/* Results */}
       <Box>
-        {data.tracks.map((similarTrack, index) => {
+        {data.tracks.map((similarTrack) => {
           // Ensure track has valid artwork or use fallback
           const trackWithArtwork = {
             ...similarTrack,

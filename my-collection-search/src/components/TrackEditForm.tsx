@@ -10,7 +10,7 @@ import {
 } from "@chakra-ui/react";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import TrackEditFormSkeleton from "@/components/TrackEditFormSkeleton";
-import { createTrackEditActionsWrapper } from "@/components/TrackEditActionsWrapper";
+import TrackEditActions from "@/components/TrackEditActions";
 import { useTrackEditSearchIntegrations } from "@/components/track-edit/useTrackEditSearchIntegrations";
 import { useTrackEditAudioActions } from "@/components/track-edit/useTrackEditAudioActions";
 import TrackEditFormFields from "@/components/track-edit/TrackEditFormFields";
@@ -110,24 +110,6 @@ export default function TrackEditForm({
     }
   };
 
-  const TrackEditActionsWrapper = createTrackEditActionsWrapper({
-    aiLoading: aiLoading,
-    onFetchAI: fetchFromChatGPT,
-    appleLoading: applePicker.loading,
-    onSearchApple: searchAppleMusic,
-    youtubeLoading: youtubeLoading,
-    onSearchYouTube: searchYouTube,
-    discogsLoading: discogsLoading,
-    onSearchDiscogs: searchDiscogs,
-    analyzeLoading: analyzeLoading,
-    onAnalyzeAudio: handleAnalyzeAudio,
-    uploadLoading: uploadLoading,
-    onFileSelected,
-    hasAudio: !!track?.local_audio_url,
-    onRemoveAudio: handleRemoveAudioClick,
-    removeAudioLoading: removeAudioLoading,
-  });
-
   return (
     <Dialog.Root
       open={dialogOpen}
@@ -145,13 +127,28 @@ export default function TrackEditForm({
                 <Flex align="center" gap={3}>
                   <Dialog.Title>Edit Track</Dialog.Title>
                   {track && (
-                    <TrackEditActionsWrapper
+                    <TrackEditActions
+                      aiLoading={aiLoading}
+                      onFetchAI={fetchFromChatGPT}
+                      appleLoading={applePicker.loading}
+                      onSearchApple={searchAppleMusic}
+                      youtubeLoading={youtubeLoading}
+                      onSearchYouTube={searchYouTube}
+                      discogsLoading={discogsLoading}
+                      onSearchDiscogs={searchDiscogs}
+                      analyzeLoading={analyzeLoading}
                       analyzeDisabled={
                         analyzeLoading ||
                         (!form.apple_music_url &&
                           !form.youtube_url &&
                           !form.soundcloud_url)
                       }
+                      onAnalyzeAudio={handleAnalyzeAudio}
+                      uploadLoading={uploadLoading}
+                      onFileSelected={onFileSelected}
+                      hasAudio={!!track.local_audio_url}
+                      onRemoveAudio={handleRemoveAudioClick}
+                      removeAudioLoading={removeAudioLoading}
                     />
                   )}
                 </Flex>

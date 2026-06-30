@@ -168,7 +168,7 @@ export default function RelatedTracksSection({ track }: Props) {
             Showing {displayTracks.length} of {merged.length}
           </Text>
 
-          {displayTracks.map((item, idx) => (
+          {displayTracks.map((item) => (
             <Box key={`${item.track_id}-${item.friend_id}`} mb={2}>
               <TrackResult
                 track={item}

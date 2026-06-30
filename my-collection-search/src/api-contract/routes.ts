@@ -16,8 +16,6 @@ import {
   albumUpdateResponseSchema,
   albumUpsertWithTracksResponseSchema,
   apiErrorSchema,
-  bulkNotesBodySchema,
-  bulkNotesResponseSchema,
   backupPolicyGetResponseSchema,
   backupPolicyPutBodySchema,
   backupPolicyPutResponseSchema,
@@ -580,6 +578,11 @@ const remainingTracksContracts: ApiContractRoute[] = [
                   },
                   required: ["track_id", "friend_id"],
                 },
+              },
+              include_vectors: {
+                type: "boolean",
+                description:
+                  "When true, include normalized vector data in `_vectors.default`. Omitted by default to keep payloads small.",
               },
             },
             required: ["tracks"],

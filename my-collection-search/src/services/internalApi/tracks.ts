@@ -50,6 +50,9 @@ export type TrackBatchRef = {
   friend_id: number;
   track_id: string;
 };
+export type FetchTracksByIdsOptions = {
+  includeVectors?: boolean;
+};
 export type TrackPlaylistCountRef = z.input<typeof trackPlaylistCountsBodySchema>["track_refs"][number];
 export type TrackPlaylistCountsResponse = z.infer<
   typeof trackPlaylistCountsResponseSchema
@@ -118,12 +121,18 @@ export type TrackMetadataResponse = { genre?: string; notes?: string } & Record<
   unknown
 >;
 
-export async function fetchTracksByIds(tracks: TrackBatchRef[]): Promise<Track[]> {
+export async function fetchTracksByIds(
+  tracks: TrackBatchRef[],
+  options: FetchTracksByIdsOptions = {}
+): Promise<Track[]> {
   if (!tracks || tracks.length === 0) return [];
   return await http<Track[]>("/api/tracks/batch", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ tracks }),
+    body: JSON.stringify({
+      tracks,
+      ...(options.includeVectors ? { include_vectors: true } : {}),
+    }),
   });
 }
 

@@ -16,7 +16,7 @@ export function usePlaylistTracksQuery(
   
   const query = useQuery<Track[], Error>({
     queryKey: queryKeys.playlistTracks(trackRefs),
-    queryFn: () => fetchTracksByIds(trackRefs),
+    queryFn: () => fetchTracksByIds(trackRefs, { includeVectors: true }),
     enabled: enabled && trackRefs.length > 0,
     staleTime: 30_000,
     gcTime: 5 * 60_000,

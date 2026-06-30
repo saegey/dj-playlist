@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Box, Text, IconButton, Flex, Spinner, Badge } from "@chakra-ui/react";
+import { Box, Text, IconButton, Flex, Spinner } from "@chakra-ui/react";
 import { LuLayoutGrid, LuTable } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";

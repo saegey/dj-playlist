@@ -5,8 +5,10 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as {
       tracks: Array<{ track_id: string; friend_id: number; position?: number }>;
+      include_vectors?: boolean;
     };
     const tracks = Array.isArray(body?.tracks) ? body.tracks : [];
+    const includeVectors = body?.include_vectors === true;
     if (tracks.length === 0) {
       return NextResponse.json([], { status: 200 });
     }
@@ -27,10 +29,15 @@ export async function POST(req: Request) {
           }
         }
       }
-      return {
-        ...t,
-        _vectors: embeddingArr ? { default: embeddingArr } : undefined,
-      };
+      const rest = { ...t } as Record<string, unknown>;
+      delete rest.embedding;
+      delete rest.ord;
+      return includeVectors
+        ? {
+            ...rest,
+            _vectors: embeddingArr ? { default: embeddingArr } : undefined,
+          }
+        : rest;
     });
     return NextResponse.json(ordered);
   } catch (error) {
