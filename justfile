@@ -18,9 +18,45 @@ music_mount := env_var_or_default("MUSIC_MOUNT", "/Volumes/music")
 compose_cmd := `if docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; fi`
 platform_override := if os() == "macos" { "-f " + compose_dir + "/docker-compose.mac.yml" } else { "" }
 op_env := "op run --env-file=" + compose_dir + "/.env.tpl --"
+mise_exec := "mise exec --"
 
 default:
   @just --list
+
+bootstrap: bootstrap-tools bootstrap-node bootstrap-python
+
+bootstrap-tools:
+  @command -v mise >/dev/null 2>&1 || { \
+    echo "mise is required. Install it first: https://mise.jdx.dev/getting-started.html"; \
+    exit 1; \
+  }
+  mise install
+
+bootstrap-node:
+  {{mise_exec}} npm install
+  {{mise_exec}} npm install --prefix my-collection-search
+
+bootstrap-python:
+  cd ga-service && {{mise_exec}} uv sync --frozen
+  cd download-worker && {{mise_exec}} uv sync --frozen
+  cd essentia-api && {{mise_exec}} uv sync --frozen
+
+test: test-web test-packages
+
+test-web:
+  {{mise_exec}} npm test --prefix my-collection-search
+
+test-packages:
+  {{mise_exec}} npm run test --workspace=packages/groovenet-client
+
+lint:
+  {{mise_exec}} npm run lint --prefix my-collection-search
+
+typecheck:
+  {{mise_exec}} npm run typecheck --prefix my-collection-search
+  {{mise_exec}} npm run build --workspace=packages/groovenet-client
+  {{mise_exec}} npm run build --workspace=packages/groovenet-cli
+  {{mise_exec}} npm run build --workspace=mcp-server
 
 check-compose:
   @if [ -z "{{compose_cmd}}" ]; then \

@@ -11,7 +11,8 @@ type ParsedFilter = {
 };
 
 const stripSearchOnlyFields = (row: Record<string, unknown>) => {
-  const { embedding: _embedding, ...rest } = row;
+  const rest = { ...row };
+  delete rest.embedding;
   return rest;
 };
 

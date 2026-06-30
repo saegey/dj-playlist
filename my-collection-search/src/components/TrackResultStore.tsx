@@ -28,7 +28,6 @@ export default function TrackResultStore({
   friendId,
   fallbackTrack,
   compact = false,
-  playlistMode = false,
   fetchIfMissing = false,
   isSelected,
   onToggleSelect,

@@ -118,7 +118,7 @@ export default function SimilarTracks({
 
       {/* Results */}
       <Box>
-        {data.tracks.map((similarTrack, index) => {
+        {data.tracks.map((similarTrack) => {
           // Ensure track has valid artwork or use fallback
           const trackWithArtwork = {
             ...similarTrack,

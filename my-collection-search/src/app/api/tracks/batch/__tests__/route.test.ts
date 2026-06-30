@@ -68,25 +68,51 @@ describe("POST /api/tracks/batch — request handling", () => {
 // ─── Embedding normalization ──────────────────────────────────────────────────
 
 describe("POST /api/tracks/batch — embedding normalization", () => {
-  it("converts array embedding to _vectors.default", async () => {
+  it("omits vector payload by default", async () => {
     const embedding = [0.1, 0.2, 0.3];
     mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding })]);
     const res = await POST(makeReq({ tracks: [{ track_id: "t1", friend_id: 1 }] }));
     const [track] = await res.json();
-    expect(track._vectors).toEqual({ default: [0.1, 0.2, 0.3] });
+    expect(track._vectors).toBeUndefined();
+    expect(track.embedding).toBeUndefined();
   });
 
-  it("parses JSON string embedding into _vectors.default", async () => {
+  it("converts array embedding to _vectors.default when include_vectors is true", async () => {
+    const embedding = [0.1, 0.2, 0.3];
+    mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding })]);
+    const res = await POST(
+      makeReq({
+        tracks: [{ track_id: "t1", friend_id: 1 }],
+        include_vectors: true,
+      })
+    );
+    const [track] = await res.json();
+    expect(track._vectors).toEqual({ default: [0.1, 0.2, 0.3] });
+    expect(track.embedding).toBeUndefined();
+  });
+
+  it("parses JSON string embedding into _vectors.default when include_vectors is true", async () => {
     const embedding = JSON.stringify([0.4, 0.5]);
     mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding })]);
-    const res = await POST(makeReq({ tracks: [{ track_id: "t1", friend_id: 1 }] }));
+    const res = await POST(
+      makeReq({
+        tracks: [{ track_id: "t1", friend_id: 1 }],
+        include_vectors: true,
+      })
+    );
     const [track] = await res.json();
     expect(track._vectors).toEqual({ default: [0.4, 0.5] });
+    expect(track.embedding).toBeUndefined();
   });
 
   it("sets _vectors to undefined when embedding is null", async () => {
     mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding: null })]);
-    const res = await POST(makeReq({ tracks: [{ track_id: "t1", friend_id: 1 }] }));
+    const res = await POST(
+      makeReq({
+        tracks: [{ track_id: "t1", friend_id: 1 }],
+        include_vectors: true,
+      })
+    );
     const [track] = await res.json();
     expect(track._vectors).toBeUndefined();
   });
@@ -95,14 +121,24 @@ describe("POST /api/tracks/batch — embedding normalization", () => {
     const t = baseTrack();
     delete (t as Record<string, unknown>).embedding;
     mockFindTracks.mockResolvedValueOnce([t]);
-    const res = await POST(makeReq({ tracks: [{ track_id: "t1", friend_id: 1 }] }));
+    const res = await POST(
+      makeReq({
+        tracks: [{ track_id: "t1", friend_id: 1 }],
+        include_vectors: true,
+      })
+    );
     const [track] = await res.json();
     expect(track._vectors).toBeUndefined();
   });
 
   it("sets _vectors to undefined when embedding is invalid JSON", async () => {
     mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding: "not-valid-json" })]);
-    const res = await POST(makeReq({ tracks: [{ track_id: "t1", friend_id: 1 }] }));
+    const res = await POST(
+      makeReq({
+        tracks: [{ track_id: "t1", friend_id: 1 }],
+        include_vectors: true,
+      })
+    );
     const [track] = await res.json();
     expect(track._vectors).toBeUndefined();
   });
@@ -111,11 +147,29 @@ describe("POST /api/tracks/batch — embedding normalization", () => {
     mockFindTracks.mockResolvedValueOnce([
       baseTrack({ embedding: [0.1], title: "My Song", artist: "Artist A", bpm: 128 }),
     ]);
-    const res = await POST(makeReq({ tracks: [{ track_id: "t1", friend_id: 1 }] }));
+    const res = await POST(
+      makeReq({
+        tracks: [{ track_id: "t1", friend_id: 1 }],
+        include_vectors: true,
+      })
+    );
     const [track] = await res.json();
     expect(track.title).toBe("My Song");
     expect(track.artist).toBe("Artist A");
     expect(track.bpm).toBe(128);
+  });
+
+  it("omits repository-only fields from the response", async () => {
+    mockFindTracks.mockResolvedValueOnce([
+      {
+        ...baseTrack({ embedding: [0.1] }),
+        ord: 7,
+      },
+    ]);
+    const res = await POST(makeReq({ tracks: [{ track_id: "t1", friend_id: 1 }] }));
+    const [track] = await res.json();
+    expect(track.embedding).toBeUndefined();
+    expect(track.ord).toBeUndefined();
   });
 });
 

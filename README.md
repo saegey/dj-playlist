@@ -45,8 +45,8 @@ dj-playlist/
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) & Docker Compose v2
-- [just](https://github.com/casey/just) — task runner (`brew install just`)
-- Node.js 20+ (for local JS development)
+- [mise](https://mise.jdx.dev/) for local toolchain setup
+- [just](https://github.com/casey/just) — task runner
 - A [Discogs](https://www.discogs.com) account with a collection
 
 ### Quick Start (Development)
@@ -54,6 +54,10 @@ dj-playlist/
 ```bash
 git clone <your-repo-url>
 cd dj-playlist
+
+# Install toolchains + dependencies
+mise install
+just bootstrap
 
 # Configure environment
 cp my-collection-search/.env.example my-collection-search/.env
@@ -69,6 +73,15 @@ just migrate-up
 App is available at [http://localhost:3000](http://localhost:3000).
 
 After starting, navigate to the import page and click **Sync from Discogs** to load your collection.
+
+### Local Task Shortcuts
+
+```bash
+just bootstrap      # install node/python dependencies across the repo
+just test           # run app + shared package tests
+just lint           # run frontend lint checks
+just typecheck      # run app typecheck + package builds
+```
 
 ### Production Deployment
 

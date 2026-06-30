@@ -19,8 +19,8 @@ import { FiArrowLeft } from "react-icons/fi";
 import PageContainer from "@/components/layout/PageContainer";
 import LabeledInput from "@/components/form/LabeledInput";
 import LabeledTextarea from "@/components/form/LabeledTextarea";
+import TrackEditActions from "@/components/TrackEditActions";
 import TrackEditFormDialogs from "@/components/track-edit/TrackEditFormDialogs";
-import { createTrackEditActionsWrapper } from "@/components/TrackEditActionsWrapper";
 import { useTrackEditSearchIntegrations } from "@/components/track-edit/useTrackEditSearchIntegrations";
 import { useTrackEditAudioActions } from "@/components/track-edit/useTrackEditAudioActions";
 import { toTrackEditFormState, type TrackEditFormProps } from "@/components/track-edit/types";
@@ -84,24 +84,6 @@ export default function TrackEditPage() {
     handleRemoveAudioClick, handleRemoveAudioConfirm, removeAudioLoading,
   } = useTrackEditAudioActions({ form, setForm, onSave: handleSave, fileInputRef });
 
-  const TrackEditActionsWrapper = createTrackEditActionsWrapper({
-    aiLoading,
-    onFetchAI: fetchFromChatGPT,
-    appleLoading: applePicker.loading,
-    onSearchApple: searchAppleMusic,
-    youtubeLoading,
-    onSearchYouTube: searchYouTube,
-    discogsLoading,
-    onSearchDiscogs: searchDiscogs,
-    analyzeLoading,
-    onAnalyzeAudio: handleAnalyzeAudio,
-    uploadLoading,
-    onFileSelected,
-    hasAudio: !!track?.local_audio_url,
-    onRemoveAudio: handleRemoveAudioClick,
-    removeAudioLoading,
-  });
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -144,11 +126,26 @@ export default function TrackEditPage() {
           <Heading size="md">Edit Track</Heading>
         </Flex>
         {track && (
-          <TrackEditActionsWrapper
+          <TrackEditActions
+            aiLoading={aiLoading}
+            onFetchAI={fetchFromChatGPT}
+            appleLoading={applePicker.loading}
+            onSearchApple={searchAppleMusic}
+            youtubeLoading={youtubeLoading}
+            onSearchYouTube={searchYouTube}
+            discogsLoading={discogsLoading}
+            onSearchDiscogs={searchDiscogs}
+            analyzeLoading={analyzeLoading}
             analyzeDisabled={
               analyzeLoading ||
               (!form.apple_music_url && !form.youtube_url && !form.soundcloud_url)
             }
+            onAnalyzeAudio={handleAnalyzeAudio}
+            uploadLoading={uploadLoading}
+            onFileSelected={onFileSelected}
+            hasAudio={!!track.local_audio_url}
+            onRemoveAudio={handleRemoveAudioClick}
+            removeAudioLoading={removeAudioLoading}
           />
         )}
       </Flex>
