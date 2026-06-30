@@ -6,6 +6,7 @@ struct NowPlayingView: View {
     @EnvironmentObject private var progress: PlaybackProgress
     @Environment(\.dismiss) private var dismiss
     @State private var showQueue = false
+    @State private var queueNavigationPath = NavigationPath()
     @State private var isScrubbing = false
     @State private var scrubbedTime: Double = 0
 
@@ -22,7 +23,7 @@ struct NowPlayingView: View {
         }
         .padding()
         .background(.background)
-        .sheet(isPresented: $showQueue) {
+        .sheet(isPresented: $showQueue, onDismiss: { queueNavigationPath = NavigationPath() }) {
             queueSheet
         }
     }
@@ -223,7 +224,7 @@ struct NowPlayingView: View {
     }
 
     private var queueSheet: some View {
-        NavigationStack {
+        NavigationStack(path: $queueNavigationPath) {
             List {
                 ForEach(Array(audioPlayer.queueTracks.enumerated()), id: \.element.id) { index, track in
                     HStack(spacing: 12) {
@@ -275,13 +276,46 @@ struct NowPlayingView: View {
                     .onTapGesture {
                         audioPlayer.skipToIndex(index)
                     }
+                    .contextMenu {
+                        if index != audioPlayer.currentQueueIndex {
+                            Button {
+                                audioPlayer.skipToIndex(index)
+                            } label: {
+                                Label("Play Now", systemImage: "play.fill")
+                            }
+                        }
+
+                        Button {
+                            queueNavigationPath.append(track)
+                        } label: {
+                            Label("Go to Track", systemImage: "music.note")
+                        }
+
+                        if index > audioPlayer.currentQueueIndex {
+                            Divider()
+                            Button(role: .destructive) {
+                                audioPlayer.removeFromQueue(at: index)
+                            } label: {
+                                Label("Remove from Queue", systemImage: "minus.circle")
+                            }
+                        }
+                    }
                 }
             }
             .navigationTitle("Queue")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: Track.self) { track in
+                TrackDetailView(track: track)
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { showQueue = false }
+                }
+                ToolbarItem(placement: .destructiveAction) {
+                    Button("Clear", role: .destructive) {
+                        audioPlayer.stop()
+                        showQueue = false
+                    }
                 }
             }
         }

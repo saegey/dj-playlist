@@ -154,6 +154,36 @@ struct PlaylistService {
         return response.optimizedPlaylist ?? response.playlist ?? []
     }
 
+    func fetchPlaylistRecommendations(tracks: [Track], limitIdentity: Int = 50, limitAudio: Int = 50) async throws -> [Track] {
+        let refs = tracks.compactMap { track -> PlaylistTrackRef? in
+            guard let friendID = track.friendID else { return nil }
+            return PlaylistTrackRef(track_id: track.trackID, friend_id: friendID)
+        }
+        guard !refs.isEmpty else { return [] }
+
+        let candidateBody = try JSONEncoder().encode(RecommendationsBatchRequest(tracks: refs, limit_identity: limitIdentity, limit_audio: limitAudio))
+        let candidateData = try await client.rawRequest(path: "/api/recommendations/candidates", method: "POST", body: candidateBody)
+        let candidatesResponse = try JSONDecoder().decode(RecommendationsResponse.self, from: candidateData)
+        guard !candidatesResponse.candidates.isEmpty else { return [] }
+
+        let batchRefs = candidatesResponse.candidates.map { PlaylistTrackRef(track_id: $0.trackId, friend_id: $0.friendId) }
+        let batchBody = try JSONEncoder().encode(TrackBatchRequest(tracks: batchRefs))
+        let tracksData = try await client.rawRequest(path: "/api/tracks/batch", method: "POST", body: batchBody)
+        return try JSONDecoder().decode([Track].self, from: tracksData)
+    }
+
+    func fetchSimilarTracksEnriched(trackID: String, friendID: Int, limit: Int = 20) async throws -> [Track] {
+        let encodedTrackID = trackID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trackID
+        let path = "/api/recommendations/candidates?track_id=\(encodedTrackID)&friend_id=\(friendID)&limit_identity=\(limit)&limit_audio=\(limit)"
+        let data = try await client.rawRequest(path: path)
+        let response = try JSONDecoder().decode(RecommendationsResponse.self, from: data)
+        guard !response.candidates.isEmpty else { return [] }
+        let batchRefs = response.candidates.map { PlaylistTrackRef(track_id: $0.trackId, friend_id: $0.friendId) }
+        let batchBody = try JSONEncoder().encode(TrackBatchRequest(tracks: batchRefs))
+        let tracksData = try await client.rawRequest(path: "/api/tracks/batch", method: "POST", body: batchBody)
+        return try JSONDecoder().decode([Track].self, from: tracksData)
+    }
+
     func fetchSimilarTracks(trackID: String, friendID: Int, limit: Int = 50) async throws -> [Track] {
         let encodedTrackID = trackID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? trackID
         let path = "/api/recommendations/candidates?track_id=\(encodedTrackID)&friend_id=\(friendID)&limit_identity=\(limit)&limit_audio=\(limit)"

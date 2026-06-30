@@ -19,13 +19,21 @@ final class AppState: ObservableObject {
         }
     }
 
+    @Published var autoplayEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(autoplayEnabled, forKey: Self.autoplayEnabledKey)
+        }
+    }
+
     static let serverURLKey = "mobile.serverURL"
     static let defaultFriendIDKey = "mobile.defaultFriendID"
+    static let autoplayEnabledKey = "mobile.autoplayEnabled"
 
     init() {
         serverURLString = UserDefaults.standard.string(forKey: Self.serverURLKey) ?? ""
         let storedFriendID = UserDefaults.standard.integer(forKey: Self.defaultFriendIDKey)
         defaultFriendID = storedFriendID != 0 ? storedFriendID : nil
+        autoplayEnabled = UserDefaults.standard.bool(forKey: Self.autoplayEnabledKey)
     }
 
     var hasValidServerURL: Bool {

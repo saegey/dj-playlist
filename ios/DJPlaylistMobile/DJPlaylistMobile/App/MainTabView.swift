@@ -41,6 +41,7 @@ private struct TabBarHeightReader: UIViewControllerRepresentable {
 
 struct MainTabView: View {
     @EnvironmentObject private var audioPlayer: AudioPlayerService
+    @EnvironmentObject private var appState: AppState
     @State private var tabBarHeight: CGFloat = 49
 
     var body: some View {
@@ -74,5 +75,22 @@ struct MainTabView: View {
             }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onChange(of: audioPlayer.autoplayTriggerTrack) { _, seed in
+            guard let seed,
+                  appState.autoplayEnabled,
+                  let serverURL = appState.normalizedServerURL,
+                  let friendID = seed.friendID else { return }
+            Task {
+                let service = PlaylistService(client: APIClient(serverURL: serverURL))
+                let tracks = try? await service.fetchSimilarTracksEnriched(
+                    trackID: seed.trackID,
+                    friendID: friendID,
+                    limit: 20
+                )
+                if let tracks, !tracks.isEmpty {
+                    audioPlayer.appendPendingTracks(tracks, serverURL: serverURL)
+                }
+            }
+        }
     }
 }

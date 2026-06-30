@@ -1,3 +1,4 @@
+import SafariServices
 import SwiftUI
 
 struct AlbumDetailView: View {
@@ -38,10 +39,19 @@ struct AlbumDetailView: View {
     @State private var spinNote = ""
     @State private var isSavingSpin = false
     @State private var spinSaveFeedbackToken = 0
+    @State private var showWebApp = false
 
     private var displayAlbum: Album { detailAlbum ?? album }
     private var currentReleaseID: String? { displayAlbum.releaseID ?? album.releaseID }
     private var currentFriendID: Int? { displayAlbum.friendID ?? album.friendID }
+
+    private var webAppAlbumURL: URL? {
+        guard let serverURL = appState.normalizedServerURL,
+              let releaseID = currentReleaseID,
+              let friendID = currentFriendID else { return nil }
+        let encodedID = releaseID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? releaseID
+        return URL(string: "\(serverURL)/albums/\(encodedID)?friend_id=\(friendID)")
+    }
     private static let spinRequestDateFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -100,6 +110,12 @@ struct AlbumDetailView: View {
                         }
                         .disabled(!tracks.contains(where: \.isPlayable))
                     }
+
+                    if webAppAlbumURL != nil {
+                        Button("Open in Web App", systemImage: "safari") {
+                            showWebApp = true
+                        }
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -129,6 +145,12 @@ struct AlbumDetailView: View {
         }
         .sheet(isPresented: $showLogSpinSheet) {
             logSpinSheet
+        }
+        .sheet(isPresented: $showWebApp) {
+            if let url = webAppAlbumURL {
+                SafariView(url: url)
+                    .ignoresSafeArea()
+            }
         }
         .sensoryFeedback(.success, trigger: spinSaveFeedbackToken)
         .miniPlayerSpacer()
@@ -910,6 +932,16 @@ struct AlbumDetailView: View {
         }
         return String(format: "%.2f", value)
     }
+}
+
+private struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: url)
+    }
+
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
 }
 
 private enum SpinLoggingMode: String, CaseIterable, Identifiable {

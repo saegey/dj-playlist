@@ -46,6 +46,7 @@ final class AudioPlayerService: ObservableObject {
     @Published private(set) var isPlaying = false
     @Published private(set) var errorMessage: String?
     @Published private(set) var queuedTrackIDs: [String] = []
+    @Published private(set) var autoplayTriggerTrack: Track?
 
     let progress = PlaybackProgress()
 
@@ -94,6 +95,7 @@ final class AudioPlayerService: ObservableObject {
 
     func play(tracks: [Track], startingAt startIndex: Int = 0, serverURL: URL) async throws {
         errorMessage = nil
+        autoplayTriggerTrack = nil
         guard !tracks.isEmpty else { return }
         guard tracks.indices.contains(startIndex) else {
             throw AudioPlayerError.invalidAudioURL
@@ -136,6 +138,7 @@ final class AudioPlayerService: ObservableObject {
         currentIndex = 0
         errorMessage = nil
         isPlaying = false
+        autoplayTriggerTrack = nil
         progress.reset()
         artworkLoadTask?.cancel()
         cachedArtwork = nil
@@ -386,14 +389,47 @@ final class AudioPlayerService: ObservableObject {
             currentIndex += 1
             prepareMoreIfNeeded()
         } else {
+            let seedTrack = currentTrack
             stop()
+            // Defer trigger so it survives stop() clearing currentTrack
+            if let seed = seedTrack {
+                Task { @MainActor in
+                    self.autoplayTriggerTrack = seed
+                }
+            }
+        }
+    }
+
+    func appendPendingTracks(_ tracks: [Track], serverURL: URL) {
+        autoplayTriggerTrack = nil
+        guard !tracks.isEmpty else { return }
+
+        if currentTrack == nil, queueEntries.isEmpty {
+            Task {
+                try? await play(tracks: tracks, startingAt: 0, serverURL: serverURL)
+            }
+        } else {
+            let queuedIDs = Set(queuedTrackIDs + pendingTracks.map(\.id))
+            let newTracks = tracks.filter { !queuedIDs.contains($0.id) }
+            guard !newTracks.isEmpty else { return }
+            pendingTracks.append(contentsOf: newTracks)
+            pendingServerURL = serverURL
+            prepareMoreIfNeeded()
         }
     }
 
     private func prepareMoreIfNeeded() {
         let itemsAhead = queueEntries.count - currentIndex - 1
-        guard itemsAhead < lookAheadCount, !pendingTracks.isEmpty, !isPreparingMore,
-              let serverURL = pendingServerURL else { return }
+        guard itemsAhead < lookAheadCount else { return }
+
+        guard !pendingTracks.isEmpty else {
+            if itemsAhead <= 1, autoplayTriggerTrack == nil, let seed = currentTrack {
+                autoplayTriggerTrack = seed
+            }
+            return
+        }
+
+        guard !isPreparingMore, let serverURL = pendingServerURL else { return }
 
         isPreparingMore = true
         let batch = Array(pendingTracks.prefix(lookAheadCount))
@@ -604,6 +640,24 @@ final class AudioPlayerService: ObservableObject {
         player.play()
         updatePlaybackState()
         refreshNowPlayingInfo()
+    }
+
+    func removeFromQueue(at index: Int) {
+        guard index > currentIndex else { return }
+
+        if index < queueEntries.count {
+            let itemOffset = index - currentIndex
+            let items = player.items()
+            if itemOffset < items.count {
+                player.remove(items[itemOffset])
+            }
+            queueEntries.remove(at: index)
+            queuedTrackIDs = queueEntries.map(\.track.id)
+        } else {
+            let pendingIndex = index - queueEntries.count
+            guard pendingTracks.indices.contains(pendingIndex) else { return }
+            pendingTracks.remove(at: pendingIndex)
+        }
     }
 
     func seek(to seconds: Double) {

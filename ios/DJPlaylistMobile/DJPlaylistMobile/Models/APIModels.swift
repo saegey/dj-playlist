@@ -930,6 +930,16 @@ struct SpinCreateResponse: Decodable {
     }
 }
 
+struct RecommendationsBatchRequest: Encodable {
+    let tracks: [PlaylistTrackRef]
+    let limit_identity: Int
+    let limit_audio: Int
+}
+
+struct TrackBatchRequest: Encodable {
+    let tracks: [PlaylistTrackRef]
+}
+
 struct RecommendationCandidateMetadata: Decodable {
     let title: String
     let artist: String
