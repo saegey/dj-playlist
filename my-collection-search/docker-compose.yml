@@ -2,11 +2,8 @@ services:
   app:
     build:
       context: .
-    container_name: myapp
     labels:
       - "deployed.revision=*${GIT_SHA:-dev}"  # change on every commit -> forces recreate
-    ports:
-      - "3000:3000"
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-djplaylist}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-djplaylist}
       APPLE_MUSIC_TEAM_ID: ${APPLE_MUSIC_TEAM_ID}
@@ -20,6 +17,7 @@ services:
       REDIS_URL: redis://redis:6379
       ESSENTIA_API_URL: http://essentia:8001/analyze
       ESSENTIA_DATA_DIR: /app/essentia-data
+      WORKTREE_HOST: ${WORKTREE_HOST:-}
       RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-}
       RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
       B2_ACCOUNT_ID: ${B2_ACCOUNT_ID:-}
@@ -72,22 +70,14 @@ services:
   essentia:
     build:
       context: ../essentia-api
-    container_name: essentia-api
-    ports:
-      - "8001:8001"
 
   ga-service:
     build:
       context: ../ga-service
-    container_name: ga-service
-    ports:
-      - "8002:8002"
 
   redis:
     image: redis:7-alpine
     restart: always
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
 
@@ -95,7 +85,6 @@ services:
     build:
       context: ../
       dockerfile: download-worker/Dockerfile
-    container_name: download-worker
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgres://${POSTGRES_USER:-djplaylist}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-djplaylist}

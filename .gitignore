@@ -33,3 +33,4 @@ xcuserdata/
 
 # Editor-local project settings
 .vscode/
+.worktree/
