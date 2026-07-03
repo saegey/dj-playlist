@@ -100,6 +100,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const [recommendationsModalOpen, setRecommendationsModalOpen] = useState(false);
   const [recommendationsPlaylistSnapshot, setRecommendationsPlaylistSnapshot] = useState<Track[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [statsExpanded, setStatsExpanded] = useState(false);
 
   useEffect(() => {
     if (playlistName) {
@@ -649,7 +650,99 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           />
         </Flex>
       </Flex>
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={3} mb={4}>
+      {/* Mobile: compact summary bar with expand toggle */}
+      <Box display={{ base: "block", md: "none" }} mb={3}>
+        <Flex
+          align="center"
+          gap={2}
+          fontSize="xs"
+          color="gray.500"
+          flexWrap="wrap"
+          cursor="pointer"
+          onClick={() => setStatsExpanded((v) => !v)}
+          py={1}
+        >
+          <Text fontWeight="medium" color="fg">
+            {playlistStats.trackCount} tracks
+          </Text>
+          {playlistStats.bpmSummary && (
+            <>
+              <Text color="gray.400">·</Text>
+              <Text>BPM {playlistStats.bpmSummary.avg}</Text>
+            </>
+          )}
+          {playlistStats.topGenres[0] && (
+            <>
+              <Text color="gray.400">·</Text>
+              <Text>{playlistStats.topGenres[0][0]}</Text>
+            </>
+          )}
+          <Text color="blue.500" ml="auto" fontWeight="medium">
+            {statsExpanded ? "Hide stats" : "Show stats"}
+          </Text>
+        </Flex>
+        {statsExpanded && (
+          <SimpleGrid columns={2} gap={2} mt={2}>
+            <Card.Root size="sm" variant="outline">
+              <Card.Body>
+                <VStack align="start" gap={1}>
+                  <Text fontSize="xs" color="gray.500">Tracks</Text>
+                  <Text fontWeight="bold">{playlistStats.trackCount}</Text>
+                  <Text fontSize="xs" color="gray.500">Audio Ready: {playlistStats.localAudioCoverage}%</Text>
+                  <Progress.Root value={playlistStats.localAudioCoverage} size="xs" width="100%">
+                    <Progress.Track><Progress.Range /></Progress.Track>
+                  </Progress.Root>
+                </VStack>
+              </Card.Body>
+            </Card.Root>
+            <Card.Root size="sm" variant="outline">
+              <Card.Body>
+                <VStack align="start" gap={1}>
+                  <Text fontSize="xs" color="gray.500">Top Genres</Text>
+                  <Flex gap={1} wrap="wrap">
+                    {playlistStats.topGenres.length > 0 ? playlistStats.topGenres.map(([name, count]) => (
+                      <Badge key={`genre-${name}`} variant="subtle" fontSize="xs">{name} ({count})</Badge>
+                    )) : <Text fontSize="xs" color="gray.500">None</Text>}
+                  </Flex>
+                </VStack>
+              </Card.Body>
+            </Card.Root>
+            <Card.Root size="sm" variant="outline">
+              <Card.Body>
+                <VStack align="start" gap={1}>
+                  <Text fontSize="xs" color="gray.500">Rhythm</Text>
+                  {playlistStats.bpmSummary ? (
+                    <Text fontSize="xs">BPM {playlistStats.bpmSummary.avg} ({playlistStats.bpmSummary.min}–{playlistStats.bpmSummary.max})</Text>
+                  ) : <Text fontSize="xs" color="gray.500">No BPM</Text>}
+                  <Flex gap={1} wrap="wrap">
+                    {playlistStats.topKeys.map(([name, count]) => (
+                      <Badge key={`key-${name}`} variant="subtle" fontSize="xs">{name} ({count})</Badge>
+                    ))}
+                  </Flex>
+                </VStack>
+              </Card.Body>
+            </Card.Root>
+            <Card.Root size="sm" variant="outline">
+              <Card.Body>
+                <VStack align="start" gap={1}>
+                  <Text fontSize="xs" color="gray.500">Ratings</Text>
+                  {playlistStats.ratingSummary ? (
+                    <Text fontSize="xs">Avg {playlistStats.ratingSummary.avg} · {playlistStats.ratingSummary.favoritesCount} favs</Text>
+                  ) : <Text fontSize="xs" color="gray.500">No ratings</Text>}
+                  <Flex gap={1} wrap="wrap">
+                    {playlistStats.topStyles.slice(0, 2).map(([name, count]) => (
+                      <Badge key={`style-${name}`} variant="subtle" fontSize="xs">{name} ({count})</Badge>
+                    ))}
+                  </Flex>
+                </VStack>
+              </Card.Body>
+            </Card.Root>
+          </SimpleGrid>
+        )}
+      </Box>
+
+      {/* Desktop: full 4-column grid */}
+      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={3} mb={4} display={{ base: "none", md: "grid" }}>
         <Card.Root size="sm" variant="outline">
           <Card.Body>
             <VStack align="start" gap={1}>

@@ -116,7 +116,7 @@ export default function TrackResult({
 
   const artworkSize = playlistMode
     ? { base: "50px", md: "70px" }
-    : { base: "70px", md: "80px", lg: "90px" };
+    : { base: "56px", md: "80px", lg: "90px" };
 
   // --- Album art block (shared) ---
   const artworkBlock = (
@@ -202,6 +202,7 @@ export default function TrackResult({
         </Text>
       )}
       {showNotes && (
+        <Box display={{ base: "none", md: "contents" }}>
         <Popover.Root>
           <Popover.Trigger asChild>
             <Box
@@ -226,6 +227,7 @@ export default function TrackResult({
             </Popover.Positioner>
           )}
         </Popover.Root>
+        </Box>
       )}
     </Flex>
   );
@@ -234,7 +236,7 @@ export default function TrackResult({
   const score = track._semanticScore !== undefined ? track._semanticScore * 100 : undefined;
 
   const mainContent = (
-    <Flex direction="column" flex={1} minW={0} gap={1}>
+    <Flex direction="column" gap={1}>
       {/* Title */}
       <Flex alignItems="baseline" gap={2} pr={10}>
         <Text
@@ -268,7 +270,7 @@ export default function TrackResult({
       </Flex>
 
       {/* Artist + rating */}
-      <Flex gap={2} alignItems="center" flexWrap="wrap">
+      <Flex gap={2} alignItems="center" flexWrap="wrap" pr={10}>
         <ArtistLink artist={track.artist} friendId={track.friend_id}>
           <Text fontSize={{ base: "xs", md: "sm" }} fontWeight="medium">{track.artist}</Text>
         </ArtistLink>
@@ -289,21 +291,21 @@ export default function TrackResult({
       </Flex>
 
       {/* Album + secondary meta */}
-      <Flex gap={2} fontSize="xs" color="gray.500" alignItems="center" flexWrap="wrap">
-        <Box overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" minW={0}>
+      <Flex gap={2} fontSize="xs" color="gray.500" alignItems="center" flexWrap={{ base: "nowrap", md: "wrap" }} pr={10}>
+        <Box flex={1} minW={0} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
           <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
             <Text as="span">{track.album}{track.year && ` (${track.year})`}</Text>
           </AlbumLink>
         </Box>
         {showUsername && track.username && (
           <>
-            <Text color="gray.400">·</Text>
-            <Text color="gray.400">{track.username}</Text>
+            <Text color="gray.400" flexShrink={0}>·</Text>
+            <Text color="gray.400" flexShrink={0}>{track.username}</Text>
           </>
         )}
         {showPlaylistCount && typeof playlistCount === "number" && playlistCount > 0 && (
           <>
-            <Text color="gray.400">·</Text>
+            <Text color="gray.400" flexShrink={0}>·</Text>
             <TrackPlaylistUsage track={track} count={playlistCount} />
           </>
         )}
@@ -349,11 +351,13 @@ export default function TrackResult({
         _hover={{ bg: hasDataIssue ? undefined : "bg.muted" }}
       >
         {artworkBlock}
-        {mainContent}
+        <Flex direction="column" flex={1} minW={0}>
+          {mainContent}
+          {footer && <Box mt={1}>{footer}</Box>}
+        </Flex>
         <Flex position="absolute" top={2} right={2} gap={1} alignItems="center">
           {buttons}
         </Flex>
-        {footer && <Box mt={2} width="100%">{footer}</Box>}
       </Flex>
     );
   }
@@ -364,8 +368,9 @@ export default function TrackResult({
       borderWidth={[0, "1px"]}
       borderBottomWidth={["1px", "1px"]}
       borderRadius={[0, "md"]}
-      p={[0, 3]}
-      mb={2}
+      py={[2, 3]}
+      px={[3, 3]}
+      mb={[0, 2]}
       gap={3}
       position="relative"
       width="100%"
@@ -380,11 +385,13 @@ export default function TrackResult({
         </Box>
       )}
       {artworkBlock}
-      {mainContent}
+      <Flex direction="column" flex={1} minW={0}>
+        {mainContent}
+        {footer && <Box mt={1}>{footer}</Box>}
+      </Flex>
       <Flex position="absolute" top={2} right={2} gap={1} alignItems="center">
         {buttons}
       </Flex>
-      {footer && <Box mt={2} width="100%">{footer}</Box>}
     </Flex>
   );
 }

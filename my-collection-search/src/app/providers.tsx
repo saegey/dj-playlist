@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -30,6 +30,10 @@ export default function ClientProviders({
   children: React.ReactNode;
 }) {
   const [client] = useState(() => new QueryClient());
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    setIsDesktop(window.innerWidth >= 768);
+  }, []);
 
   return (
     <ChakraProvider>
@@ -48,7 +52,7 @@ export default function ClientProviders({
           </UsernameProvider>
         </JobWatcherProvider>
         </CommandPaletteProvider>
-        {process.env.NODE_ENV === "development" && (
+        {process.env.NODE_ENV === "development" && isDesktop && (
           <ReactQueryDevtools initialIsOpen={false} />
         )}
       </QueryClientProvider>

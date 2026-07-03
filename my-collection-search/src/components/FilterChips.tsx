@@ -20,7 +20,15 @@ export default function FilterChips({ chips, onToggle, onClearAll }: FilterChips
   const anyActive = chips.some((c) => c.active);
 
   return (
-    <Flex gap={2} flexWrap="wrap" alignItems="center" mb={3}>
+    <Flex
+      gap={2}
+      flexWrap="nowrap"
+      overflowX="auto"
+      alignItems="center"
+      mt={2}
+      pb={1}
+      className="hide-scrollbar"
+    >
       {chips.map((chip) => (
         <Button
           key={chip.key}

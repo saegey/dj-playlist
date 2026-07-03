@@ -42,7 +42,6 @@ export default function UnifiedSearchControls({
 
   return (
     <Box
-      mb={3}
       p={{ base: 2, md: 3 }}
       borderWidth="1px"
       borderColor="border.subtle"

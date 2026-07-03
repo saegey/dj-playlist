@@ -315,8 +315,8 @@ const SearchResults: React.FC = () => {
             </IconButton>
           </>
         }
-        mobileSecondaryControls={
-          <>
+        mobilePrimaryControl={
+          <Flex gap={1} flexShrink={0}>
             <IconButton
               aria-label="Card view"
               size="sm"
@@ -333,7 +333,7 @@ const SearchResults: React.FC = () => {
             >
               <LuTable />
             </IconButton>
-          </>
+          </Flex>
         }
       />
 
