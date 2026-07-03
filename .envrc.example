@@ -1,0 +1,21 @@
+# Copy to `.envrc`, adjust values for your machine, then run:
+#   direnv allow
+#
+# This file is intentionally generic and safe to commit. Keep your real
+# `.envrc` untracked.
+
+export REGISTRY=ghcr.io/your-org
+export PROD_HOST=deploy@example.com
+export PROD_STACK_DIR=/opt/stacks/groovenet
+export SSH_USER=deploy
+
+# Optional: prepend commands with a secret manager or env loader.
+# Example for 1Password:
+export OP_ENV_PREFIX='op run --env-file=my-collection-search/.env.tpl --'
+
+# Optional operator-only helpers.
+export MUSIC_NFS_HOST=nas.local
+export MUSIC_NFS_PATH=/srv/music
+export ASSET_SYNC_HOST=deploy@example.com
+export ALBUM_COVERS_LOCAL_DIR="$HOME/groovenet-covers"
+export MUSIC_MOUNT="$HOME/groovenet-music"
