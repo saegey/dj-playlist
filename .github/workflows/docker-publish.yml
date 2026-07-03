@@ -1,4 +1,4 @@
-name: Build and Publish Docker Image
+name: Build and Publish Docker Images
 
 on:
   pull_request:
@@ -7,7 +7,92 @@ on:
       - "v*"
 
 jobs:
-  build:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      myapp: ${{ steps.filter.outputs.myapp }}
+      essentia: ${{ steps.filter.outputs.essentia }}
+      ga_service: ${{ steps.filter.outputs.ga_service }}
+      download_worker: ${{ steps.filter.outputs.download_worker }}
+      force_all: ${{ steps.filter.outputs.force_all }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed build inputs
+        id: filter
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base_ref="${{ github.event.pull_request.base.sha }}"
+            head_ref="${{ github.event.pull_request.head.sha }}"
+            changed_files="$(git diff --name-only "$base_ref" "$head_ref")"
+          else
+            changed_files="$(git diff-tree --no-commit-id --name-only -r "${{ github.sha }}")"
+          fi
+
+          echo "Changed files:"
+          echo "$changed_files"
+
+          myapp=false
+          essentia=false
+          ga_service=false
+          download_worker=false
+          force_all=false
+
+          while IFS= read -r file; do
+            [[ -n "$file" ]] || continue
+
+            case "$file" in
+              .github/workflows/docker-publish.yml|justfile)
+                force_all=true
+                ;;
+            esac
+
+            case "$file" in
+              my-collection-search/*)
+                myapp=true
+                ;;
+            esac
+
+            case "$file" in
+              essentia-api/*)
+                essentia=true
+                ;;
+            esac
+
+            case "$file" in
+              ga-service/*)
+                ga_service=true
+                ;;
+            esac
+
+            case "$file" in
+              download-worker/*|packages/groovenet-python/*)
+                download_worker=true
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            force_all=true
+          fi
+
+          echo "myapp=$myapp" >> "$GITHUB_OUTPUT"
+          echo "essentia=$essentia" >> "$GITHUB_OUTPUT"
+          echo "ga_service=$ga_service" >> "$GITHUB_OUTPUT"
+          echo "download_worker=$download_worker" >> "$GITHUB_OUTPUT"
+          echo "force_all=$force_all" >> "$GITHUB_OUTPUT"
+
+  build-myapp:
+    needs: changes
+    if: needs.changes.outputs.force_all == 'true' || needs.changes.outputs.myapp == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -15,9 +100,25 @@ jobs:
     env:
       SHOULD_PUSH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
       IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
+      PLATFORMS: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Prepare image tags
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          tags="ghcr.io/${{ github.repository_owner }}/myapp:${{ env.IMAGE_TAG }}"
+          if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
+            tags="${tags}"$'\n'"ghcr.io/${{ github.repository_owner }}/myapp:latest"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -30,18 +131,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
+      - name: Build and push myapp
+        uses: docker/build-push-action@v6
         with:
           context: ./my-collection-search
           file: ./my-collection-search/Dockerfile
           push: ${{ env.SHOULD_PUSH == 'true' }}
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/myapp:${{ env.IMAGE_TAG }}
-            ghcr.io/${{ github.repository_owner }}/myapp:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          platforms: ${{ env.PLATFORMS }}
+          tags: ${{ steps.tags.outputs.tags }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=myapp
+          cache-to: type=gha,mode=max,scope=myapp
           build-args: |
             OPENAI_API_KEY=dummy
             DISCOGS_USER_TOKEN=dummytoken
@@ -53,10 +154,9 @@ jobs:
             DATABASE_URL=postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
             YOUTUBE_API_KEY=dummyyoutubeapikey
 
-      - name: Image digest
-        run: echo "Published image for tag ${{ github.ref_name }}"
-
   build-essentia:
+    needs: changes
+    if: needs.changes.outputs.force_all == 'true' || needs.changes.outputs.essentia == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -64,10 +164,25 @@ jobs:
     env:
       SHOULD_PUSH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
       IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
-
+      PLATFORMS: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Prepare image tags
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          tags="ghcr.io/${{ github.repository_owner }}/essentia-api:${{ env.IMAGE_TAG }}"
+          if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
+            tags="${tags}"$'\n'"ghcr.io/${{ github.repository_owner }}/essentia-api:latest"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -81,22 +196,21 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push Essentia API
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./essentia-api
           file: ./essentia-api/Dockerfile
           push: ${{ env.SHOULD_PUSH == 'true' }}
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/essentia-api:${{ env.IMAGE_TAG }}
-            ghcr.io/${{ github.repository_owner }}/essentia-api:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Image digest
-        run: echo "Published Essentia API image for tag ${{ github.ref_name }}"
+          platforms: ${{ env.PLATFORMS }}
+          tags: ${{ steps.tags.outputs.tags }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=essentia-api
+          cache-to: type=gha,mode=max,scope=essentia-api
 
   build-ga-service:
+    needs: changes
+    if: needs.changes.outputs.force_all == 'true' || needs.changes.outputs.ga_service == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -104,10 +218,25 @@ jobs:
     env:
       SHOULD_PUSH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
       IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
-
+      PLATFORMS: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Prepare image tags
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          tags="ghcr.io/${{ github.repository_owner }}/ga-service:${{ env.IMAGE_TAG }}"
+          if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
+            tags="${tags}"$'\n'"ghcr.io/${{ github.repository_owner }}/ga-service:latest"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -120,23 +249,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push GA Service
-        uses: docker/build-push-action@v5
+      - name: Build and push GA service
+        uses: docker/build-push-action@v6
         with:
           context: ./ga-service
           file: ./ga-service/Dockerfile
           push: ${{ env.SHOULD_PUSH == 'true' }}
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/ga-service:${{ env.IMAGE_TAG }}
-            ghcr.io/${{ github.repository_owner }}/ga-service:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Image digest
-        run: echo "Published GA Service image for tag ${{ github.ref_name }}"
+          platforms: ${{ env.PLATFORMS }}
+          tags: ${{ steps.tags.outputs.tags }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=ga-service
+          cache-to: type=gha,mode=max,scope=ga-service
 
   build-download-worker:
+    needs: changes
+    if: needs.changes.outputs.force_all == 'true' || needs.changes.outputs.download_worker == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -144,10 +272,25 @@ jobs:
     env:
       SHOULD_PUSH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
       IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
-
+      PLATFORMS: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Prepare image tags
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          tags="ghcr.io/${{ github.repository_owner }}/download-worker:${{ env.IMAGE_TAG }}"
+          if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
+            tags="${tags}"$'\n'"ghcr.io/${{ github.repository_owner }}/download-worker:latest"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -160,18 +303,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push Download Worker
-        uses: docker/build-push-action@v5
+      - name: Build and push download worker
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./download-worker/Dockerfile
           push: ${{ env.SHOULD_PUSH == 'true' }}
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/download-worker:${{ env.IMAGE_TAG }}
-            ghcr.io/${{ github.repository_owner }}/download-worker:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Image digest
-        run: echo "Built images for ref ${{ github.ref_name }} (push=${{ env.SHOULD_PUSH }})"
+          platforms: ${{ env.PLATFORMS }}
+          tags: ${{ steps.tags.outputs.tags }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=download-worker
+          cache-to: type=gha,mode=max,scope=download-worker
