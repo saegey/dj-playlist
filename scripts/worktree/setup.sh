@@ -90,7 +90,7 @@ else
   echo "Database already contains tables; skipping seed restore."
 fi
 
-compose_exec run --rm migrate
+compose_exec run --rm --build migrate
 
 echo
 echo "Worktree ready"

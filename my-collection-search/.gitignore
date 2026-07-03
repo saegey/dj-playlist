@@ -30,10 +30,8 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files — secrets stay local, templates are committed
+# env files — .env.example and .env.tpl live at repo root now
 .env*
-!.env.example
-!.env.tpl
 
 # vercel
 .vercel
