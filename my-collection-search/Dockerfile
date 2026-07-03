@@ -1,12 +1,15 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:22-bookworm-slim AS deps
+FROM node:22-bookworm-slim AS base
+RUN npm install -g npm@11.18.0
+
+FROM base AS deps
 WORKDIR /app
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --ignore-scripts
 
-FROM node:22-bookworm-slim AS builder
+FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -15,7 +18,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN --mount=type=cache,target=/app/.next/cache \
     npm run build
 
-FROM node:22-bookworm-slim AS runner
+FROM base AS runner
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
@@ -48,6 +51,9 @@ ENV HOSTNAME=0.0.0.0
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+RUN mkdir -p cookies dumps discogs_exports audio essentia-data public/uploads/album-covers && \
+    chown -R nextjs:nodejs cookies dumps discogs_exports audio essentia-data public/uploads/album-covers
 
 USER nextjs
 EXPOSE 3000
