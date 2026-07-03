@@ -12,7 +12,7 @@ services:
       CHOKIDAR_INTERVAL: "700"
     volumes:
       # Mount source code for live reload
-      - .:/app
+      - ./my-collection-search:/app
       # Keep node_modules inside the container image
       - /app/node_modules
       - ${APP_AUDIO_MOUNT:-music_data:/app/audio}
@@ -33,4 +33,4 @@ services:
       - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
       - ${WORKER_ALBUM_COVERS_SRC:-album_covers}:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
-      - ./cookies:/app/cookies:ro # Mount local cookies directory as read-only
+      - ./my-collection-search/cookies:/app/cookies:ro # Mount local cookies directory as read-only

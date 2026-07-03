@@ -77,7 +77,7 @@ if database_is_empty; then
 
     if [[ -d "$seed_dir/app" || -d "$seed_dir/audio" || -d "$seed_dir/dumps" || -d "$seed_dir/public" ]]; then
       app_container="$(app_container_id)"
-      "$COMPOSE_DIR/scripts/restore-restic-assets.sh" \
+      "$APP_DIR/scripts/restore-restic-assets.sh" \
         --restore-target "$seed_dir" \
         --app-container "$app_container"
     fi

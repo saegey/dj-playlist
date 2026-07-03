@@ -2,9 +2,11 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-COMPOSE_DIR="${COMPOSE_DIR:-$REPO_ROOT/my-collection-search}"
+COMPOSE_DIR="${COMPOSE_DIR:-$REPO_ROOT}"
+APP_DIR="${APP_DIR:-$REPO_ROOT/my-collection-search}"
 WORKTREE_STATE_DIR="${WORKTREE_STATE_DIR:-$REPO_ROOT/.worktree}"
-REPO_NAME="${REPO_NAME:-$(basename "$REPO_ROOT")}"
+_main_worktree() { git -C "$REPO_ROOT" worktree list --porcelain | awk '/^worktree /{print $2; exit}'; }
+REPO_NAME="${REPO_NAME:-$(basename "$(dirname "$(_main_worktree)")")}"
 SEED_ROOT="${SEED_ROOT:-$HOME/.supacode/worktree-seeds/$REPO_NAME}"
 SEED_LATEST_DIR="${SEED_LATEST_DIR:-$SEED_ROOT/latest}"
 CADDY_WORKTREE_DIR="${CADDY_WORKTREE_DIR:-$HOME/.config/caddy/worktrees}"
@@ -168,8 +170,8 @@ compose_exec() {
     source "$(worktree_env_file)"
     set +a
     cd "$REPO_ROOT"
-    if command -v op >/dev/null 2>&1 && [[ -f "$COMPOSE_DIR/.env.tpl" ]]; then
-      op run --env-file="$COMPOSE_DIR/.env.tpl" -- \
+    if command -v op >/dev/null 2>&1 && [[ -f "$APP_DIR/.env.tpl" ]]; then
+      op run --env-file="$APP_DIR/.env.tpl" -- \
         docker compose "${compose_args[@]}" "$@"
     else
       docker compose "${compose_args[@]}" "$@"
@@ -204,8 +206,8 @@ compose_exec_detect() {
     if [[ -n "$detected_project" ]]; then
       export COMPOSE_PROJECT_NAME="$detected_project"
     fi
-    if command -v op >/dev/null 2>&1 && [[ -f "$COMPOSE_DIR/.env.tpl" ]]; then
-      op run --env-file="$COMPOSE_DIR/.env.tpl" -- \
+    if command -v op >/dev/null 2>&1 && [[ -f "$APP_DIR/.env.tpl" ]]; then
+      op run --env-file="$APP_DIR/.env.tpl" -- \
         docker compose "${compose_args[@]}" "$@"
     else
       docker compose "${compose_args[@]}" "$@"

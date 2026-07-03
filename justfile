@@ -1,6 +1,6 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
-compose_dir := env_var_or_default("COMPOSE_DIR", "my-collection-search")
+app_dir := env_var_or_default("APP_DIR", "my-collection-search")
 buildkit_env := env_var_or_default("BUILDKIT_ENV", "DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1")
 registry := env_var_or_default("REGISTRY", "ghcr.io/your-org")
 platform := env_var_or_default("PLATFORM", "linux/amd64")
@@ -19,7 +19,7 @@ music_nfs_host := env_var_or_default("MUSIC_NFS_HOST", "")
 music_nfs_path := env_var_or_default("MUSIC_NFS_PATH", "/srv/music")
 op_env := env_var_or_default("OP_ENV_PREFIX", "")
 compose_cmd := `if docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; fi`
-platform_override := if os() == "macos" { "-f " + compose_dir + "/docker-compose.mac.yml" } else { "" }
+platform_override := if os() == "macos" { "-f docker-compose.mac.yml" } else { "" }
 mise_exec := "mise exec --"
 
 default:
@@ -104,17 +104,17 @@ sync-dev-assets:
     exit 0; \
   fi
   BEELINK_HOST={{asset_sync_host}} COVERS_LOCAL_DIR={{album_covers_local_dir}} \
-    ./{{compose_dir}}/scripts/sync-dev-assets.sh
+    ./{{app_dir}}/scripts/sync-dev-assets.sh
 
 compose-dev: check-compose mount-music sync-dev-assets
-  APP_PORT=${APP_PORT:-3000} {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml -f {{compose_dir}}/docker-compose.worktree.yml {{platform_override}} up --remove-orphans
+  APP_PORT=${APP_PORT:-3000} {{buildkit_env}} {{op_env}} {{compose_cmd}} -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.worktree.yml {{platform_override}} up --remove-orphans
 
 compose-dev-mac: check-compose mount-music sync-dev-assets
-  APP_PORT=${APP_PORT:-3000} {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml -f {{compose_dir}}/docker-compose.worktree.yml -f {{compose_dir}}/docker-compose.mac.yml up --remove-orphans
+  APP_PORT=${APP_PORT:-3000} {{buildkit_env}} {{op_env}} {{compose_cmd}} -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.worktree.yml -f docker-compose.mac.yml up --remove-orphans
 
 compose-dev-reset: check-compose mount-music
-  APP_PORT=${APP_PORT:-3000} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml -f {{compose_dir}}/docker-compose.worktree.yml {{platform_override}} down --remove-orphans
-  APP_PORT=${APP_PORT:-3000} {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml -f {{compose_dir}}/docker-compose.worktree.yml {{platform_override}} up --build --force-recreate --remove-orphans
+  APP_PORT=${APP_PORT:-3000} {{op_env}} {{compose_cmd}} -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.worktree.yml {{platform_override}} down --remove-orphans
+  APP_PORT=${APP_PORT:-3000} {{buildkit_env}} {{op_env}} {{compose_cmd}} -f docker-compose.yml -f docker-compose.dev.yml -f docker-compose.worktree.yml {{platform_override}} up --build --force-recreate --remove-orphans
 
 worktree-up *args:
   ./scripts/worktree/setup.sh {{args}}
@@ -132,17 +132,17 @@ worktree-install-caddy *args:
   ./scripts/worktree/install-caddy-host.sh {{args}}
 
 compose-prod: check-compose
-  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.prod.yml up
+  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f docker-compose.yml -f docker-compose.prod.yml up
 
 compose-down: check-compose
-  {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.prod.yml down
+  {{op_env}} {{compose_cmd}} -f docker-compose.yml -f docker-compose.prod.yml down
   just unmount-music
 
 compose-logs: check-compose
-  {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.prod.yml logs -f
+  {{op_env}} {{compose_cmd}} -f docker-compose.yml -f docker-compose.prod.yml logs -f
 
 build-app:
-  {{buildkit_env}} docker buildx build -t ghcr.io/saegey/myapp:{{tag}} -f {{compose_dir}}/Dockerfile {{compose_dir}}
+  {{buildkit_env}} docker buildx build -t ghcr.io/saegey/myapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
 
 build-essentia:
   {{buildkit_env}} docker buildx build -t ghcr.io/saegey/essentia-api:{{tag}} -f essentia-api/Dockerfile essentia-api
@@ -154,18 +154,18 @@ build-download-worker:
   {{buildkit_env}} docker buildx build -t ghcr.io/saegey/download-worker:{{tag}} -f download-worker/Dockerfile .
 
 rebuild-download-worker: check-compose
-  {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml build --no-cache download-worker
-  {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml up -d download-worker
+  {{compose_cmd}} -f docker-compose.yml build --no-cache download-worker
+  {{compose_cmd}} -f docker-compose.yml up -d download-worker
 
 rebuild-containers services="app essentia ga-service download-worker":
-  {{buildkit_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml build {{services}}
+  {{buildkit_env}} {{compose_cmd}} -f docker-compose.yml build {{services}}
 
 rebuild-containers-no-cache services="app essentia ga-service download-worker":
-  {{buildkit_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml build --no-cache {{services}}
+  {{buildkit_env}} {{compose_cmd}} -f docker-compose.yml build --no-cache {{services}}
 
 rebuild-up-containers services="app essentia ga-service download-worker":
-  {{buildkit_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml build {{services}}
-  {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml up -d {{services}}
+  {{buildkit_env}} {{compose_cmd}} -f docker-compose.yml build {{services}}
+  {{compose_cmd}} -f docker-compose.yml up -d {{services}}
 
 build-all: build-app build-essentia build-ga-service build-download-worker
 
@@ -232,13 +232,13 @@ generate-python-client: generate-spec
     --overwrite
 
 push-images:
-  {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/myapp:{{tag}} -f {{compose_dir}}/Dockerfile {{compose_dir}}
+  {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/myapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/essentia-api:{{tag}} -f essentia-api/Dockerfile essentia-api
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/ga-service:{{tag}} -f ga-service/Dockerfile ga-service
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/download-worker:{{tag}} -f download-worker/Dockerfile .
 
 deploy-prod-local:
-  cd {{compose_dir}} && ./scripts/deploy-prod.sh {{tag}}
+  cd {{app_dir}} && ./scripts/deploy-prod.sh {{tag}}
 
 deploy-prod-remote:
   ssh {{prod_host}} 'set -euo pipefail; cd {{prod_stack_dir}}; if [ -x ./scripts/deploy-prod.sh ]; then ./scripts/deploy-prod.sh {{tag}}; elif [ -x ./my-collection-search/scripts/deploy-prod.sh ]; then ./my-collection-search/scripts/deploy-prod.sh {{tag}}; else echo "deploy-prod.sh not found"; exit 127; fi'
@@ -270,17 +270,17 @@ release-localbuild-beelink: tag-push
   TAG="{{tag}}" just prod_host="100.117.118.15" prod_stack_dir="/srv/docker/groovenet" deploy-prod-remote-localbuild
 
 migrate-up: check-compose
-  {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml run --rm migrate
+  {{op_env}} {{compose_cmd}} -f docker-compose.yml run --rm migrate
 
 migrate-down: check-compose
-  {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml run --rm migrate npx node-pg-migrate down
+  {{op_env}} {{compose_cmd}} -f docker-compose.yml run --rm migrate npx node-pg-migrate down
 
 migrate-create NAME:
   @if [ -z "{{NAME}}" ]; then echo "Usage: just migrate-create <name>"; exit 1; fi
-  cd {{compose_dir}} && npm run migrate create {{NAME}}
+  cd {{app_dir}} && npm run migrate create {{NAME}}
 
 sync-album-covers:
-  ./{{compose_dir}}/scripts/sync-album-covers.sh \
+  ./{{app_dir}}/scripts/sync-album-covers.sh \
     "{{album_covers_remote_host}}" \
     "{{album_covers_remote_path}}" \
     "{{album_covers_local_dir}}"
