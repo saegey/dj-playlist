@@ -20,9 +20,21 @@ elif [[ -f "${PROJECT_DIR}/my-collection-search/.env" ]]; then
 else
   COMPOSE_ENV_FILE=""
 fi
-COMPOSE_CMD=(docker compose)
+if [[ -f "${PROJECT_DIR}/.env.tpl" ]]; then
+  COMPOSE_TEMPLATE_FILE="${PROJECT_DIR}/.env.tpl"
+elif [[ -f "${PROJECT_DIR}/my-collection-search/.env.tpl" ]]; then
+  COMPOSE_TEMPLATE_FILE="${PROJECT_DIR}/my-collection-search/.env.tpl"
+else
+  COMPOSE_TEMPLATE_FILE=""
+fi
+OP_BIN="$(command -v op || true)"
+COMPOSE_CMD=()
 if [[ -n "${COMPOSE_ENV_FILE}" ]]; then
-  COMPOSE_CMD+=(--env-file "${COMPOSE_ENV_FILE}")
+  COMPOSE_CMD=(docker compose --env-file "${COMPOSE_ENV_FILE}")
+elif [[ -n "${COMPOSE_TEMPLATE_FILE}" && -n "${OP_BIN}" ]]; then
+  COMPOSE_CMD=(op run --env-file "${COMPOSE_TEMPLATE_FILE}" -- docker compose)
+else
+  COMPOSE_CMD=(docker compose)
 fi
 SERVICES=(app migrate essentia ga-service download-worker)
 MIN_FREE_GB="${MIN_FREE_GB:-5}"
@@ -61,8 +73,10 @@ git checkout "${TAG}"
 
 if [[ -n "${COMPOSE_ENV_FILE}" ]]; then
   echo "==> Using env file ${COMPOSE_ENV_FILE}"
+elif [[ -n "${COMPOSE_TEMPLATE_FILE}" && -n "${OP_BIN}" ]]; then
+  echo "==> Using 1Password template ${COMPOSE_TEMPLATE_FILE}"
 else
-  echo "WARNING: no .env file found at repo root or my-collection-search/.env"
+  echo "WARNING: no .env or usable .env.tpl found"
 fi
 
 echo "==> Checking disk space"
