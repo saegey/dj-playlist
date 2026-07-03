@@ -2,6 +2,7 @@ services:
   app:
     build:
       context: my-collection-search
+      target: runner
     labels:
       - "deployed.revision=*${GIT_SHA:-dev}"  # change on every commit -> forces recreate
     environment:
