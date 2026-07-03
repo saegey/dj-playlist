@@ -5,6 +5,7 @@ services:
   app:
     environment:
       NODE_ENV: development
+      NPM_CONFIG_CACHE: /tmp/.npm
       # Make file watching reliable in Docker on macOS/Windows
       WATCHPACK_POLLING: "true"
       WATCHPACK_POLLING_INTERVAL: "700"
@@ -13,8 +14,8 @@ services:
     volumes:
       # Mount source code for live reload
       - ./my-collection-search:/app
-      # Keep node_modules inside the container image
-      - /app/node_modules
+      # Named volume keeps node_modules isolated from the host and independent of the image
+      - dev_node_modules:/app/node_modules
       - ${APP_AUDIO_MOUNT:-music_data:/app/audio}
       - ${APP_ALBUM_COVERS_SRC:-album_covers}:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
@@ -34,3 +35,6 @@ services:
       - ${WORKER_ALBUM_COVERS_SRC:-album_covers}:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
       - ./my-collection-search/cookies:/app/cookies:ro # Mount local cookies directory as read-only
+
+volumes:
+  dev_node_modules:

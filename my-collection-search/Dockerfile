@@ -36,7 +36,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       docker-ce-cli
 
 RUN groupadd --system --gid 1001 nodejs && \
-    useradd --system --uid 1001 --gid nodejs nextjs
+    useradd --system --uid 1001 --gid nodejs -m nextjs
 
 WORKDIR /app
 
