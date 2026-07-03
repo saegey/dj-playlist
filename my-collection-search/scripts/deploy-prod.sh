@@ -13,6 +13,17 @@ cd "${PROJECT_DIR}"
 
 PROJECT_NAME="${PROJECT_NAME:-dj-playlist}"
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.prod.yml)
+if [[ -f "${PROJECT_DIR}/.env" ]]; then
+  COMPOSE_ENV_FILE="${PROJECT_DIR}/.env"
+elif [[ -f "${PROJECT_DIR}/my-collection-search/.env" ]]; then
+  COMPOSE_ENV_FILE="${PROJECT_DIR}/my-collection-search/.env"
+else
+  COMPOSE_ENV_FILE=""
+fi
+COMPOSE_CMD=(docker compose)
+if [[ -n "${COMPOSE_ENV_FILE}" ]]; then
+  COMPOSE_CMD+=(--env-file "${COMPOSE_ENV_FILE}")
+fi
 SERVICES=(app migrate essentia ga-service download-worker)
 MIN_FREE_GB="${MIN_FREE_GB:-5}"
 PGUSER="${POSTGRES_USER:-djplaylist}"
@@ -32,13 +43,13 @@ check_disk_space() {
 wait_for_db_ready() {
   local timeout_s=120 elapsed=0
   echo "==> Waiting for PostgreSQL readiness"
-  until IMAGE_TAG="${TAG}" docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" exec -T db \
+  until IMAGE_TAG="${TAG}" "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" exec -T db \
     pg_isready -U "${PGUSER}" -d "${PGDB}" >/dev/null 2>&1; do
     sleep 2
     elapsed=$((elapsed + 2))
     if (( elapsed >= timeout_s )); then
       echo "ERROR: Postgres did not become ready within ${timeout_s}s"
-      IMAGE_TAG="${TAG}" docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" logs --tail=200 db || true
+      IMAGE_TAG="${TAG}" "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" logs --tail=200 db || true
       exit 1
     fi
   done
@@ -48,20 +59,26 @@ echo "==> Fetching tags and checking out ${TAG}"
 git fetch --tags
 git checkout "${TAG}"
 
+if [[ -n "${COMPOSE_ENV_FILE}" ]]; then
+  echo "==> Using env file ${COMPOSE_ENV_FILE}"
+else
+  echo "WARNING: no .env file found at repo root or my-collection-search/.env"
+fi
+
 echo "==> Checking disk space"
 check_disk_space
 
 echo "==> Pulling images for ${TAG}"
-IMAGE_TAG="${TAG}" docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" pull "${SERVICES[@]}"
+IMAGE_TAG="${TAG}" "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" pull "${SERVICES[@]}"
 
 echo "==> Starting database dependencies"
-IMAGE_TAG="${TAG}" docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d db redis
+IMAGE_TAG="${TAG}" "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d db redis
 wait_for_db_ready
 
 echo "==> Running migrations"
-IMAGE_TAG="${TAG}" docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" run --rm --use-aliases migrate
+IMAGE_TAG="${TAG}" "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" run --rm --use-aliases migrate
 
 echo "==> Starting services"
-IMAGE_TAG="${TAG}" docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d --remove-orphans
+IMAGE_TAG="${TAG}" "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d --remove-orphans
 
 echo "==> Deployment complete"
