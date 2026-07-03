@@ -1,5 +1,6 @@
-import os, subprocess, json, tempfile, requests
+import os, subprocess, json, tempfile, requests, re
 import socket, ipaddress
+
 from urllib.parse import urlparse
 from fastapi import FastAPI, Request
 
@@ -43,7 +44,9 @@ async def analyze(request: Request):
     if not resp.ok:
         return {"error": f"Couldn’t download file: {resp.status_code}"}
 
-    suffix = os.path.splitext(url)[1] or ".mp3"
+    parsed = urlparse(url)
+    path_ext = os.path.splitext(os.path.basename(parsed.path))[1].lower()
+    suffix = path_ext if re.fullmatch(r"\.[a-z0-9]{1,10}", path_ext) else ".mp3"
     tf = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
     tf.write(resp.content)
     tf.flush(); tf.close()
