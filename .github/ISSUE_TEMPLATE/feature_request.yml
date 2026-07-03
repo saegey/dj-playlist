@@ -1,0 +1,42 @@
+name: Feature request
+description: Suggest an improvement to the product, developer workflow, or docs
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Please focus on the problem and the desired outcome.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What problem or limitation are you running into?
+      placeholder: I'm trying to do `...` but currently `...`
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like to happen?
+      placeholder: Describe the behavior, UX, API, or workflow you want.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you consider?
+  - type: textarea
+    id: scope
+    attributes:
+      label: Affected area
+      description: Which parts of the project would this touch?
+      placeholder: e.g. app UI, API routes, search, playlist generation, worker, docs, CLI
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Add examples, screenshots, links, or related issues.
