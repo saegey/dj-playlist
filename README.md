@@ -173,11 +173,40 @@ Pre-built images are x86_64 only. Mac users build locally from source.
 #### Remote deploy (via SSH)
 
 ```bash
-just release-localbuild   # tag + deploy to beelink.tail0bdbb0.ts.net (builds on server)
+just release-localbuild   # tag + deploy to PROD_HOST (builds on server)
 just release              # tag + push images to registry + deploy
 ```
 
 Set `PROD_HOST` and `PROD_STACK_DIR` in your environment or justfile to match your server.
+
+### Local Overrides
+
+The public [`justfile`](/Users/saegey/Projects/dj-playlist/justfile:1) uses generic defaults so the repo stays portable. Personal or operator-specific values should be supplied through environment variables rather than committed into the repo.
+
+Recommended setup:
+
+```bash
+cp .envrc.example .envrc
+direnv allow
+```
+
+Common overrides:
+
+```bash
+export REGISTRY=ghcr.io/your-org
+export PROD_HOST=deploy@example.com
+export PROD_STACK_DIR=/opt/stacks/groovenet
+export SSH_USER=deploy
+export OP_ENV_PREFIX='op run --env-file=my-collection-search/.env.tpl --'
+export MUSIC_NFS_HOST=nas.local
+export MUSIC_NFS_PATH=/srv/music
+export ASSET_SYNC_HOST=deploy@example.com
+export ALBUM_COVERS_LOCAL_DIR="$HOME/groovenet-covers"
+```
+
+Operator-only helper tasks such as NFS music mounting and asset sync now no-op when their related environment variables are unset.
+
+If you do not use `direnv`, you can place the same exports in your shell profile such as `~/.zshrc`.
 
 ## Environment Variables
 

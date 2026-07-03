@@ -2,22 +2,24 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 
 compose_dir := env_var_or_default("COMPOSE_DIR", "my-collection-search")
 buildkit_env := env_var_or_default("BUILDKIT_ENV", "DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1")
-registry := env_var_or_default("REGISTRY", "ghcr.io/saegey")
+registry := env_var_or_default("REGISTRY", "ghcr.io/your-org")
 platform := env_var_or_default("PLATFORM", "linux/amd64")
-prod_host := env_var_or_default("PROD_HOST", "beelink.tail0bdbb0.ts.net")
-prod_stack_dir := env_var_or_default("PROD_STACK_DIR", "/opt/stacks/dj-playlist")
-ssh_user := env_var_or_default("SSH_USER", "saegey")
+prod_host := env_var_or_default("PROD_HOST", "your-server.example.com")
+prod_stack_dir := env_var_or_default("PROD_STACK_DIR", "/opt/stacks/groovenet")
+ssh_user := env_var_or_default("SSH_USER", "deploy")
 tag_prefix := env_var_or_default("TAG_PREFIX", "v")
 tag_time := `date -u +%Y%m%dT%H%M%SZ`
 tag := env_var_or_default("TAG", tag_prefix + tag_time)
 album_covers_remote_host := env_var_or_default("ALBUM_COVERS_REMOTE_HOST", ssh_user + "@" + prod_host)
-album_covers_remote_path := env_var_or_default("ALBUM_COVERS_REMOTE_PATH", "/var/lib/docker/volumes/teststack_album_covers/_data")
-album_covers_local_dir := env_var_or_default("ALBUM_COVERS_LOCAL_DIR", "/Users/saegey/groovenet-covers")
-beelink_host := env_var_or_default("BEELINK_HOST", "saegey@100.117.118.15")
-music_mount := env_var_or_default("MUSIC_MOUNT", "/Volumes/music")
+album_covers_remote_path := env_var_or_default("ALBUM_COVERS_REMOTE_PATH", "/var/lib/docker/volumes/groovenet_album_covers/_data")
+album_covers_local_dir := env_var_or_default("ALBUM_COVERS_LOCAL_DIR", env_var_or_default("HOME", "") + "/groovenet-covers")
+asset_sync_host := env_var_or_default("ASSET_SYNC_HOST", "")
+music_mount := env_var_or_default("MUSIC_MOUNT", env_var_or_default("HOME", "") + "/groovenet-music")
+music_nfs_host := env_var_or_default("MUSIC_NFS_HOST", "")
+music_nfs_path := env_var_or_default("MUSIC_NFS_PATH", "/srv/music")
+op_env := env_var_or_default("OP_ENV_PREFIX", "")
 compose_cmd := `if docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; fi`
 platform_override := if os() == "macos" { "-f " + compose_dir + "/docker-compose.mac.yml" } else { "" }
-op_env := "op run --env-file=" + compose_dir + "/.env.tpl --"
 mise_exec := "mise exec --"
 
 default:
@@ -76,12 +78,16 @@ tag-push: tag
   git push origin {{tag}}
 
 mount-music:
+  @if [ -z "{{music_nfs_host}}" ]; then \
+    echo "→ MUSIC_NFS_HOST is unset; skipping NFS mount"; \
+    exit 0; \
+  fi
   @sudo mkdir -p {{music_mount}}
   @if mount | grep -q '{{music_mount}}'; then \
     echo "→ {{music_mount}} already mounted"; \
   else \
-    echo "→ Mounting beelink.local:/srv/music at {{music_mount}}..."; \
-    sudo mount -t nfs -o resvport,ro beelink:/srv/music {{music_mount}}; \
+    echo "→ Mounting {{music_nfs_host}}:{{music_nfs_path}} at {{music_mount}}..."; \
+    sudo mount -t nfs -o resvport,ro {{music_nfs_host}}:{{music_nfs_path}} {{music_mount}}; \
   fi
 
 unmount-music:
@@ -93,7 +99,11 @@ unmount-music:
   fi
 
 sync-dev-assets:
-  BEELINK_HOST={{beelink_host}} COVERS_LOCAL_DIR={{album_covers_local_dir}} \
+  @if [ -z "{{asset_sync_host}}" ]; then \
+    echo "→ ASSET_SYNC_HOST is unset; skipping asset sync"; \
+    exit 0; \
+  fi
+  BEELINK_HOST={{asset_sync_host}} COVERS_LOCAL_DIR={{album_covers_local_dir}} \
     ./{{compose_dir}}/scripts/sync-dev-assets.sh
 
 compose-dev: check-compose mount-music sync-dev-assets
@@ -238,15 +248,14 @@ release: tag-push push-images deploy-prod-remote
 deploy-prod-remote-localbuild:
   ssh {{prod_host}} 'set -euo pipefail; cd {{prod_stack_dir}}; if [ -x ./scripts/deploy-prod-localbuild.sh ]; then ./scripts/deploy-prod-localbuild.sh {{tag}}; elif [ -x ./my-collection-search/scripts/deploy-prod-localbuild.sh ]; then ./my-collection-search/scripts/deploy-prod-localbuild.sh {{tag}}; else echo "deploy-prod-localbuild.sh not found"; exit 127; fi'
 
-release-localbuild server="vinyl": tag-push
+release-localbuild host="{{prod_host}}" stack_dir="{{prod_stack_dir}}": tag-push
   #!/usr/bin/env bash
   set -euo pipefail
-  case "{{server}}" in
-    vinyl)   host=beelink.tail0bdbb0.ts.net;   dir=/opt/stacks/dj-playlist ;;
-    beelink) host=100.117.118.15; dir=/srv/docker/groovenet ;;
-    *) echo "Unknown server: {{server}}. Known servers: vinyl, beelink"; exit 1 ;;
-  esac
-  TAG="{{tag}}" just prod_host="$host" prod_stack_dir="$dir" deploy-prod-remote-localbuild
+  if [ "{{host}}" = "your-server.example.com" ] || [ -z "{{host}}" ]; then
+    echo "Set PROD_HOST or pass an explicit host, e.g. just release-localbuild host=deploy@example.com stack_dir=/opt/stacks/groovenet"
+    exit 1
+  fi
+  TAG="{{tag}}" just prod_host="{{host}}" prod_stack_dir="{{stack_dir}}" deploy-prod-remote-localbuild
 
 migrate-up: check-compose
   {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml run --rm migrate

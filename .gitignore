@@ -6,6 +6,7 @@ packages/*/build/
 mcp-server/build/
 discogs_exports/
 .env
+.envrc
 .DS_Store
 tmp/
 openapi-generated.json
