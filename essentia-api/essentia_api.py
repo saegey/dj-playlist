@@ -1,7 +1,33 @@
 import os, subprocess, json, tempfile, requests
+import socket, ipaddress
+from urllib.parse import urlparse
 from fastapi import FastAPI, Request
 
 app = FastAPI()
+
+def is_public_http_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        if not parsed.hostname:
+            return False
+
+        infos = socket.getaddrinfo(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
+        for info in infos:
+            ip = ipaddress.ip_address(info[4][0])
+            if (
+                ip.is_private
+                or ip.is_loopback
+                or ip.is_link_local
+                or ip.is_multicast
+                or ip.is_reserved
+                or ip.is_unspecified
+            ):
+                return False
+        return True
+    except Exception:
+        return False
 
 @app.post("/analyze")
 async def analyze(request: Request):
@@ -9,9 +35,11 @@ async def analyze(request: Request):
     url = data.get("filename")           # really a URL now
     if not url:
         return {"error": "No URL provided"}
+    if not is_public_http_url(url):
+        return {"error": "Invalid or disallowed URL"}
 
     # download it to a temp file
-    resp = requests.get(url)
+    resp = requests.get(url, allow_redirects=False, timeout=10)
     if not resp.ok:
         return {"error": f"Couldn’t download file: {resp.status_code}"}
 
