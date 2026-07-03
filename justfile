@@ -241,12 +241,12 @@ deploy-prod-local:
   cd {{app_dir}} && ./scripts/deploy-prod.sh {{tag}}
 
 deploy-prod-remote:
-  ssh {{prod_host}} 'set -euo pipefail; cd {{prod_stack_dir}}; if [ -x ./scripts/deploy-prod.sh ]; then ./scripts/deploy-prod.sh {{tag}}; elif [ -x ./my-collection-search/scripts/deploy-prod.sh ]; then ./my-collection-search/scripts/deploy-prod.sh {{tag}}; else echo "deploy-prod.sh not found"; exit 127; fi'
+  ssh {{prod_host}} 'set -euo pipefail; cd {{prod_stack_dir}}; if [ -x ./my-collection-search/scripts/deploy-prod.sh ]; then ./my-collection-search/scripts/deploy-prod.sh {{tag}}; elif [ -x ./scripts/deploy-prod.sh ]; then ./scripts/deploy-prod.sh {{tag}}; else echo "deploy-prod.sh not found"; exit 127; fi'
 
 release: tag-push push-images deploy-prod-remote
 
 deploy-prod-remote-localbuild:
-  ssh {{prod_host}} 'set -euo pipefail; cd {{prod_stack_dir}}; if [ -x ./scripts/deploy-prod-localbuild.sh ]; then ./scripts/deploy-prod-localbuild.sh {{tag}}; elif [ -x ./my-collection-search/scripts/deploy-prod-localbuild.sh ]; then ./my-collection-search/scripts/deploy-prod-localbuild.sh {{tag}}; else echo "deploy-prod-localbuild.sh not found"; exit 127; fi'
+  ssh {{prod_host}} 'set -euo pipefail; cd {{prod_stack_dir}}; if [ -x ./my-collection-search/scripts/deploy-prod-localbuild.sh ]; then ./my-collection-search/scripts/deploy-prod-localbuild.sh {{tag}}; elif [ -x ./scripts/deploy-prod-localbuild.sh ]; then ./scripts/deploy-prod-localbuild.sh {{tag}}; else echo "deploy-prod-localbuild.sh not found"; exit 127; fi'
 
 release-localbuild host="{{prod_host}}" stack_dir="{{prod_stack_dir}}": tag-push
   #!/usr/bin/env bash
