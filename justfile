@@ -257,6 +257,18 @@ release-localbuild host="{{prod_host}}" stack_dir="{{prod_stack_dir}}": tag-push
   fi
   TAG="{{tag}}" just prod_host="{{host}}" prod_stack_dir="{{stack_dir}}" deploy-prod-remote-localbuild
 
+deploy-prod-remote-localbuild-vinyl:
+  just prod_host="beelink.tail0bdbb0.ts.net" prod_stack_dir="/opt/stacks/dj-playlist" deploy-prod-remote-localbuild
+
+deploy-prod-remote-localbuild-beelink:
+  just prod_host="100.117.118.15" prod_stack_dir="/srv/docker/groovenet" deploy-prod-remote-localbuild
+
+release-localbuild-vinyl: tag-push
+  TAG="{{tag}}" just prod_host="beelink.tail0bdbb0.ts.net" prod_stack_dir="/opt/stacks/dj-playlist" deploy-prod-remote-localbuild
+
+release-localbuild-beelink: tag-push
+  TAG="{{tag}}" just prod_host="100.117.118.15" prod_stack_dir="/srv/docker/groovenet" deploy-prod-remote-localbuild
+
 migrate-up: check-compose
   {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml run --rm migrate
 
