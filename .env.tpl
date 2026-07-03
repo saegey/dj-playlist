@@ -10,7 +10,7 @@ NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 JOB_TTL_ACTIVE_SECONDS=604800
 JOB_TTL_TERMINAL_SECONDS=259200
 
-# Secrets from 1Password (op://Vault/Item/Field)
+# Secrets from 1Password
 POSTGRES_PASSWORD=op://Homelab/groovenet/POSTGRES_PASSWORD
 DATABASE_URL=op://Homelab/groovenet/DATABASE_URL
 OPENAI_API_KEY=op://Homelab/groovenet/OPENAI_API_KEY
