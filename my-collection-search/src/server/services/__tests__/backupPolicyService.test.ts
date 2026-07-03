@@ -5,7 +5,6 @@ import path from "node:path";
 import yaml from "yaml";
 
 let tmpDir: string;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let service: any;
 
 beforeEach(async () => {
