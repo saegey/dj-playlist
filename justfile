@@ -33,7 +33,7 @@ bootstrap-tools:
   mise install
 
 bootstrap-node:
-  {{mise_exec}} npm install
+  {{mise_exec}} npm install --workspaces
   {{mise_exec}} npm install --prefix my-collection-search
 
 bootstrap-python:
@@ -47,6 +47,7 @@ test-web:
   {{mise_exec}} npm test --prefix my-collection-search
 
 test-packages:
+  {{mise_exec}} npm install --workspace=@groovenet/client
   {{mise_exec}} npm run test --workspace=packages/groovenet-client
 
 lint:
@@ -146,12 +147,69 @@ rebuild-download-worker: check-compose
   {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml build --no-cache download-worker
   {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml up -d download-worker
 
+rebuild-containers services="app essentia ga-service download-worker":
+  {{buildkit_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml build {{services}}
+
+rebuild-containers-no-cache services="app essentia ga-service download-worker":
+  {{buildkit_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml build --no-cache {{services}}
+
+rebuild-up-containers services="app essentia ga-service download-worker":
+  {{buildkit_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml build {{services}}
+  {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml up -d {{services}}
+
 build-all: build-app build-essentia build-ga-service build-download-worker
 
 build-packages:
   npm run build --workspace=packages/groovenet-client
   npm run build --workspace=packages/groovenet-cli
   npm run build --workspace=mcp-server
+
+deps-check-app cooldown="14" target="minor":
+  cooldown_value="{{cooldown}}"
+  target_value="{{target}}"
+  {{mise_exec}} npx -y npm-check-updates \
+    --packageFile my-collection-search/package.json \
+    --target "${target_value#target=}" \
+    --cooldown "${cooldown_value#cooldown=}"
+
+deps-update-app cooldown="14" target="minor":
+  cooldown_value="{{cooldown}}"
+  target_value="{{target}}"
+  {{mise_exec}} npx -y npm-check-updates \
+    --packageFile my-collection-search/package.json \
+    --target "${target_value#target=}" \
+    --cooldown "${cooldown_value#cooldown=}" \
+    --upgrade
+  {{mise_exec}} npm install --prefix my-collection-search
+
+deps-check-python cooldown_days="14":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cooldown_days_value="{{cooldown_days}}"
+  cooldown_days_value="${cooldown_days_value#cooldown_days=}"
+  cutoff="$(python3 -c 'from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc) - timedelta(days=int("'"$cooldown_days_value"'" ))).date().isoformat())')"
+  for service in ga-service essentia-api download-worker; do
+    echo "==> $service (excluding releases newer than $cutoff)"
+    (
+      cd "$service"
+      {{mise_exec}} uv lock --upgrade --exclude-newer "$cutoff" --dry-run
+    )
+  done
+
+deps-update-python cooldown_days="14":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cooldown_days_value="{{cooldown_days}}"
+  cooldown_days_value="${cooldown_days_value#cooldown_days=}"
+  cutoff="$(python3 -c 'from datetime import datetime, timedelta, timezone; print((datetime.now(timezone.utc) - timedelta(days=int("'"$cooldown_days_value"'" ))).date().isoformat())')"
+  for service in ga-service essentia-api download-worker; do
+    echo "==> $service (excluding releases newer than $cutoff)"
+    (
+      cd "$service"
+      {{mise_exec}} uv lock --upgrade --exclude-newer "$cutoff"
+      {{mise_exec}} uv sync --frozen
+    )
+  done
 
 generate-spec:
   npm run openapi:generate-spec --workspace=my-collection-search
