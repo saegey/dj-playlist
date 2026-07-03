@@ -33,7 +33,7 @@ bootstrap-tools:
   mise install
 
 bootstrap-node:
-  {{mise_exec}} npm install
+  {{mise_exec}} npm install --workspaces
   {{mise_exec}} npm install --prefix my-collection-search
 
 bootstrap-python:
@@ -47,6 +47,7 @@ test-web:
   {{mise_exec}} npm test --prefix my-collection-search
 
 test-packages:
+  {{mise_exec}} npm install --workspace=@groovenet/client
   {{mise_exec}} npm run test --workspace=packages/groovenet-client
 
 lint:

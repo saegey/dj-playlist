@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type * as ManifestService from "../discogsManifestService";
+import type { DiscogsRelease } from "@/types/track";
 
 let tmpDir: string;
 let exportsDir: string;
@@ -31,7 +32,7 @@ function writeJson(filePath: string, data: unknown) {
   fs.writeFileSync(filePath, JSON.stringify(data), "utf8");
 }
 
-function makeAlbum(overrides: Partial<ManifestService.DiscogsRelease> = {}): ManifestService.DiscogsRelease {
+function makeAlbum(overrides: Partial<DiscogsRelease> = {}): DiscogsRelease {
   return {
     id: 100,
     title: "Test Album",
@@ -64,7 +65,7 @@ function makeAlbum(overrides: Partial<ManifestService.DiscogsRelease> = {}): Man
     country: "UK",
     formats: [{ name: "Vinyl" }] as unknown as string,
     ...overrides,
-  } as ManifestService.DiscogsRelease;
+  } as DiscogsRelease;
 }
 
 // ─── getManifestPath ──────────────────────────────────────────────────────────
