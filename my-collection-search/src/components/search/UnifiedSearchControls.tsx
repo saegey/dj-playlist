@@ -15,6 +15,7 @@ type UnifiedSearchControlsProps = {
   onFriendChange?: (friendId: number) => void;
   includeAllOption?: boolean;
   placeholder?: string;
+  compactDesktop?: boolean;
   desktopControls?: React.ReactNode;
   mobilePrimaryControl?: React.ReactNode;
   mobileSecondaryControls?: React.ReactNode;
@@ -29,6 +30,7 @@ export default function UnifiedSearchControls({
   onFriendChange,
   includeAllOption = false,
   placeholder = "Search...",
+  compactDesktop = false,
   desktopControls,
   mobilePrimaryControl,
   mobileSecondaryControls,
@@ -62,13 +64,14 @@ export default function UnifiedSearchControls({
             placeholder={placeholder}
           />
         </InputGroup>
-        <Box width="200px" flexShrink={0}>
+        <Box flexShrink={0} width={compactDesktop ? "auto" : "200px"}>
           <UsernameSelect
             usernames={friends}
             includeAllOption={includeAllOption}
             value={selectedFriend}
             onChange={onFriendChange}
             size="md"
+            iconOnlyMobile={compactDesktop}
           />
         </Box>
         {desktopControls ? <Flex gap={2} align="center">{desktopControls}</Flex> : null}

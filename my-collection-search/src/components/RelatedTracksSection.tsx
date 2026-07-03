@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Box, Button, Flex, Heading, Spinner, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, Heading, Spinner, Text, useBreakpointValue } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import type { Track } from "@/types/track";
 import TrackResult from "@/components/TrackResult";
@@ -37,7 +37,8 @@ function normalizeArtwork(track: Track): Track {
 }
 
 export default function RelatedTracksSection({ track }: Props) {
-  const [showAll, setShowAll] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const initialCount = useBreakpointValue({ base: 3, md: 20 }) ?? 3;
 
   const recQuery = useRecommendationsQuery([track], 60);
   const similarQuery = useSimilarTracks({
@@ -138,68 +139,69 @@ export default function RelatedTracksSection({ track }: Props) {
     [merged, hydratedByKey]
   );
 
-  const displayTracks = showAll ? resolved.slice(0, 60) : resolved.slice(0, 20);
+  const displayTracks = expanded ? resolved.slice(0, 60) : resolved.slice(0, initialCount);
   const isLoading = recQuery.isLoading || similarQuery.isLoading || vibeQuery.isLoading;
   const hasError = recQuery.error || similarQuery.error || vibeQuery.error;
 
   return (
-    <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
-      <Flex justify="space-between" align="center" mb={3} gap={3} wrap="wrap">
-        <Heading size="sm">Related Tracks</Heading>
-        <Text fontSize="sm" color="fg.muted">
-          Combined from AI recommendations, similar tracks, and similar vibes
-        </Text>
+    <Box mt={4}>
+      <Flex align="center" justify="space-between" mb={3} gap={2}>
+        <Box>
+          <Heading size="sm">Related Tracks</Heading>
+          <Text fontSize="xs" color="fg.muted" display={{ base: "none", md: "block" }} mt={0.5}>
+            Combined from AI recommendations, similar tracks, and similar vibes
+          </Text>
+        </Box>
+        {!isLoading && !hasError && merged.length > 0 && (
+          <Text fontSize="xs" color="fg.muted" flexShrink={0}>
+            {displayTracks.length} of {merged.length}
+          </Text>
+        )}
       </Flex>
 
       {isLoading ? (
         <Flex align="center" gap={3} py={4}>
           <Spinner size="sm" />
-          <Text>Loading related tracks...</Text>
+          <Text fontSize="sm">Loading related tracks...</Text>
         </Flex>
       ) : hasError ? (
-        <Text color="red.500">
-          Could not load related tracks from all sources.
-        </Text>
+        <Text color="red.500" fontSize="sm">Could not load related tracks.</Text>
       ) : displayTracks.length === 0 ? (
-        <Text color="fg.muted">No related tracks found.</Text>
+        <Text color="fg.muted" fontSize="sm">No related tracks found.</Text>
       ) : (
         <>
-          <Text fontSize="sm" color="fg.muted" mb={3}>
-            Showing {displayTracks.length} of {merged.length}
-          </Text>
-
           {displayTracks.map((item) => (
-            <Box key={`${item.track_id}-${item.friend_id}`} mb={2}>
-              <TrackResult
-                track={item}
-                showUsername={true}
-                showRating={true}
-                buttons={<TrackActionsMenu track={item} />}
-                footer={
-                  <Flex gap={1} align="center">
-                    {item._sources.includes("ai") && (
-                      <Badge colorPalette="purple" size="sm">AI</Badge>
-                    )}
-                    {item._sources.includes("similar") && (
-                      <Badge colorPalette="blue" size="sm">Similar</Badge>
-                    )}
-                    {item._sources.includes("vibe") && (
-                      <Badge colorPalette="cyan" size="sm">Vibe</Badge>
-                    )}
-                  </Flex>
-                }
-              />
-            </Box>
+            <TrackResult
+              key={`${item.track_id}-${item.friend_id}`}
+              track={item}
+              showUsername={true}
+              showRating={true}
+              buttons={<TrackActionsMenu track={item} />}
+              footer={
+                <Flex gap={1} align="center">
+                  {item._sources.includes("ai") && (
+                    <Badge colorPalette="purple" size="sm">AI</Badge>
+                  )}
+                  {item._sources.includes("similar") && (
+                    <Badge colorPalette="blue" size="sm">Similar</Badge>
+                  )}
+                  {item._sources.includes("vibe") && (
+                    <Badge colorPalette="cyan" size="sm">Vibe</Badge>
+                  )}
+                </Flex>
+              }
+            />
           ))}
 
-          {merged.length > 20 && (
+          {merged.length > initialCount && (
             <Button
               size="sm"
               variant="outline"
               mt={2}
-              onClick={() => setShowAll((v) => !v)}
+              w="full"
+              onClick={() => setExpanded((v) => !v)}
             >
-              {showAll ? "Show Top 20" : "Show More"}
+              {expanded ? `Show fewer` : `Show all ${merged.length}`}
             </Button>
           )}
         </>

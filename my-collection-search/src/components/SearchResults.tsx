@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Box, Text, IconButton, Flex, Spinner } from "@chakra-ui/react";
-import { LuLayoutGrid, LuTable } from "react-icons/lu";
+import { LuLayoutGrid, LuTable, LuListChecks } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import posthog from "posthog-js";
 import TrackSelectionBar from "@/components/TrackSelectionBar";
@@ -171,6 +171,15 @@ const SearchResults: React.FC = () => {
     clearSelection();
   }, [downloadableTracks, clearSelection]);
 
+  const [selectMode, setSelectMode] = React.useState(false);
+
+  const toggleSelectMode = React.useCallback(() => {
+    setSelectMode((prev) => {
+      if (prev) clearSelection();
+      return !prev;
+    });
+  }, [clearSelection]);
+
   // View mode state with localStorage persistence
   const [viewMode, setViewMode] = React.useState<"card" | "table">("card");
 
@@ -295,8 +304,26 @@ const SearchResults: React.FC = () => {
           const next = friends.find((f) => f.id === friendId) || null;
           setFriend(next);
         }}
+        mobilePrimaryControl={
+          <IconButton
+            aria-label="Select tracks"
+            size="sm"
+            variant={selectMode ? "solid" : "ghost"}
+            onClick={toggleSelectMode}
+          >
+            <LuListChecks />
+          </IconButton>
+        }
         desktopControls={
           <>
+            <IconButton
+              aria-label="Select tracks"
+              size="sm"
+              variant={selectMode ? "solid" : "ghost"}
+              onClick={toggleSelectMode}
+            >
+              <LuListChecks />
+            </IconButton>
             <IconButton
               aria-label="Card view"
               size="sm"
@@ -314,26 +341,6 @@ const SearchResults: React.FC = () => {
               <LuTable />
             </IconButton>
           </>
-        }
-        mobilePrimaryControl={
-          <Flex gap={1} flexShrink={0}>
-            <IconButton
-              aria-label="Card view"
-              size="sm"
-              variant={viewMode === "card" ? "solid" : "ghost"}
-              onClick={() => handleViewModeChange("card")}
-            >
-              <LuLayoutGrid />
-            </IconButton>
-            <IconButton
-              aria-label="Table view"
-              size="sm"
-              variant={viewMode === "table" ? "solid" : "ghost"}
-              onClick={() => handleViewModeChange("table")}
-            >
-              <LuTable />
-            </IconButton>
-          </Flex>
         }
       />
 
@@ -379,8 +386,8 @@ const SearchResults: React.FC = () => {
                   trackId={info.trackId}
                   friendId={info.friendId}
                   playlistCount={playlistCounts[key]}
-                  isSelected={selectedTracks.has(key)}
-                  onToggleSelect={() => toggleTrack(info.trackId, info.friendId)}
+                  isSelected={selectMode ? selectedTracks.has(key) : undefined}
+                  onToggleSelect={selectMode ? () => toggleTrack(info.trackId, info.friendId) : undefined}
                 />
               );
             })
@@ -413,7 +420,7 @@ const SearchResults: React.FC = () => {
         loadedCount={trackInfo.length}
         downloadableCount={downloadableTracks.length}
         onSelectAll={selectAll}
-        onClear={clearSelection}
+        onClear={() => { clearSelection(); setSelectMode(false); }}
         onEnrich={handleEnrich}
         onDownloadAudio={handleDownloadAudio}
       />

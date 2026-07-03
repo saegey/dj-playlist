@@ -647,6 +647,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
               startIndex: 0,
             })
             }
+          playlistName={playlistName || undefined}
           />
         </Flex>
       </Flex>

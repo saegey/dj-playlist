@@ -6,10 +6,9 @@ import {
   Spinner,
   Button,
   IconButton,
-  NativeSelectRoot,
-  NativeSelectField,
+  Menu,
 } from "@chakra-ui/react";
-import { LuLayoutGrid, LuTable } from "react-icons/lu";
+import { LuArrowUpDown } from "react-icons/lu";
 import { useSearchParams, useRouter } from "next/navigation";
 import AlbumSearchResults from "@/components/AlbumSearchResults";
 import PageContainer from "@/components/layout/PageContainer";
@@ -38,10 +37,6 @@ function AlbumsPageContent() {
     if (saved === "card" || saved === "table") setViewMode(saved);
   }, []);
 
-  const handleViewModeChange = (mode: "card" | "table") => {
-    setViewMode(mode);
-    localStorage.setItem("albumViewMode", mode);
-  };
   const [selectedFriendId, setSelectedFriendId] = React.useState<number | null>(
     searchParams.get("friend_id")
       ? parseInt(searchParams.get("friend_id")!)
@@ -69,15 +64,25 @@ function AlbumsPageContent() {
     return friends.find((f) => f.id === selectedFriendId) || null;
   }, [selectedFriendId, friends]);
 
-  const handleSearch = () => {
+  const buildParams = (overrides: Record<string, string | null> = {}) => {
     const params = new URLSearchParams();
-    if (query) params.set("q", query);
-    if (sort !== "date_added:desc") params.set("sort", sort);
-    if (selectedFriendId) params.set("friend_id", selectedFriendId.toString());
+    const effectiveQuery = overrides.q !== undefined ? overrides.q : query;
+    const effectiveSort = overrides.sort !== undefined ? overrides.sort : sort;
+    const effectiveFriendId = overrides.friend_id !== undefined ? overrides.friend_id : selectedFriendId?.toString() ?? null;
+    if (effectiveQuery) params.set("q", effectiveQuery);
+    if (effectiveSort && effectiveSort !== "date_added:desc") params.set("sort", effectiveSort);
+    if (effectiveFriendId) params.set("friend_id", effectiveFriendId);
     if (missingLibraryIdentifier) params.set("missing_library_identifier", "1");
     if (missingLocalCoverArtUrl) params.set("missing_local_cover_art_url", "1");
     if (missingAudio) params.set("missing_audio", "1");
-    router.push(`/albums?${params.toString()}`);
+    return params;
+  };
+
+  const handleSearch = () => router.push(`/albums?${buildParams().toString()}`);
+
+  const handleSortChange = (newSort: string) => {
+    setSort(newSort);
+    router.push(`/albums?${buildParams({ sort: newSort }).toString()}`);
   };
 
   const handleFriendChange = (friendId: number) => {
@@ -138,24 +143,37 @@ function AlbumsPageContent() {
           onFriendChange={handleFriendChange}
           includeAllOption={true}
           placeholder="Search albums..."
+          compactDesktop={true}
           desktopControls={
             <>
-              <NativeSelectRoot width="220px" flexShrink={0}>
-                <NativeSelectField
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value)}
-                >
-                  <option value="date_added:desc">Recently Added</option>
-                  <option value="date_added:asc">Oldest First</option>
-                  <option value="year:desc">Newest Releases</option>
-                  <option value="year:asc">Oldest Releases</option>
-                  <option value="title:asc">Title (A-Z)</option>
-                  <option value="album_rating:desc">Highest Rated</option>
-                </NativeSelectField>
-              </NativeSelectRoot>
-              <Button colorScheme="blue" onClick={handleSearch} flexShrink={0}>
-                Search
-              </Button>
+              <Menu.Root>
+                <Menu.Trigger asChild>
+                  <IconButton aria-label="Sort" size="sm" variant="ghost">
+                    <LuArrowUpDown />
+                  </IconButton>
+                </Menu.Trigger>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    {[
+                      { value: "date_added:desc", label: "Recently Added" },
+                      { value: "date_added:asc", label: "Oldest First" },
+                      { value: "year:desc", label: "Newest Releases" },
+                      { value: "year:asc", label: "Oldest Releases" },
+                      { value: "title:asc", label: "Title (A-Z)" },
+                      { value: "album_rating:desc", label: "Highest Rated" },
+                    ].map((opt) => (
+                      <Menu.Item
+                        key={opt.value}
+                        value={opt.value}
+                        onSelect={() => handleSortChange(opt.value)}
+                        fontWeight={sort === opt.value ? "bold" : "normal"}
+                      >
+                        {opt.label}
+                      </Menu.Item>
+                    ))}
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Menu.Root>
               <Button variant="outline" flexShrink={0} onClick={() => router.push("/albums/add")}>
                 + Add Album
               </Button>
@@ -163,48 +181,35 @@ function AlbumsPageContent() {
           }
           mobilePrimaryControl={
             <Flex gap={1} align="center" flexShrink={0}>
-              <IconButton
-                aria-label="Card view"
-                size="sm"
-                variant={viewMode === "card" ? "solid" : "ghost"}
-                onClick={() => handleViewModeChange("card")}
-              >
-                <LuLayoutGrid />
-              </IconButton>
-              <IconButton
-                aria-label="Table view"
-                size="sm"
-                variant={viewMode === "table" ? "solid" : "ghost"}
-                onClick={() => handleViewModeChange("table")}
-              >
-                <LuTable />
-              </IconButton>
-              <Button
-                colorScheme="blue"
-                onClick={handleSearch}
-                flexShrink={0}
-                size="sm"
-                px={3}
-              >
-                Go
-              </Button>
+              <Menu.Root>
+                <Menu.Trigger asChild>
+                  <IconButton aria-label="Sort" size="sm" variant="ghost">
+                    <LuArrowUpDown />
+                  </IconButton>
+                </Menu.Trigger>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    {[
+                      { value: "date_added:desc", label: "Recently Added" },
+                      { value: "date_added:asc", label: "Oldest First" },
+                      { value: "year:desc", label: "Newest Releases" },
+                      { value: "year:asc", label: "Oldest Releases" },
+                      { value: "title:asc", label: "Title (A-Z)" },
+                      { value: "album_rating:desc", label: "Highest Rated" },
+                    ].map((opt) => (
+                      <Menu.Item
+                        key={opt.value}
+                        value={opt.value}
+                        onSelect={() => handleSortChange(opt.value)}
+                        fontWeight={sort === opt.value ? "bold" : "normal"}
+                      >
+                        {opt.label}
+                      </Menu.Item>
+                    ))}
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Menu.Root>
             </Flex>
-          }
-          mobileSecondaryControls={
-            <NativeSelectRoot size="sm" flex="1">
-              <NativeSelectField
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                fontSize="sm"
-              >
-                <option value="date_added:desc">Recently Added</option>
-                <option value="date_added:asc">Oldest First</option>
-                <option value="year:desc">Newest Releases</option>
-                <option value="year:asc">Oldest Releases</option>
-                <option value="title:asc">Title (A-Z)</option>
-                <option value="album_rating:desc">Highest Rated</option>
-              </NativeSelectField>
-            </NativeSelectRoot>
           }
         />
 
