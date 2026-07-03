@@ -32,6 +32,7 @@ export type AlbumResultProps = {
   albumRef?: { release_id: string; friend_id: number };
   buttons?: React.ReactNode;
   showEditFields?: boolean;
+  compact?: boolean;
 };
 
 export default function AlbumResult({
@@ -39,6 +40,7 @@ export default function AlbumResult({
   albumRef,
   buttons,
   showEditFields = false,
+  compact = false,
 }: AlbumResultProps) {
   const releaseId = albumRef?.release_id ?? album?.release_id ?? "";
   const friendId = albumRef?.friend_id ?? album?.friend_id ?? -1;
@@ -106,6 +108,58 @@ export default function AlbumResult({
   };
 
   if (!resolvedAlbum) return null;
+
+  if (compact) {
+    return (
+      <Flex
+        borderBottomWidth="1px"
+        py={2}
+        px={1}
+        gap={2}
+        align="center"
+        width="100%"
+      >
+        <Image
+          src={artworkSrc}
+          alt={resolvedAlbum.title}
+          width="40px"
+          height="40px"
+          objectFit="cover"
+          borderRadius="sm"
+          flexShrink={0}
+        />
+        <Box flex={1} minW={0}>
+          <Text fontSize="sm" fontWeight="bold" lineClamp={1}>
+            <Link
+              as={NextLink}
+              href={`/albums/${resolvedAlbum.release_id}?friend_id=${resolvedAlbum.friend_id}`}
+            >
+              {resolvedAlbum.title}
+            </Link>
+          </Text>
+          <Text fontSize="xs" color={mutedText} lineClamp={1}>
+            {resolvedAlbum.artist}
+            {resolvedAlbum.year ? ` · ${resolvedAlbum.year}` : ""}
+          </Text>
+        </Box>
+        <Flex gap={1} flexShrink={0}>
+          {resolvedAlbum.discogs_url && (
+            <Link href={resolvedAlbum.discogs_url} target="_blank" rel="noopener noreferrer">
+              <Button size="xs" variant="ghost" px={1}>
+                <Icon as={SiDiscogs} />
+              </Button>
+            </Link>
+          )}
+          {showEditFields && (
+            <Button size="xs" variant="outline" onClick={() => setIsEditing(true)} px={1}>
+              <Icon as={FiEdit} />
+            </Button>
+          )}
+          {buttons}
+        </Flex>
+      </Flex>
+    );
+  }
 
   const displayGenres = resolvedAlbum.genres ?? [];
   const displayStyles = resolvedAlbum.styles ?? [];

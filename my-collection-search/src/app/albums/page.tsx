@@ -5,9 +5,11 @@ import {
   Flex,
   Spinner,
   Button,
+  IconButton,
   NativeSelectRoot,
   NativeSelectField,
 } from "@chakra-ui/react";
+import { LuLayoutGrid, LuTable } from "react-icons/lu";
 import { useSearchParams, useRouter } from "next/navigation";
 import AlbumSearchResults from "@/components/AlbumSearchResults";
 import PageContainer from "@/components/layout/PageContainer";
@@ -29,6 +31,17 @@ function AlbumsPageContent() {
   const [sort, setSort] = React.useState(
     searchParams.get("sort") || "date_added:desc"
   );
+  const [viewMode, setViewMode] = React.useState<"card" | "table">("card");
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem("albumViewMode");
+    if (saved === "card" || saved === "table") setViewMode(saved);
+  }, []);
+
+  const handleViewModeChange = (mode: "card" | "table") => {
+    setViewMode(mode);
+    localStorage.setItem("albumViewMode", mode);
+  };
   const [selectedFriendId, setSelectedFriendId] = React.useState<number | null>(
     searchParams.get("friend_id")
       ? parseInt(searchParams.get("friend_id")!)
@@ -115,7 +128,7 @@ function AlbumsPageContent() {
 
   return (
     <PageContainer size="standard">
-      <Flex gap={4} direction="column">
+      <Flex gap={3} direction="column">
         <UnifiedSearchControls
           query={query}
           onQueryChange={setQuery}
@@ -149,18 +162,36 @@ function AlbumsPageContent() {
             </>
           }
           mobilePrimaryControl={
-            <Button
-              colorScheme="blue"
-              onClick={handleSearch}
-              flexShrink={0}
-              size="sm"
-              px={3}
-            >
-              Go
-            </Button>
+            <Flex gap={1} align="center" flexShrink={0}>
+              <IconButton
+                aria-label="Card view"
+                size="sm"
+                variant={viewMode === "card" ? "solid" : "ghost"}
+                onClick={() => handleViewModeChange("card")}
+              >
+                <LuLayoutGrid />
+              </IconButton>
+              <IconButton
+                aria-label="Table view"
+                size="sm"
+                variant={viewMode === "table" ? "solid" : "ghost"}
+                onClick={() => handleViewModeChange("table")}
+              >
+                <LuTable />
+              </IconButton>
+              <Button
+                colorScheme="blue"
+                onClick={handleSearch}
+                flexShrink={0}
+                size="sm"
+                px={3}
+              >
+                Go
+              </Button>
+            </Flex>
           }
           mobileSecondaryControls={
-            <NativeSelectRoot size="sm" minW="100%">
+            <NativeSelectRoot size="sm" flex="1">
               <NativeSelectField
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
@@ -205,7 +236,7 @@ function AlbumsPageContent() {
             </Flex>
           }
         >
-          <AlbumSearchResults />
+          <AlbumSearchResults viewMode={viewMode} />
         </Suspense>
       </Flex>
     </PageContainer>

@@ -6,7 +6,7 @@ import { useAlbumsByRefs } from "@/hooks/useAlbum";
 import AlbumResult from "./AlbumResult";
 import { useSearchParams } from "next/navigation";
 
-export default function AlbumSearchResults() {
+export default function AlbumSearchResults({ viewMode = "card" }: { viewMode?: "card" | "table" }) {
   const searchParams = useSearchParams();
   const observerTarget = useRef<HTMLDivElement>(null);
 
@@ -113,6 +113,7 @@ export default function AlbumSearchResults() {
             }}
             album={album}
             showEditFields={true}
+            compact={viewMode === "table"}
           />
         ))}
       </Box>

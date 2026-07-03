@@ -174,8 +174,9 @@ export default function RelatedTracksSection({ track }: Props) {
                 track={item}
                 showUsername={true}
                 showRating={true}
-                buttons={
-                  <Flex gap={2} align="center" wrap="wrap">
+                buttons={<TrackActionsMenu track={item} />}
+                footer={
+                  <Flex gap={1} align="center">
                     {item._sources.includes("ai") && (
                       <Badge colorPalette="purple" size="sm">AI</Badge>
                     )}
@@ -185,7 +186,6 @@ export default function RelatedTracksSection({ track }: Props) {
                     {item._sources.includes("vibe") && (
                       <Badge colorPalette="cyan" size="sm">Vibe</Badge>
                     )}
-                    <TrackActionsMenu track={item} />
                   </Flex>
                 }
               />

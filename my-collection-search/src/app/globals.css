@@ -3,3 +3,11 @@ html,
 body {
   height: 100%;
 }
+
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+

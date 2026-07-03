@@ -219,120 +219,118 @@ export default function JobsPage() {
 
   return (
     <PageContainer size="standard">
-      <Stack gap={6}>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Heading size="lg">Job Queue Status</Heading>
-          <Box display="flex" gap={2} alignItems="center">
-            <NativeSelectRoot size="sm" width="180px">
-              <NativeSelectField
-                value={stateFilter}
-                onChange={(e) => {
-                  setStateFilter(
-                    e.target.value as
-                      | "all"
-                      | "waiting"
-                      | "active"
-                      | "completed"
-                      | "failed"
-                  );
-                  setOffset(0);
-                }}
+      <Stack gap={{ base: 3, md: 6 }}>
+        <Flex direction="column" gap={2}>
+          <Flex justify="space-between" align="center" gap={2}>
+            <Heading size={{ base: "md", md: "lg" }}>Job Queue</Heading>
+            <Flex gap={2} align="center">
+              <NativeSelectRoot size="sm" width={{ base: "130px", md: "180px" }}>
+                <NativeSelectField
+                  value={stateFilter}
+                  onChange={(e) => {
+                    setStateFilter(
+                      e.target.value as
+                        | "all"
+                        | "waiting"
+                        | "active"
+                        | "completed"
+                        | "failed"
+                    );
+                    setOffset(0);
+                  }}
+                >
+                  <option value="all">All Jobs</option>
+                  <option value="waiting">Waiting</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="failed">Failed</option>
+                </NativeSelectField>
+              </NativeSelectRoot>
+              <Button
+                onClick={() => clearJobsMutation.mutate()}
+                loading={clearJobsMutation.isPending}
+                variant="outline"
+                colorScheme="red"
+                disabled={summary.total === 0}
+                aria-label="Clear all jobs"
+                size="sm"
               >
-                <option value="all">All Jobs</option>
-                <option value="waiting">Waiting</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="failed">Failed</option>
-              </NativeSelectField>
-            </NativeSelectRoot>
-            <Button
-              onClick={() => clearJobsMutation.mutate()}
-              loading={clearJobsMutation.isPending}
-              variant="outline"
-              colorScheme="red"
-              disabled={summary.total === 0}
-              aria-label="Clear all jobs"
-              title="Clear All"
-            >
-              <LuTrash2 />
-              <Text display={{ base: "none", md: "inline" }}>Clear All</Text>
-            </Button>
-            <Button
-              onClick={() => refetch()}
-              loading={isLoading}
-              variant="outline"
-              aria-label="Refresh jobs"
-              title="Refresh"
-            >
-              <LuRefreshCw />
-              <Text display={{ base: "none", md: "inline" }}>Refresh</Text>
-            </Button>
-          </Box>
+                <LuTrash2 />
+                <Text display={{ base: "none", md: "inline" }}>Clear All</Text>
+              </Button>
+              <Button
+                onClick={() => refetch()}
+                loading={isLoading}
+                variant="outline"
+                aria-label="Refresh jobs"
+                size="sm"
+              >
+                <LuRefreshCw />
+                <Text display={{ base: "none", md: "inline" }}>Refresh</Text>
+              </Button>
+            </Flex>
+          </Flex>
+          <Flex gap={2} fontSize="xs" color="gray.500" flexWrap="wrap">
+            {dataUpdatedAt && <Text>Updated: {new Date(dataUpdatedAt).toLocaleTimeString()}</Text>}
+            <Text>·</Text>
+            <Text>{jobs.length} of {totalFiltered} jobs ({stateFilter})</Text>
+          </Flex>
+        </Flex>
+
+        {/* Summary — compact strip on mobile, cards on desktop */}
+        <Box display={{ base: "block", md: "none" }}>
+          <Flex gap={0} borderWidth="1px" borderRadius="lg" overflow="hidden">
+            {[
+              { label: "Total", value: summary.total, color: undefined },
+              { label: "Waiting", value: summary.waiting, color: "blue.500" },
+              { label: "Active", value: summary.active, color: "orange.500" },
+              { label: "Done", value: summary.completed, color: "green.500" },
+              { label: "Failed", value: summary.failed, color: "red.500" },
+            ].map((stat, i) => (
+              <Flex
+                key={stat.label}
+                direction="column"
+                align="center"
+                flex={1}
+                py={2}
+                borderLeftWidth={i > 0 ? "1px" : "0"}
+                gap={0}
+              >
+                <Text fontWeight="bold" fontSize="lg" color={stat.color}>{stat.value}</Text>
+                <Text fontSize="9px" color="gray.500" letterSpacing="wide" textTransform="uppercase">{stat.label}</Text>
+              </Flex>
+            ))}
+          </Flex>
         </Box>
-
-        {dataUpdatedAt && (
-          <Text fontSize="sm" color="gray.500">
-            Last updated: {new Date(dataUpdatedAt).toLocaleTimeString()}
-          </Text>
-        )}
-        <Text fontSize="sm" color="gray.500">
-          Showing {jobs.length} of {totalFiltered} jobs ({stateFilter})
-        </Text>
-
-        {/* Summary Cards */}
-        <SimpleGrid columns={[2, 3, 5]} gap={{ base: 2, md: 4 }}>
+        <SimpleGrid columns={5} gap={4} display={{ base: "none", md: "grid" }}>
           <Card.Root>
-            <Card.Body textAlign="center" py={{ base: 3, md: 6 }}>
-              <Text fontSize={{ base: "lg", md: "2xl" }} fontWeight="bold">
-                {summary.total}
-              </Text>
-              <Text fontSize={{ base: "xs", md: "sm" }} color="gray.500">
-                Total Jobs
-              </Text>
+            <Card.Body textAlign="center" py={6}>
+              <Text fontSize="2xl" fontWeight="bold">{summary.total}</Text>
+              <Text fontSize="sm" color="gray.500">Total Jobs</Text>
             </Card.Body>
           </Card.Root>
-
           <Card.Root>
-            <Card.Body textAlign="center" py={{ base: 3, md: 6 }}>
-              <Text fontSize={{ base: "lg", md: "2xl" }} fontWeight="bold" color="blue.500">
-                {summary.waiting}
-              </Text>
-              <Text fontSize={{ base: "xs", md: "sm" }} color="gray.500">
-                Waiting
-              </Text>
+            <Card.Body textAlign="center" py={6}>
+              <Text fontSize="2xl" fontWeight="bold" color="blue.500">{summary.waiting}</Text>
+              <Text fontSize="sm" color="gray.500">Waiting</Text>
             </Card.Body>
           </Card.Root>
-
           <Card.Root>
-            <Card.Body textAlign="center" py={{ base: 3, md: 6 }}>
-              <Text fontSize={{ base: "lg", md: "2xl" }} fontWeight="bold" color="orange.500">
-                {summary.active}
-              </Text>
-              <Text fontSize={{ base: "xs", md: "sm" }} color="gray.500">
-                Active
-              </Text>
+            <Card.Body textAlign="center" py={6}>
+              <Text fontSize="2xl" fontWeight="bold" color="orange.500">{summary.active}</Text>
+              <Text fontSize="sm" color="gray.500">Active</Text>
             </Card.Body>
           </Card.Root>
-
           <Card.Root>
-            <Card.Body textAlign="center" py={{ base: 3, md: 6 }}>
-              <Text fontSize={{ base: "lg", md: "2xl" }} fontWeight="bold" color="green.500">
-                {summary.completed}
-              </Text>
-              <Text fontSize={{ base: "xs", md: "sm" }} color="gray.500">
-                Completed
-              </Text>
+            <Card.Body textAlign="center" py={6}>
+              <Text fontSize="2xl" fontWeight="bold" color="green.500">{summary.completed}</Text>
+              <Text fontSize="sm" color="gray.500">Completed</Text>
             </Card.Body>
           </Card.Root>
-
           <Card.Root>
-            <Card.Body textAlign="center" py={{ base: 3, md: 6 }}>
-              <Text fontSize={{ base: "lg", md: "2xl" }} fontWeight="bold" color="red.500">
-                {summary.failed}
-              </Text>
-              <Text fontSize={{ base: "xs", md: "sm" }} color="gray.500">
-                Failed
-              </Text>
+            <Card.Body textAlign="center" py={6}>
+              <Text fontSize="2xl" fontWeight="bold" color="red.500">{summary.failed}</Text>
+              <Text fontSize="sm" color="gray.500">Failed</Text>
             </Card.Body>
           </Card.Root>
         </SimpleGrid>
