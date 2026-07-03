@@ -96,14 +96,29 @@ sync-dev-assets:
     ./{{compose_dir}}/scripts/sync-dev-assets.sh
 
 compose-dev: check-compose mount-music sync-dev-assets
-  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml {{platform_override}} up --remove-orphans
+  APP_PORT=${APP_PORT:-3000} {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml -f {{compose_dir}}/docker-compose.worktree.yml {{platform_override}} up --remove-orphans
 
 compose-dev-mac: check-compose mount-music sync-dev-assets
-  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml -f {{compose_dir}}/docker-compose.mac.yml up --remove-orphans
+  APP_PORT=${APP_PORT:-3000} {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml -f {{compose_dir}}/docker-compose.worktree.yml -f {{compose_dir}}/docker-compose.mac.yml up --remove-orphans
 
 compose-dev-reset: check-compose mount-music
-  {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml {{platform_override}} down --remove-orphans
-  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml {{platform_override}} up --build --force-recreate --remove-orphans
+  APP_PORT=${APP_PORT:-3000} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml -f {{compose_dir}}/docker-compose.worktree.yml {{platform_override}} down --remove-orphans
+  APP_PORT=${APP_PORT:-3000} {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.dev.yml -f {{compose_dir}}/docker-compose.worktree.yml {{platform_override}} up --build --force-recreate --remove-orphans
+
+worktree-up *args:
+  ./scripts/worktree/setup.sh {{args}}
+
+worktree-down *args:
+  ./scripts/worktree/teardown.sh {{args}}
+
+worktree-purge *args:
+  ./scripts/worktree/teardown.sh --purge {{args}}
+
+worktree-seed *args:
+  ./scripts/worktree/create-golden-seed.sh {{args}}
+
+worktree-install-caddy *args:
+  ./scripts/worktree/install-caddy-host.sh {{args}}
 
 compose-prod: check-compose
   {{buildkit_env}} {{op_env}} {{compose_cmd}} -f {{compose_dir}}/docker-compose.yml -f {{compose_dir}}/docker-compose.prod.yml up

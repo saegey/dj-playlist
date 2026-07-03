@@ -7,6 +7,7 @@ import { embeddingsService } from "@/server/services/embeddingsService";
 import { trackRepository } from "@/server/repositories/trackRepository";
 
 type PreviewType = "prompt" | "identity" | "audio_vibe";
+const MISSING_AUDIO_ANALYSIS_ERROR = "Track missing audio analysis data";
 
 function parsePreviewType(value: string | null): PreviewType {
   if (value === "identity" || value === "audio_vibe" || value === "prompt") {
@@ -64,6 +65,18 @@ export async function GET(
       prompt,
     });
   } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === MISSING_AUDIO_ANALYSIS_ERROR
+    ) {
+      return NextResponse.json(
+        {
+          error: MISSING_AUDIO_ANALYSIS_ERROR,
+          code: "missing_audio_analysis",
+        },
+        { status: 422 }
+      );
+    }
     console.error("Failed to build embedding preview:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
