@@ -125,7 +125,7 @@ export function useAddToPlaylistDialog() {
       addToPlaylistMutation.mutate({ playlist, track: currentTrack });
     }
     setIsPlaylistDialogOpen(false);
-  }, [currentTrack, addToPlaylistMutation, addToPlaylistMutation.isPending, createPlaylistMutation.isPending]);
+  }, [currentTrack, addToPlaylistMutation, createPlaylistMutation]);
 
   // Handle create new playlist
   const handleCreateNew = React.useCallback((name?: string) => {
