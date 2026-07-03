@@ -20,6 +20,7 @@ import { FiEdit } from "react-icons/fi";
 import { Album } from "@/types/track";
 import { useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
 import { useAlbum } from "@/hooks/useAlbum";
+import AlbumActionsMenu from "@/components/AlbumActionsMenu";
 
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
@@ -166,10 +167,9 @@ export default function AlbumResult({
 
   return (
     <Box
-      borderWidth={[0, "1px"]}
-      borderBottomWidth={["1px", "1px"]}
-      borderRadius={[0, "md"]}
-      p={[0, 3]}
+      borderWidth="1px"
+      borderRadius="md"
+      p={3}
       mb={2}
       width="100%"
     >
@@ -191,11 +191,6 @@ export default function AlbumResult({
 
         <Flex direction="column" flex={1} minW={0} gap={1}>
           <Flex alignItems="center" gap={2} pr={{ base: 14, lg: 24 }}>
-            {resolvedAlbum.library_identifier && (
-              <Badge colorPalette="blue" size="sm" fontWeight="bold" flexShrink={0}>
-                {resolvedAlbum.library_identifier}
-              </Badge>
-            )}
             <Text
               fontSize={{ base: "sm", md: "lg" }}
               fontWeight="bold"
@@ -231,6 +226,11 @@ export default function AlbumResult({
           </Link>
 
           <Flex gap={2} fontSize="xs" color="gray.500" alignItems="center" flexWrap="wrap">
+            {resolvedAlbum.library_identifier && (
+              <Badge colorPalette="blue" size="sm" fontWeight="bold" flexShrink={0}>
+                {resolvedAlbum.library_identifier}
+              </Badge>
+            )}
             {resolvedAlbum.year && <Text>{resolvedAlbum.year}</Text>}
             {resolvedAlbum.track_count > 0 && (
               <>
@@ -311,27 +311,13 @@ export default function AlbumResult({
         </Flex>
 
         <Flex position="absolute" top={2} right={2} gap={1} alignItems="center">
-          {resolvedAlbum.discogs_url && (
-            <Link href={resolvedAlbum.discogs_url} target="_blank" rel="noopener noreferrer">
-              <Button size="xs" variant="ghost" px={2}>
-                <Icon as={SiDiscogs} />
-                <Box display={{ base: "none", lg: "inline" }} ml={2}>
-                  Discogs
-                </Box>
-              </Button>
-            </Link>
-          )}
-
-          {showEditFields && !isEditing && (
-            <Button size="xs" variant="outline" onClick={() => setIsEditing(true)} px={2}>
-              <Icon as={FiEdit} />
-              <Box display={{ base: "none", lg: "inline" }} ml={2}>
-                Edit
-              </Box>
-            </Button>
-          )}
-
-          {buttons}
+          <AlbumActionsMenu
+            albumTitle={resolvedAlbum.title}
+            albumArtist={resolvedAlbum.artist}
+            discogsUrl={resolvedAlbum.discogs_url}
+            onEditDetails={showEditFields && !isEditing ? () => setIsEditing(true) : undefined}
+            editAlbumHref={showEditFields ? `/albums/${resolvedAlbum.release_id}/edit?friend_id=${resolvedAlbum.friend_id}` : undefined}
+          />
         </Flex>
       </Flex>
 

@@ -12,18 +12,16 @@ import {
   Badge,
   Link,
   Button,
-  Icon,
   Heading,
   RatingGroup,
   Textarea,
   Input,
-  Menu,
   Dialog,
+  Popover,
   Portal,
   CloseButton,
 } from "@chakra-ui/react";
-import { SiDiscogs } from "react-icons/si";
-import { FiPlay, FiDownload, FiEdit, FiMoreVertical, FiFileText } from "react-icons/fi";
+import { FiFileText } from "react-icons/fi";
 import NextLink from "next/link";
 
 import { useAlbumDetailQuery, useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
@@ -32,6 +30,7 @@ import { useTracksByRelease, useTracksByReleaseHydrated } from "@/hooks/useTrack
 import AlbumTrackItem from "@/components/AlbumTrackItem";
 import AlbumSpinPanel from "@/components/spins/AlbumSpinPanel";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
+import AlbumActionsMenu from "@/components/AlbumActionsMenu";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { toaster } from "@/components/ui/toaster";
 import { useColorModeValue } from "@/components/ui/color-mode";
@@ -89,6 +88,8 @@ function AlbumDetailContent() {
   const panelBg = useColorModeValue("gray.50", "gray.800");
   const mutedText = useColorModeValue("gray.600", "gray.400");
   const subtleText = useColorModeValue("gray.500", "gray.500");
+  const sideHeaderBg = useColorModeValue("gray.100", "gray.800");
+  const sideHeaderAccent = useColorModeValue("gray.400", "gray.600");
   const album = albumFromStore;
   const tracks = React.useMemo(() => {
     return [...tracksFromStore].sort((a, b) =>
@@ -242,10 +243,9 @@ function AlbumDetailContent() {
 
       {/* Album header */}
       <Flex
-        borderWidth={[0, "1px"]}
-        borderBottomWidth={["1px", "1px"]}
-        borderRadius={[0, "md"]}
-        p={[0, 3]}
+        borderWidth="1px"
+        borderRadius="md"
+        p={3}
         mb={{ base: 4, md: 6 }}
         gap={3}
         position="relative"
@@ -348,24 +348,43 @@ function AlbumDetailContent() {
             </Flex>
           )}
 
-          <Flex gap={2} fontSize="xs" color={subtleText} flexWrap="wrap">
+          <Flex gap={2} fontSize="xs" color={subtleText} flexWrap="wrap" alignItems="center">
             {album.track_count && <Text>{album.track_count} tracks</Text>}
             {albumDurationSeconds > 0 && <Text>{formatSeconds(albumDurationSeconds)}</Text>}
             {album.date_added && <Text display={{ base: "none", md: "block" }}>Added: {formatDate(album.date_added)}</Text>}
+            {!isEditing && (album.album_notes || album.purchase_price || album.condition) && (
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <Box
+                    as="button"
+                    display="inline-flex"
+                    alignItems="center"
+                    color="yellow.500"
+                    _hover={{ color: "yellow.400" }}
+                  >
+                    <FiFileText size={13} />
+                  </Box>
+                </Popover.Trigger>
+                <Popover.Positioner>
+                  <Popover.Content maxW="280px">
+                    <Popover.Body>
+                      {album.album_notes && (
+                        <Text fontSize="sm" whiteSpace="pre-wrap" mb={(album.purchase_price || album.condition) ? 2 : 0}>
+                          {album.album_notes}
+                        </Text>
+                      )}
+                      {(album.purchase_price || album.condition) && (
+                        <Flex gap={3} fontSize="xs" color={mutedText}>
+                          {album.purchase_price && <Text>Price: ${album.purchase_price}</Text>}
+                          {album.condition && <Text>{album.condition}</Text>}
+                        </Flex>
+                      )}
+                    </Popover.Body>
+                  </Popover.Content>
+                </Popover.Positioner>
+              </Popover.Root>
+            )}
           </Flex>
-
-          {!isEditing && album.album_notes && (
-            <Box p={3} bg={panelBg} borderRadius="md" borderWidth="1px" mt={1}>
-              <Text fontSize="sm">{album.album_notes}</Text>
-            </Box>
-          )}
-
-          {!isEditing && (album.purchase_price || album.condition) && (
-            <Flex gap={2} fontSize="xs" color={mutedText}>
-              {album.purchase_price && <Text>Price: ${album.purchase_price}</Text>}
-              {album.condition && <Text>Condition: {album.condition}</Text>}
-            </Flex>
-          )}
 
           {/* Edit form */}
           {isEditing && (
@@ -449,80 +468,27 @@ function AlbumDetailContent() {
         </Flex>
 
         <Flex position="absolute" top={2} right={2} gap={1} alignItems="center">
-          <Menu.Root>
-            <Menu.Trigger asChild>
-              <Button
-                size="sm"
-                variant="ghost"
-                aria-label="Album actions"
-                minW="32px"
-                h="32px"
-                p={0}
-              >
-                <FiMoreVertical />
-              </Button>
-            </Menu.Trigger>
-            <Menu.Positioner>
-              <Menu.Content>
-                {tracks.length > 0 && (
-                  <Menu.Item value="play" onSelect={handleEnqueueAlbum}>
-                    <FiPlay /> Play Album
-                  </Menu.Item>
-                )}
-
-                {tracks.length > 0 && (
-                  <Menu.Item
-                    value="download"
-                    onSelect={handleDownloadAlbum}
-                    disabled={isDownloading}
-                  >
-                    <FiDownload /> {isDownloading ? "Downloading..." : "Download Missing"}
-                  </Menu.Item>
-                )}
-
-                {album.discogs_url && (
-                  <Menu.Item
-                    value="discogs"
-                    asChild
-                  >
-                    <Link href={album.discogs_url} target="_blank" rel="noopener noreferrer">
-                      <Icon as={SiDiscogs} /> View on Discogs
-                    </Link>
-                  </Menu.Item>
-                )}
-
-                <Menu.Item
-                  value="discogs-raw"
-                  onSelect={() => setDiscogsRawModalOpen(true)}
-                >
-                  <FiFileText /> View Raw Discogs File
-                </Menu.Item>
-
-                {!isEditing && (
-                  <Menu.Item value="edit" onSelect={() => setIsEditing(true)}>
-                    <FiEdit /> Edit Details
-                  </Menu.Item>
-                )}
-
-                <Menu.Item
-                  value="edit-album"
-                  asChild
-                >
-                  <Link href={`/albums/${releaseId}/edit?friend_id=${friendId}`}>
-                    <FiEdit /> Edit Album & Tracks
-                  </Link>
-                </Menu.Item>
-              </Menu.Content>
-            </Menu.Positioner>
-          </Menu.Root>
+          <AlbumActionsMenu
+            albumTitle={album.title}
+            albumArtist={album.artist}
+            onPlayAlbum={tracks.length > 0 ? handleEnqueueAlbum : undefined}
+            onDownloadMissing={tracks.length > 0 ? handleDownloadAlbum : undefined}
+            isDownloading={isDownloading}
+            discogsUrl={album.discogs_url}
+            onViewRawDiscogs={() => setDiscogsRawModalOpen(true)}
+            onEditDetails={!isEditing ? () => setIsEditing(true) : undefined}
+            editAlbumHref={`/albums/${releaseId}/edit?friend_id=${friendId}`}
+          />
         </Flex>
       </Flex>
 
-      <AlbumSpinPanel
-        releaseId={releaseId}
-        friendId={friendId}
-        albumTitle={album.title}
-      />
+      <Box mb={{ base: 4, md: 6 }}>
+        <AlbumSpinPanel
+          releaseId={releaseId}
+          friendId={friendId}
+          albumTitle={album.title}
+        />
+      </Box>
 
       {/* Track list */}
       <Box>
@@ -538,12 +504,18 @@ function AlbumDetailContent() {
                     alignItems="center"
                     gap={3}
                     mb={{ base: 2, md: 3 }}
+                    px={3}
+                    py={2}
+                    bg={sideHeaderBg}
+                    borderRadius="md"
+                    borderLeftWidth="3px"
+                    borderLeftColor={sideHeaderAccent}
                   >
-                    <Heading size={{ base: "sm", md: "md" }}>
+                    <Heading size={{ base: "sm", md: "md" }} letterSpacing="wide">
                       {section.label}
                     </Heading>
-                    <Box flex="1" borderTopWidth="1px" />
-                    <Text fontSize="xs" color={subtleText} whiteSpace="nowrap">
+                    <Box flex="1" />
+                    <Text fontSize="xs" color={subtleText} whiteSpace="nowrap" fontWeight="medium">
                       {section.tracks.length}{" "}
                       {section.tracks.length === 1 ? "track" : "tracks"}
                     </Text>

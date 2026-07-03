@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import DeletePlaylistDialog from "@/components/DeletePlaylistDialog";
+import PlaylistItemActionsMenu from "@/components/PlaylistItemActionsMenu";
 import FriendSelectDialog from "@/components/FriendSelectDialog";
 import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
 import {
@@ -15,17 +16,15 @@ import {
   HStack,
   Badge,
   Spinner,
-  Separator,
   Menu,
 } from "@chakra-ui/react";
 
 import { Toaster, toaster } from "@/components/ui/toaster"; // See below
-import { FiHeadphones, FiTrash, FiMoreVertical } from "react-icons/fi";
+import { FiHeadphones } from "react-icons/fi";
 import { TbFileImport } from "react-icons/tb";
 import { usePlaylists } from "@/providers/PlaylistsProvider";
 import { importPlaylist, PlaylistTrackPayload } from "@/services/internalApi/playlists";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
-import { FaPlay } from "react-icons/fa";
 import { fetchTracksByIds } from "@/services/internalApi/tracks";
 import { formatDateWithRelative } from "@/lib/date";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
@@ -252,16 +251,7 @@ export default function PlaylistManager() {
         />
       </VStack>
 
-      <Stack
-        overflowY="auto"
-        borderWidth={[0, "1px"]}
-        borderRadius="md"
-        p={[0, 2]}
-        bg={["bg", "bg.subtle"]}
-        separator={
-          <Separator orientation="horizontal" borderColor="bg.muted" />
-        }
-      >
+      <Stack overflowY="auto">
         {playlists.length === 0 && !loadingPlaylists ? (
           <EmptyState.Root size={"sm"}>
             <EmptyState.Content>
@@ -301,8 +291,9 @@ export default function PlaylistManager() {
                 key={pl.id}
                 w="100%"
                 textAlign="left"
-                px={[0, 2]}
+                px={3}
                 py={2}
+                borderWidth="1px"
                 borderRadius="md"
                 _hover={{ bg: "bg.muted" }}
                 _active={{ bg: "bg.subtle" }}
@@ -347,49 +338,20 @@ export default function PlaylistManager() {
 
                   <HStack gap={1} flexShrink={0}>
                     {isRowLoading && <Spinner size="xs" />}
-                    <Menu.Root>
-                      <Menu.Trigger asChild>
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          px={2}
-                          aria-label="Playlist actions"
-                        >
-                          <FiMoreVertical />
-                        </Button>
-                      </Menu.Trigger>
-                      <Menu.Positioner>
-                        <Menu.Content>
-                          <Menu.Item
-                            value="play-now"
-                            onClick={async () => {
-                              const tracks = await fetchTracksByIds(pl.tracks);
-                              replacePlaylist(tracks, { autoplay: true, startIndex: 0 });
-
-                              // PostHog: Track playback started
-                              posthog.capture("playback_started", {
-                                playlist_id: pl.id,
-                                playlist_name: pl.name,
-                                track_count: pl.tracks.length,
-                                source: "playlist_manager",
-                              });
-                            }}
-                          >
-                            <FaPlay /> Play now
-                          </Menu.Item>
-                          <Menu.Item
-                            value="delete"
-                            onClick={() =>
-                              setDeleteDialogState({ open: true, playlistId: pl.id })
-                            }
-                            color="fg.error"
-                            _hover={{ bg: "bg.error", color: "fg.error" }}
-                          >
-                            <FiTrash /> Delete
-                          </Menu.Item>
-                        </Menu.Content>
-                      </Menu.Positioner>
-                    </Menu.Root>
+                    <PlaylistItemActionsMenu
+                      playlistName={pl.name}
+                      onPlay={async () => {
+                        const tracks = await fetchTracksByIds(pl.tracks);
+                        replacePlaylist(tracks, { autoplay: true, startIndex: 0 });
+                        posthog.capture("playback_started", {
+                          playlist_id: pl.id,
+                          playlist_name: pl.name,
+                          track_count: pl.tracks.length,
+                          source: "playlist_manager",
+                        });
+                      }}
+                      onDelete={() => setDeleteDialogState({ open: true, playlistId: pl.id })}
+                    />
                   </HStack>
                 </HStack>
               </Box>

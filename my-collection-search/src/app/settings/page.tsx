@@ -75,17 +75,16 @@ export default function SettingsPage() {
         <PageContainer size="wide">
           <Box mb="120px">
             <Flex
-              align={{ base: "start", md: "center" }}
+              align="center"
               justify="space-between"
               gap={4}
-              mb={6}
-              direction={{ base: "column", md: "row" }}
+              mb={4}
             >
               <Box>
-                <Heading size="xl" mb={1}>
+                <Heading size={{ base: "lg", md: "xl" }} mb={{ base: 0, md: 1 }}>
                   Settings
                 </Heading>
-                <Text color="gray.600">
+                <Text color="gray.600" display={{ base: "none", md: "block" }}>
                   Configure GrooveNET by area, without the long one-page scroll.
                 </Text>
               </Box>
@@ -95,9 +94,6 @@ export default function SettingsPage() {
             </Flex>
 
             <Box display={{ base: "block", md: "none" }} mb={4}>
-              <Text fontSize="sm" color="gray.500" mb={2}>
-                Section
-              </Text>
               <select
                 value={activeSectionId}
                 onChange={(e) => setActiveSectionId(e.target.value)}
@@ -174,10 +170,10 @@ export default function SettingsPage() {
                 p={{ base: 4, md: 6 }}
                 bg="bg"
               >
-                <Heading size="lg" mb={1}>
+                <Heading size="lg" mb={1} display={{ base: "none", md: "block" }}>
                   {activeSection.label}
                 </Heading>
-                <Text color="gray.500" mb={4}>
+                <Text color="gray.500" mb={4} display={{ base: "none", md: "block" }}>
                   {activeSection.description}
                 </Text>
                 {activeSection.content}

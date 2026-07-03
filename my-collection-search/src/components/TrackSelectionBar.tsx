@@ -31,19 +31,27 @@ export default function TrackSelectionBar({
       right={0}
       bg="bg"
       borderTopWidth="1px"
-      py={3}
+      pt={3}
+      pb={{ base: "max(env(safe-area-inset-bottom), 12px)", md: 3 }}
       px={4}
       zIndex={100}
       shadow="lg"
     >
-      <Flex align="center" justify="space-between" maxW="4xl" mx="auto">
-        <Flex align="center" gap={4}>
+      <Flex
+        direction={{ base: "column", md: "row" }}
+        gap={{ base: 2, md: 0 }}
+        align={{ base: "stretch", md: "center" }}
+        justify="space-between"
+        maxW="4xl"
+        mx="auto"
+      >
+        <Flex align="center" gap={3}>
           <Text fontWeight="semibold" fontSize="sm">
             {selectedCount} track{selectedCount !== 1 ? "s" : ""} selected
           </Text>
           {selectedCount < loadedCount && (
             <Button size="xs" variant="ghost" onClick={onSelectAll}>
-              Select all {loadedCount} loaded
+              Select all {loadedCount}
             </Button>
           )}
           <Button size="xs" variant="ghost" colorPalette="red" onClick={onClear}>
@@ -52,12 +60,12 @@ export default function TrackSelectionBar({
         </Flex>
         <Flex gap={2}>
           {downloadableCount > 0 && (
-            <Button size="sm" variant="outline" onClick={onDownloadAudio}>
-              Download audio ({downloadableCount})
+            <Button size="sm" variant="outline" onClick={onDownloadAudio} flex={{ base: 1, md: "none" }}>
+              Download ({downloadableCount})
             </Button>
           )}
-          <Button size="sm" colorPalette="blue" onClick={onEnrich}>
-            Enrich {selectedCount} track{selectedCount !== 1 ? "s" : ""} →
+          <Button size="sm" colorPalette="blue" onClick={onEnrich} flex={{ base: 1, md: "none" }}>
+            Enrich {selectedCount} →
           </Button>
         </Flex>
       </Flex>

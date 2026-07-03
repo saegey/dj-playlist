@@ -1,10 +1,8 @@
 "use client";
 
-import NextLink from "next/link";
 import { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Box, Button, Flex, Heading, Icon, Skeleton, Text, VStack } from "@chakra-ui/react";
-import { LuChevronLeft } from "react-icons/lu";
+import { Box, Button, Flex, Skeleton, Text, VStack } from "@chakra-ui/react";
 import { toaster } from "@/components/ui/toaster";
 import { useTrackStore } from "@/stores/trackStore";
 import { useAlbumStore } from "@/stores/albumStore";
@@ -41,24 +39,6 @@ export default function TrackPage() {
 
   return (
     <PageContainer size="standard">
-      <Flex justify="space-between" align="center" mb={3} gap={2}>
-        <Heading size={{ base: "md", md: "lg" }}>Track Details</Heading>
-        <Flex gap={2}>
-          <Button asChild variant="outline" size="sm">
-            <NextLink href="/">
-              <Icon as={LuChevronLeft} display={{ base: "inline", md: "none" }} />
-              <Box display={{ base: "none", md: "inline" }}>Back to Search</Box>
-            </NextLink>
-          </Button>
-          {hasValidFriendId && (
-            <Button asChild size="sm">
-              <NextLink href={`/tracks/${encodeURIComponent(trackId)}/edit?friend_id=${friendId}`}>
-                Edit
-              </NextLink>
-            </Button>
-          )}
-        </Flex>
-      </Flex>
 
       {!hasValidFriendId && (
         <Box borderWidth="1px" borderRadius="md" p={4}>

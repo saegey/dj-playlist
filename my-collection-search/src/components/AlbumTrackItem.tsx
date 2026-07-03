@@ -71,7 +71,6 @@ export default function AlbumTrackItem({
         alignItems="center"
         gap={{ base: 2, md: 3 }}
         flexShrink={0}
-        minW={{ base: "56px", md: "72px" }}
       >
         {positionLabel && (
           <Box
@@ -98,6 +97,7 @@ export default function AlbumTrackItem({
             h="28px"
             p={0}
             aria-label={`Play ${track.title}`}
+            display={{ base: "none", md: "flex" }}
             onClick={() =>
               replacePlaylist([track], { autoplay: true, startIndex: 0 })
             }
@@ -151,7 +151,11 @@ export default function AlbumTrackItem({
           {getTrackDurationSeconds(track) && (
             <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
           )}
-          {track.bpm && <Text>{track.bpm} BPM</Text>}
+          {track.bpm && (
+            <Badge colorPalette="purple" size="xs" variant="subtle">
+              {track.bpm} BPM
+            </Badge>
+          )}
           {track.key && (
             <Text display={{ base: "none", sm: "inline" }}>
               {track.key} ({keyToCamelot(track.key)})
@@ -168,43 +172,48 @@ export default function AlbumTrackItem({
           </Box>
         </Flex>
 
-        {((typeof track.local_tags === "string" &&
+        {(((typeof track.local_tags === "string" &&
           track.local_tags !== "{}" &&
           track.local_tags !== "") ||
-          (Array.isArray(track.local_tags) && track.local_tags.length > 0)) && (
-          <Flex gap={1} flexWrap="wrap">
-            <Badge size="xs" variant="solid">
-              {Array.isArray(track.local_tags)
-                ? track.local_tags.join(", ")
-                : track.local_tags}
-            </Badge>
+          (Array.isArray(track.local_tags) && track.local_tags.length > 0)) ||
+          hasNotes) && (
+          <Flex gap={1} flexWrap="wrap" alignItems="center">
+            {((typeof track.local_tags === "string" &&
+              track.local_tags !== "{}" &&
+              track.local_tags !== "") ||
+              (Array.isArray(track.local_tags) && track.local_tags.length > 0)) && (
+              <Badge size="xs" variant="solid">
+                {Array.isArray(track.local_tags)
+                  ? track.local_tags.join(", ")
+                  : track.local_tags}
+              </Badge>
+            )}
+            {hasNotes && (
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <Box
+                    as="button"
+                    display="inline-flex"
+                    alignItems="center"
+                    color="yellow.500"
+                    _hover={{ color: "yellow.400" }}
+                    w="fit-content"
+                  >
+                    <FiFileText size={13} />
+                  </Box>
+                </Popover.Trigger>
+                <Popover.Positioner>
+                  <Popover.Content maxW="320px">
+                    <Popover.Body>
+                      <Text fontSize="sm" whiteSpace="pre-wrap">
+                        {track.notes}
+                      </Text>
+                    </Popover.Body>
+                  </Popover.Content>
+                </Popover.Positioner>
+              </Popover.Root>
+            )}
           </Flex>
-        )}
-
-        {hasNotes && (
-          <Popover.Root>
-            <Popover.Trigger asChild>
-              <Box
-                as="button"
-                display="inline-flex"
-                alignItems="center"
-                color="yellow.500"
-                _hover={{ color: "yellow.400" }}
-                w="fit-content"
-              >
-                <FiFileText size={13} />
-              </Box>
-            </Popover.Trigger>
-            <Popover.Positioner>
-              <Popover.Content maxW="320px">
-                <Popover.Body>
-                  <Text fontSize="sm" whiteSpace="pre-wrap">
-                    {track.notes}
-                  </Text>
-                </Popover.Body>
-              </Popover.Content>
-            </Popover.Positioner>
-          </Popover.Root>
         )}
       </Flex>
 

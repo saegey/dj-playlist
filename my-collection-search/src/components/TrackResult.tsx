@@ -270,16 +270,27 @@ export default function TrackResult({
       </Flex>
 
       {/* Artist + rating */}
-      <Flex gap={2} alignItems="center" flexWrap="wrap" pr={10}>
-        <ArtistLink artist={track.artist} friendId={track.friend_id}>
-          <Text fontSize={{ base: "xs", md: "sm" }} fontWeight="medium">{track.artist}</Text>
-        </ArtistLink>
+      <Flex gap={2} alignItems="center" flexWrap={{ base: "nowrap", md: "wrap" }} pr={10} overflow="hidden">
+        <Box flex="1 1 auto" minW={0} overflow="hidden">
+          <ArtistLink artist={track.artist} friendId={track.friend_id}>
+            <Text
+              fontSize={{ base: "xs", md: "sm" }}
+              fontWeight="medium"
+              overflow="hidden"
+              textOverflow="ellipsis"
+              whiteSpace="nowrap"
+            >
+              {track.artist}
+            </Text>
+          </ArtistLink>
+        </Box>
         {showRating && (
           <RatingGroup.Root
             value={localRating}
             onValueChange={(details) => handleRatingChange(details.value)}
             count={5}
             size="xs"
+            flexShrink={0}
           >
             {[1, 2, 3, 4, 5].map((index) => (
               <RatingGroup.Item key={index} index={index}>
@@ -291,7 +302,7 @@ export default function TrackResult({
       </Flex>
 
       {/* Album + secondary meta */}
-      <Flex gap={2} fontSize="xs" color="gray.500" alignItems="center" flexWrap={{ base: "nowrap", md: "wrap" }} pr={10}>
+      <Flex gap={2} fontSize="xs" color="gray.500" alignItems="center" flexWrap={{ base: "nowrap", md: "wrap" }} pr={10} overflow="hidden">
         <Box flex={1} minW={0} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
           <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
             <Text as="span">{track.album}{track.year && ` (${track.year})`}</Text>
@@ -339,9 +350,13 @@ export default function TrackResult({
   if (playlistMode) {
     return (
       <Flex
+        borderTopWidth={{ base: "1px", md: "0" }}
         borderBottomWidth="1px"
-        borderLeftWidth={hasDataIssue ? "3px" : "0"}
-        borderLeftColor={hasDataIssue ? "red.400" : "transparent"}
+        borderLeftWidth={hasDataIssue ? "3px" : { base: "1px", md: "0" }}
+        borderRightWidth={{ base: "1px", md: "0" }}
+        borderLeftColor={hasDataIssue ? "red.400" : undefined}
+        borderRadius={{ base: "md", md: "none" }}
+        mb={{ base: 2, md: 0 }}
         p={{ base: 2, md: 3 }}
         gap={{ base: 2, md: 3 }}
         position="relative"
@@ -365,12 +380,11 @@ export default function TrackResult({
   // ---- EXPANDED / DEFAULT VIEW ----
   return (
     <Flex
-      borderWidth={[0, "1px"]}
-      borderBottomWidth={["1px", "1px"]}
-      borderRadius={[0, "md"]}
-      py={[2, 3]}
-      px={[3, 3]}
-      mb={[0, 2]}
+      borderWidth="1px"
+      borderRadius="md"
+      py={[2.5, 3]}
+      px={3}
+      mb={2}
       gap={3}
       position="relative"
       width="100%"
