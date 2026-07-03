@@ -145,9 +145,20 @@ just typecheck      # run app typecheck + package builds
 cp my-collection-search/.env.example my-collection-search/.env
 # Edit .env with production credentials
 
-docker compose -f my-collection-search/docker-compose.prod.yml up -d
-docker compose -f my-collection-search/docker-compose.prod.yml run --rm migrate
+docker compose \
+  -f my-collection-search/docker-compose.yml \
+  -f my-collection-search/docker-compose.prod.yml \
+  up -d
+docker compose \
+  -f my-collection-search/docker-compose.yml \
+  -f my-collection-search/docker-compose.prod.yml \
+  run --rm migrate
 ```
+
+Production-style deploys use the stable Compose project name `groovenet`, so
+the default shared Docker network is always `groovenet_default`. External
+services like a separate Caddy container should join `groovenet_default` and
+proxy to `http://myapp:3000`.
 
 #### Mac / ARM64 (local build)
 

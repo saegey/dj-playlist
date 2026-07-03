@@ -21,7 +21,19 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm migrate
 
 - `docker-compose.yml`: base services/config for all environments
 - `docker-compose.dev.yml`: dev overrides (hot reload, source mounts)
-- `docker-compose.prod.yml`: production template that extends base services
+- `docker-compose.prod.yml`: production template that extends base services and
+  sets the stable Compose project name `groovenet`
+
+Production-style commands should include both files:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm migrate
+```
+
+That deployment path creates a stable default network named
+`groovenet_default`, which external services like Caddy can join and proxy to
+`http://myapp:3000`.
 
 ## Useful npm scripts
 

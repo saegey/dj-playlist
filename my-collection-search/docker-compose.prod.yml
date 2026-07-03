@@ -1,5 +1,11 @@
 # Production compose template extending docker-compose.yml.
-# Usage: docker compose -f docker-compose.prod.yml up -d
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This top-level name keeps the production-style Compose project and its
+# default network stable across deploys so external services can consistently
+# join `groovenet_default`.
+name: groovenet
 
 services:
   app:
