@@ -4,8 +4,15 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+const allowedDevOrigins = [
+  "localhost",
+  "127.0.0.1",
+  process.env.WORKTREE_HOST,
+].filter(Boolean);
+
 /** @type {import("next").NextConfig} */
 const nextConfig = {
+  allowedDevOrigins,
   experimental: {
     serverActions: {
       bodySizeLimit: "30mb",

@@ -74,6 +74,60 @@ App is available at [http://localhost:3000](http://localhost:3000).
 
 After starting, navigate to the import page and click **Sync from Discogs** to load your collection.
 
+### Worktree Bootstrap
+
+For Supacode worktrees, use the worktree bootstrap scripts instead of managing ports manually:
+
+```bash
+just worktree-install-caddy
+just worktree-up
+```
+
+That flow:
+
+- derives a stable worktree slug from the current git worktree
+- allocates a unique loopback app port
+- writes a Caddy vhost fragment for `https://<slug>.groovenet.localhost`
+- starts an isolated compose project for the worktree
+- restores a golden seed dump if one exists and the DB is empty
+
+Teardown commands:
+
+```bash
+just worktree-down
+just worktree-purge   # also removes the worktree volumes
+```
+
+Golden seed creation:
+
+```bash
+just worktree-seed
+```
+
+Optional:
+
+- `scripts/worktree/create-golden-seed.sh --include-audio`
+- `scripts/worktree/setup.sh --no-seed`
+- `scripts/worktree/setup.sh --seed /custom/seed/path`
+
+Expected local Caddy setup:
+
+```caddy
+{
+  auto_https disable_redirects
+}
+
+import /Users/your-user/.config/caddy/worktrees/*.caddy
+```
+
+The repo includes a helper to install and configure that host daemon:
+
+```bash
+just worktree-install-caddy
+```
+
+On macOS with Homebrew, the managed daemon config lives at `/opt/homebrew/etc/Caddyfile`, while per-worktree fragments live under `~/.config/caddy/worktrees/`.
+
 ### Local Task Shortcuts
 
 ```bash
