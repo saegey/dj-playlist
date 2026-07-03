@@ -15,6 +15,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
 # Copy the local groovenet client so uv can resolve the path dependency
 COPY packages/groovenet-python /app/packages/groovenet-python
 
@@ -25,8 +28,6 @@ WORKDIR /app/download-worker
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
-
-ENV PATH="/app/download-worker/.venv/bin:$PATH"
 
 COPY download-worker/ /app/download-worker/
 
