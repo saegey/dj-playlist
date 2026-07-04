@@ -29,12 +29,12 @@ services:
 
   download-worker:
     environment:
-      GAMDL_COOKIE_FILE: /app/cookies/music.apple.com_cookies.txt
+      GAMDL_COOKIE_FILE: /app/cookies/gamdl_cookies.txt
     volumes:
       - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
       - ${WORKER_ALBUM_COVERS_SRC:-album_covers}:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
-      - ./my-collection-search/cookies:/app/cookies:ro # Mount local cookies directory as read-only
+      - cookie_data:/app/cookies:ro
 
 volumes:
   dev_node_modules:

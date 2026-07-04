@@ -17,6 +17,7 @@ const mockRedis = vi.hoisted(() => ({
   scan: vi.fn(),
   hgetall: vi.fn(),
   pipeline: vi.fn(),
+  lrange: vi.fn(),
   lpush: vi.fn(),
   zrangebyscore: vi.fn(),
   zrem: vi.fn(),
@@ -52,6 +53,7 @@ beforeEach(() => {
   mockPipeline.exec.mockResolvedValue([]);
 
   mockRedis.pipeline.mockReturnValue(mockPipeline);
+  mockRedis.lrange.mockResolvedValue([]);
   mockRedis.lpush.mockResolvedValue(1);
   mockRedis.scan.mockResolvedValue(["0", []]);
   mockRedis.hgetall.mockResolvedValue({});
@@ -99,6 +101,7 @@ describe("createDurationJob()", () => {
   it("stores metadata via the pipeline with correct job_type", async () => {
     await makeService().createDurationJob({ track_id: "t1", friend_id: 1 });
 
+    expect(mockPipeline.del).toHaveBeenCalledWith("job:test-job-id:logs");
     expect(mockPipeline.hset).toHaveBeenCalledWith(
       "job:test-job-id",
       expect.objectContaining({ job_type: "fix-duration", track_id: "t1" })
@@ -395,7 +398,12 @@ describe("clearAllJobs()", () => {
 
     await makeService().clearAllJobs();
 
-    expect(mockRedis.del).toHaveBeenCalledWith("job:a", "job:b");
+    expect(mockRedis.del).toHaveBeenCalledWith(
+      "job:a",
+      "job:b",
+      "job:a:logs",
+      "job:b:logs"
+    );
   });
 
   it("deletes the queue and index keys", async () => {
@@ -415,24 +423,64 @@ describe("clearAllJobs()", () => {
 
 describe("deleteJob()", () => {
   it("returns true when the job key existed", async () => {
-    mockPipeline.exec.mockResolvedValue([[null, 1], [null, 1]]);
+    mockPipeline.exec.mockResolvedValue([[null, 1], [null, 1], [null, 1]]);
 
     const result = await makeService().deleteJob("test-job-id");
     expect(result).toBe(true);
   });
 
   it("returns false when the job key did not exist", async () => {
-    mockPipeline.exec.mockResolvedValue([[null, 0], [null, 0]]);
+    mockPipeline.exec.mockResolvedValue([[null, 0], [null, 0], [null, 0]]);
 
     const result = await makeService().deleteJob("missing-id");
     expect(result).toBe(false);
   });
 
   it("removes the job from the updated index", async () => {
-    mockPipeline.exec.mockResolvedValue([[null, 1], [null, 1]]);
+    mockPipeline.exec.mockResolvedValue([[null, 1], [null, 1], [null, 1]]);
 
     await makeService().deleteJob("test-job-id");
 
     expect(mockPipeline.zrem).toHaveBeenCalledWith("jobs:updated", "test-job-id");
+  });
+
+  it("deletes the per-job log list too", async () => {
+    mockPipeline.exec.mockResolvedValue([[null, 1], [null, 1], [null, 1]]);
+
+    await makeService().deleteJob("test-job-id");
+
+    expect(mockPipeline.del).toHaveBeenCalledWith("job:test-job-id:logs");
+  });
+});
+
+// ─── getJobLogs ──────────────────────────────────────────────────────────────
+
+describe("getJobLogs()", () => {
+  it("returns the persisted Redis log list when present", async () => {
+    mockRedis.lrange.mockResolvedValue(["line one", "line two"]);
+
+    const result = await makeService().getJobLogs("test-job-id");
+
+    expect(result).toEqual(["line one", "line two"]);
+    expect(mockRedis.hgetall).not.toHaveBeenCalled();
+  });
+
+  it("falls back to synthesized job details when no log list exists", async () => {
+    mockRedis.lrange.mockResolvedValue([]);
+    mockRedis.hgetall.mockResolvedValue(
+      makeJobHash({
+        status: "failed",
+        progress: "0",
+        error: "Download failed: auth failed",
+      })
+    );
+
+    const result = await makeService().getJobLogs("test-job-id");
+
+    expect(result).toEqual([
+      "No buffered worker logs were captured for job test-job-id.",
+      "Status: failed (0%)",
+      "Error: Download failed: auth failed",
+    ]);
   });
 });

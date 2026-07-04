@@ -17,7 +17,7 @@ asset_sync_host := env_var_or_default("ASSET_SYNC_HOST", "")
 music_mount := env_var_or_default("MUSIC_MOUNT", env_var_or_default("HOME", "") + "/groovenet-music")
 music_nfs_host := env_var_or_default("MUSIC_NFS_HOST", "")
 music_nfs_path := env_var_or_default("MUSIC_NFS_PATH", "/srv/music")
-op_env := env_var_or_default("OP_ENV_PREFIX", "")
+op_env := "op run --env-file=.env.tpl --"
 compose_cmd := `if docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; fi`
 platform_override := if os() == "macos" { "-f docker-compose.mac.yml" } else { "" }
 mise_exec := "mise exec --"
@@ -154,18 +154,22 @@ build-download-worker:
   {{buildkit_env}} docker buildx build -t ghcr.io/saegey/download-worker:{{tag}} -f download-worker/Dockerfile .
 
 rebuild-download-worker: check-compose
-  {{compose_cmd}} -f docker-compose.yml build --no-cache download-worker
-  {{compose_cmd}} -f docker-compose.yml up -d download-worker
+  {{op_env}} {{compose_cmd}} -f docker-compose.yml build --no-cache download-worker
+  {{op_env}} {{compose_cmd}} -f docker-compose.yml up -d --force-recreate download-worker
+
+rebuild-download-worker-worktree:
+  bash --noprofile --norc -c 'source ./scripts/worktree/lib.sh && compose_exec build --no-cache download-worker'
+  bash --noprofile --norc -c 'source ./scripts/worktree/lib.sh && compose_exec up -d --force-recreate download-worker'
 
 rebuild-containers services="app essentia ga-service download-worker":
-  {{buildkit_env}} {{compose_cmd}} -f docker-compose.yml build {{services}}
+  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f docker-compose.yml build {{services}}
 
 rebuild-containers-no-cache services="app essentia ga-service download-worker":
-  {{buildkit_env}} {{compose_cmd}} -f docker-compose.yml build --no-cache {{services}}
+  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f docker-compose.yml build --no-cache {{services}}
 
 rebuild-up-containers services="app essentia ga-service download-worker":
-  {{buildkit_env}} {{compose_cmd}} -f docker-compose.yml build {{services}}
-  {{compose_cmd}} -f docker-compose.yml up -d {{services}}
+  {{buildkit_env}} {{op_env}} {{compose_cmd}} -f docker-compose.yml build {{services}}
+  {{op_env}} {{compose_cmd}} -f docker-compose.yml up -d {{services}}
 
 build-all: build-app build-essentia build-ga-service build-download-worker
 

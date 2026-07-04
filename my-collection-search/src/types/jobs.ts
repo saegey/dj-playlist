@@ -15,6 +15,8 @@ export type JobData = {
   local_audio_url?: string | null;
   library_identifier?: string | null;
   username?: string | null;
+  downloader?: string | null;
+  source_url_key?: string | null;
 };
 
 export interface JobInfo {

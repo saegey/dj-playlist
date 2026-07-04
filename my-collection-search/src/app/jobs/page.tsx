@@ -19,10 +19,11 @@ import {
   CloseButton,
   NativeSelectRoot,
   NativeSelectField,
+  Tabs,
 } from "@chakra-ui/react";
 import { LuInfo, LuRefreshCw, LuTrash2 } from "react-icons/lu";
 import { useJobsQuery } from "@/hooks/useJobsQuery";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { clearAllJobs } from "@/services/internalApi/jobs";
 import TrackResultStore from "@/components/TrackResultStore";
 import type { Track } from "@/types/track";
@@ -41,6 +42,18 @@ export default function JobsPage() {
     state: stateFilter,
   });
   const [detailsJob, setDetailsJob] = React.useState<JobInfo | null>(null);
+
+  const { data: logsData, isLoading: logsLoading, refetch: refetchLogs } = useQuery({
+    queryKey: ["job-logs", detailsJob?.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/jobs/${detailsJob!.id}/logs`);
+      if (!res.ok) throw new Error("Failed to fetch logs");
+      const json = await res.json();
+      return (json.logs as string[]) ?? [];
+    },
+    enabled: !!detailsJob,
+    refetchInterval: detailsJob?.state === "active" ? 3000 : false,
+  });
 
   const clearJobsMutation = useMutation({
     mutationFn: clearAllJobs,
@@ -88,6 +101,10 @@ export default function JobsPage() {
   }) => {
     const data = job.data || {};
     const jobName = job.name || String(data.job_type || "");
+    const actualDownloader =
+      typeof data.downloader === "string" ? data.downloader : undefined;
+    const actualSourceKey =
+      typeof data.source_url_key === "string" ? data.source_url_key : undefined;
 
     if (jobName === "analyze-local-audio" || data.job_type === "analyze-local") {
       return {
@@ -122,8 +139,34 @@ export default function JobsPage() {
       };
     }
 
-    // Determine which downloader will be used based on available URLs
-    if (data.apple_music_url) {
+    if (actualDownloader === "gamdl" || actualSourceKey === "apple_music_url") {
+      return {
+        name: "gamdl",
+        source: "Apple Music",
+        color: "purple" as const,
+        quality: String(data.quality || "best")
+      };
+    } else if (
+      actualDownloader === "yt-dlp" &&
+      (actualSourceKey === "youtube_url" || (!actualSourceKey && data.youtube_url))
+    ) {
+      return {
+        name: "yt-dlp",
+        source: "YouTube",
+        color: "red" as const,
+        quality: "audio"
+      };
+    } else if (
+      actualDownloader === "yt-dlp" &&
+      (actualSourceKey === "soundcloud_url" || (!actualSourceKey && data.soundcloud_url))
+    ) {
+      return {
+        name: "yt-dlp",
+        source: "SoundCloud",
+        color: "orange" as const,
+        quality: "audio"
+      };
+    } else if (data.apple_music_url) {
       return {
         name: "gamdl",
         source: "Apple Music",
@@ -454,55 +497,106 @@ export default function JobsPage() {
           <Portal>
             <Dialog.Backdrop />
             <Dialog.Positioner>
-              <Dialog.Content>
+              <Dialog.Content
+                maxW={{ base: "calc(100vw - 1rem)", md: "4xl", xl: "6xl" }}
+                maxH="90vh"
+              >
                 <Dialog.Header>
                   <Dialog.Title>Job Details</Dialog.Title>
                   <Dialog.CloseTrigger asChild>
                     <CloseButton />
                   </Dialog.CloseTrigger>
                 </Dialog.Header>
-                <Dialog.Body>
+                <Dialog.Body overflowY="auto">
                   {detailsJob && (
-                    <Stack gap={3}>
-                      <Box>
-                        <Text fontSize="sm" color="gray.500">Job ID</Text>
-                        <Text fontFamily="mono">{detailsJob.id}</Text>
-                      </Box>
-                      <Box>
-                        <Text fontSize="sm" color="gray.500">Track ID</Text>
-                        <Text fontFamily="mono">{detailsJob.data.track_id}</Text>
-                      </Box>
-                      <Box>
-                        <Text fontSize="sm" color="gray.500">Queue</Text>
-                        <Text>{detailsJob.queue}</Text>
-                      </Box>
-                      <Box>
-                        <Text fontSize="sm" color="gray.500">Job Type</Text>
-                        <Text>{detailsJob.name}</Text>
-                      </Box>
-                      <Box>
-                        <Text fontSize="sm" color="gray.500">State</Text>
-                        <Text>{detailsJob.state}</Text>
-                      </Box>
-                      <Box>
-                        <Text fontSize="sm" color="gray.500">Attempts</Text>
-                        <Text>{detailsJob.attemptsMade}</Text>
-                      </Box>
-                      <Box>
-                        <Text fontSize="sm" color="gray.500">Duration</Text>
-                        <Text>{formatDuration(detailsJob.processedOn, detailsJob.finishedOn)}</Text>
-                      </Box>
-                      <Box>
-                        <Text fontSize="sm" color="gray.500">Finished</Text>
-                        <Text>{formatTimestamp(detailsJob.finishedOn)}</Text>
-                      </Box>
-                      {detailsJob.failedReason && (
-                        <Box>
-                          <Text fontSize="sm" color="gray.500">Failure</Text>
-                          <Text color="red.500">{detailsJob.failedReason}</Text>
-                        </Box>
-                      )}
-                    </Stack>
+                    <Tabs.Root defaultValue="details" size="sm">
+                      <Tabs.List mb={3}>
+                        <Tabs.Trigger value="details">Details</Tabs.Trigger>
+                        <Tabs.Trigger value="logs">
+                          Logs
+                          {logsData && logsData.length > 0 && (
+                            <Badge ml={1} size="xs" variant="subtle">{logsData.length}</Badge>
+                          )}
+                        </Tabs.Trigger>
+                      </Tabs.List>
+
+                      <Tabs.Content value="details">
+                        <Stack gap={3}>
+                          <Box>
+                            <Text fontSize="sm" color="gray.500">Job ID</Text>
+                            <Text fontFamily="mono">{detailsJob.id}</Text>
+                          </Box>
+                          <Box>
+                            <Text fontSize="sm" color="gray.500">Track ID</Text>
+                            <Text fontFamily="mono">{detailsJob.data.track_id}</Text>
+                          </Box>
+                          <Box>
+                            <Text fontSize="sm" color="gray.500">Queue</Text>
+                            <Text>{detailsJob.queue}</Text>
+                          </Box>
+                          <Box>
+                            <Text fontSize="sm" color="gray.500">Job Type</Text>
+                            <Text>{detailsJob.name}</Text>
+                          </Box>
+                          <Box>
+                            <Text fontSize="sm" color="gray.500">State</Text>
+                            <Text>{detailsJob.state}</Text>
+                          </Box>
+                          <Box>
+                            <Text fontSize="sm" color="gray.500">Attempts</Text>
+                            <Text>{detailsJob.attemptsMade}</Text>
+                          </Box>
+                          <Box>
+                            <Text fontSize="sm" color="gray.500">Duration</Text>
+                            <Text>{formatDuration(detailsJob.processedOn, detailsJob.finishedOn)}</Text>
+                          </Box>
+                          <Box>
+                            <Text fontSize="sm" color="gray.500">Finished</Text>
+                            <Text>{formatTimestamp(detailsJob.finishedOn)}</Text>
+                          </Box>
+                          {detailsJob.failedReason && (
+                            <Box>
+                              <Text fontSize="sm" color="gray.500">Failure</Text>
+                              <Text color="red.500">{detailsJob.failedReason}</Text>
+                            </Box>
+                          )}
+                        </Stack>
+                      </Tabs.Content>
+
+                      <Tabs.Content value="logs">
+                        <Flex justify="space-between" align="center" mb={2}>
+                          <Text fontSize="sm" color="gray.500">
+                            {logsData ? `${logsData.length} log entries` : "No logs"}
+                          </Text>
+                          <Button size="xs" variant="ghost" onClick={() => refetchLogs()}>
+                            <LuRefreshCw />
+                            Refresh
+                          </Button>
+                        </Flex>
+                        {logsLoading ? (
+                          <Flex justify="center" py={4}><Spinner size="sm" /></Flex>
+                        ) : logsData && logsData.length > 0 ? (
+                          <Box
+                            as="pre"
+                            fontSize="xs"
+                            fontFamily="mono"
+                            bg="gray.900"
+                            color="gray.100"
+                            p={3}
+                            borderRadius="md"
+                            overflowY="auto"
+                            minH={{ base: "320px", md: "420px" }}
+                            maxH="65vh"
+                            whiteSpace="pre-wrap"
+                            wordBreak="break-all"
+                          >
+                            {logsData.join("\n\n")}
+                          </Box>
+                        ) : (
+                          <Text fontSize="sm" color="gray.500">No logs captured for this job.</Text>
+                        )}
+                      </Tabs.Content>
+                    </Tabs.Root>
                   )}
                 </Dialog.Body>
               </Dialog.Content>

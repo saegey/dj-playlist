@@ -36,11 +36,22 @@ export async function GET(
         friend_id: jobStatus.friend_id,
         release_id: jobStatus.release_id,
         job_type: jobStatus.job_type || jobStatus.name,
+        downloader:
+          typeof jobStatus.result?.downloader === "string"
+            ? jobStatus.result.downloader
+            : undefined,
+        source_url_key:
+          typeof jobStatus.result?.source_url_key === "string"
+            ? jobStatus.result.source_url_key
+            : undefined,
       },
       progress: jobStatus.progress || 0,
       returnvalue: jobStatus.result,
       finishedOn: jobStatus.status === 'completed' || jobStatus.status === 'failed' ? jobStatus.updated_at : undefined,
-      processedOn: jobStatus.status === 'processing' || jobStatus.status === 'completed' || jobStatus.status === 'failed' ? jobStatus.updated_at : undefined,
+      processedOn:
+        jobStatus.status === 'processing' || jobStatus.status === 'completed' || jobStatus.status === 'failed'
+          ? jobStatus.started_at || jobStatus.created_at
+          : undefined,
       failedReason: jobStatus.error,
       attemptsMade: 1,
       delay: 0,
