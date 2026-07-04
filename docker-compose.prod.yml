@@ -12,6 +12,8 @@ services:
     image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
     container_name: myapp
     environment:
+      APPLE_MUSIC_TEAM_ID: ${APPLE_MUSIC_TEAM_ID}
+      APPLE_MUSIC_KEY_ID: ${APPLE_MUSIC_KEY_ID}
       APPLE_MUSIC_PRIVATE_KEY: ${APPLE_MUSIC_PRIVATE_KEY}
       NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY}
       NEXT_PUBLIC_POSTHOG_HOST: ${NEXT_PUBLIC_POSTHOG_HOST}
