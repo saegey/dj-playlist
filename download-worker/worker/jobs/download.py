@@ -18,6 +18,30 @@ from ..types import JobData, JobResult
 from .analyze import analyze_local_audio
 
 
+def resolve_gamdl_cookie_file() -> Optional[str]:
+    configured_path = os.getenv('GAMDL_COOKIE_FILE')
+    candidates: list[str] = []
+
+    if configured_path:
+        candidates.append(configured_path)
+
+    # Backwards-compatible fallbacks for older local setups.
+    candidates.extend([
+        '/app/cookies/gamdl_cookies.txt',
+        '/app/cookies/music.apple.com_cookies.txt',
+    ])
+
+    seen: set[str] = set()
+    for path in candidates:
+        if not path or path in seen:
+            continue
+        seen.add(path)
+        if os.path.exists(path):
+            return path
+
+    return configured_path
+
+
 def has_download_urls(job_data: JobData) -> bool:
     for key in ['apple_music_url', 'youtube_url', 'soundcloud_url']:
         value = job_data.get(key)
@@ -48,7 +72,7 @@ def download_with_gamdl(
         if quality != 'best':
             cmd.extend(['--audio-quality', quality])
 
-        cookie_file = os.getenv('GAMDL_COOKIE_FILE')
+        cookie_file = resolve_gamdl_cookie_file()
         if cookie_file:
             if os.path.exists(cookie_file):
                 try:
@@ -60,6 +84,7 @@ def download_with_gamdl(
                         logger.warning("Cookie file may not contain Apple Music cookies")
                     else:
                         cmd.extend(['--cookies-path', cookie_file])
+                        logger.info(f"Using gamdl cookie file: {cookie_file}")
                         lines = content.split('\n')
                         apple_lines = [l for l in lines if 'apple' in l.lower()]
                         logger.info(f"Using cookie file with {len(apple_lines)} Apple entries")

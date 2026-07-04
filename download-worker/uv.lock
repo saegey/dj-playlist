@@ -16,6 +16,15 @@ wheels = [
 ]
 
 [[package]]
+name = "async-lru"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/1f/989ecfef8e64109a489fff357450cb73fa73a865a92bd8c272170a6922c2/async_lru-2.3.0.tar.gz", hash = "sha256:89bdb258a0140d7313cf8f4031d816a042202faa61d0ab310a0a538baa1c24b6", size = 16332, upload-time = "2026-03-19T01:04:32.413Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e5/e2/c2e3abf398f80732e58b03be77bde9022550d221dd8781bf586bd4d97cc1/async_lru-2.3.0-py3-none-any.whl", hash = "sha256:eea27b01841909316f2cc739807acea1c623df2be8c5cfad7583286397bb8315", size = 8403, upload-time = "2026-03-19T01:04:30.883Z" },
+]
+
+[[package]]
 name = "attrs"
 version = "26.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -134,6 +143,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b6/2c/66bab4fef920ef8caa3e180ea601475b2cbbe196255b18f1c58215940607/construct-2.8.8.tar.gz", hash = "sha256:1b84b8147f6fd15bcf64b737c3e8ac5100811ad80c830cb4b2545140511c4157", size = 717694, upload-time = "2016-10-20T22:29:12.563Z" }
 
 [[package]]
+name = "dataclass-click"
+version = "1.0.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "click" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/89/82/5b6035efd90621771fa039960eab3e1ec7ff2a8625033272856843e8bd27/dataclass_click-1.0.4.tar.gz", hash = "sha256:10e7de638dd9e68ae9abd5086f61d8ddee42b1873a70f5fd9fd2167856afac11", size = 7580, upload-time = "2025-10-10T21:11:31.956Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/86/dc/38a94a2eb5f756724a6dc87a7aea38f7b747fe7b2e9daabc34a65e6cd9ac/dataclass_click-1.0.4-py3-none-any.whl", hash = "sha256:a225d30c04e4abbdba411cc3d5ec0a2ea829e1dca6500afe5f87cc243e5ead72", size = 8553, upload-time = "2025-10-10T21:11:30.514Z" },
+]
+
+[[package]]
 name = "download-worker"
 version = "1.0.0"
 source = { virtual = "." }
@@ -155,7 +176,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "gamdl", specifier = "==2.6.5" },
+    { name = "gamdl", specifier = "==3.8.1" },
     { name = "groovenet-python-client", editable = "../packages/groovenet-python" },
     { name = "psycopg2-binary", specifier = ">=2.9.9,<2.10" },
     { name = "redis", specifier = "==5.0.1" },
@@ -185,21 +206,26 @@ wheels = [
 
 [[package]]
 name = "gamdl"
-version = "2.6.5"
+version = "3.8.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "async-lru" },
     { name = "click" },
     { name = "colorama" },
+    { name = "dataclass-click" },
+    { name = "httpx" },
+    { name = "httpx-retries" },
     { name = "inquirerpy" },
     { name = "m3u8" },
     { name = "mutagen" },
     { name = "pillow" },
     { name = "pywidevine" },
+    { name = "structlog" },
     { name = "yt-dlp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e0/1f/82072cd7d18efe7e617127790ea94e17af2a57dc8f0dfc83e510ede1facc/gamdl-2.6.5.tar.gz", hash = "sha256:5e65e5b7a5a9777874d9ffc674bb96af844d6520c223746dc642910138ac90f5", size = 40636, upload-time = "2025-10-04T20:12:04.611Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/63/dc/00ee2132ba0356deb067d2550e927931a43d4070d0ecdd2d33ff8b6486ab/gamdl-3.8.1.tar.gz", hash = "sha256:bd069a580d1b7ff9dc709cf996fe65a0a0731ef83dbe5a0608a182948e91c237", size = 82616, upload-time = "2026-07-03T14:06:17.787Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f9/b1/f8004411e1abe0e7a544accf24a68772eb5bf39a959b8dd49f4e5366012c/gamdl-2.6.5-py3-none-any.whl", hash = "sha256:81cfe03716c9e7ba5f8efd1da3664eeed4b3a4862c80e938c739f5131b479737", size = 43103, upload-time = "2025-10-04T20:12:03.387Z" },
+    { url = "https://files.pythonhosted.org/packages/56/96/a08e39e72d5485d2a5f3c84b81e1ac3cc6eeaa90d4ca1251b1f177cb70d0/gamdl-3.8.1-py3-none-any.whl", hash = "sha256:d120fd4627ac6c2f36ecbe56d525d000a381c6a3fc7097fee31c4f48328d7df7", size = 89630, upload-time = "2026-07-03T14:06:16.374Z" },
 ]
 
 [[package]]
@@ -254,6 +280,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b1/df/48c586a5fe32a0f01324ee087459e112ebb7224f646c0b5023f5e79e9956/httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc", size = 141406, upload-time = "2024-12-06T15:37:23.222Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl", hash = "sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad", size = 73517, upload-time = "2024-12-06T15:37:21.509Z" },
+]
+
+[[package]]
+name = "httpx-retries"
+version = "0.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/f5/046cac13877ce9b55aebdbb3999e0e45b19b989a95c5fd1040fa04bd1f92/httpx_retries-0.5.0.tar.gz", hash = "sha256:d8c8e1e0852d84be3837aba0bcf78aeb89a4b77db95e8cc988c8c058830b3044", size = 15647, upload-time = "2026-04-20T01:21:47.154Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c5/a8/aadeaa9a28510727d538636ee8688f0782a98523147852b29404ce696f1b/httpx_retries-0.5.0-py3-none-any.whl", hash = "sha256:d3124592979a9dc6197e666d1f02e9ab996a0c58fce59fad8db6201a6a87304e", size = 8908, upload-time = "2026-04-20T01:21:46.157Z" },
 ]
 
 [[package]]
@@ -663,6 +701,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e8/c4/ba2f8066cceb6f23394729afe52f3bf7adec04bf9ed2c820b39e19299111/sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88", size = 30594, upload-time = "2021-05-16T22:03:42.897Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/32/46/9cb0e58b2deb7f82b84065f37f3bffeb12413f947f9388e4cac22c4621ce/sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0", size = 29575, upload-time = "2021-05-16T22:03:41.177Z" },
+]
+
+[[package]]
+name = "structlog"
+version = "26.1.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5e/89/b4a0bcfdf4f71a3dea31379f095929613d7e4528a0996bca6aa964cd0dca/structlog-26.1.0.tar.gz", hash = "sha256:f63a716cbd1b1291cf7661de7794b455acfa4c43c5bcf1630e6ad5ddc1adb3b7", size = 1459881, upload-time = "2026-06-06T07:33:39.348Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a9/18/489c97b834dfff9cf2fc2507cede4bcd4b11e67f84bc462acd1992496f86/structlog-26.1.0-py3-none-any.whl", hash = "sha256:e081a26d6c373e6d201eca24eede26d8ffab07f88f477822e679183428d3d91e", size = 73764, upload-time = "2026-06-06T07:33:38.046Z" },
 ]
 
 [[package]]
