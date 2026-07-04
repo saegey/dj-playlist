@@ -59,7 +59,13 @@ USER nextjs
 EXPOSE 3000
 CMD ["node", "server.js"]
 
-FROM deps AS migrator
+FROM base AS migrator
+WORKDIR /app
+
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --ignore-scripts
+
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && \
