@@ -11,5 +11,15 @@ dependencies = [
     "groovenet-python-client",
 ]
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.14",
+    "fakeredis>=2.20",
+]
+
 [tool.uv.sources]
 groovenet-python-client = { path = "../packages/groovenet-python", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

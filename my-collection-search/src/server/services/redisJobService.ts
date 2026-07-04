@@ -81,7 +81,9 @@ export class RedisJobService {
         1000
       );
       cursor = nextCursor;
-      if (batch.length > 0) keys.push(...batch);
+      if (batch.length > 0) {
+        keys.push(...batch.filter((key) => !key.endsWith(":logs")));
+      }
     } while (cursor !== "0");
     return keys;
   }
@@ -109,6 +111,8 @@ export class RedisJobService {
     payload: Record<string, string | number>
   ): Promise<void> {
     const pipeline = this.redis.pipeline();
+    // Ensure each queued job starts with a clean per-job log buffer.
+    pipeline.del(`job:${job_id}:logs`);
     pipeline.hset(`job:${job_id}`, payload);
     pipeline.zadd(this.updatedIndexKey, Date.now(), job_id);
     pipeline.expire(`job:${job_id}`, this.activeJobTtlSeconds);
@@ -446,10 +450,11 @@ export class RedisJobService {
   }
 
   async clearAllJobs(): Promise<void> {
-    // Clear job data
+    // Clear job hashes and their per-job log lists.
     const jobKeys = await this.listJobKeys();
     if (jobKeys.length > 0) {
-      await this.redis.del(...jobKeys);
+      const logKeys = jobKeys.map((key) => `${key}:logs`);
+      await this.redis.del(...jobKeys, ...logKeys);
     }
 
     // Clear queues
@@ -461,10 +466,38 @@ export class RedisJobService {
   async deleteJob(job_id: string): Promise<boolean> {
     const pipeline = this.redis.pipeline();
     pipeline.del(`job:${job_id}`);
+    pipeline.del(`job:${job_id}:logs`);
     pipeline.zrem(this.updatedIndexKey, job_id);
     const results = await pipeline.exec();
     const deleted = Number(results?.[0]?.[1] ?? 0);
     return deleted > 0;
+  }
+
+  async getJobLogs(job_id: string): Promise<string[]> {
+    const logs = await this.redis.lrange(`job:${job_id}:logs`, 0, -1);
+    if (logs.length > 0) {
+      return logs;
+    }
+
+    const job = await this.getJobStatus(job_id);
+    if (!job) {
+      return [];
+    }
+
+    const fallback = [
+      `No buffered worker logs were captured for job ${job_id}.`,
+      `Status: ${job.status} (${job.progress}%)`,
+    ];
+
+    if (job.error) {
+      fallback.push(`Error: ${job.error}`);
+    }
+
+    if (job.result) {
+      fallback.push(`Result: ${JSON.stringify(job.result, null, 2)}`);
+    }
+
+    return fallback;
   }
 }
 

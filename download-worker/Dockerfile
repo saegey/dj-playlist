@@ -33,4 +33,4 @@ COPY download-worker/ /app/download-worker/
 
 RUN mkdir -p /app/audio /app/downloads
 
-CMD ["python", "download_worker.py"]
+CMD ["python", "-m", "worker.main"]
