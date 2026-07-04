@@ -142,7 +142,7 @@ function AlbumsPageContent() {
           selectedFriend={selectedFriend}
           onFriendChange={handleFriendChange}
           includeAllOption={true}
-          placeholder="Search albums..."
+          placeholder="Search"
           compactDesktop={true}
           desktopControls={
             <>

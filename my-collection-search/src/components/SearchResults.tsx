@@ -344,18 +344,20 @@ const SearchResults: React.FC = () => {
         }
       />
 
-      <FilterChips
-        chips={[
-          { key: "missingAudio", label: "Missing audio", active: !!activeFilters.missingAudio },
-          { key: "missingMetadata", label: "Missing metadata", active: !!activeFilters.missingMetadata },
-          { key: "missingAnyStreamingUrl", label: "No streaming URL", active: !!activeFilters.missingAnyStreamingUrl },
-          { key: "missingAppleMusic", label: "No Apple Music", active: !!activeFilters.missingAppleMusic },
-          { key: "missingYouTube", label: "No YouTube", active: !!activeFilters.missingYouTube },
-          { key: "missingSoundCloud", label: "No SoundCloud", active: !!activeFilters.missingSoundCloud },
-        ]}
-        onToggle={handleFilterToggle}
-        onClearAll={activeFilterCount > 0 ? handleClearAllFilters : undefined}
-      />
+      <Box mt={3}>
+        <FilterChips
+          chips={[
+            { key: "missingAudio", label: "Missing audio", active: !!activeFilters.missingAudio },
+            { key: "missingMetadata", label: "Missing metadata", active: !!activeFilters.missingMetadata },
+            { key: "missingAnyStreamingUrl", label: "No streaming URL", active: !!activeFilters.missingAnyStreamingUrl },
+            { key: "missingAppleMusic", label: "No Apple Music", active: !!activeFilters.missingAppleMusic },
+            { key: "missingYouTube", label: "No YouTube", active: !!activeFilters.missingYouTube },
+            { key: "missingSoundCloud", label: "No SoundCloud", active: !!activeFilters.missingSoundCloud },
+          ]}
+          onToggle={handleFilterToggle}
+          onClearAll={activeFilterCount > 0 ? handleClearAllFilters : undefined}
+        />
+      </Box>
 
       {initialLoading ? (
         <Box mt={8}>
@@ -367,7 +369,7 @@ const SearchResults: React.FC = () => {
         </Box>
       ) : (
         <>
-          <Text fontSize="sm" color="gray.500" mb={2}>
+          <Text fontSize="sm" color="gray.500" mb={2} mt={3}>
             {estimatedResults.toLocaleString()} results found
             {activeFilterCount > 0 && (
               <Text as="span" color="blue.500" ml={2}>

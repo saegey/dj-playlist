@@ -334,10 +334,9 @@ export default function AlbumResult({
         </Box>
       )}
 
-      {!isEditing && (resolvedAlbum.purchase_price || resolvedAlbum.condition) && (
+      {!isEditing && resolvedAlbum.condition && (
         <Flex mt={3} gap={3} fontSize="sm" color={subtleText} flexWrap="wrap">
-          {resolvedAlbum.purchase_price && <Text>Price: ${resolvedAlbum.purchase_price}</Text>}
-          {resolvedAlbum.condition && <Text>Condition: {resolvedAlbum.condition}</Text>}
+          <Text>Condition: {resolvedAlbum.condition}</Text>
         </Flex>
       )}
 

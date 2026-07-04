@@ -29,7 +29,7 @@ export default function UnifiedSearchControls({
   selectedFriend,
   onFriendChange,
   includeAllOption = false,
-  placeholder = "Search...",
+  placeholder = "Search",
   compactDesktop = false,
   desktopControls,
   mobilePrimaryControl,

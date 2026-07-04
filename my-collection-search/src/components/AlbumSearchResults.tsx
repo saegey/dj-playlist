@@ -90,17 +90,9 @@ export default function AlbumSearchResults({ viewMode = "card" }: { viewMode?: "
 
   return (
     <Box>
-      {/* Results count */}
-      <Flex justify="space-between" align="center" mb={4} px={2}>
-        <Text fontSize="sm" color="gray.600">
-          {totalHits.toLocaleString()} {totalHits === 1 ? "album" : "albums"}
-        </Text>
-        {query && (
-          <Text fontSize="sm" color="gray.500">
-            Search: &quot;{query}&quot;
-          </Text>
-        )}
-      </Flex>
+      <Text fontSize="sm" color="gray.500" mb={2}>
+        {totalHits.toLocaleString()} {totalHits === 1 ? "album" : "albums"}
+      </Text>
 
       {/* Album results */}
       <Box>
