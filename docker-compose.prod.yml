@@ -44,6 +44,12 @@ services:
   download-worker:
     image: ghcr.io/saegey/download-worker:${IMAGE_TAG:-latest}
     container_name: download-worker
+    volumes:
+      # Keep worker and app pointed at the same backing store for /app/audio.
+      - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
+      - album_covers:/app/public/uploads/album-covers
+      - cookie_data:/app/cookies
+      - essentia_data:/app/essentia-data
     restart: unless-stopped
 
 volumes:
