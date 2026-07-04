@@ -38,6 +38,7 @@ else
   COMPOSE_CMD=(docker compose)
 fi
 BUILD_SERVICES=(app essentia ga-service download-worker)
+NAMED_CONTAINERS=(myapp essentia-api ga-service download-worker)
 MIN_FREE_GB="${MIN_FREE_GB:-5}"
 PGUSER="${POSTGRES_USER:-djplaylist}"
 PGDB="${POSTGRES_DB:-djplaylist}"
@@ -50,6 +51,20 @@ check_disk_space() {
     echo "ERROR: low disk space. Need >= ${MIN_FREE_GB}GB free before deploy."
     echo "Available: $((avail_kb / 1024 / 1024))GB"
     exit 1
+  fi
+}
+
+remove_stale_named_containers() {
+  local existing=()
+  for name in "${NAMED_CONTAINERS[@]}"; do
+    if docker ps -a --format '{{.Names}}' | grep -Fxq "${name}"; then
+      existing+=("${name}")
+    fi
+  done
+
+  if (( ${#existing[@]} > 0 )); then
+    echo "==> Removing stale named containers: ${existing[*]}"
+    docker rm -f "${existing[@]}"
   fi
 }
 
@@ -94,6 +109,7 @@ echo "==> Running migrations"
 "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${MIGRATE_COMPOSE_FILES[@]}" run --build --rm --use-aliases migrate
 
 echo "==> Starting services"
+remove_stale_named_containers
 "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d --force-recreate --remove-orphans
 
 echo "==> Deployment complete"
