@@ -65,6 +65,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --ignore-scripts
+RUN --mount=type=cache,target=/root/.npm \
+    npm install -g node-pg-migrate@8.0.4
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
