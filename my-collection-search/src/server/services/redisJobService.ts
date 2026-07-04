@@ -37,6 +37,7 @@ export interface JobStatus {
   status: "queued" | "processing" | "completed" | "failed";
   progress: number;
   created_at: number;
+  started_at?: number;
   updated_at: number;
   name?: string;
   job_type?: DownloadJobData["job_type"];
@@ -95,6 +96,7 @@ export class RedisJobService {
       status: jobData.status as JobStatus["status"],
       progress: parseInt(jobData.progress || "0"),
       created_at: parseInt(jobData.created_at),
+      started_at: jobData.started_at ? parseInt(jobData.started_at) : undefined,
       updated_at: parseInt(jobData.updated_at),
       name: jobData.name,
       job_type: jobData.job_type as DownloadJobData["job_type"] | undefined,

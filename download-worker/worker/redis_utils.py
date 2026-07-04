@@ -34,6 +34,8 @@ def update_job_status(
 
     pipeline = redis_conn.pipeline()
     pipeline.hset(job_key, mapping=job_data)
+    if status == 'processing':
+        pipeline.hsetnx(job_key, 'started_at', now_ms)
     pipeline.zadd(JOBS_UPDATED_INDEX_KEY, {job_id: now_ms})
     pipeline.expire(job_key, ttl)
     pipeline.execute()

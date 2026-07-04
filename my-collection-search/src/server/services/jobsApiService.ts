@@ -135,6 +135,12 @@ export class JobsApiService {
           local_audio_url: track?.local_audio_url || undefined,
           library_identifier: track?.library_identifier || undefined,
           username: track?.username || undefined,
+          downloader:
+            typeof job.result?.downloader === "string" ? job.result.downloader : undefined,
+          source_url_key:
+            typeof job.result?.source_url_key === "string"
+              ? job.result.source_url_key
+              : undefined,
         },
         returnvalue: job.result,
         finishedOn:
@@ -147,7 +153,7 @@ export class JobsApiService {
           job.status === "processing" ||
           job.status === "completed" ||
           job.status === "failed"
-            ? job.updated_at
+            ? job.started_at || job.created_at
             : undefined,
         queue: "download",
       };

@@ -101,6 +101,10 @@ export default function JobsPage() {
   }) => {
     const data = job.data || {};
     const jobName = job.name || String(data.job_type || "");
+    const actualDownloader =
+      typeof data.downloader === "string" ? data.downloader : undefined;
+    const actualSourceKey =
+      typeof data.source_url_key === "string" ? data.source_url_key : undefined;
 
     if (jobName === "analyze-local-audio" || data.job_type === "analyze-local") {
       return {
@@ -135,8 +139,34 @@ export default function JobsPage() {
       };
     }
 
-    // Determine which downloader will be used based on available URLs
-    if (data.apple_music_url) {
+    if (actualDownloader === "gamdl" || actualSourceKey === "apple_music_url") {
+      return {
+        name: "gamdl",
+        source: "Apple Music",
+        color: "purple" as const,
+        quality: String(data.quality || "best")
+      };
+    } else if (
+      actualDownloader === "yt-dlp" &&
+      (actualSourceKey === "youtube_url" || (!actualSourceKey && data.youtube_url))
+    ) {
+      return {
+        name: "yt-dlp",
+        source: "YouTube",
+        color: "red" as const,
+        quality: "audio"
+      };
+    } else if (
+      actualDownloader === "yt-dlp" &&
+      (actualSourceKey === "soundcloud_url" || (!actualSourceKey && data.soundcloud_url))
+    ) {
+      return {
+        name: "yt-dlp",
+        source: "SoundCloud",
+        color: "orange" as const,
+        quality: "audio"
+      };
+    } else if (data.apple_music_url) {
       return {
         name: "gamdl",
         source: "Apple Music",

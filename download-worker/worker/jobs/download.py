@@ -306,6 +306,8 @@ def download_audio(job_data: JobData) -> JobResult:
         ]
 
         downloaded_file = None
+        successful_downloader = None
+        successful_url_key = None
         for url_key, downloader in sources:
             if not (job_data.get(url_key) or "").strip():
                 continue
@@ -322,6 +324,8 @@ def download_audio(job_data: JobData) -> JobResult:
                     downloaded_file = download_with_ytdlp(url, download_dir, track_id, log_sink=log_sink)
 
                 if downloaded_file:
+                    successful_downloader = downloader
+                    successful_url_key = url_key
                     logger.info(f"Successfully downloaded: {downloaded_file}")
                     break
             except Exception as e:
@@ -381,6 +385,8 @@ def download_audio(job_data: JobData) -> JobResult:
             'local_audio_url': os.path.basename(downloaded_file),
             'track_id': track_id,
             'friend_id': friend_id,
+            'downloader': successful_downloader,
+            'source_url_key': successful_url_key,
         }
         if analysis_result:
             result['analysis'] = analysis_result
