@@ -6,6 +6,9 @@ packages/*/build/
 mcp-server/build/
 discogs_exports/
 .env
+.env.*
+!.env.example
+!.env.tpl
 .envrc
 .DS_Store
 tmp/

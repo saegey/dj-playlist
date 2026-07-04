@@ -2,9 +2,11 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-COMPOSE_DIR="${COMPOSE_DIR:-$REPO_ROOT/my-collection-search}"
+COMPOSE_DIR="${COMPOSE_DIR:-$REPO_ROOT}"
+APP_DIR="${APP_DIR:-$REPO_ROOT/my-collection-search}"
 WORKTREE_STATE_DIR="${WORKTREE_STATE_DIR:-$REPO_ROOT/.worktree}"
-REPO_NAME="${REPO_NAME:-$(basename "$REPO_ROOT")}"
+_main_worktree() { git -C "$REPO_ROOT" worktree list --porcelain | awk '/^worktree /{print $2; exit}'; }
+REPO_NAME="${REPO_NAME:-$(basename "$(_main_worktree)")}"
 SEED_ROOT="${SEED_ROOT:-$HOME/.supacode/worktree-seeds/$REPO_NAME}"
 SEED_LATEST_DIR="${SEED_LATEST_DIR:-$SEED_ROOT/latest}"
 CADDY_WORKTREE_DIR="${CADDY_WORKTREE_DIR:-$HOME/.config/caddy/worktrees}"

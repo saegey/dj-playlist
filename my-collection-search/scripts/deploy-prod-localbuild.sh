@@ -8,12 +8,37 @@ if [[ -z "${TAG}" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PROJECT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${PROJECT_DIR}"
 
 PROJECT_NAME="${PROJECT_NAME:-dj-playlist}"
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.prod.yml)
+MIGRATE_COMPOSE_FILES=(-f docker-compose.yml)
+if [[ -f "${PROJECT_DIR}/.env" ]]; then
+  COMPOSE_ENV_FILE="${PROJECT_DIR}/.env"
+elif [[ -f "${PROJECT_DIR}/my-collection-search/.env" ]]; then
+  COMPOSE_ENV_FILE="${PROJECT_DIR}/my-collection-search/.env"
+else
+  COMPOSE_ENV_FILE=""
+fi
+if [[ -f "${PROJECT_DIR}/.env.tpl" ]]; then
+  COMPOSE_TEMPLATE_FILE="${PROJECT_DIR}/.env.tpl"
+elif [[ -f "${PROJECT_DIR}/my-collection-search/.env.tpl" ]]; then
+  COMPOSE_TEMPLATE_FILE="${PROJECT_DIR}/my-collection-search/.env.tpl"
+else
+  COMPOSE_TEMPLATE_FILE=""
+fi
+OP_BIN="$(command -v op || true)"
+COMPOSE_CMD=()
+if [[ -n "${COMPOSE_ENV_FILE}" ]]; then
+  COMPOSE_CMD=(docker compose --env-file "${COMPOSE_ENV_FILE}")
+elif [[ -n "${COMPOSE_TEMPLATE_FILE}" && -n "${OP_BIN}" ]]; then
+  COMPOSE_CMD=(op run --env-file "${COMPOSE_TEMPLATE_FILE}" -- docker compose)
+else
+  COMPOSE_CMD=(docker compose)
+fi
 BUILD_SERVICES=(app essentia ga-service download-worker)
+NAMED_CONTAINERS=(myapp essentia-api ga-service download-worker)
 MIN_FREE_GB="${MIN_FREE_GB:-5}"
 PGUSER="${POSTGRES_USER:-djplaylist}"
 PGDB="${POSTGRES_DB:-djplaylist}"
@@ -29,16 +54,30 @@ check_disk_space() {
   fi
 }
 
+remove_stale_named_containers() {
+  local existing=()
+  for name in "${NAMED_CONTAINERS[@]}"; do
+    if docker ps -a --format '{{.Names}}' | grep -Fxq "${name}"; then
+      existing+=("${name}")
+    fi
+  done
+
+  if (( ${#existing[@]} > 0 )); then
+    echo "==> Removing stale named containers: ${existing[*]}"
+    docker rm -f "${existing[@]}"
+  fi
+}
+
 wait_for_db_ready() {
   local timeout_s=120 elapsed=0
   echo "==> Waiting for PostgreSQL readiness"
-  until docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" exec -T db \
+  until "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" exec -T db \
     pg_isready -U "${PGUSER}" -d "${PGDB}" >/dev/null 2>&1; do
     sleep 2
     elapsed=$((elapsed + 2))
     if (( elapsed >= timeout_s )); then
       echo "ERROR: Postgres did not become ready within ${timeout_s}s"
-      docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" logs --tail=200 db || true
+      "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" logs --tail=200 db || true
       exit 1
     fi
   done
@@ -48,20 +87,29 @@ echo "==> Fetching tags and checking out ${TAG}"
 git fetch --tags
 git checkout "${TAG}"
 
+if [[ -n "${COMPOSE_ENV_FILE}" ]]; then
+  echo "==> Using env file ${COMPOSE_ENV_FILE}"
+elif [[ -n "${COMPOSE_TEMPLATE_FILE}" && -n "${OP_BIN}" ]]; then
+  echo "==> Using 1Password template ${COMPOSE_TEMPLATE_FILE}"
+else
+  echo "WARNING: no .env or usable .env.tpl found"
+fi
+
 echo "==> Checking disk space"
 check_disk_space
 
 echo "==> Building images locally on server"
-docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" build "${BUILD_SERVICES[@]}"
+"${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" build "${BUILD_SERVICES[@]}"
 
 echo "==> Starting database dependencies"
-docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d db redis
+"${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d db redis
 wait_for_db_ready
 
 echo "==> Running migrations"
-docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" run --rm --use-aliases migrate
+"${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${MIGRATE_COMPOSE_FILES[@]}" run --build --rm --use-aliases migrate
 
 echo "==> Starting services"
-docker compose -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d --force-recreate --remove-orphans
+remove_stale_named_containers
+"${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d --force-recreate --remove-orphans
 
 echo "==> Deployment complete"

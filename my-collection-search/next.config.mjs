@@ -12,6 +12,7 @@ const allowedDevOrigins = [
 
 /** @type {import("next").NextConfig} */
 const nextConfig = {
+  output: "standalone",
   allowedDevOrigins,
   experimental: {
     serverActions: {

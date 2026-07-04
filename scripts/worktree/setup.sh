@@ -77,7 +77,7 @@ if database_is_empty; then
 
     if [[ -d "$seed_dir/app" || -d "$seed_dir/audio" || -d "$seed_dir/dumps" || -d "$seed_dir/public" ]]; then
       app_container="$(app_container_id)"
-      "$COMPOSE_DIR/scripts/restore-restic-assets.sh" \
+      "$APP_DIR/scripts/restore-restic-assets.sh" \
         --restore-target "$seed_dir" \
         --app-container "$app_container"
     fi
@@ -90,7 +90,7 @@ else
   echo "Database already contains tables; skipping seed restore."
 fi
 
-compose_exec run --rm migrate
+compose_exec run --rm --build migrate
 
 echo
 echo "Worktree ready"

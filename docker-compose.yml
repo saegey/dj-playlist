@@ -1,7 +1,8 @@
 services:
   app:
     build:
-      context: .
+      context: my-collection-search
+      target: runner
     labels:
       - "deployed.revision=*${GIT_SHA:-dev}"  # change on every commit -> forces recreate
     environment:
@@ -36,7 +37,8 @@ services:
 
   migrate:
     build:
-      context: .
+      context: my-collection-search
+      target: migrator
     profiles:
       - migrate
     working_dir: /app
@@ -56,24 +58,13 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
 
-  # watchtower:
-  #   image: containrrr/watchtower
-  #   restart: always
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #   environment:
-  #     - WATCHTOWER_CLEANUP=true
-  #     - WATCHTOWER_POLL_INTERVAL=3600 # Check hourly
-  #   depends_on:
-  #     - app
-
   essentia:
     build:
-      context: ../essentia-api
+      context: essentia-api
 
   ga-service:
     build:
-      context: ../ga-service
+      context: ga-service
 
   redis:
     image: redis:7-alpine
@@ -83,7 +74,7 @@ services:
 
   download-worker:
     build:
-      context: ../
+      context: .
       dockerfile: download-worker/Dockerfile
     environment:
       REDIS_URL: redis://redis:6379
