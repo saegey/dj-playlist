@@ -249,7 +249,7 @@ deploy-prod-remote:
   }
   trap cleanup EXIT
   if [ -f .env.tpl ] && command -v op >/dev/null 2>&1; then
-    op inject -i .env.tpl -o "$tmp_env"
+    bash ./scripts/render-env.sh .env.tpl "$tmp_env"
     scp "$tmp_env" {{prod_host}}:{{prod_stack_dir}}/.env
   fi
   ssh {{prod_host}} 'set -euo pipefail; cd {{prod_stack_dir}}; if [ -x ./my-collection-search/scripts/deploy-prod.sh ]; then ./my-collection-search/scripts/deploy-prod.sh {{tag}}; elif [ -x ./scripts/deploy-prod.sh ]; then ./scripts/deploy-prod.sh {{tag}}; else echo "deploy-prod.sh not found"; exit 127; fi'
@@ -265,7 +265,7 @@ deploy-prod-remote-localbuild:
   }
   trap cleanup EXIT
   if [ -f .env.tpl ] && command -v op >/dev/null 2>&1; then
-    op inject -i .env.tpl -o "$tmp_env"
+    bash ./scripts/render-env.sh .env.tpl "$tmp_env"
     scp "$tmp_env" {{prod_host}}:{{prod_stack_dir}}/.env
   fi
   ssh {{prod_host}} 'set -euo pipefail; cd {{prod_stack_dir}}; if [ -x ./my-collection-search/scripts/deploy-prod-localbuild.sh ]; then ./my-collection-search/scripts/deploy-prod-localbuild.sh {{tag}}; elif [ -x ./scripts/deploy-prod-localbuild.sh ]; then ./scripts/deploy-prod-localbuild.sh {{tag}}; else echo "deploy-prod-localbuild.sh not found"; exit 127; fi'
