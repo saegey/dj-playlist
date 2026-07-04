@@ -11,6 +11,8 @@ services:
   app:
     image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
     container_name: myapp
+    env_file:
+      - .env
     environment:
       APPLE_MUSIC_TEAM_ID: ${APPLE_MUSIC_TEAM_ID}
       APPLE_MUSIC_KEY_ID: ${APPLE_MUSIC_KEY_ID}
