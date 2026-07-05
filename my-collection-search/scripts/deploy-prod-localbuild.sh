@@ -42,17 +42,55 @@ MIN_FREE_GB="${MIN_FREE_GB:-5}"
 PGUSER="${POSTGRES_USER:-djplaylist}"
 PGDB="${POSTGRES_DB:-djplaylist}"
 APP_IMAGE="ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}"
+EXPECTED_APP_CMD='["npm","run","start"]'
 
 latest_migration_name() {
   find "${PROJECT_DIR}/my-collection-search/migrations" -maxdepth 1 -name '*.js' -type f \
     -exec basename {} .js \; | sort | tail -n 1
 }
 
+app_image_id() {
+  docker image inspect "${APP_IMAGE}" --format '{{.Id}}' 2>/dev/null || true
+}
+
 verify_app_image_cmd() {
   local cmd
   cmd="$(docker image inspect "${APP_IMAGE}" --format '{{json .Config.Cmd}}' 2>/dev/null || true)"
-  if [[ "${cmd}" != '["npm","run","start"]' ]]; then
+  if [[ "${cmd}" != "${EXPECTED_APP_CMD}" ]]; then
     echo "ERROR: built app image has unexpected Cmd: ${cmd}"
+    exit 1
+  fi
+}
+
+remove_stale_app_image_if_needed() {
+  local cmd
+  cmd="$(docker image inspect "${APP_IMAGE}" --format '{{json .Config.Cmd}}' 2>/dev/null || true)"
+  if [[ -n "${cmd}" && "${cmd}" != "${EXPECTED_APP_CMD}" ]]; then
+    echo "==> Removing stale app image ${APP_IMAGE} with unexpected Cmd ${cmd}"
+    docker image rm -f "${APP_IMAGE}"
+  fi
+}
+
+verify_running_app_container() {
+  local expected_image_id actual_image_id actual_cmd
+  expected_image_id="$(app_image_id)"
+  actual_image_id="$(docker inspect myapp --format '{{.Image}}' 2>/dev/null || true)"
+  actual_cmd="$(docker inspect myapp --format '{{json .Config.Cmd}}' 2>/dev/null || true)"
+
+  if [[ -z "${expected_image_id}" ]]; then
+    echo "ERROR: unable to resolve built app image id for ${APP_IMAGE}"
+    exit 1
+  fi
+
+  if [[ "${actual_image_id}" != "${expected_image_id}" ]]; then
+    echo "ERROR: running myapp container does not use the freshly built image"
+    echo "Expected image id: ${expected_image_id}"
+    echo "Actual image id:   ${actual_image_id}"
+    exit 1
+  fi
+
+  if [[ "${actual_cmd}" != "${EXPECTED_APP_CMD}" ]]; then
+    echo "ERROR: running myapp container has unexpected Cmd: ${actual_cmd}"
     exit 1
   fi
 }
@@ -124,6 +162,8 @@ fi
 echo "==> Checking disk space"
 check_disk_space
 
+remove_stale_app_image_if_needed
+
 echo "==> Building images locally on server"
 "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" build "${BUILD_SERVICES[@]}"
 verify_app_image_cmd
@@ -139,5 +179,6 @@ verify_latest_migration_applied
 echo "==> Starting services"
 remove_stale_named_containers
 "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d --force-recreate --remove-orphans
+verify_running_app_container
 
 echo "==> Deployment complete"

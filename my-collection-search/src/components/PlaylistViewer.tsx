@@ -42,6 +42,7 @@ import { analyzeTrackAsync, fixTrackDuration } from "@/services/internalApi/trac
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { queryKeys } from "@/lib/queryKeys";
 import { getTrackDurationSeconds } from "@/lib/trackUtils";
+import { getMobileBottomOverlayOffset } from "@/lib/mobileLayout";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
@@ -81,7 +82,8 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     sortPositionChanges,
   } = usePlaylistMutations(playlistId, () => setHasUnsavedChanges(true));
 
-  const { replacePlaylist } = usePlaylistPlayer();
+  const { replacePlaylist, playlistLength } = usePlaylistPlayer();
+  const mobileBottomOverlayOffset = getMobileBottomOverlayOffset(playlistLength);
 
   const { exportPlaylist, exportToPDF, getTotalPlaytime } =
     usePlaylistActions(playlistId);
@@ -921,7 +923,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           position="fixed"
           left="0"
           right="0"
-          bottom="0"
+          bottom={mobileBottomOverlayOffset}
           px={4}
           pb="calc(env(safe-area-inset-bottom, 0px) + 12px)"
           pt={3}

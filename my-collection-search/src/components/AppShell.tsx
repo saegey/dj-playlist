@@ -31,6 +31,10 @@ import { usePathname } from "next/navigation";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useCommandPalette } from "@/providers/CommandPaletteProvider";
 import CommandPalette from "@/components/CommandPalette";
+import {
+  getMobileBottomOverlayOffset,
+  MOBILE_NAV_BOTTOM_OFFSET,
+} from "@/lib/mobileLayout";
 
 const menuItems = [
   { href: "/", label: "Tracks" },
@@ -65,9 +69,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const CONTENT_MAX_W = "1360px";
   const pathname = usePathname();
   const { playlistLength } = usePlaylistPlayer();
-  const mobileNavBottomOffset = "16px";
   const mobileDrawerBottomPadding = "80px";
-  const mobileContentBottomPadding = playlistLength > 0 ? "252px" : "112px";
+  const mobileContentBottomPadding = getMobileBottomOverlayOffset(playlistLength);
   const current = useMemo(() => {
     if (!pathname) return "";
     if (pathname === "/") return "/";
@@ -354,7 +357,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         position="fixed"
         left={4}
         right={4}
-        bottom={`calc(env(safe-area-inset-bottom, 0px) + ${mobileNavBottomOffset})`}
+        bottom={`calc(env(safe-area-inset-bottom, 0px) + ${MOBILE_NAV_BOTTOM_OFFSET})`}
         zIndex={90}
         opacity={drawerOpen ? 0 : 1}
         transform={drawerOpen ? "translateY(12px)" : "translateY(0)"}
