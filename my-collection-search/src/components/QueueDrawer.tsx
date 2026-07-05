@@ -114,8 +114,6 @@ function MobileQueueList({
     (track: Track | undefined, idx: number) => {
       if (!track) return null;
 
-      const isCurrentTrack = idx === currentTrackIndex;
-
       return (
         <Flex gap={1}>
           <IconButton
@@ -130,7 +128,7 @@ function MobileQueueList({
         </Flex>
       );
     },
-    [currentTrackIndex, playTrack, removeFromQueue]
+    [removeFromQueue]
   );
 
   return (

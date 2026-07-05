@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { renderHook } from "@testing-library/react";
 import { useMediaSession } from "@/providers/playlist-player/useMediaSession";
 import type { MediaSessionLike } from "@/providers/playlist-player/useMediaSession";
 import type { Track } from "@/types/track";

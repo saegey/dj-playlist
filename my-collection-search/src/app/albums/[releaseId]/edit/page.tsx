@@ -266,7 +266,6 @@ function EditAlbumContent() {
     <PageContainer
       size="standard"
       py={{ base: 0, md: 4 }}
-      mb={playlistLength > 0 ? "120px" : "0"}
     >
       <Stack gap={6}>
         <Heading size="2xl">Edit Album</Heading>

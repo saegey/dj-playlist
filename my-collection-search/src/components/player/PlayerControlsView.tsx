@@ -331,12 +331,6 @@ export default function PlayerControlsView({
           </IconButton>
         </HStack>
       </Flex>
-
-      {compact && (
-        <Box mt={2}>
-          <CompactProgressSlider seek={onSeek} />
-        </Box>
-      )}
     </Box>
   );
 }
