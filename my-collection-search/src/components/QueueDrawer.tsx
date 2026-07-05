@@ -399,7 +399,7 @@ export default function QueueDrawer({
               inset={0}
               bgImage={`url(${artworkSrc})`}
               bgSize="cover"
-              bgPosition="center"
+              backgroundPosition="center"
               filter="blur(36px)"
               transform="scale(1.12)"
               opacity={0.55}
@@ -645,12 +645,6 @@ export default function QueueDrawer({
                     minH={0}
                     overflowY="auto"
                     pr={1}
-                    sx={{
-                      "& [data-part='item']": {
-                        background: "rgba(255,255,255,0.08)",
-                        borderColor: "rgba(255,255,255,0.12)",
-                      },
-                    }}
                   >
                     <MobileQueueList
                       playlist={playlist}
