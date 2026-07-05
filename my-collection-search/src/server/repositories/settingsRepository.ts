@@ -16,6 +16,27 @@ const GAMDL_ALLOWED_FIELDS = [
 type GamdlField = (typeof GAMDL_ALLOWED_FIELDS)[number];
 
 export class SettingsRepository {
+  async findDefaultLibraryFriendId(): Promise<number | null> {
+    const { rows } = await dbQuery<{ friend_id: number | null }>(
+      "SELECT friend_id FROM default_library_settings WHERE id = 1 LIMIT 1"
+    );
+    return typeof rows[0]?.friend_id === "number" ? rows[0].friend_id : null;
+  }
+
+  async upsertDefaultLibraryFriendId(friendId: number): Promise<number> {
+    const { rows } = await dbQuery<{ friend_id: number }>(
+      `
+      INSERT INTO default_library_settings (id, friend_id, updated_at)
+      VALUES (1, $1, current_timestamp)
+      ON CONFLICT (id)
+      DO UPDATE SET friend_id = EXCLUDED.friend_id, updated_at = current_timestamp
+      RETURNING friend_id
+      `,
+      [friendId]
+    );
+    return rows[0]?.friend_id ?? friendId;
+  }
+
   async findAiPromptByFriendId(friendId: number): Promise<string | null> {
     const { rows } = await dbQuery<{ prompt: string | null }>(
       "SELECT prompt FROM ai_prompt_settings WHERE friend_id = $1 LIMIT 1",

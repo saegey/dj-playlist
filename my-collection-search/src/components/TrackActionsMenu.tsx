@@ -16,6 +16,7 @@ import {
   CloseButton,
 } from "@chakra-ui/react";
 import {
+  FiCode,
   FiDownload,
   FiEdit,
   FiMoreVertical,
@@ -38,6 +39,7 @@ import posthog from "posthog-js";
 
 type Props = {
   track: Track;
+  onOpenTrackDebug?: () => void;
 };
 
 const menuDivider = (
@@ -104,7 +106,7 @@ function DrawerItem({
   );
 }
 
-export default function TrackActionsMenu({ track }: Props) {
+export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
   const { appendToQueue, replacePlaylist } = usePlaylistPlayer();
   const editHref = `/tracks/${encodeURIComponent(track.track_id)}/edit?friend_id=${track.friend_id}`;
   const { openForTrack, playlistDialog, nameDialog } = useAddToPlaylistDialog();
@@ -186,7 +188,13 @@ export default function TrackActionsMenu({ track }: Props) {
     <>
       {/* Mobile: bottom sheet */}
       <Box display={{ base: "block", md: "none" }}>
-        <Button variant="outline" size="xs" onClick={() => setDrawerOpen(true)} aria-label="Track actions">
+        <Button
+          variant="outline"
+          size="sm"
+          px={2}
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Track actions"
+        >
           <FiMoreVertical />
         </Button>
         <Drawer.Root placement="bottom" open={drawerOpen} onOpenChange={(d) => setDrawerOpen(d.open)}>
@@ -218,6 +226,16 @@ export default function TrackActionsMenu({ track }: Props) {
                       onClick={() => { openForTrack(track); setDrawerOpen(false); }}
                     />
                     <DrawerItem icon={<FiEdit />} label="Edit Track" href={editHref} />
+                    {onOpenTrackDebug && (
+                      <DrawerItem
+                        icon={<FiCode />}
+                        label="Track Debug"
+                        onClick={() => {
+                          onOpenTrackDebug();
+                          setDrawerOpen(false);
+                        }}
+                      />
+                    )}
                     <DrawerItem
                       icon={<FiPlusSquare />}
                       label="Add to Queue"
@@ -263,7 +281,7 @@ export default function TrackActionsMenu({ track }: Props) {
       <Box display={{ base: "none", md: "block" }}>
         <Menu.Root>
           <Menu.Trigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" px={2} aria-label="Track actions">
               <FiMoreVertical />
             </Button>
           </Menu.Trigger>
@@ -282,6 +300,11 @@ export default function TrackActionsMenu({ track }: Props) {
                   <FiEdit /> Edit Track
                 </NextLink>
               </Menu.Item>
+              {onOpenTrackDebug && (
+                <Menu.Item onSelect={onOpenTrackDebug} value="track-debug">
+                  <FiCode /> Track Debug
+                </Menu.Item>
+              )}
               <Menu.Item onSelect={() => appendToQueue(track)} value="queue">
                 <FiPlusSquare /> Add to Queue
               </Menu.Item>

@@ -18,6 +18,7 @@ import { useTrackStore } from "@/stores/trackStore";
 interface UseSearchResultsOptions {
   friend?: Friend | null; // optional override; defaults to provider
   filter?: string | string[];
+  enabled?: boolean;
   // New: choose between infinite scroll (default) or single-page pagination
   mode?: "infinite" | "page";
   // New: override page size
@@ -33,6 +34,7 @@ const DEFAULT_LIMIT = 20;
 export function useSearchResults({
   friend,
   filter,
+  enabled: enabledOverride = true,
   mode = "infinite",
   limit: limitOverride,
   page,
@@ -74,7 +76,7 @@ export function useSearchResults({
     return searchFilter;
   }, [searchFilter]);
 
-  const enabled = true;
+  const enabled = enabledOverride;
   const bootstrapping = false;
 
   // --- Tracks query (infinite or single page) ---

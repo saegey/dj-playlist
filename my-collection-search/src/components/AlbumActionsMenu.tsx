@@ -26,7 +26,6 @@ export interface AlbumActionsMenuProps {
   isDownloading?: boolean;
   discogsUrl?: string;
   onViewRawDiscogs?: () => void;
-  onEditDetails?: () => void;
   editAlbumHref?: string;
 }
 
@@ -111,7 +110,6 @@ export default function AlbumActionsMenu({
   isDownloading,
   discogsUrl,
   onViewRawDiscogs,
-  onEditDetails,
   editAlbumHref,
 }: AlbumActionsMenuProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -119,7 +117,7 @@ export default function AlbumActionsMenu({
 
   const hasPlayback = !!onPlayAlbum || !!onDownloadMissing;
   const hasDiscogs = !!discogsUrl || !!onViewRawDiscogs;
-  const hasEdit = !!onEditDetails || !!editAlbumHref;
+  const hasEdit = !!editAlbumHref;
 
   return (
     <>
@@ -173,9 +171,6 @@ export default function AlbumActionsMenu({
                         {hasEdit && drawerDivider}
                       </>
                     )}
-                    {onEditDetails && (
-                      <DrawerItem icon={<FiEdit />} label="Edit Details" onClick={() => { onEditDetails(); close(); }} />
-                    )}
                     {editAlbumHref && (
                       <DrawerItem icon={<FiEdit />} label="Edit Album & Tracks" href={editAlbumHref} />
                     )}
@@ -221,11 +216,6 @@ export default function AlbumActionsMenu({
                 </Menu.Item>
               )}
               {hasDiscogs && hasEdit && menuDivider}
-              {onEditDetails && (
-                <Menu.Item value="edit" onSelect={onEditDetails}>
-                  <FiEdit /> Edit Details
-                </Menu.Item>
-              )}
               {editAlbumHref && (
                 <Menu.Item value="edit-album" asChild>
                   <Link as={NextLink} href={editAlbumHref}>

@@ -28,6 +28,14 @@ export type TopTrackSpinEventRow = {
   album_snapshot: string;
   side_key: string | null;
   position_snapshot: string | null;
+  album_thumbnail?: string | null;
+  audio_file_album_art_url?: string | null;
+  local_audio_url?: string | null;
+  bpm?: number | string | null;
+  key?: string | null;
+  star_rating?: number | null;
+  library_identifier?: string | null;
+  hasVectors?: boolean;
 };
 
 export type CreateTrackSpinEventInput = {
@@ -147,7 +155,21 @@ export class TrackSpinEventRepository {
         latest.artist_snapshot,
         latest.album_snapshot,
         latest.side_key,
-        latest.position_snapshot
+        latest.position_snapshot,
+        t.album_thumbnail,
+        t.audio_file_album_art_url,
+        t.local_audio_url,
+        t.bpm,
+        t.key,
+        t.star_rating,
+        COALESCE(a.library_identifier, t.library_identifier) AS library_identifier,
+        EXISTS (
+          SELECT 1
+          FROM track_embeddings te
+          WHERE te.track_id = aggregated.track_id
+            AND te.friend_id = aggregated.friend_id
+            AND te.embedding IS NOT NULL
+        ) AS "hasVectors"
       FROM aggregated
       INNER JOIN LATERAL (
         SELECT
@@ -163,6 +185,10 @@ export class TrackSpinEventRepository {
         ORDER BY tse.played_at DESC, tse.id DESC
         LIMIT 1
       ) latest ON TRUE
+      LEFT JOIN tracks t
+        ON t.track_id = aggregated.track_id AND t.friend_id = aggregated.friend_id
+      LEFT JOIN albums a
+        ON a.release_id = t.release_id AND a.friend_id = t.friend_id
       ORDER BY aggregated.play_count DESC, aggregated.last_played_at DESC, aggregated.track_id ASC
       LIMIT ${limitRef}
       OFFSET ${offsetRef}

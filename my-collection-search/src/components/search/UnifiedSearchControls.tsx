@@ -10,10 +10,11 @@ type UnifiedSearchControlsProps = {
   query: string;
   onQueryChange: (value: string) => void;
   onQueryEnter?: () => void;
-  friends: Friend[];
+  friends?: Friend[];
   selectedFriend?: Friend | null;
   onFriendChange?: (friendId: number) => void;
   includeAllOption?: boolean;
+  showLibrarySelect?: boolean;
   placeholder?: string;
   compactDesktop?: boolean;
   desktopControls?: React.ReactNode;
@@ -25,10 +26,11 @@ export default function UnifiedSearchControls({
   query,
   onQueryChange,
   onQueryEnter,
-  friends,
+  friends = [],
   selectedFriend,
   onFriendChange,
   includeAllOption = false,
+  showLibrarySelect = true,
   placeholder = "Search",
   compactDesktop = false,
   desktopControls,
@@ -64,16 +66,18 @@ export default function UnifiedSearchControls({
             placeholder={placeholder}
           />
         </InputGroup>
-        <Box flexShrink={0} width={compactDesktop ? "auto" : "200px"}>
-          <UsernameSelect
-            usernames={friends}
-            includeAllOption={includeAllOption}
-            value={selectedFriend}
-            onChange={onFriendChange}
-            size="md"
-            iconOnlyMobile={compactDesktop}
-          />
-        </Box>
+        {showLibrarySelect ? (
+          <Box flexShrink={0} width={compactDesktop ? "auto" : "200px"}>
+            <UsernameSelect
+              usernames={friends}
+              includeAllOption={includeAllOption}
+              value={selectedFriend}
+              onChange={onFriendChange}
+              size="md"
+              iconOnlyMobile={compactDesktop}
+            />
+          </Box>
+        ) : null}
         {desktopControls ? <Flex gap={2} align="center">{desktopControls}</Flex> : null}
       </Flex>
 
@@ -92,15 +96,17 @@ export default function UnifiedSearchControls({
               placeholder={placeholder}
             />
           </InputGroup>
-          <UsernameSelect
-            usernames={friends}
-            includeAllOption={includeAllOption}
-            value={selectedFriend}
-            onChange={onFriendChange}
-            iconOnlyMobile={true}
-            width="auto"
-            size="sm"
-          />
+          {showLibrarySelect ? (
+            <UsernameSelect
+              usernames={friends}
+              includeAllOption={includeAllOption}
+              value={selectedFriend}
+              onChange={onFriendChange}
+              iconOnlyMobile={true}
+              width="auto"
+              size="sm"
+            />
+          ) : null}
           {mobilePrimaryControl}
         </Flex>
         {mobileSecondaryControls ? (

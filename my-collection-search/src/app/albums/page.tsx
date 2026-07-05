@@ -14,17 +14,12 @@ import AlbumSearchResults from "@/components/AlbumSearchResults";
 import PageContainer from "@/components/layout/PageContainer";
 import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
 import FilterChips from "@/components/FilterChips";
-import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
 
 function AlbumsPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { friend: currentUserFriend } = useUsername();
-
-  const { friends } = useFriendsQuery({
-    showCurrentUser: true,
-  });
+  const { friend: currentUserFriend, isHydrated } = useUsername();
 
   const [query, setQuery] = React.useState(searchParams.get("q") || "");
   const [sort, setSort] = React.useState(
@@ -37,41 +32,16 @@ function AlbumsPageContent() {
     if (saved === "card" || saved === "table") setViewMode(saved);
   }, []);
 
-  const [selectedFriendId, setSelectedFriendId] = React.useState<number | null>(
-    searchParams.get("friend_id")
-      ? parseInt(searchParams.get("friend_id")!)
-      : null
-  );
-
   const missingLibraryIdentifier = searchParams.get("missing_library_identifier") === "1";
   const missingLocalCoverArtUrl = searchParams.get("missing_local_cover_art_url") === "1";
   const missingAudio = searchParams.get("missing_audio") === "1";
-
-  // Set default friend_id to current user's library on initial load
-  React.useEffect(() => {
-    if (!searchParams.get("friend_id") && currentUserFriend && !selectedFriendId) {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("friend_id", currentUserFriend.id.toString());
-      if (query) params.set("q", query);
-      if (sort !== "date_added:desc") params.set("sort", sort);
-      router.replace(`/albums?${params.toString()}`);
-    }
-  }, [currentUserFriend, searchParams, selectedFriendId, router, query, sort]);
-
-  // Get the selected Friend object for the UsernameSelect component
-  const selectedFriend = React.useMemo(() => {
-    if (!selectedFriendId) return null;
-    return friends.find((f) => f.id === selectedFriendId) || null;
-  }, [selectedFriendId, friends]);
 
   const buildParams = (overrides: Record<string, string | null> = {}) => {
     const params = new URLSearchParams();
     const effectiveQuery = overrides.q !== undefined ? overrides.q : query;
     const effectiveSort = overrides.sort !== undefined ? overrides.sort : sort;
-    const effectiveFriendId = overrides.friend_id !== undefined ? overrides.friend_id : selectedFriendId?.toString() ?? null;
     if (effectiveQuery) params.set("q", effectiveQuery);
     if (effectiveSort && effectiveSort !== "date_added:desc") params.set("sort", effectiveSort);
-    if (effectiveFriendId) params.set("friend_id", effectiveFriendId);
     if (missingLibraryIdentifier) params.set("missing_library_identifier", "1");
     if (missingLocalCoverArtUrl) params.set("missing_local_cover_art_url", "1");
     if (missingAudio) params.set("missing_audio", "1");
@@ -83,26 +53,6 @@ function AlbumsPageContent() {
   const handleSortChange = (newSort: string) => {
     setSort(newSort);
     router.push(`/albums?${buildParams({ sort: newSort }).toString()}`);
-  };
-
-  const handleFriendChange = (friendId: number) => {
-    // friendId === 0 means "All Libraries" was selected
-    const params = new URLSearchParams();
-    if (query) params.set("q", query);
-    if (sort !== "date_added:desc") params.set("sort", sort);
-    if (missingLibraryIdentifier) params.set("missing_library_identifier", "1");
-    if (missingLocalCoverArtUrl) params.set("missing_local_cover_art_url", "1");
-    if (missingAudio) params.set("missing_audio", "1");
-
-    if (friendId > 0) {
-      setSelectedFriendId(friendId);
-      params.set("friend_id", friendId.toString());
-    } else {
-      // "All Libraries" selected - clear friend_id
-      setSelectedFriendId(null);
-    }
-
-    router.push(`/albums?${params.toString()}`);
   };
 
   const handleAlbumFilterToggle = (key: string) => {
@@ -134,14 +84,17 @@ function AlbumsPageContent() {
   return (
     <PageContainer size="standard">
       <Flex gap={3} direction="column">
+        {!isHydrated || !currentUserFriend ? (
+          <Flex justify="center" py={8}>
+            <Spinner />
+          </Flex>
+        ) : (
+          <>
         <UnifiedSearchControls
           query={query}
           onQueryChange={setQuery}
           onQueryEnter={handleSearch}
-          friends={friends}
-          selectedFriend={selectedFriend}
-          onFriendChange={handleFriendChange}
-          includeAllOption={true}
+          showLibrarySelect={false}
           placeholder="Search"
           compactDesktop={true}
           desktopControls={
@@ -241,8 +194,13 @@ function AlbumsPageContent() {
             </Flex>
           }
         >
-          <AlbumSearchResults viewMode={viewMode} />
+          <AlbumSearchResults
+            viewMode={viewMode}
+            friendId={currentUserFriend.id}
+          />
         </Suspense>
+          </>
+        )}
       </Flex>
     </PageContainer>
   );

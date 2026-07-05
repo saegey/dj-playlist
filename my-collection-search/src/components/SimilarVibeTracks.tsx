@@ -109,11 +109,12 @@ export default function SimilarVibeTracks({
             >
               <TrackResult
                 track={trackWithArtwork}
+                playlistMode={true}
                 showUsername={true}
                 showRating={true}
-                buttons={
-                  <Flex gap={2} align="center">
-                    {/* Distance badge */}
+                buttons={<TrackActionsMenu track={trackWithArtwork} />}
+                footer={
+                  <Flex gap={1} align="center" flexWrap="wrap">
                     <Badge
                       colorPalette={getDistanceColor(similarTrack.distance)}
                       size="sm"
@@ -121,8 +122,6 @@ export default function SimilarVibeTracks({
                     >
                       {getDistanceLabel(similarTrack.distance)}
                     </Badge>
-
-                    {/* Show BPM/Key if available */}
                     {similarTrack.bpm && (
                       <Badge colorPalette="purple" size="sm" variant="subtle">
                         {Math.round(parseFloat(similarTrack.bpm))} BPM
@@ -133,9 +132,6 @@ export default function SimilarVibeTracks({
                         {similarTrack.key}
                       </Badge>
                     )}
-
-                    {/* Actions menu */}
-                    <TrackActionsMenu track={trackWithArtwork} />
                   </Flex>
                 }
               />

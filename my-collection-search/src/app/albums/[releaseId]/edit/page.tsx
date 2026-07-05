@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { Button, Heading, Stack, Flex, Spinner, Text } from "@chakra-ui/react";
+import { Box, Button, Heading, Stack, Flex, Spinner, Text } from "@chakra-ui/react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { toaster } from "@/components/ui/toaster";
 import { useUpdateAlbumWithTracksMutation } from "@/hooks/useUpdateAlbumWithTracksMutation";
@@ -284,7 +284,12 @@ function EditAlbumContent() {
           defaultAlbum={albumForm.title}
         />
 
-        <Flex gap={3} justify="flex-end" pt={4}>
+        <Flex
+          gap={3}
+          justify="flex-end"
+          pt={4}
+          display={{ base: "none", md: "flex" }}
+        >
           <Button
             onClick={handleCancel}
             variant="outline"
@@ -296,6 +301,39 @@ function EditAlbumContent() {
             onClick={handleSave}
             colorScheme="blue"
             loading={updateMutation.isPending}
+          >
+            Save Changes
+          </Button>
+        </Flex>
+
+        <Box display={{ base: "block", md: "none" }} h="92px" />
+
+        <Flex
+          display={{ base: "flex", md: "none" }}
+          position="fixed"
+          left="0"
+          right="0"
+          bottom="0"
+          px={4}
+          pb="calc(env(safe-area-inset-bottom, 0px) + 12px)"
+          pt={3}
+          bg="linear-gradient(to top, var(--chakra-colors-bg), color-mix(in srgb, var(--chakra-colors-bg) 88%, transparent))"
+          zIndex={20}
+          gap={2}
+        >
+          <Button
+            onClick={handleCancel}
+            variant="outline"
+            disabled={updateMutation.isPending}
+            flex={1}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            colorScheme="blue"
+            loading={updateMutation.isPending}
+            flex={1}
           >
             Save Changes
           </Button>

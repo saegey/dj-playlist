@@ -3,10 +3,29 @@ import {
   getDefaultTrackEmbeddingTemplate,
   invalidateTrackEmbeddingTemplateCache,
 } from "@/lib/track-embedding";
+import { friendRepository } from "@/server/repositories/friendRepository";
 import type { GamdlSettings, GamdlSettingsUpdate } from "@/types/gamdl";
 import { settingsRepository } from "@/server/repositories/settingsRepository";
 
 export class SettingsService {
+  async getDefaultLibrary(): Promise<{ friend_id: number | null }> {
+    const friend_id = await settingsRepository.findDefaultLibraryFriendId();
+    return { friend_id };
+  }
+
+  async updateDefaultLibrary(
+    friendId: number
+  ): Promise<{ friend_id: number }> {
+    const friend = await friendRepository.findById(friendId);
+    if (!friend) {
+      throw new Error(`Library ${friendId} does not exist`);
+    }
+    const friend_id = await settingsRepository.upsertDefaultLibraryFriendId(
+      friendId
+    );
+    return { friend_id };
+  }
+
   async getAiPrompt(friendId?: number): Promise<{
     prompt: string;
     defaultPrompt: string;

@@ -10,9 +10,7 @@ import {
   Flex,
   Spinner,
 } from "@chakra-ui/react";
-import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
-import UsernameSelect from "@/components/UsernameSelect";
 import { toaster } from "@/components/ui/toaster";
 import {
   fetchEmbeddingPromptSettings,
@@ -20,10 +18,7 @@ import {
 } from "@/services/internalApi/settings";
 
 export default function EmbeddingPromptSettingsSection(): React.JSX.Element {
-  const { friend, setFriend } = useUsername();
-  const { friends, friendsLoading } = useFriendsQuery({
-    showCurrentUser: true,
-  });
+  const { friend } = useUsername();
 
   const [template, setTemplate] = React.useState("");
   const [defaultTemplate, setDefaultTemplate] = React.useState("");
@@ -119,19 +114,6 @@ export default function EmbeddingPromptSettingsSection(): React.JSX.Element {
       </Text>
 
       <Flex gap={3} align="center" mb={4} flexWrap="wrap">
-        <Box minW="240px">
-          <UsernameSelect
-            usernames={friends}
-            includeAllOption={false}
-            onChange={(friendId) => {
-              const selected = friends.find((f) => f.id === friendId) || null;
-              setFriend(selected);
-            }}
-            value={friend ?? null}
-            isLoading={friendsLoading}
-            size="md"
-          />
-        </Box>
         {loading && <Spinner size="sm" />}
         {isDefault ? (
           <Text fontSize="sm" color="gray.500">

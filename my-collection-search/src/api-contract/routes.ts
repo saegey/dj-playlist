@@ -21,6 +21,9 @@ import {
   backupPolicyPutResponseSchema,
   backupCreateResponseSchema,
   backupCreateCustomResponseSchema,
+  defaultLibrarySettingsGetResponseSchema,
+  defaultLibrarySettingsPutBodySchema,
+  defaultLibrarySettingsPutResponseSchema,
   discogsLookupQuerySchema,
   discogsLookupResponseSchema,
   discogsDeleteReleasesBodySchema,
@@ -2355,6 +2358,94 @@ export const apiContractRoutes: ApiContractRoute[] = [
         "500": {
           description: "Server error",
           content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getDefaultLibrarySettings",
+    method: "get",
+    path: "/api/settings/default-library",
+    summary: "Get the saved default library",
+    tags: ["Settings"],
+    successSchema: defaultLibrarySettingsGetResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Default library setting",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  friend_id: { type: ["integer", "null"] },
+                },
+                required: ["friend_id"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "updateDefaultLibrarySettings",
+    method: "put",
+    path: "/api/settings/default-library",
+    summary: "Update the saved default library",
+    tags: ["Settings"],
+    bodySchema: defaultLibrarySettingsPutBodySchema,
+    successSchema: defaultLibrarySettingsPutResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                friend_id: { type: "integer" },
+              },
+              required: ["friend_id"],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Default library updated",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  friend_id: { type: "integer" },
+                },
+                required: ["friend_id"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid payload",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
         },
       },
     },

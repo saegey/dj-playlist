@@ -62,7 +62,9 @@ export default function TrackEditActions(props: TrackEditActionsProps) {
         <Menu.Trigger asChild>
           <Button size="sm" variant="outline" aria-label="Track actions">
             <FiMoreVertical />
-            <Box ml={1}>Actions</Box>
+            <Box ml={1} display={{ base: "none", md: "block" }}>
+              Actions
+            </Box>
           </Button>
         </Menu.Trigger>
         <Menu.Positioner>

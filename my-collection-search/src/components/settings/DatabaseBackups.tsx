@@ -16,7 +16,7 @@ export default function DatabaseBackups() {
   const [showAllBackups, setShowAllBackups] = useState(false);
 
   return (
-    <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
+    <Box mt={{ base: 6, md: 10 }} mb={8} p={4} borderWidth={1} borderRadius="md">
       <Heading size="md" mb={2}>
         Database Backups
       </Heading>
@@ -35,8 +35,10 @@ export default function DatabaseBackups() {
         <>
           <VStack align="stretch" gap={3}>
             {(showAllBackups ? backups : backups.slice(0, 5)).map((file) => (
-              <HStack key={file} justify="space-between">
-                <Text fontSize="sm">{file}</Text>
+              <HStack key={file} justify="space-between" align="center">
+                <Text fontSize="sm" lineClamp={2} pr={3}>
+                  {file}
+                </Text>
                 <a
                   href={`/api/backups/${encodeURIComponent(file)}`}
                   download

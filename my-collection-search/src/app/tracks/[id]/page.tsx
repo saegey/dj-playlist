@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Box, Button, Flex, Skeleton, Text, VStack } from "@chakra-ui/react";
+import { Box, Skeleton, Text, VStack } from "@chakra-ui/react";
 import { toaster } from "@/components/ui/toaster";
 import { useTrackStore } from "@/stores/trackStore";
 import { useAlbumStore } from "@/stores/albumStore";
@@ -74,21 +74,17 @@ export default function TrackPage() {
                 trackId={trackId}
                 friendId={friendId}
                 fallbackTrack={trackQuery.data}
-                buttons={[<TrackActionsMenu key="menu" track={trackQuery.data} />]}
+                playlistMode={true}
+                buttons={[
+                  <TrackActionsMenu
+                    key="menu"
+                    track={trackQuery.data}
+                    onOpenTrackDebug={() => setDebugOpen(true)}
+                  />,
+                ]}
               />
 
               <RelatedTracksSection track={trackQuery.data} />
-
-              <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
-                <Flex justify="space-between" align="center" gap={3} wrap="wrap">
-                  <Text color="fg.muted">
-                    Advanced diagnostics and raw analysis data are available in Track Debug.
-                  </Text>
-                  <Button size="sm" variant="outline" onClick={() => setDebugOpen(true)}>
-                    Open Track Debug
-                  </Button>
-                </Flex>
-              </Box>
 
               <TrackPlaylistsSection query={playlistsQuery} />
 

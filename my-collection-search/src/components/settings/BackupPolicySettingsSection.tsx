@@ -69,7 +69,7 @@ export default function BackupPolicySettingsSection(): React.JSX.Element {
   };
 
   return (
-    <Box mt={8} p={4} borderWidth={1} borderRadius="md">
+    <Box mt={{ base: 4, md: 8 }} p={{ base: 4, md: 4 }} borderWidth={1} borderRadius="md">
       <Heading size="md" mb={2}>
         Remote Backup Policy
       </Heading>
@@ -218,14 +218,14 @@ export default function BackupPolicySettingsSection(): React.JSX.Element {
             </Checkbox.Root>
           </Flex>
 
-          <Flex mt={4} gap={2} align="center">
+          <Flex mt={4} gap={2} align={{ base: "stretch", md: "center" }} direction={{ base: "column", md: "row" }}>
             <Button colorScheme="blue" onClick={save} loading={saving}>
               Save Policy
             </Button>
             <Button variant="outline" onClick={() => void load()} disabled={saving}>
               Reload
             </Button>
-            <Text fontSize="xs" color="gray.500">
+            <Text fontSize="xs" color="gray.500" ml={{ base: 0, md: 1 }}>
               Updated: {new Date(policy.updated_at).toLocaleString()}
             </Text>
           </Flex>

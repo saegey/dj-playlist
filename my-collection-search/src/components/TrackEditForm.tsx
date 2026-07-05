@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import {
   Box,
+  Button,
   Flex,
   Portal,
   Dialog,
@@ -167,7 +168,42 @@ export default function TrackEditForm({
                     loading={loading}
                     onChange={handleChange}
                     onStarRatingChange={handleStarRating}
+                    submitButtonDisplay={{ base: "none", md: "inline-flex" }}
                   />
+
+                  <Box display={{ base: "block", md: "none" }} h="88px" />
+
+                  <Box
+                    display={{ base: "block", md: "none" }}
+                    position="sticky"
+                    bottom={0}
+                    mt={4}
+                    mx={-2}
+                    px={2}
+                    pb="calc(env(safe-area-inset-bottom, 0px) + 12px)"
+                    pt={3}
+                    bg="linear-gradient(to top, var(--chakra-colors-bg), color-mix(in srgb, var(--chakra-colors-bg) 88%, transparent))"
+                    zIndex={2}
+                  >
+                    <Flex gap={2}>
+                      <Button
+                        type="submit"
+                        loading={loading}
+                        disabled={loading}
+                        flex={1}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setDialogOpen(false)}
+                        disabled={loading}
+                        flex={1}
+                      >
+                        Cancel
+                      </Button>
+                    </Flex>
+                  </Box>
 
                   <TrackEditFormDialogs
                     track={track}

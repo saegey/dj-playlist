@@ -269,6 +269,18 @@ export const backupPolicyPutResponseSchema = z.object({
   policy: backupPolicySchema,
 });
 
+export const defaultLibrarySettingsGetResponseSchema = z.object({
+  friend_id: z.number().int().nullable(),
+});
+
+export const defaultLibrarySettingsPutBodySchema = z.object({
+  friend_id: intFromInputSchema,
+});
+
+export const defaultLibrarySettingsPutResponseSchema = z.object({
+  friend_id: z.number().int(),
+});
+
 export const backupCreateResponseSchema = z.object({
   message: z.string(),
 });
@@ -953,6 +965,7 @@ export const trackEntitySchema = z
     position: z.union([z.string(), z.number()]).optional(),
     release_id: z.string().nullable().optional(),
     library_identifier: z.string().nullable().optional(),
+    hasVectors: z.boolean().optional(),
   })
   .passthrough();
 
@@ -1214,6 +1227,14 @@ export const spinTopTrackItemSchema = z.object({
   album_snapshot: z.string(),
   side_key: z.string().nullable().optional(),
   position_snapshot: z.string().nullable().optional(),
+  album_thumbnail: z.string().nullable().optional(),
+  audio_file_album_art_url: z.string().nullable().optional(),
+  local_audio_url: z.string().nullable().optional(),
+  bpm: z.union([z.number(), z.string()]).nullable().optional(),
+  key: z.string().nullable().optional(),
+  star_rating: z.number().nullable().optional(),
+  library_identifier: z.string().nullable().optional(),
+  hasVectors: z.boolean().optional(),
 });
 
 export const spinTopTracksResponseSchema = z.object({

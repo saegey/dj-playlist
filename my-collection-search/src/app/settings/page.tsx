@@ -13,6 +13,7 @@ import BackupPolicySettingsSection from "@/components/settings/BackupPolicySetti
 import GamdlSettingsSection from "@/components/settings/GamdlSettingsSection";
 import AiPromptSettingsSection from "@/components/settings/AiPromptSettingsSection";
 import EmbeddingPromptSettingsSection from "@/components/settings/EmbeddingPromptSettingsSection";
+import DefaultLibrarySettingsSection from "@/components/settings/DefaultLibrarySettingsSection";
 import PageContainer from "@/components/layout/PageContainer";
 import DiscogsSyncDialog from "@/components/settings/dialogs/DiscogsSyncDialog";
 import RemoveFriendDialog from "@/components/settings/dialogs/RemoveFriendDialog"; // your streamed removal dialog
@@ -27,6 +28,12 @@ type SettingsSection = {
 export default function SettingsPage() {
   const sections: SettingsSection[] = useMemo(
     () => [
+      {
+        id: "defaults",
+        label: "Defaults",
+        description: "global library selection and app-wide scope",
+        content: <DefaultLibrarySettingsSection />,
+      },
       {
         id: "downloads",
         label: "Downloads",
@@ -75,38 +82,42 @@ export default function SettingsPage() {
         <PageContainer size="wide">
           <Box mb="120px">
             <Flex
-              align="center"
+              align={{ base: "flex-start", md: "center" }}
               justify="space-between"
               gap={4}
               mb={4}
             >
               <Box>
-                <Heading size={{ base: "lg", md: "xl" }} mb={{ base: 0, md: 1 }}>
+                <Heading size={{ base: "lg", md: "xl" }} mb={{ base: 1, md: 1 }}>
                   Settings
                 </Heading>
-                <Text color="gray.600" display={{ base: "none", md: "block" }}>
+                <Text color="gray.600" display={{ base: "block", md: "block" }} fontSize={{ base: "sm", md: "md" }}>
                   Configure GrooveNET by area, without the long one-page scroll.
                 </Text>
               </Box>
-              <Box minW={{ md: "220px" }}>
+              <Box minW={{ base: "auto", md: "220px" }}>
                 <ActionsGrid showTitle={false} />
               </Box>
             </Flex>
 
             <Box display={{ base: "block", md: "none" }} mb={4}>
+              <Text fontSize="xs" fontWeight="semibold" letterSpacing="wide" textTransform="uppercase" color="gray.500" mb={2}>
+                Section
+              </Text>
               <select
                 value={activeSectionId}
                 onChange={(e) => setActiveSectionId(e.target.value)}
                 style={{
                   width: "100%",
-                  height: "var(--chakra-sizes-10)",
-                  padding: "0 var(--chakra-spacing-3)",
-                  borderRadius: "var(--chakra-radii-md)",
+                  height: "var(--chakra-sizes-12)",
+                  padding: "0 var(--chakra-spacing-4)",
+                  borderRadius: "var(--chakra-radii-lg)",
                   borderWidth: "1px",
                   borderStyle: "solid",
                   borderColor: "var(--chakra-colors-border)",
                   backgroundColor: "var(--chakra-colors-bg)",
                   color: "inherit",
+                  fontSize: "1rem",
                 }}
               >
                 {sections.map((section) => (
@@ -165,9 +176,9 @@ export default function SettingsPage() {
               <Box
                 flex={1}
                 minW={0}
-                borderWidth={1}
-                borderRadius="lg"
-                p={{ base: 4, md: 6 }}
+                borderWidth={{ base: 0, md: 1 }}
+                borderRadius={{ base: "none", md: "lg" }}
+                p={{ base: 0, md: 6 }}
                 bg="bg"
               >
                 <Heading size="lg" mb={1} display={{ base: "none", md: "block" }}>

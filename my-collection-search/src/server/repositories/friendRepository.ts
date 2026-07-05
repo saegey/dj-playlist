@@ -13,6 +13,14 @@ export class FriendRepository {
     return result.rows;
   }
 
+  async findById(id: number): Promise<FriendRow | null> {
+    const result = await dbQuery<FriendRow>(
+      "SELECT id, username FROM friends WHERE id = $1 LIMIT 1",
+      [id]
+    );
+    return result.rows[0] ?? null;
+  }
+
   async findIdByUsername(username: string): Promise<number | null> {
     const result = await dbQuery<{ id: number }>(
       "SELECT id FROM friends WHERE username = $1 LIMIT 1",

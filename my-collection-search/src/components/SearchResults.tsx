@@ -14,7 +14,6 @@ import { toaster } from "@/components/ui/toaster";
 import TrackResultStore from "@/components/TrackResultStore";
 import TrackTableViewWithLoader from "@/components/TrackTableViewWithLoader";
 import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
-import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { useTrack } from "@/hooks/useTrack";
@@ -27,9 +26,10 @@ const TrackResultItem: React.FC<{
   friendId: number;
   playlistCount?: number;
   compact?: boolean;
+  playlistMode?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
-}> = ({ trackId, friendId, playlistCount, compact, isSelected, onToggleSelect }) => {
+}> = ({ trackId, friendId, playlistCount, compact, playlistMode, isSelected, onToggleSelect }) => {
   const track = useTrack(trackId, friendId);
 
   if (!track) {
@@ -44,6 +44,7 @@ const TrackResultItem: React.FC<{
       playlistCount={playlistCount}
       buttons={[<TrackActionsMenu key="menu" track={track} />]}
       compact={compact}
+      playlistMode={playlistMode}
       isSelected={isSelected}
       onToggleSelect={onToggleSelect}
     />
@@ -61,18 +62,7 @@ const SearchResults: React.FC = () => {
     () => searchParams?.toString() ?? "",
     [searchParams]
   );
-  const { friend: currentUserFriend, setFriend, isHydrated } = useUsername();
-  const { friends } = useFriendsQuery({
-    showCurrentUser: true,
-  });
-
-  // Ensure tracks view is always scoped to a library unless user explicitly clears.
-  React.useEffect(() => {
-    if (!isHydrated) return;
-    if (currentUserFriend) return;
-    if (friends.length === 0) return;
-    setFriend(friends[0]);
-  }, [currentUserFriend, friends, setFriend, isHydrated]);
+  const { friend: currentUserFriend, isHydrated } = useUsername();
 
   // Filter state - applied immediately (no modal)
   const [activeFilters, setActiveFilters] = React.useState<TracksFilter>(createEmptyFilters());
@@ -100,6 +90,7 @@ const SearchResults: React.FC = () => {
     initialLoading,
     loadingMore,
   } = useSearchResults({
+    enabled: isHydrated && !!currentUserFriend,
     mode: "infinite",
     limit: 20,
     friend: currentUserFriend,
@@ -295,15 +286,16 @@ const SearchResults: React.FC = () => {
 
   return (
     <Box mb={'100px'}>
+      {!isHydrated || !currentUserFriend ? (
+        <Flex justify="center" py={8}>
+          <Spinner />
+        </Flex>
+      ) : (
+        <>
       <UnifiedSearchControls
         query={debouncedValue}
         onQueryChange={setDebouncedValue}
-        friends={friends}
-        selectedFriend={currentUserFriend}
-        onFriendChange={(friendId) => {
-          const next = friends.find((f) => f.id === friendId) || null;
-          setFriend(next);
-        }}
+        showLibrarySelect={false}
         mobilePrimaryControl={
           <IconButton
             aria-label="Select tracks"
@@ -388,6 +380,7 @@ const SearchResults: React.FC = () => {
                   trackId={info.trackId}
                   friendId={info.friendId}
                   playlistCount={playlistCounts[key]}
+                  playlistMode={true}
                   isSelected={selectMode ? selectedTracks.has(key) : undefined}
                   onToggleSelect={selectMode ? () => toggleTrack(info.trackId, info.friendId) : undefined}
                 />
@@ -426,6 +419,8 @@ const SearchResults: React.FC = () => {
         onEnrich={handleEnrich}
         onDownloadAudio={handleDownloadAudio}
       />
+        </>
+      )}
     </Box>
   );
 };

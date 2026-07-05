@@ -2,7 +2,6 @@
 
 import React, { useState, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import NextLink from "next/link";
 import {
   Box,
   Button,
@@ -14,7 +13,6 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
-import { FiArrowLeft } from "react-icons/fi";
 
 import PageContainer from "@/components/layout/PageContainer";
 import LabeledInput from "@/components/form/LabeledInput";
@@ -110,21 +108,25 @@ export default function TrackEditPage() {
       setSaving(false);
     }
   };
-
-  const detailHref = `/tracks/${encodeURIComponent(trackId)}?friend_id=${friendId}`;
-
   return (
     <PageContainer size="standard">
-      {/* Header */}
-      <Flex justify="space-between" align="center" mb={6} gap={3} wrap="wrap">
-        <Flex align="center" gap={3}>
-          <Button asChild variant="ghost" size="sm">
-            <NextLink href={detailHref}>
-              <FiArrowLeft /> Back
-            </NextLink>
-          </Button>
-          <Heading size="md">Edit Track</Heading>
-        </Flex>
+      <Flex
+        justify="space-between"
+        align={{ base: "flex-start", md: "center" }}
+        mb={6}
+        gap={3}
+      >
+        <Stack gap={1} minW={0} flex={1}>
+          <Heading size={{ base: "lg", md: "xl" }} lineHeight="1.15">
+            Edit Track
+          </Heading>
+          {track && (
+            <Text color="fg.muted" fontSize={{ base: "sm", md: "md" }} lineClamp={1}>
+              {form.title || track.title}
+              {(form.artist || track.artist) ? ` · ${form.artist || track.artist}` : ""}
+            </Text>
+          )}
+        </Stack>
         {track && (
           <TrackEditActions
             aiLoading={aiLoading}
@@ -287,7 +289,7 @@ export default function TrackEditPage() {
             </SectionCard>
           </Stack>
 
-          <Flex gap={3} mt={6}>
+          <Flex gap={3} mt={6} display={{ base: "none", md: "flex" }}>
             <Button type="submit" loading={saving} disabled={saving}>
               Save
             </Button>
@@ -295,6 +297,30 @@ export default function TrackEditPage() {
               Cancel
             </Button>
           </Flex>
+
+          <Box display={{ base: "block", md: "none" }} h="92px" />
+
+          <Box
+            display={{ base: "block", md: "none" }}
+            position="fixed"
+            left="0"
+            right="0"
+            bottom="0"
+            px={4}
+            pb="calc(env(safe-area-inset-bottom, 0px) + 12px)"
+            pt={3}
+            bg="linear-gradient(to top, var(--chakra-colors-bg), color-mix(in srgb, var(--chakra-colors-bg) 88%, transparent))"
+            zIndex={20}
+          >
+            <Flex gap={2}>
+              <Button type="submit" loading={saving} disabled={saving} flex={1}>
+                Save
+              </Button>
+              <Button variant="outline" onClick={() => router.back()} disabled={saving} flex={1}>
+                Cancel
+              </Button>
+            </Flex>
+          </Box>
         </Box>
       )}
 
