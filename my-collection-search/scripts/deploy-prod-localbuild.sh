@@ -42,6 +42,7 @@ MIN_FREE_GB="${MIN_FREE_GB:-5}"
 PGUSER="${POSTGRES_USER:-djplaylist}"
 PGDB="${POSTGRES_DB:-djplaylist}"
 APP_IMAGE="ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}"
+MIGRATE_IMAGE="ghcr.io/saegey/myapp-migrate:${IMAGE_TAG:-latest}"
 EXPECTED_APP_CMD='["npm","run","start"]'
 
 latest_migration_name() {
@@ -51,6 +52,13 @@ latest_migration_name() {
 
 app_image_id() {
   docker image inspect "${APP_IMAGE}" --format '{{.Id}}' 2>/dev/null || true
+}
+
+verify_image_tags_do_not_collide() {
+  if [[ "${APP_IMAGE}" == "${MIGRATE_IMAGE}" ]]; then
+    echo "ERROR: app and migrate image tags must be different"
+    exit 1
+  fi
 }
 
 verify_app_image_cmd() {
@@ -162,6 +170,7 @@ fi
 echo "==> Checking disk space"
 check_disk_space
 
+verify_image_tags_do_not_collide
 remove_stale_app_image_if_needed
 
 echo "==> Building images locally on server"
