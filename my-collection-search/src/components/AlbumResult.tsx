@@ -54,6 +54,8 @@ export default function AlbumResult({
   const subtleText = useColorModeValue("gray.500", "gray.400");
 
   const updateMutation = useUpdateAlbumMutation();
+  const displayYear =
+    resolvedAlbum?.year && resolvedAlbum.year !== "0" ? resolvedAlbum.year : "";
 
   React.useEffect(() => {
     if (!resolvedAlbum) return;
@@ -92,7 +94,7 @@ export default function AlbumResult({
           </Text>
           <Text fontSize="xs" color={mutedText} lineClamp={1}>
             {resolvedAlbum.artist}
-            {resolvedAlbum.year ? ` · ${resolvedAlbum.year}` : ""}
+            {displayYear ? ` · ${displayYear}` : ""}
           </Text>
         </Box>
         <Flex gap={1} flexShrink={0}>
@@ -160,6 +162,10 @@ export default function AlbumResult({
               <Link
                 as={NextLink}
                 href={`/albums/${resolvedAlbum.release_id}?friend_id=${resolvedAlbum.friend_id}`}
+                display="block"
+                overflow="hidden"
+                textOverflow="ellipsis"
+                whiteSpace="nowrap"
                 _hover={{ textDecoration: "underline" }}
               >
                 {resolvedAlbum.title}
@@ -184,23 +190,21 @@ export default function AlbumResult({
 
           <Flex gap={2} fontSize="xs" color="gray.500" alignItems="center" flexWrap="wrap">
             {resolvedAlbum.library_identifier && (
-              <Badge colorPalette="blue" size="sm" fontWeight="bold" flexShrink={0}>
+              <Text
+                color="blue.600"
+                fontWeight="bold"
+                flexShrink={0}
+              >
                 {resolvedAlbum.library_identifier}
-              </Badge>
+              </Text>
             )}
-            {resolvedAlbum.year && <Text>{resolvedAlbum.year}</Text>}
+            {displayYear && <Text>{displayYear}</Text>}
             {resolvedAlbum.track_count > 0 && (
               <>
                 <Text color="gray.400">·</Text>
                 <Text>
                   {resolvedAlbum.track_count} track{resolvedAlbum.track_count !== 1 ? "s" : ""}
                 </Text>
-              </>
-            )}
-            {resolvedAlbum.username && (
-              <>
-                <Text color="gray.400">·</Text>
-                <Text>{resolvedAlbum.username}</Text>
               </>
             )}
           </Flex>
@@ -232,7 +236,6 @@ export default function AlbumResult({
                 </RatingGroup.Item>
               ))}
             </RatingGroup.Root>
-            {resolvedAlbum.format && <Text>{resolvedAlbum.format}</Text>}
             {resolvedAlbum.label && (
               <Text display={{ base: "none", md: "block" }}>{resolvedAlbum.label}</Text>
             )}
@@ -265,7 +268,13 @@ export default function AlbumResult({
           )}
         </Flex>
 
-        <Flex position="absolute" top={2} right={2} gap={1} alignItems="center">
+        <Flex
+          position="absolute"
+          top={{ base: 0, md: 2 }}
+          right={{ base: 0, md: 2 }}
+          gap={1}
+          alignItems="center"
+        >
           <AlbumActionsMenu
             albumTitle={resolvedAlbum.title}
             albumArtist={resolvedAlbum.artist}

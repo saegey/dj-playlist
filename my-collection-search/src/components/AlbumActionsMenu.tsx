@@ -123,7 +123,7 @@ export default function AlbumActionsMenu({
     <>
       {/* Mobile: bottom sheet */}
       <Box display={{ base: "block", md: "none" }}>
-        <Button size="sm" variant="outline" aria-label="Album actions" px={2} onClick={() => setDrawerOpen(true)}>
+        <Button size="sm" variant="ghost" aria-label="Album actions" px={2} onClick={() => setDrawerOpen(true)}>
           <FiMoreVertical />
         </Button>
         <Drawer.Root placement="bottom" open={drawerOpen} onOpenChange={(d) => setDrawerOpen(d.open)}>

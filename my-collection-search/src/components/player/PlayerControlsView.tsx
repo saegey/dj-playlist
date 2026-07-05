@@ -24,7 +24,6 @@ import {
 import type { IconType } from "react-icons";
 import type { Track } from "@/types/track";
 import ProgressSlider from "@/components/player/ProgressSlider";
-import CompactProgressSlider from "@/components/player/CompactProgressSlider";
 import Artwork from "@/components/player/Artwork";
 import ArtistLink from "@/components/ArtistLink";
 import AlbumLink from "@/components/AlbumLink";
@@ -83,34 +82,100 @@ export default function PlayerControlsView({
     currentTrack?.album_thumbnail ||
     "/images/placeholder-artwork.png";
 
-  return (
-    <Box>
-      {!compact && <ProgressSlider seek={onSeek} />}
-
-      {compact && (
-        <Flex mb={2}>
-          <VStack
-            align="start"
-            gap={1}
-            flex="1"
-            minW={0}
-            display={{ base: "flex", md: "none" }}
+  if (compact) {
+    return (
+      <Box
+        role={onQueueToggle ? "button" : undefined}
+        tabIndex={onQueueToggle ? 0 : undefined}
+        aria-label={onQueueToggle ? "Open player queue" : undefined}
+        cursor={onQueueToggle ? "pointer" : "default"}
+        onClick={onQueueToggle}
+        onKeyDown={(event) => {
+          if (!onQueueToggle) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onQueueToggle();
+          }
+        }}
+      >
+        <Flex align="center" gap={2.5} minH="42px">
+          <AlbumLink
+            releaseId={currentTrack?.release_id}
+            friendId={currentTrack?.friend_id}
           >
-            <Text fontWeight="semibold" fontSize="sm" maxW="100%">
+            <Artwork
+              src={currentArtwork}
+              alt={
+                currentTrack
+                  ? `${currentTrack.artist} - ${currentTrack.title}`
+                  : "Artwork"
+              }
+              size="36px"
+            />
+          </AlbumLink>
+
+          <VStack align="start" gap={0} flex="1" minW={0}>
+            <Text
+              fontWeight="semibold"
+              fontSize="xs"
+              lineClamp={1}
+              maxW="100%"
+            >
               {currentTrack ? currentTrack.title : "No track playing"}
             </Text>
-            <Text color="fg.muted" fontSize="xs" maxW="100%">
+            <Text color="fg.muted" fontSize="11px" lineClamp={1} maxW="100%">
               {currentTrack ? currentTrack.artist : "—"}
             </Text>
           </VStack>
+
+          {isPlaying ? (
+            <IconButton
+              aria-label="Pause"
+              size="sm"
+              minW="36px"
+              h="36px"
+              borderRadius="full"
+              variant="solid"
+              colorPalette="gray"
+              onClick={(event) => {
+                event.stopPropagation();
+                onPause();
+              }}
+            >
+              <FiPause />
+            </IconButton>
+          ) : (
+            <IconButton
+              aria-label="Play"
+              size="sm"
+              minW="36px"
+              h="36px"
+              borderRadius="full"
+              variant="solid"
+              colorPalette="gray"
+              onClick={(event) => {
+                event.stopPropagation();
+                onPlay();
+              }}
+              disabled={safeLen === 0}
+            >
+              <FiPlay />
+            </IconButton>
+          )}
         </Flex>
-      )}
+      </Box>
+    );
+  }
+
+  return (
+    <Box>
+      <ProgressSlider seek={onSeek} />
 
       <Flex
         align="center"
         gap={{ base: 3, md: 4 }}
         justify="space-between"
-        minH={compact ? "48px" : "64px"}
+        minH="64px"
       >
         <HStack minW={0} gap={3} flex="1">
           <AlbumLink
@@ -130,7 +195,7 @@ export default function PlayerControlsView({
           <VStack
             align="start"
             minW={0}
-            display={compact ? "none" : { base: "none", md: "flex" }}
+            display={{ base: "none", md: "flex" }}
           >
             <Text
               fontWeight="semibold"

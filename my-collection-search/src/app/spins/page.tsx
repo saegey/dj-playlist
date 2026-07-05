@@ -120,10 +120,10 @@ function SpinsPageContent() {
           </Box>
         </Flex>
 
-        <Grid templateColumns={{ base: "1fr", xl: "1.2fr 0.8fr" }} gap={4}>
+        <Grid templateColumns={{ base: "1fr", xl: "1.2fr 0.8fr" }} gap={4} minW={0}>
           {/* Recent Spins */}
-          <Box>
-            <HStack justify="space-between" mb={3}>
+          <Box minW={0} w="full">
+            <HStack justify="space-between" mb={3} w="full" minW={0}>
               <HStack gap={2}>
                 <FiClock />
                 <Heading size="sm">Recent Spins</Heading>
@@ -210,8 +210,8 @@ function SpinsPageContent() {
           </Box>
 
           {/* Most Played Tracks */}
-          <Box>
-            <HStack justify="space-between" mb={3}>
+          <Box minW={0} w="full">
+            <HStack justify="space-between" mb={3} w="full" minW={0}>
               <HStack gap={2}>
                 <FiActivity />
                 <Heading size="sm">Most Played Tracks</Heading>

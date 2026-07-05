@@ -27,9 +27,10 @@ const TrackResultItem: React.FC<{
   playlistCount?: number;
   compact?: boolean;
   playlistMode?: boolean;
+  showUsername?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
-}> = ({ trackId, friendId, playlistCount, compact, playlistMode, isSelected, onToggleSelect }) => {
+}> = ({ trackId, friendId, playlistCount, compact, playlistMode, showUsername, isSelected, onToggleSelect }) => {
   const track = useTrack(trackId, friendId);
 
   if (!track) {
@@ -45,6 +46,7 @@ const TrackResultItem: React.FC<{
       buttons={[<TrackActionsMenu key="menu" track={track} />]}
       compact={compact}
       playlistMode={playlistMode}
+      showUsername={showUsername}
       isSelected={isSelected}
       onToggleSelect={onToggleSelect}
     />
@@ -381,6 +383,7 @@ const SearchResults: React.FC = () => {
                   friendId={info.friendId}
                   playlistCount={playlistCounts[key]}
                   playlistMode={true}
+                  showUsername={false}
                   isSelected={selectMode ? selectedTracks.has(key) : undefined}
                   onToggleSelect={selectMode ? () => toggleTrack(info.trackId, info.friendId) : undefined}
                 />

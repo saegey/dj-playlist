@@ -26,8 +26,6 @@ import { useTrackByIdQuery } from "@/hooks/useTrackByIdQuery";
 import { useTracksQuery } from "@/hooks/useTracksQuery";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
-import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
-import { getMobileBottomOverlayOffset } from "@/lib/mobileLayout";
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -44,8 +42,6 @@ export default function TrackEditPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { playlistLength } = usePlaylistPlayer();
-  const mobileBottomOverlayOffset = getMobileBottomOverlayOffset(playlistLength);
 
   const trackId = params?.id ?? "";
   const friendId = Number(searchParams?.get("friend_id") ?? "");
@@ -304,7 +300,7 @@ export default function TrackEditPage() {
 
           <Box
             display={{ base: "block", md: "none" }}
-            h={`calc(${mobileBottomOverlayOffset} + 108px)`}
+            h="108px"
           />
 
           <Box
@@ -312,7 +308,7 @@ export default function TrackEditPage() {
             position="fixed"
             left="0"
             right="0"
-            bottom={mobileBottomOverlayOffset}
+            bottom="0"
             px={4}
             pb="calc(env(safe-area-inset-bottom, 0px) + 12px)"
             pt={3}
