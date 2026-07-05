@@ -61,16 +61,20 @@ export default function PlaylistTrackItem({
   };
 
   let hasEmbedding = false;
-  const embeddingRaw =
-    t._vectors?.default ?? t.embedding;
-  if (Array.isArray(embeddingRaw)) {
-    hasEmbedding = embeddingRaw.length > 0;
-  } else if (typeof embeddingRaw === "string") {
-    try {
-      const parsed = JSON.parse(embeddingRaw) as unknown;
-      hasEmbedding = Array.isArray(parsed) && parsed.length > 0;
-    } catch {
+  if (typeof track.hasVectors === "boolean") {
+    hasEmbedding = track.hasVectors;
+  } else {
+    const embeddingRaw =
+      t._vectors?.default ?? t.embedding;
+    if (Array.isArray(embeddingRaw)) {
       hasEmbedding = embeddingRaw.length > 0;
+    } else if (typeof embeddingRaw === "string") {
+      try {
+        const parsed = JSON.parse(embeddingRaw) as unknown;
+        hasEmbedding = Array.isArray(parsed) && parsed.length > 0;
+      } catch {
+        hasEmbedding = embeddingRaw.length > 0;
+      }
     }
   }
 

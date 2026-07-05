@@ -39,6 +39,7 @@ export type UpdateTrackInput = TrackRef & UpdatableTrackFields;
 
 export type TrackWithLibraryIdentifierRow = Track & {
   library_identifier?: string | null;
+  hasVectors?: boolean;
 };
 
 export type TrackWithAlbumMetadataRow = Track & {
@@ -55,6 +56,7 @@ export type TrackPlaylistMembershipRow = {
 };
 
 export type OrderedTrackRow = TrackWithLibraryIdentifierRow & {
+  hasVectors?: boolean;
   ord: number;
 };
 
@@ -348,6 +350,13 @@ export class TrackRepository {
       SELECT
         t.*,
         COALESCE(a.library_identifier, t.library_identifier) AS library_identifier,
+        EXISTS (
+          SELECT 1
+          FROM track_embeddings te
+          WHERE te.track_id = t.track_id
+            AND te.friend_id = t.friend_id
+            AND te.embedding IS NOT NULL
+        ) AS "hasVectors",
         v.ord
       FROM (VALUES ${values.join(",")}) AS v(track_id, friend_id, ord)
       JOIN tracks t
@@ -367,7 +376,16 @@ export class TrackRepository {
   ): Promise<TrackWithLibraryIdentifierRow | null> {
     const { rows } = await dbQuery<TrackWithLibraryIdentifierRow>(
       `
-      SELECT t.*, a.library_identifier
+      SELECT
+        t.*,
+        a.library_identifier,
+        EXISTS (
+          SELECT 1
+          FROM track_embeddings te
+          WHERE te.track_id = t.track_id
+            AND te.friend_id = t.friend_id
+            AND te.embedding IS NOT NULL
+        ) AS "hasVectors"
       FROM tracks t
       LEFT JOIN albums a ON t.release_id = a.release_id AND t.friend_id = a.friend_id
       WHERE t.track_id = $1 AND t.friend_id = $2
@@ -386,7 +404,14 @@ export class TrackRepository {
       `
       SELECT
         t.*,
-        COALESCE(a.library_identifier, t.library_identifier) AS library_identifier
+        COALESCE(a.library_identifier, t.library_identifier) AS library_identifier,
+        EXISTS (
+          SELECT 1
+          FROM track_embeddings te
+          WHERE te.track_id = t.track_id
+            AND te.friend_id = t.friend_id
+            AND te.embedding IS NOT NULL
+        ) AS "hasVectors"
       FROM tracks t
       LEFT JOIN albums a
         ON t.release_id = a.release_id AND t.friend_id = a.friend_id

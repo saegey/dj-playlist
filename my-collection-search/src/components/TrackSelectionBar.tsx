@@ -1,6 +1,8 @@
 "use client";
 import React from "react";
 import { Box, Flex, Text, Button } from "@chakra-ui/react";
+import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import { getMobileBottomOverlayOffset } from "@/lib/mobileLayout";
 
 interface TrackSelectionBarProps {
   selectedCount: number;
@@ -21,12 +23,15 @@ export default function TrackSelectionBar({
   onEnrich,
   onDownloadAudio,
 }: TrackSelectionBarProps) {
+  const { playlistLength } = usePlaylistPlayer();
+  const mobileBottomOverlayOffset = getMobileBottomOverlayOffset(playlistLength);
+
   if (selectedCount === 0) return null;
 
   return (
     <Box
       position="fixed"
-      bottom={0}
+      bottom={mobileBottomOverlayOffset}
       left={0}
       right={0}
       bg="bg"

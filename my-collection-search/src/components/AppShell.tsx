@@ -13,9 +13,12 @@ import {
   Drawer,
   Icon,
   Portal,
+  Button,
+  Stack,
+  CloseButton,
 } from "@chakra-ui/react";
 import { Tooltip } from "@/components/ui/tooltip";
-import { FiMenu, FiChevronLeft, FiChevronRight, FiSearch, FiDisc } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiSearch, FiDisc, FiMoreHorizontal } from "react-icons/fi";
 import { TbPlaylist } from "react-icons/tb";
 import { LuCloudDownload } from "react-icons/lu";
 import {
@@ -28,6 +31,10 @@ import { usePathname } from "next/navigation";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useCommandPalette } from "@/providers/CommandPaletteProvider";
 import CommandPalette from "@/components/CommandPalette";
+import {
+  getMobileBottomOverlayOffset,
+  MOBILE_NAV_BOTTOM_OFFSET,
+} from "@/lib/mobileLayout";
 
 const menuItems = [
   { href: "/", label: "Tracks" },
@@ -37,6 +44,9 @@ const menuItems = [
   { href: "/jobs", label: "Jobs" },
   { href: "/settings", label: "Settings" },
 ];
+
+const primaryMobileMenuItems = menuItems.slice(0, 4);
+const secondaryMobileMenuItems = menuItems.slice(4);
 
 function getItemIcon(href: string) {
   if (href === "/") return IoMusicalNotes;
@@ -48,10 +58,19 @@ function getItemIcon(href: string) {
   return IoBookSharp;
 }
 
+function isActiveRoute(currentPath: string, href: string) {
+  if (href === "/") {
+    return currentPath === "/" || currentPath.startsWith("/tracks");
+  }
+  return currentPath === href || currentPath.startsWith(`${href}/`);
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const CONTENT_MAX_W = "1360px";
   const pathname = usePathname();
   const { playlistLength } = usePlaylistPlayer();
+  const mobileDrawerBottomPadding = "80px";
+  const mobileContentBottomPadding = getMobileBottomOverlayOffset(playlistLength);
   const current = useMemo(() => {
     if (!pathname) return "";
     if (pathname === "/") return "/";
@@ -183,7 +202,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </Tooltip>
             )}
             {menuItems.map((item) => {
-              const active = current === item.href;
+              const active = isActiveRoute(current, item.href);
               const ItemIcon = getItemIcon(item.href);
               return (
                 <Tooltip
@@ -232,42 +251,58 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </Flex>
       </Box>
 
-      {/* Mobile floating menu button */}
-      <IconButton
-        aria-label="Open menu"
-        variant="solid"
-        colorPalette="gray"
-        display={{ base: "inline-flex", md: "none" }}
-        position="fixed"
-        bottom={{ base: playlistLength > 0 ? "112px" : "16px" }}
-        right={4}
-        zIndex={90}
-        borderRadius="full"
-        boxShadow="md"
-        onClick={() => setDrawerOpen(true)}
-      >
-        <FiMenu size={16} />
-      </IconButton>
-
-      {/* Mobile drawer */}
+      {/* Mobile More sheet */}
       <Portal>
         <Drawer.Root
           open={drawerOpen}
           onOpenChange={(e) => setDrawerOpen(e.open)}
-          size={"xs"}
-          placement="start"
+          placement="bottom"
         >
-          <Drawer.Positioner paddingTop={0} paddingBottom={[0, "117px"]}>
+          <Drawer.Backdrop bg="blackAlpha.400" backdropFilter="blur(4px)" />
+          <Drawer.Positioner
+            paddingTop={0}
+            paddingBottom={`calc(env(safe-area-inset-bottom, 0px) + ${mobileDrawerBottomPadding})`}
+          >
             <Drawer.Content
-              boxShadow="none"
-              borderRightStyle="solid"
-              borderRightWidth={"1px"}
-              borderRightColor={"brand.0"}
+              mx={4}
+              borderTopRadius="2xl"
+              borderWidth="1px"
+              borderColor="border"
+              boxShadow="0 20px 48px rgba(15, 23, 42, 0.2)"
             >
-              <Drawer.Body>
-                <VStack align="stretch" gap={1} mt={2}>
-                  {menuItems.map((item) => {
-                    const active = current === item.href;
+              <Drawer.Header borderBottomWidth="1px" py={3} px={5} position="relative">
+                <Box
+                  position="absolute"
+                  top={2}
+                  left="50%"
+                  transform="translateX(-50%)"
+                  w="40px"
+                  h="4px"
+                  borderRadius="full"
+                  bg="blackAlpha.300"
+                />
+                <Box pr={8}>
+                  <Text fontWeight="semibold" fontSize="sm">
+                    More
+                  </Text>
+                  <Text fontSize="xs" color="fg.muted">
+                    Navigation and tools
+                  </Text>
+                </Box>
+                <Drawer.CloseTrigger asChild>
+                  <CloseButton
+                    size="sm"
+                    position="absolute"
+                    right={3}
+                    top="50%"
+                    transform="translateY(-50%)"
+                  />
+                </Drawer.CloseTrigger>
+              </Drawer.Header>
+              <Drawer.Body p={0}>
+                <Stack gap={0} py={2}>
+                  {secondaryMobileMenuItems.map((item) => {
+                    const active = isActiveRoute(current, item.href);
                     const ItemIcon = getItemIcon(item.href);
                     return (
                       <Link
@@ -276,9 +311,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         href={item.href}
                         onClick={() => setDrawerOpen(false)}
                         _hover={{ textDecoration: "none", bg: "bg.subtle" }}
-                        px={3}
-                        py={2}
-                        borderRadius="md"
+                        px={5}
+                        py={3.5}
                         bg={active ? "bg.subtle" : undefined}
                       >
                         <HStack gap={3} align="center">
@@ -294,15 +328,120 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       </Link>
                     );
                   })}
-                </VStack>
+                  <Box
+                    as="button"
+                    onClick={() => {
+                      setPaletteOpen(true);
+                      setDrawerOpen(false);
+                    }}
+                    textAlign="left"
+                    px={5}
+                    py={3.5}
+                    _hover={{ bg: "bg.subtle" }}
+                  >
+                    <HStack gap={3} align="center">
+                      <Icon as={FiSearch} boxSize={5} color="fg.muted" />
+                      <Text>Search</Text>
+                    </HStack>
+                  </Box>
+                </Stack>
               </Drawer.Body>
             </Drawer.Content>
           </Drawer.Positioner>
         </Drawer.Root>
       </Portal>
 
+      {/* Mobile bottom navigation */}
+      <Box
+        display={{ base: "block", md: "none" }}
+        position="fixed"
+        left={4}
+        right={4}
+        bottom={`calc(env(safe-area-inset-bottom, 0px) + ${MOBILE_NAV_BOTTOM_OFFSET})`}
+        zIndex={90}
+        opacity={drawerOpen ? 0 : 1}
+        transform={drawerOpen ? "translateY(12px)" : "translateY(0)"}
+        transition="opacity 0.18s ease, transform 0.18s ease"
+        pointerEvents={drawerOpen ? "none" : "auto"}
+      >
+        <Flex
+          align="center"
+          justify="space-between"
+          gap={1}
+          px={2}
+          py={2}
+          borderWidth="1px"
+          borderColor="border"
+          borderRadius="2xl"
+          bg="bg"
+          boxShadow="0 12px 28px rgba(15, 23, 42, 0.12)"
+        >
+          {primaryMobileMenuItems.map((item) => {
+            const active = isActiveRoute(current, item.href);
+            const ItemIcon = getItemIcon(item.href);
+            return (
+              <Link
+                key={item.href}
+                as={NextLink}
+                href={item.href}
+                flex="1 1 0"
+                _hover={{ textDecoration: "none" }}
+              >
+                <VStack
+                  gap={1}
+                  py={2}
+                  px={1}
+                  borderRadius="xl"
+                  bg={active ? "bg.subtle" : "transparent"}
+                >
+                  <Icon
+                    as={ItemIcon}
+                    boxSize={5}
+                    color={active ? "blue.500" : "fg.muted"}
+                  />
+                  <Text
+                    fontSize="xs"
+                    fontWeight={active ? "semibold" : "medium"}
+                    color={active ? "fg" : "fg.muted"}
+                    lineHeight="1"
+                  >
+                    {item.label}
+                  </Text>
+                </VStack>
+              </Link>
+            );
+          })}
+
+          <Button
+            variant="ghost"
+            onClick={() => setDrawerOpen(true)}
+            flex="1 1 0"
+            h="auto"
+            py={2}
+            px={1}
+            borderRadius="xl"
+          >
+            <VStack gap={1}>
+              <Icon as={FiMoreHorizontal} boxSize={5} color="fg.muted" />
+              <Text fontSize="xs" fontWeight="medium" color="fg.muted" lineHeight="1">
+                More
+              </Text>
+            </VStack>
+          </Button>
+        </Flex>
+      </Box>
+
       {/* Main content */}
-      <Box flex="1" minW={0} px={{ base: 4, md: 6 }} py={{ base: 4, md: 6 }}>
+      <Box
+        flex="1"
+        minW={0}
+        px={{ base: 4, md: 6 }}
+        py={{ base: 4, md: 6 }}
+        pb={{
+          base: mobileContentBottomPadding,
+          md: 6,
+        }}
+      >
         <Box w="full" maxW={CONTENT_MAX_W} mx="auto">
           {children}
         </Box>

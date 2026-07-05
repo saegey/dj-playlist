@@ -42,6 +42,7 @@ import { analyzeTrackAsync, fixTrackDuration } from "@/services/internalApi/trac
 import NamePlaylistDialog from "@/components/NamePlaylistDialog";
 import { queryKeys } from "@/lib/queryKeys";
 import { getTrackDurationSeconds } from "@/lib/trackUtils";
+import { getMobileBottomOverlayOffset } from "@/lib/mobileLayout";
 
 const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
   const { playlistCounts } = useSearchResults({});
@@ -81,7 +82,8 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
     sortPositionChanges,
   } = usePlaylistMutations(playlistId, () => setHasUnsavedChanges(true));
 
-  const { replacePlaylist } = usePlaylistPlayer();
+  const { replacePlaylist, playlistLength } = usePlaylistPlayer();
+  const mobileBottomOverlayOffset = getMobileBottomOverlayOffset(playlistLength);
 
   const { exportPlaylist, exportToPDF, getTotalPlaytime } =
     usePlaylistActions(playlistId);
@@ -591,7 +593,12 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
               {playlistName || `Playlist ${playlistId ?? ""}`.trim()}
             </Text>
             {hasUnsavedChanges && (
-              <Badge colorPalette="orange" variant="solid" size="sm">
+              <Badge
+                colorPalette="orange"
+                variant="solid"
+                size="sm"
+                display={{ base: "none", md: "inline-flex" }}
+              >
                 Unsaved changes
               </Badge>
             )}
@@ -608,6 +615,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
             <Button
               size="sm"
               colorScheme="blue"
+              display={{ base: "none", md: "inline-flex" }}
               onClick={saveExisting}
             >
               Save Changes
@@ -830,6 +838,9 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           }}
           sortPositionChanges={sortPositionChanges}
         />
+        {hasUnsavedChanges && playlistId && (
+          <Box display={{ base: "block", md: "none" }} h="92px" />
+        )}
         {/* <PlaylistRecommendations
           playlist={tracks}
           onAddToPlaylist={addToPlaylist}
@@ -906,6 +917,44 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           </Portal>
         </Dialog.Root>
       </Box>
+      {hasUnsavedChanges && playlistId && (
+        <Box
+          display={{ base: "block", md: "none" }}
+          position="fixed"
+          left="0"
+          right="0"
+          bottom={mobileBottomOverlayOffset}
+          px={4}
+          pb="calc(env(safe-area-inset-bottom, 0px) + 12px)"
+          pt={3}
+          bg="linear-gradient(to top, var(--chakra-colors-bg), color-mix(in srgb, var(--chakra-colors-bg) 88%, transparent))"
+          zIndex={20}
+        >
+          <Box
+            borderWidth="1px"
+            borderColor="orange.200"
+            bg="orange.50"
+            borderRadius="xl"
+            boxShadow="lg"
+            px={3}
+            py={3}
+          >
+            <Flex align="center" gap={3}>
+              <Box flex="1" minW={0}>
+                <Text fontSize="sm" fontWeight="semibold" color="orange.800">
+                  Unsaved changes
+                </Text>
+                <Text fontSize="xs" color="orange.700">
+                  Reordered tracks won&apos;t persist until you save.
+                </Text>
+              </Box>
+              <Button size="sm" colorScheme="orange" onClick={saveExisting}>
+                Save
+              </Button>
+            </Flex>
+          </Box>
+        </Box>
+      )}
     </>
   );
 };

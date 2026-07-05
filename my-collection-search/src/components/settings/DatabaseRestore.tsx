@@ -32,7 +32,7 @@ const DatabaseRestore: React.FC = () => {
   };
 
   return (
-    <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
+    <Box mt={{ base: 6, md: 10 }} mb={8} p={4} borderWidth={1} borderRadius="md">
       <Heading size="md" mb={2}>
         Restore Full Database
       </Heading>
@@ -70,7 +70,7 @@ const DatabaseRestore: React.FC = () => {
           />
         </Alert.Root>
       )}
-      <HStack mb={4}>
+      <HStack mb={4} align="stretch" flexDirection={{ base: "column", md: "row" }}>
         <FileUpload.Root
           accept=".sql,.dump,.backup"
           onChange={(event) => {
@@ -82,7 +82,7 @@ const DatabaseRestore: React.FC = () => {
         >
           <FileUpload.HiddenInput />
           <FileUpload.Trigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" width={{ base: "full", md: "auto" }}>
               <HiUpload /> Upload file
             </Button>
           </FileUpload.Trigger>
@@ -93,6 +93,7 @@ const DatabaseRestore: React.FC = () => {
           onClick={handleRestore}
           disabled={!restoreFile || isRestoring}
           loading={isRestoring}
+          width={{ base: "full", md: "auto" }}
         >
           Restore Database
         </Button>

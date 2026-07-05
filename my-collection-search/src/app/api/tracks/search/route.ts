@@ -114,6 +114,13 @@ async function searchTracksPg(params: {
   const { rows } = await dbQuery(
     `
     SELECT t.*
+      , EXISTS (
+        SELECT 1
+        FROM track_embeddings te
+        WHERE te.track_id = t.track_id
+          AND te.friend_id = t.friend_id
+          AND te.embedding IS NOT NULL
+      ) AS "hasVectors"
     FROM tracks t
     ${whereSql}
     ORDER BY ${orderBySql}

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
-import { Button, Heading, Stack, Flex, Spinner, Text } from "@chakra-ui/react";
+import { Box, Button, Heading, Stack, Flex, Spinner, Text } from "@chakra-ui/react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { toaster } from "@/components/ui/toaster";
 import { useUpdateAlbumWithTracksMutation } from "@/hooks/useUpdateAlbumWithTracksMutation";
@@ -14,6 +14,7 @@ import AlbumForm, { AlbumFormData } from "@/components/AlbumForm";
 import CoverArtUpload from "@/components/CoverArtUpload";
 import TrackListBuilder, { TrackFormData } from "@/components/TrackListBuilder";
 import PageContainer from "@/components/layout/PageContainer";
+import { getMobileBottomOverlayOffset } from "@/lib/mobileLayout";
 
 function EditAlbumContent() {
   const router = useRouter();
@@ -22,6 +23,7 @@ function EditAlbumContent() {
   const updateMutation = useUpdateAlbumWithTracksMutation();
   const { friend: currentUserFriend } = useUsername();
   const { playlistLength } = usePlaylistPlayer();
+  const mobileBottomOverlayOffset = getMobileBottomOverlayOffset(playlistLength);
 
   const releaseId = params.releaseId as string;
   const friendId = parseInt(searchParams.get("friend_id") || "0");
@@ -284,7 +286,12 @@ function EditAlbumContent() {
           defaultAlbum={albumForm.title}
         />
 
-        <Flex gap={3} justify="flex-end" pt={4}>
+        <Flex
+          gap={3}
+          justify="flex-end"
+          pt={4}
+          display={{ base: "none", md: "flex" }}
+        >
           <Button
             onClick={handleCancel}
             variant="outline"
@@ -299,6 +306,61 @@ function EditAlbumContent() {
           >
             Save Changes
           </Button>
+        </Flex>
+
+        <Box
+          display={{ base: "block", md: "none" }}
+          h={`calc(${mobileBottomOverlayOffset} + 108px)`}
+        />
+
+        <Flex
+          display={{ base: "flex", md: "none" }}
+          position="fixed"
+          left="0"
+          right="0"
+          bottom={mobileBottomOverlayOffset}
+          px={4}
+          pb="calc(env(safe-area-inset-bottom, 0px) + 12px)"
+          pt={3}
+          bg="linear-gradient(to top, var(--chakra-colors-bg), color-mix(in srgb, var(--chakra-colors-bg) 88%, transparent))"
+          zIndex={20}
+        >
+            <Flex
+              gap={2}
+              w="full"
+              p="10px"
+              borderWidth="1px"
+              borderColor="rgba(255, 255, 255, 0.45)"
+              borderRadius="28px"
+              bg="transparent"
+              _light={{ bg: "rgba(255, 255, 255, 0.58)" }}
+              _dark={{ bg: "rgba(18, 18, 24, 0.58)" }}
+              boxShadow="0 18px 40px rgba(15, 23, 42, 0.16)"
+              style={{ backdropFilter: "blur(24px) saturate(200%)" }}
+            >
+              <Button
+                onClick={handleCancel}
+                variant="outline"
+                bg="bg"
+                borderColor="blackAlpha.200"
+                disabled={updateMutation.isPending}
+                flex={1}
+                fontWeight="semibold"
+                borderRadius="xl"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                colorScheme="blue"
+                loading={updateMutation.isPending}
+                flex={1}
+                fontWeight="semibold"
+                borderRadius="xl"
+              >
+                Save Changes
+              </Button>
+          </Flex>
         </Flex>
       </Stack>
     </PageContainer>

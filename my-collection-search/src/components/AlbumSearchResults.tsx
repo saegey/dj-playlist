@@ -6,13 +6,18 @@ import { useAlbumsByRefs } from "@/hooks/useAlbum";
 import AlbumResult from "./AlbumResult";
 import { useSearchParams } from "next/navigation";
 
-export default function AlbumSearchResults({ viewMode = "card" }: { viewMode?: "card" | "table" }) {
+export default function AlbumSearchResults({
+  viewMode = "card",
+  friendId,
+}: {
+  viewMode?: "card" | "table";
+  friendId: number;
+}) {
   const searchParams = useSearchParams();
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const query = searchParams.get("q") || "";
   const sort = searchParams.get("sort") || "date_added:desc";
-  const friendId = searchParams.get("friend_id");
   const missingLibraryIdentifier = searchParams.get("missing_library_identifier") === "1";
   const missingLocalCoverArtUrl = searchParams.get("missing_local_cover_art_url") === "1";
   const missingAudio = searchParams.get("missing_audio") === "1";
@@ -21,7 +26,7 @@ export default function AlbumSearchResults({ viewMode = "card" }: { viewMode?: "
     useAlbumsInfiniteQuery({
       q: query,
       sort,
-      friend_id: friendId ? parseInt(friendId) : undefined,
+      friend_id: friendId,
       limit: 20,
       missing_library_identifier: missingLibraryIdentifier || undefined,
       missing_local_cover_art_url: missingLocalCoverArtUrl || undefined,
@@ -90,17 +95,9 @@ export default function AlbumSearchResults({ viewMode = "card" }: { viewMode?: "
 
   return (
     <Box>
-      {/* Results count */}
-      <Flex justify="space-between" align="center" mb={4} px={2}>
-        <Text fontSize="sm" color="gray.600">
-          {totalHits.toLocaleString()} {totalHits === 1 ? "album" : "albums"}
-        </Text>
-        {query && (
-          <Text fontSize="sm" color="gray.500">
-            Search: &quot;{query}&quot;
-          </Text>
-        )}
-      </Flex>
+      <Text fontSize="sm" color="gray.500" mb={2}>
+        {totalHits.toLocaleString()} {totalHits === 1 ? "album" : "albums"}
+      </Text>
 
       {/* Album results */}
       <Box>

@@ -11,6 +11,8 @@ type TrackEditFormFieldsProps = {
   loading: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onStarRatingChange: (rating: number) => void;
+  showSubmitButton?: boolean;
+  submitButtonDisplay?: { base?: string; md?: string };
 };
 
 export default function TrackEditFormFields({
@@ -18,6 +20,8 @@ export default function TrackEditFormFields({
   loading,
   onChange,
   onStarRatingChange,
+  showSubmitButton = true,
+  submitButtonDisplay = { base: "inline-flex", md: "inline-flex" },
 }: TrackEditFormFieldsProps) {
   return (
     <>
@@ -130,9 +134,17 @@ export default function TrackEditFormFields({
           </RatingGroup.Root>
         </Box>
       </Stack>
-      <Button type="submit" loading={loading} disabled={loading} size={"sm"}>
-        Save
-      </Button>
+      {showSubmitButton && (
+        <Button
+          type="submit"
+          loading={loading}
+          disabled={loading}
+          size={"sm"}
+          display={submitButtonDisplay}
+        >
+          Save
+        </Button>
+      )}
     </>
   );
 }

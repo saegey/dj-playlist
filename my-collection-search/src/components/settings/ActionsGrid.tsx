@@ -161,7 +161,9 @@ export default function ActionsGrid({ showTitle = true }: ActionsGridProps) {
           <Menu.Trigger asChild>
             <Button size="sm" variant="outline" disabled={disableAll}>
               <FiMoreVertical />
-              <Box ml={2}>Actions</Box>
+              <Box ml={2} display={{ base: "none", md: "block" }}>
+                Actions
+              </Box>
             </Button>
           </Menu.Trigger>
           <Menu.Positioner>

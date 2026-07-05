@@ -2,11 +2,6 @@
 # Usage:
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
-# This top-level name keeps the production-style Compose project and its
-# default network stable across deploys so external services can consistently
-# join `groovenet_default`.
-name: groovenet
-
 services:
   app:
     image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
@@ -31,7 +26,10 @@ services:
     restart: unless-stopped
 
   migrate:
-    image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
+    # Must not share the app image tag. `docker compose run --build migrate`
+    # builds the `migrator` target, and reusing the app tag clobbers the
+    # runner image with a stage that falls back to the base Node CMD.
+    image: ghcr.io/saegey/myapp-migrate:${IMAGE_TAG:-latest}
 
   essentia:
     image: ghcr.io/saegey/essentia-api:${IMAGE_TAG:-latest}
@@ -44,6 +42,12 @@ services:
   download-worker:
     image: ghcr.io/saegey/download-worker:${IMAGE_TAG:-latest}
     container_name: download-worker
+    volumes:
+      # Keep worker and app pointed at the same backing store for /app/audio.
+      - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}
+      - album_covers:/app/public/uploads/album-covers
+      - cookie_data:/app/cookies
+      - essentia_data:/app/essentia-data
     restart: unless-stopped
 
 volumes:

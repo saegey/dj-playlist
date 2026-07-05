@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import {
   Box,
+  Button,
   Flex,
   Portal,
   Dialog,
@@ -15,6 +16,8 @@ import { useTrackEditSearchIntegrations } from "@/components/track-edit/useTrack
 import { useTrackEditAudioActions } from "@/components/track-edit/useTrackEditAudioActions";
 import TrackEditFormFields from "@/components/track-edit/TrackEditFormFields";
 import TrackEditFormDialogs from "@/components/track-edit/TrackEditFormDialogs";
+import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
+import { getMobileBottomOverlayOffset } from "@/lib/mobileLayout";
 import {
   toTrackEditFormState,
   type TrackEditFormProps,
@@ -45,6 +48,8 @@ export default function TrackEditForm({
   }, [track]);
 
   const [loading, setLoading] = useState(false);
+  const { playlistLength } = usePlaylistPlayer();
+  const mobileBottomOverlayOffset = getMobileBottomOverlayOffset(playlistLength);
   const {
     aiLoading,
     fetchFromChatGPT,
@@ -167,7 +172,60 @@ export default function TrackEditForm({
                     loading={loading}
                     onChange={handleChange}
                     onStarRatingChange={handleStarRating}
+                    submitButtonDisplay={{ base: "none", md: "inline-flex" }}
                   />
+
+                  <Box display={{ base: "block", md: "none" }} h="104px" />
+
+                  <Box
+                    display={{ base: "block", md: "none" }}
+                    position="sticky"
+                    bottom={mobileBottomOverlayOffset}
+                    mt={4}
+                    mx={-2}
+                    px={2}
+                    pb="calc(env(safe-area-inset-bottom, 0px) + 12px)"
+                    pt={3}
+                    bg="linear-gradient(to top, var(--chakra-colors-bg), color-mix(in srgb, var(--chakra-colors-bg) 88%, transparent))"
+                    zIndex={2}
+                  >
+                    <Flex
+                      gap={2}
+                      p="10px"
+                      borderWidth="1px"
+                      borderColor="rgba(255, 255, 255, 0.45)"
+                      borderRadius="28px"
+                      bg="transparent"
+                      _light={{ bg: "rgba(255, 255, 255, 0.58)" }}
+                      _dark={{ bg: "rgba(18, 18, 24, 0.58)" }}
+                      boxShadow="0 18px 40px rgba(15, 23, 42, 0.16)"
+                      style={{ backdropFilter: "blur(24px) saturate(200%)" }}
+                    >
+                      <Button
+                        variant="outline"
+                        bg="bg"
+                        borderColor="blackAlpha.200"
+                        onClick={() => setDialogOpen(false)}
+                        disabled={loading}
+                        flex={1}
+                        fontWeight="semibold"
+                        borderRadius="xl"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        loading={loading}
+                        disabled={loading}
+                        flex={1}
+                        colorPalette="blue"
+                        fontWeight="semibold"
+                        borderRadius="xl"
+                      >
+                        Save
+                      </Button>
+                    </Flex>
+                  </Box>
 
                   <TrackEditFormDialogs
                     track={track}

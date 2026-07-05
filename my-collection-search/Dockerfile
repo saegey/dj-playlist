@@ -48,16 +48,17 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 
 RUN mkdir -p cookies dumps discogs_exports audio essentia-data public/uploads/album-covers && \
-    chown -R nextjs:nodejs cookies dumps discogs_exports audio essentia-data public/uploads/album-covers
+    chown -R nextjs:nodejs /app
 
 USER nextjs
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["npm", "run", "start"]
 
 FROM base AS migrator
 WORKDIR /app

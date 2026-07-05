@@ -14,7 +14,6 @@ import {
   EmptyState,
   VStack,
   HStack,
-  Badge,
   Spinner,
   Menu,
 } from "@chakra-ui/react";
@@ -28,14 +27,12 @@ import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { fetchTracksByIds } from "@/services/internalApi/tracks";
 import { formatDateWithRelative } from "@/lib/date";
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
-import { useUsername } from "@/providers/UsernameProvider";
 import posthog from "posthog-js";
 
 export default function PlaylistManager() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { playlists, loadingPlaylists, fetchPlaylists } = usePlaylists();
-  const { friend: currentUserFriend } = useUsername();
   const { friends } = useFriendsQuery({
     showCurrentUser: true,
   });
@@ -61,29 +58,11 @@ export default function PlaylistManager() {
 
   // Simple filter for playlists
   const [filter, setFilter] = useState("");
-  const [selectedLibraryFriendId, setSelectedLibraryFriendId] = useState<
-    number | null
-  >(null);
-  const selectedFriend = React.useMemo(() => {
-    if (!selectedLibraryFriendId) return null;
-    return friends.find((f) => f.id === selectedLibraryFriendId) || null;
-  }, [selectedLibraryFriendId, friends]);
-
-  React.useEffect(() => {
-    if (selectedLibraryFriendId || !currentUserFriend) return;
-    setSelectedLibraryFriendId(currentUserFriend.id);
-  }, [currentUserFriend, selectedLibraryFriendId]);
 
   const filtered = React.useMemo(() => {
     const q = filter.toLowerCase();
-    return playlists.filter((pl) => {
-      const matchesName = !q || pl.name.toLowerCase().includes(q);
-      const matchesFriend =
-        selectedLibraryFriendId === null ||
-        pl.tracks.some((t) => t.friend_id === selectedLibraryFriendId);
-      return matchesName && matchesFriend;
-    });
-  }, [playlists, filter, selectedLibraryFriendId]);
+    return playlists.filter((pl) => !q || pl.name.toLowerCase().includes(q));
+  }, [playlists, filter]);
 
   const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -196,20 +175,10 @@ export default function PlaylistManager() {
         <UnifiedSearchControls
           query={filter}
           onQueryChange={setFilter}
-          friends={friends}
-          selectedFriend={selectedFriend}
-          onFriendChange={(friendId) =>
-            setSelectedLibraryFriendId(friendId > 0 ? friendId : null)
-          }
-          includeAllOption={true}
+          showLibrarySelect={false}
           placeholder="Filter playlists..."
           desktopControls={
             <>
-              {playlists.length > 0 && (
-                <Badge colorPalette="gray" variant="surface" flexShrink={0}>
-                  {playlists.length}
-                </Badge>
-              )}
               <Menu.Root>
                 <Menu.Trigger asChild>
                   <Button size="sm" variant="outline" flexShrink={0}>
@@ -249,6 +218,13 @@ export default function PlaylistManager() {
             </Menu.Root>
           }
         />
+
+        {!loadingPlaylists && playlists.length > 0 && (
+          <Text fontSize="sm" color="gray.500" px={1}>
+            {filtered.length.toLocaleString()}{" "}
+            {filtered.length === 1 ? "playlist" : "playlists"}
+          </Text>
+        )}
       </VStack>
 
       <Stack overflowY="auto">
@@ -278,7 +254,7 @@ export default function PlaylistManager() {
           <Text fontSize="sm" color="fg.muted" px={2} py={1}>
             {filter.trim()
               ? `No playlists match "${filter}"`
-              : "No playlists match the selected library"}
+              : "No playlists yet"}
           </Text>
         ) : (
           filtered.map((pl) => {

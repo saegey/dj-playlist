@@ -25,7 +25,6 @@ export default function FilterChips({ chips, onToggle, onClearAll }: FilterChips
       flexWrap="nowrap"
       overflowX="auto"
       alignItems="center"
-      mt={2}
       pb={1}
       className="hide-scrollbar"
     >

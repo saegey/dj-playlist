@@ -129,11 +129,12 @@ export default function SimilarTracks({
             <Box key={`${similarTrack.track_id}-${similarTrack.friend_id}`} mb={2}>
               <TrackResult
                 track={trackWithArtwork}
+                playlistMode={true}
                 showUsername={true}
                 showRating={true}
-                buttons={
-                  <Flex gap={2} align="center">
-                    {/* Distance badge */}
+                buttons={<TrackActionsMenu track={trackWithArtwork} />}
+                footer={
+                  <Flex gap={1} align="center" flexWrap="wrap">
                     <Badge
                       colorPalette={getDistanceColor(similarTrack.distance)}
                       size="sm"
@@ -141,9 +142,6 @@ export default function SimilarTracks({
                     >
                       {getDistanceLabel(similarTrack.distance)}
                     </Badge>
-
-                    {/* Actions menu */}
-                    <TrackActionsMenu track={trackWithArtwork} />
                   </Flex>
                 }
               />

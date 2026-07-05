@@ -5,17 +5,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, useSearchParams } from "next/navigation";
 import {
   Box,
+  Button,
   Flex,
   Spinner,
   Text,
   Image,
   Badge,
   Link,
-  Button,
   Heading,
   RatingGroup,
-  Textarea,
-  Input,
   Dialog,
   Popover,
   Portal,
@@ -76,16 +74,10 @@ function AlbumDetailContent() {
   const updateMutation = useUpdateAlbumMutation();
   const { replacePlaylist } = usePlaylistPlayer();
 
-  const [isEditing, setIsEditing] = React.useState(false);
   const [rating, setRating] = React.useState(0);
-  const [notes, setNotes] = React.useState("");
-  const [purchasePrice, setPurchasePrice] = React.useState("");
-  const [condition, setCondition] = React.useState("");
-  const [libraryIdentifier, setLibraryIdentifier] = React.useState("");
   const [isDownloading, setIsDownloading] = React.useState(false);
   const [discogsRawModalOpen, setDiscogsRawModalOpen] = React.useState(false);
 
-  const panelBg = useColorModeValue("gray.50", "gray.800");
   const mutedText = useColorModeValue("gray.600", "gray.400");
   const subtleText = useColorModeValue("gray.500", "gray.500");
   const sideHeaderBg = useColorModeValue("gray.100", "gray.800");
@@ -130,27 +122,8 @@ function AlbumDetailContent() {
   React.useEffect(() => {
     if (album) {
       setRating(album.album_rating || 0);
-      setNotes(album.album_notes || "");
-      setPurchasePrice(album.purchase_price?.toString() || "");
-      setCondition(album.condition || "");
-      setLibraryIdentifier(album.library_identifier || "");
     }
   }, [album]);
-
-  const handleSave = async () => {
-    if (!album) return;
-
-    await updateMutation.mutateAsync({
-      release_id: album.release_id,
-      friend_id: album.friend_id,
-      album_rating: rating,
-      album_notes: notes,
-      purchase_price: purchasePrice ? parseFloat(purchasePrice) : undefined,
-      condition: condition || undefined,
-      library_identifier: libraryIdentifier || null,
-    });
-    setIsEditing(false);
-  };
 
   const handleEnqueueAlbum = () => {
     if (tracks.length === 0 || !album) {
@@ -302,14 +275,11 @@ function AlbumDetailContent() {
               value={rating}
               onValueChange={(details) => {
                 setRating(details.value);
-                if (!isEditing) {
-                  // Auto-save rating on change
-                  updateMutation.mutate({
-                    release_id: album.release_id,
-                    friend_id: album.friend_id,
-                    album_rating: details.value,
-                  });
-                }
+                updateMutation.mutate({
+                  release_id: album.release_id,
+                  friend_id: album.friend_id,
+                  album_rating: details.value,
+                });
               }}
               count={5}
               size="xs"
@@ -352,7 +322,7 @@ function AlbumDetailContent() {
             {album.track_count && <Text>{album.track_count} tracks</Text>}
             {albumDurationSeconds > 0 && <Text>{formatSeconds(albumDurationSeconds)}</Text>}
             {album.date_added && <Text display={{ base: "none", md: "block" }}>Added: {formatDate(album.date_added)}</Text>}
-            {!isEditing && (album.album_notes || album.purchase_price || album.condition) && (
+            {(album.album_notes || album.purchase_price || album.condition) && (
               <Popover.Root>
                 <Popover.Trigger asChild>
                   <Box
@@ -385,86 +355,6 @@ function AlbumDetailContent() {
               </Popover.Root>
             )}
           </Flex>
-
-          {/* Edit form */}
-          {isEditing && (
-            <Box mt={2} p={4} borderWidth="1px" borderRadius="md" bg={panelBg}>
-              <Flex direction="column" gap={3}>
-                <Box>
-                  <Text fontSize="sm" fontWeight="bold" mb={1}>
-                    Notes
-                  </Text>
-                  <Textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Add notes about this album..."
-                    size="sm"
-                  />
-                </Box>
-
-                <Flex gap={3}>
-                  <Box flex="1">
-                    <Text fontSize="sm" fontWeight="bold" mb={1}>
-                      Purchase Price
-                    </Text>
-                    <Input
-                      value={purchasePrice}
-                      onChange={(e) => setPurchasePrice(e.target.value)}
-                      placeholder="25.99"
-                      size="sm"
-                      type="number"
-                      step="0.01"
-                    />
-                  </Box>
-
-                  <Box flex="1">
-                    <Text fontSize="sm" fontWeight="bold" mb={1}>
-                      Condition
-                    </Text>
-                    <Input
-                      value={condition}
-                      onChange={(e) => setCondition(e.target.value)}
-                      placeholder="Near Mint, VG+, etc."
-                      size="sm"
-                    />
-                  </Box>
-                </Flex>
-
-                <Box>
-                  <Text fontSize="sm" fontWeight="bold" mb={1}>
-                    Library Identifier (e.g., LP001)
-                  </Text>
-                  <Input
-                    value={libraryIdentifier}
-                    onChange={(e) => setLibraryIdentifier(e.target.value)}
-                    placeholder="LP001"
-                    size="sm"
-                    maxLength={50}
-                  />
-                </Box>
-
-                <Flex gap={2} mt={2}>
-                  <Button size="sm" colorScheme="blue" onClick={handleSave}>
-                    Save
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setIsEditing(false);
-                      setNotes(album.album_notes || "");
-                      setPurchasePrice(album.purchase_price?.toString() || "");
-                      setCondition(album.condition || "");
-                      setLibraryIdentifier(album.library_identifier || "");
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </Flex>
-              </Flex>
-            </Box>
-          )}
-
         </Flex>
 
         <Flex position="absolute" top={2} right={2} gap={1} alignItems="center">
@@ -476,7 +366,6 @@ function AlbumDetailContent() {
             isDownloading={isDownloading}
             discogsUrl={album.discogs_url}
             onViewRawDiscogs={() => setDiscogsRawModalOpen(true)}
-            onEditDetails={!isEditing ? () => setIsEditing(true) : undefined}
             editAlbumHref={`/albums/${releaseId}/edit?friend_id=${friendId}`}
           />
         </Flex>

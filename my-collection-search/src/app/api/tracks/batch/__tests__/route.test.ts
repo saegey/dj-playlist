@@ -70,16 +70,17 @@ describe("POST /api/tracks/batch — request handling", () => {
 describe("POST /api/tracks/batch — embedding normalization", () => {
   it("omits vector payload by default", async () => {
     const embedding = [0.1, 0.2, 0.3];
-    mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding })]);
+    mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding, hasVectors: true })]);
     const res = await POST(makeReq({ tracks: [{ track_id: "t1", friend_id: 1 }] }));
     const [track] = await res.json();
+    expect(track.hasVectors).toBe(true);
     expect(track._vectors).toBeUndefined();
     expect(track.embedding).toBeUndefined();
   });
 
   it("converts array embedding to _vectors.default when include_vectors is true", async () => {
     const embedding = [0.1, 0.2, 0.3];
-    mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding })]);
+    mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding, hasVectors: true })]);
     const res = await POST(
       makeReq({
         tracks: [{ track_id: "t1", friend_id: 1 }],
@@ -87,13 +88,14 @@ describe("POST /api/tracks/batch — embedding normalization", () => {
       })
     );
     const [track] = await res.json();
+    expect(track.hasVectors).toBe(true);
     expect(track._vectors).toEqual({ default: [0.1, 0.2, 0.3] });
     expect(track.embedding).toBeUndefined();
   });
 
   it("parses JSON string embedding into _vectors.default when include_vectors is true", async () => {
     const embedding = JSON.stringify([0.4, 0.5]);
-    mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding })]);
+    mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding, hasVectors: true })]);
     const res = await POST(
       makeReq({
         tracks: [{ track_id: "t1", friend_id: 1 }],
@@ -101,12 +103,13 @@ describe("POST /api/tracks/batch — embedding normalization", () => {
       })
     );
     const [track] = await res.json();
+    expect(track.hasVectors).toBe(true);
     expect(track._vectors).toEqual({ default: [0.4, 0.5] });
     expect(track.embedding).toBeUndefined();
   });
 
   it("sets _vectors to undefined when embedding is null", async () => {
-    mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding: null })]);
+    mockFindTracks.mockResolvedValueOnce([baseTrack({ embedding: null, hasVectors: false })]);
     const res = await POST(
       makeReq({
         tracks: [{ track_id: "t1", friend_id: 1 }],
@@ -114,6 +117,7 @@ describe("POST /api/tracks/batch — embedding normalization", () => {
       })
     );
     const [track] = await res.json();
+    expect(track.hasVectors).toBe(false);
     expect(track._vectors).toBeUndefined();
   });
 

@@ -8,6 +8,9 @@ import {
   backupPolicyPutBodySchema,
   backupPolicyPutResponseSchema,
   backupPolicySchema,
+  defaultLibrarySettingsGetResponseSchema,
+  defaultLibrarySettingsPutBodySchema,
+  defaultLibrarySettingsPutResponseSchema,
   embeddingPromptSettingsGetResponseSchema,
   embeddingPromptSettingsPutBodySchema,
   embeddingPromptSettingsPutResponseSchema,
@@ -63,6 +66,38 @@ export type UpdateBackupPolicyBody = z.input<typeof backupPolicyPutBodySchema>;
 export type UpdateBackupPolicyResponse = z.infer<
   typeof backupPolicyPutResponseSchema
 >;
+export type DefaultLibrarySettingsResponse = z.infer<
+  typeof defaultLibrarySettingsGetResponseSchema
+>;
+export type UpdateDefaultLibrarySettingsBody = z.input<
+  typeof defaultLibrarySettingsPutBodySchema
+>;
+export type UpdateDefaultLibrarySettingsResponse = z.infer<
+  typeof defaultLibrarySettingsPutResponseSchema
+>;
+
+export async function fetchDefaultLibrarySettings(): Promise<DefaultLibrarySettingsResponse> {
+  return await http<DefaultLibrarySettingsResponse>(
+    "/api/settings/default-library",
+    {
+      method: "GET",
+      cache: "no-store",
+    }
+  );
+}
+
+export async function updateDefaultLibrarySettings(
+  body: UpdateDefaultLibrarySettingsBody
+): Promise<UpdateDefaultLibrarySettingsResponse> {
+  return await http<UpdateDefaultLibrarySettingsResponse>(
+    "/api/settings/default-library",
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }
+  );
+}
 
 export async function fetchAiPromptSettings(
   query: AiPromptSettingsQuery = {}

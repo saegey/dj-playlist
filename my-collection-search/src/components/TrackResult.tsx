@@ -98,9 +98,12 @@ export default function TrackResult({
   // Data quality indicators for playlist mode
   const t = track as Track & { _vectors?: { default?: number[] }; embedding?: string | number[] | null };
   const embeddingRaw = t._vectors?.default ?? t.embedding;
-  const hasEmbedding = Array.isArray(embeddingRaw)
-    ? embeddingRaw.length > 0
-    : typeof embeddingRaw === "string" && embeddingRaw.length > 0;
+  const hasEmbedding =
+    typeof track.hasVectors === "boolean"
+      ? track.hasVectors
+      : Array.isArray(embeddingRaw)
+      ? embeddingRaw.length > 0
+      : typeof embeddingRaw === "string" && embeddingRaw.length > 0;
   const bpmNum = typeof track.bpm === "number" ? track.bpm : parseFloat(track.bpm as string);
   const hasBpm = Number.isFinite(bpmNum) && bpmNum > 0;
   const hasDataIssue = playlistMode && (!hasEmbedding || !hasBpm);
@@ -114,9 +117,7 @@ export default function TrackResult({
   const displayStyles = explodeDisplayTags(track.styles);
   const displayLocalTags = explodeDisplayTags(track.local_tags);
 
-  const artworkSize = playlistMode
-    ? { base: "50px", md: "70px" }
-    : { base: "56px", md: "80px", lg: "90px" };
+  const artworkSize = { base: "70px", md: "80px", lg: "90px" };
 
   // --- Album art block (shared) ---
   const artworkBlock = (
@@ -240,7 +241,7 @@ export default function TrackResult({
       {/* Title */}
       <Flex alignItems="baseline" gap={2} pr={10}>
         <Text
-          fontSize={{ base: "sm", md: playlistMode ? "md" : "lg" }}
+          fontSize={{ base: "md", md: playlistMode ? "lg" : "xl" }}
           fontWeight={playlistMode ? "semibold" : "bold"}
           overflow="hidden"
           textOverflow="ellipsis"
@@ -270,11 +271,17 @@ export default function TrackResult({
       </Flex>
 
       {/* Artist + rating */}
-      <Flex gap={2} alignItems="center" flexWrap={{ base: "nowrap", md: "wrap" }} pr={10} overflow="hidden">
+      <Flex
+        gap={2}
+        alignItems="center"
+        flexWrap={{ base: "nowrap", md: "wrap" }}
+        pr={10}
+        overflow="hidden"
+      >
         <Box flex="1 1 auto" minW={0} overflow="hidden">
           <ArtistLink artist={track.artist} friendId={track.friend_id}>
             <Text
-              fontSize={{ base: "xs", md: "sm" }}
+              fontSize={{ base: "sm", md: "md" }}
               fontWeight="medium"
               overflow="hidden"
               textOverflow="ellipsis"
@@ -291,6 +298,7 @@ export default function TrackResult({
             count={5}
             size="xs"
             flexShrink={0}
+            display={playlistMode ? { base: "none", md: "inline-flex" } : undefined}
           >
             {[1, 2, 3, 4, 5].map((index) => (
               <RatingGroup.Item key={index} index={index}>
@@ -302,16 +310,30 @@ export default function TrackResult({
       </Flex>
 
       {/* Album + secondary meta */}
-      <Flex gap={2} fontSize="xs" color="gray.500" alignItems="center" flexWrap={{ base: "nowrap", md: "wrap" }} pr={10} overflow="hidden">
-        <Box flex={1} minW={0} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+      <Flex
+        gap={2}
+        fontSize={{ base: "sm", md: "md" }}
+        color="gray.500"
+        alignItems="center"
+        flexWrap={{ base: "nowrap", md: "wrap" }}
+        pr={10}
+        overflow="hidden"
+      >
+        <Box
+          flex={1}
+          minW={0}
+          overflow="hidden"
+          textOverflow="ellipsis"
+          whiteSpace="nowrap"
+        >
           <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
             <Text as="span">{track.album}{track.year && ` (${track.year})`}</Text>
           </AlbumLink>
         </Box>
         {showUsername && track.username && (
           <>
-            <Text color="gray.400" flexShrink={0}>·</Text>
-            <Text color="gray.400" flexShrink={0}>{track.username}</Text>
+            <Text color="gray.400" flexShrink={0} display={playlistMode ? { base: "none", md: "block" } : undefined}>·</Text>
+            <Text color="gray.400" flexShrink={0} display={playlistMode ? { base: "none", md: "block" } : undefined}>{track.username}</Text>
           </>
         )}
         {showPlaylistCount && typeof playlistCount === "number" && playlistCount > 0 && (
@@ -321,6 +343,37 @@ export default function TrackResult({
           </>
         )}
       </Flex>
+
+      {playlistMode && (showRating || (showUsername && track.username)) && (
+        <Flex
+          display={{ base: "flex", md: "none" }}
+          alignItems="center"
+          gap={2}
+          pr={10}
+          minH="20px"
+        >
+          {showRating && (
+            <RatingGroup.Root
+              value={localRating}
+              onValueChange={(details) => handleRatingChange(details.value)}
+              count={5}
+              size="xs"
+              flexShrink={0}
+            >
+              {[1, 2, 3, 4, 5].map((index) => (
+                <RatingGroup.Item key={`mobile-${index}`} index={index}>
+                  <RatingGroup.ItemIndicator />
+                </RatingGroup.Item>
+              ))}
+            </RatingGroup.Root>
+          )}
+          {showUsername && track.username && (
+            <Text fontSize="xs" color="gray.400" lineClamp={1}>
+              {track.username}
+            </Text>
+          )}
+        </Flex>
+      )}
 
       {detailsRow}
 
@@ -346,29 +399,186 @@ export default function TrackResult({
     </Flex>
   );
 
+  const playlistContent = (
+    <Flex direction="column" gap={{ base: 1, md: 1.5 }} minW={0}>
+      <Flex alignItems="center" gap={2} pr={{ base: 14, lg: 24 }}>
+        <Text
+          fontSize={{ base: "sm", md: "lg" }}
+          fontWeight="bold"
+          overflow="hidden"
+          textOverflow="ellipsis"
+          whiteSpace="nowrap"
+          flex="1 1 auto"
+          minW={0}
+        >
+          <Link
+            as={NextLink}
+            href={trackHref}
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            _hover={{ textDecoration: "underline" }}
+          >
+            {track.title}
+          </Link>
+          {score && (
+            <Badge
+              ml={2}
+              colorPalette={score > 90 ? "green" : score > 75 ? "yellow" : "red"}
+              size="sm"
+            >
+              {score.toFixed(1)}%
+            </Badge>
+          )}
+        </Text>
+      </Flex>
+
+      <ArtistLink artist={track.artist} friendId={track.friend_id}>
+        <Text
+          fontSize={{ base: "xs", md: "sm" }}
+          fontWeight="medium"
+          color="gray.600"
+          lineClamp={1}
+        >
+          {track.artist}
+        </Text>
+      </ArtistLink>
+
+      <Flex
+        gap={2}
+        fontSize="xs"
+        color="gray.500"
+        alignItems="center"
+        flexWrap="wrap"
+      >
+        <Box minW={0} maxW="100%">
+          <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
+            <Text as="span">
+              {track.album}
+              {track.year && ` (${track.year})`}
+            </Text>
+          </AlbumLink>
+        </Box>
+        {showUsername && track.username && (
+          <>
+            <Text color="gray.400">·</Text>
+            <Text>{track.username}</Text>
+          </>
+        )}
+      </Flex>
+
+      <Flex
+        gap={3}
+        fontSize="xs"
+        flexWrap="wrap"
+        alignItems="center"
+        color="gray.500"
+        mt={0.5}
+      >
+        {showRating && (
+          <RatingGroup.Root
+            value={localRating}
+            onValueChange={(details) => handleRatingChange(details.value)}
+            count={5}
+            size="xs"
+            flexShrink={0}
+          >
+            {[1, 2, 3, 4, 5].map((index) => (
+              <RatingGroup.Item key={`playlist-${index}`} index={index}>
+                <RatingGroup.ItemIndicator />
+              </RatingGroup.Item>
+            ))}
+          </RatingGroup.Root>
+        )}
+        {!hasEmbedding && (
+          <Badge colorPalette="red" size="sm">No embedding</Badge>
+        )}
+        {!hasBpm && (
+          <Badge colorPalette="orange" size="sm">No BPM</Badge>
+        )}
+        {track.library_identifier && (
+          <Badge colorPalette="blue" size="sm" fontWeight="bold">{track.library_identifier}</Badge>
+        )}
+        {sortPositionChange && (
+          <Badge colorPalette="purple" size="sm">
+            #{sortPositionChange.currentPosition} was #{sortPositionChange.previousPosition}
+          </Badge>
+        )}
+        {track.position && (
+          <Text color="gray.400">{track.position}</Text>
+        )}
+        {getTrackDurationSeconds(track) && (
+          <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
+        )}
+        {track.bpm && <Text>{track.bpm} BPM</Text>}
+        {track.key && (
+          <Text display={{ base: "none", md: "block" }}>
+            {track.key} ({keyToCamelot(track.key)})
+          </Text>
+        )}
+        {showNotes && (
+          <Box display={{ base: "none", md: "contents" }}>
+            <Popover.Root>
+              <Popover.Trigger asChild>
+                <Box
+                  as="button"
+                  display="flex"
+                  alignItems="center"
+                  color={hasNotes ? "yellow.400" : "gray.300"}
+                  cursor={hasNotes ? "pointer" : "default"}
+                  pointerEvents={hasNotes ? "auto" : "none"}
+                  _hover={hasNotes ? { color: "yellow.300" } : undefined}
+                >
+                  <FiFileText size={14} />
+                </Box>
+              </Popover.Trigger>
+              {hasNotes && (
+                <Popover.Positioner>
+                  <Popover.Content maxW="320px">
+                    <Popover.Body>
+                      <Text fontSize="sm" whiteSpace="pre-wrap">{track.notes}</Text>
+                    </Popover.Body>
+                  </Popover.Content>
+                </Popover.Positioner>
+              )}
+            </Popover.Root>
+          </Box>
+        )}
+      </Flex>
+
+      {footer && <Box mt={1}>{footer}</Box>}
+    </Flex>
+  );
+
   // ---- PLAYLIST MODE ----
   if (playlistMode) {
     return (
       <Flex
-        borderTopWidth={{ base: "1px", md: "0" }}
-        borderBottomWidth="1px"
-        borderLeftWidth={hasDataIssue ? "3px" : { base: "1px", md: "0" }}
-        borderRightWidth={{ base: "1px", md: "0" }}
+        borderWidth="1px"
+        borderLeftWidth={hasDataIssue ? "3px" : "1px"}
         borderLeftColor={hasDataIssue ? "red.400" : undefined}
-        borderRadius={{ base: "md", md: "none" }}
-        mb={{ base: 2, md: 0 }}
-        p={{ base: 2, md: 3 }}
-        gap={{ base: 2, md: 3 }}
+        borderRadius="md"
+        mb={3}
+        py={[2.5, 3]}
+        px={3}
+        gap={3}
         position="relative"
         width="100%"
+        borderColor={isSelected ? "blue.500" : undefined}
         bg={hasDataIssue ? "red.50" : undefined}
         _dark={{ bg: hasDataIssue ? "red.900" : undefined }}
         _hover={{ bg: hasDataIssue ? undefined : "bg.muted" }}
       >
+        {onToggleSelect && (
+          <Box flexShrink={0} alignSelf="center" onClick={(e) => e.stopPropagation()}>
+            <Checkbox.Root checked={isSelected} onChange={onToggleSelect}>
+              <Checkbox.HiddenInput />
+              <Checkbox.Control />
+            </Checkbox.Root>
+          </Box>
+        )}
         {artworkBlock}
         <Flex direction="column" flex={1} minW={0}>
-          {mainContent}
-          {footer && <Box mt={1}>{footer}</Box>}
+          {playlistContent}
         </Flex>
         <Flex position="absolute" top={2} right={2} gap={1} alignItems="center">
           {buttons}

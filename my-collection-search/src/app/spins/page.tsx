@@ -12,20 +12,19 @@ import {
   Heading,
   HStack,
   Link,
-  NativeSelectField,
-  NativeSelectRoot,
   Spinner,
   Stack,
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { FiActivity, FiClock, FiDisc, FiTrash2 } from "react-icons/fi";
+import TrackActionsMenu from "@/components/TrackActionsMenu";
+import TrackResultStore from "@/components/TrackResultStore";
 import PageContainer from "@/components/layout/PageContainer";
 import { toaster } from "@/components/ui/toaster";
-import { useFriendsQuery } from "@/hooks/useFriendsQuery";
 import { useSpinMutations, useSpinsQuery, useSpinTopTracksQuery } from "@/hooks/useSpinsQuery";
 import { useUsername } from "@/providers/UsernameProvider";
+import type { Track } from "@/types/track";
 
 function formatPlayedAt(dateString: string): string {
   return new Date(dateString).toLocaleString([], {
@@ -34,23 +33,48 @@ function formatPlayedAt(dateString: string): string {
   });
 }
 
+function buildTopTrackFallback(track: {
+  track_id: string;
+  friend_id: number;
+  title_snapshot: string;
+  artist_snapshot: string;
+  album_snapshot: string;
+  album_thumbnail?: string | null;
+  audio_file_album_art_url?: string | null;
+  local_audio_url?: string | null;
+  bpm?: number | string | null;
+  key?: string | null;
+  star_rating?: number | null;
+  library_identifier?: string | null;
+  hasVectors?: boolean;
+}): Track {
+  return {
+    id: 0,
+    track_id: track.track_id,
+    friend_id: track.friend_id,
+    title: track.title_snapshot,
+    artist: track.artist_snapshot,
+    album: track.album_snapshot,
+    year: "",
+    duration: "",
+    position: "",
+    discogs_url: "",
+    apple_music_url: "",
+    album_thumbnail: track.album_thumbnail ?? undefined,
+    audio_file_album_art_url: track.audio_file_album_art_url ?? undefined,
+    local_audio_url: track.local_audio_url ?? undefined,
+    bpm:
+      typeof track.bpm === "number" ? String(track.bpm) : track.bpm ?? undefined,
+    key: track.key ?? undefined,
+    star_rating: track.star_rating ?? undefined,
+    library_identifier: track.library_identifier ?? undefined,
+    hasVectors: track.hasVectors,
+  };
+}
+
 function SpinsPageContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const { friend: currentUserFriend } = useUsername();
-  const { friends } = useFriendsQuery({ showCurrentUser: true });
-
-  const selectedFriendId = searchParams.get("friend_id")
-    ? Number(searchParams.get("friend_id"))
-    : null;
-
-  React.useEffect(() => {
-    if (!searchParams.get("friend_id") && currentUserFriend) {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("friend_id", String(currentUserFriend.id));
-      router.replace(`/spins?${params.toString()}`);
-    }
-  }, [currentUserFriend, router, searchParams]);
+  const { friend: currentUserFriend, isHydrated } = useUsername();
+  const selectedFriendId = currentUserFriend?.id ?? null;
 
   const spinsQuery = useSpinsQuery(
     { friend_id: selectedFriendId ?? 0, limit: 50, offset: 0 },
@@ -61,13 +85,6 @@ function SpinsPageContent() {
     { enabled: typeof selectedFriendId === "number" && selectedFriendId > 0 }
   );
   const { deleteSpin, deleteSpinPending } = useSpinMutations(selectedFriendId ?? undefined);
-
-  const handleFriendChange = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (!value) params.delete("friend_id");
-    else params.set("friend_id", value);
-    router.push(`/spins?${params.toString()}`);
-  };
 
   const handleDeleteSpin = async (spinId: number) => {
     try {
@@ -82,7 +99,7 @@ function SpinsPageContent() {
     }
   };
 
-  if (!selectedFriendId) {
+  if (!isHydrated || !selectedFriendId) {
     return (
       <PageContainer size="standard">
         <Flex justify="center" py={10}><Spinner /></Flex>
@@ -101,21 +118,11 @@ function SpinsPageContent() {
               Global history and most-played physical vinyl tracks.
             </Text>
           </Box>
-          <NativeSelectRoot width={{ base: "140px", md: "200px" }} flexShrink={0} size="sm">
-            <NativeSelectField
-              value={selectedFriendId}
-              onChange={(event) => handleFriendChange(event.target.value)}
-            >
-              {friends.map((friend) => (
-                <option key={friend.id} value={friend.id}>{friend.username}</option>
-              ))}
-            </NativeSelectField>
-          </NativeSelectRoot>
         </Flex>
 
         <Grid templateColumns={{ base: "1fr", xl: "1.2fr 0.8fr" }} gap={4}>
           {/* Recent Spins */}
-          <Box borderWidth="1px" borderRadius="md" p={{ base: 3, md: 4 }}>
+          <Box>
             <HStack justify="space-between" mb={3}>
               <HStack gap={2}>
                 <FiClock />
@@ -203,7 +210,7 @@ function SpinsPageContent() {
           </Box>
 
           {/* Most Played Tracks */}
-          <Box borderWidth="1px" borderRadius="md" p={{ base: 3, md: 4 }}>
+          <Box>
             <HStack justify="space-between" mb={3}>
               <HStack gap={2}>
                 <FiActivity />
@@ -229,39 +236,24 @@ function SpinsPageContent() {
             ) : (
               <Stack gap={2}>
                 {topTracksQuery.topTracks.map((track, index) => (
-                  <Flex
+                  <TrackResultStore
                     key={`${track.track_id}:${track.friend_id}`}
-                    align="center"
-                    gap={3}
-                    borderWidth="1px"
-                    borderRadius="md"
-                    px={3}
-                    py={2.5}
-                    minW={0}
-                  >
-                    <HStack gap={1.5} flexShrink={0}>
-                      <Badge colorPalette="blue" size="xs">#{index + 1}</Badge>
-                      <Badge variant="outline" size="xs">{track.play_count}×</Badge>
-                    </HStack>
-                    <Box flex={1} minW={0}>
-                      <Link
-                        as={NextLink}
-                        href={`/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`}
-                        fontWeight="semibold"
-                        fontSize="sm"
-                        lineClamp={1}
-                      >
-                        {track.title_snapshot}
-                      </Link>
-                      <Text fontSize="xs" color="fg.muted" lineClamp={1}>
-                        {track.artist_snapshot}
-                        {track.album_snapshot && ` · ${track.album_snapshot}`}
-                      </Text>
-                    </Box>
-                    {track.position_snapshot && (
-                      <Badge variant="subtle" size="xs" flexShrink={0}>{track.position_snapshot}</Badge>
-                    )}
-                  </Flex>
+                    trackId={track.track_id}
+                    friendId={track.friend_id}
+                    fallbackTrack={buildTopTrackFallback(track)}
+                    playlistMode={true}
+                    showUsername={false}
+                    buttons={<TrackActionsMenu track={buildTopTrackFallback(track)} />}
+                    footer={
+                      <Flex gap={1} align="center" flexWrap="wrap">
+                        <Badge colorPalette="blue" size="sm">#{index + 1}</Badge>
+                        <Badge variant="outline" size="sm">{track.play_count}× played</Badge>
+                        {track.position_snapshot && (
+                          <Badge variant="subtle" size="sm">{track.position_snapshot}</Badge>
+                        )}
+                      </Flex>
+                    }
+                  />
                 ))}
               </Stack>
             )}

@@ -14,7 +14,7 @@ export const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
   return (
     <Box
       position="fixed"
-      bottom={{ base: 3, md: 4 }}
+      bottom={{ base: "calc(env(safe-area-inset-bottom, 0px) + 104px)", md: 4 }}
       left="50%"
       transform="translateX(-50%)"
       zIndex={100}
@@ -49,7 +49,7 @@ const PlaylistPlayer: React.FC = () => {
   return (
     <>
       {/* Spacer so page content scrolls clear of the floating player */}
-      <Box h={{ base: "88px", md: "100px" }} />
+      <Box h={{ base: "180px", md: "100px" }} />
 
       {/* Original Player - hide when queue drawer is open */}
       {!isOpen && (

@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { execSync } from "child_process";
 import { dbQuery } from "@/lib/serverDb";
@@ -112,63 +113,67 @@ async function reindexSearch(): Promise<{
 }
 
 export async function restoreDatabaseFromUpload(file: File): Promise<RestoreResult> {
-  const restoreDir = path.resolve("dumps");
-  if (!fs.existsSync(restoreDir)) {
-    fs.mkdirSync(restoreDir, { recursive: true });
-  }
+  const restoreDir = fs.mkdtempSync(path.join(os.tmpdir(), "groovenet-restore-"));
 
   const content = Buffer.from(await file.arrayBuffer());
   const { fileType, backupType } = classifyBackup(file.name, content);
-  const restorePath = path.join(
-    restoreDir,
-    fileType === "dump" ? "restore.dump" : "restore.sql"
-  );
-  fs.writeFileSync(restorePath, content);
+  try {
+    const restorePath = path.join(
+      restoreDir,
+      fileType === "dump" ? "restore.dump" : "restore.sql"
+    );
+    fs.writeFileSync(restorePath, content);
 
-  const pg = getPgConfig();
+    const pg = getPgConfig();
 
-  // Always do full schema restore semantics.
-  const cleanSql = `
+    // Always do full schema restore semantics.
+    const cleanSql = `
 DROP SCHEMA IF EXISTS public CASCADE;
 CREATE SCHEMA public;
 GRANT ALL ON SCHEMA public TO ${pg.user};
 GRANT ALL ON SCHEMA public TO public;
 `;
-  const cleanPath = path.join(restoreDir, "restore-clean.sql");
-  fs.writeFileSync(cleanPath, cleanSql);
-  runShell(
-    `psql -U ${pg.user} -h ${pg.host} -p ${pg.port} -d ${pg.db} -f '${cleanPath}'`,
-    pg.pass
-  );
-
-  // Data-only backups need schema created first.
-  if (backupType === "data-only") {
-    runShell("npm run migrate up", pg.pass);
-  }
-
-  if (fileType === "dump") {
+    const cleanPath = path.join(restoreDir, "restore-clean.sql");
+    fs.writeFileSync(cleanPath, cleanSql);
     runShell(
-      `pg_restore -U ${pg.user} -h ${pg.host} -p ${pg.port} -d ${pg.db} --single-transaction --no-owner --no-acl '${restorePath}'`,
+      `psql -U ${pg.user} -h ${pg.host} -p ${pg.port} -d ${pg.db} -f '${cleanPath}'`,
       pg.pass
     );
-  } else {
-    const sqlContent = fs.readFileSync(restorePath, "utf8");
-    const filteredPath = path.join(restoreDir, "restore-filtered.sql");
-    // Only strip pgmigrations for data-only backups — migrations run separately for those.
-    // For schema+data backups, pgmigrations is in the dump and must be restored as-is.
-    const finalContent = backupType === "data-only" ? removePgMigrationsData(sqlContent) : sqlContent;
-    fs.writeFileSync(filteredPath, finalContent);
-    runShell(
-      `psql -U ${pg.user} -h ${pg.host} -p ${pg.port} -d ${pg.db} --single-transaction -v ON_ERROR_STOP=1 -q -f '${filteredPath}'`,
-      pg.pass
-    );
-  }
 
-  const reindex = await reindexSearch();
-  return {
-    message: "Database schema and data restored successfully.",
-    backupType,
-    fileType,
-    reindex,
-  };
+    // Data-only backups need schema created first.
+    if (backupType === "data-only") {
+      runShell("npm run migrate up", pg.pass);
+    }
+
+    if (fileType === "dump") {
+      runShell(
+        `pg_restore -U ${pg.user} -h ${pg.host} -p ${pg.port} -d ${pg.db} --single-transaction --no-owner --no-acl '${restorePath}'`,
+        pg.pass
+      );
+    } else {
+      const sqlContent = fs.readFileSync(restorePath, "utf8");
+      const filteredPath = path.join(restoreDir, "restore-filtered.sql");
+      // Only strip pgmigrations for data-only backups — migrations run separately for those.
+      // For schema+data backups, pgmigrations is in the dump and must be restored as-is.
+      const finalContent =
+        backupType === "data-only"
+          ? removePgMigrationsData(sqlContent)
+          : sqlContent;
+      fs.writeFileSync(filteredPath, finalContent);
+      runShell(
+        `psql -U ${pg.user} -h ${pg.host} -p ${pg.port} -d ${pg.db} --single-transaction -v ON_ERROR_STOP=1 -q -f '${filteredPath}'`,
+        pg.pass
+      );
+    }
+
+    const reindex = await reindexSearch();
+    return {
+      message: "Database schema and data restored successfully.",
+      backupType,
+      fileType,
+      reindex,
+    };
+  } finally {
+    fs.rmSync(restoreDir, { recursive: true, force: true });
+  }
 }

@@ -174,6 +174,7 @@ export default function RelatedTracksSection({ track }: Props) {
             <TrackResult
               key={`${item.track_id}-${item.friend_id}`}
               track={item}
+              playlistMode={true}
               showUsername={true}
               showRating={true}
               buttons={<TrackActionsMenu track={item} />}

@@ -11,12 +11,9 @@ import {
   Icon,
   RatingGroup,
   Badge,
-  Input,
-  Textarea,
 } from "@chakra-ui/react";
 import { useColorModeValue } from "@/components/ui/color-mode";
 import { SiDiscogs } from "react-icons/si";
-import { FiEdit } from "react-icons/fi";
 import { Album } from "@/types/track";
 import { useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
 import { useAlbum } from "@/hooks/useAlbum";
@@ -52,61 +49,16 @@ export default function AlbumResult({
     resolvedAlbum?.audio_file_album_art_url ||
     resolvedAlbum?.album_thumbnail ||
     "/images/placeholder-artwork.png";
-  const [isEditing, setIsEditing] = useState(false);
   const [rating, setRating] = useState(resolvedAlbum?.album_rating || 0);
-  const [notes, setNotes] = useState(resolvedAlbum?.album_notes || "");
-  const [purchasePrice, setPurchasePrice] = useState(
-    resolvedAlbum?.purchase_price?.toString() || ""
-  );
-  const [condition, setCondition] = useState(resolvedAlbum?.condition || "");
-  const [libraryIdentifier, setLibraryIdentifier] = useState(
-    resolvedAlbum?.library_identifier || ""
-  );
   const mutedText = useColorModeValue("gray.600", "gray.300");
   const subtleText = useColorModeValue("gray.500", "gray.400");
-  const panelBg = useColorModeValue("gray.50", "gray.900");
-  const panelBorder = useColorModeValue("gray.200", "gray.700");
 
   const updateMutation = useUpdateAlbumMutation();
 
   React.useEffect(() => {
-    if (isEditing || !resolvedAlbum) return;
-    setRating(resolvedAlbum.album_rating || 0);
-    setNotes(resolvedAlbum.album_notes || "");
-    setPurchasePrice(resolvedAlbum.purchase_price?.toString() || "");
-    setCondition(resolvedAlbum.condition || "");
-    setLibraryIdentifier(resolvedAlbum.library_identifier || "");
-  }, [
-    isEditing,
-    resolvedAlbum,
-    resolvedAlbum?.album_rating,
-    resolvedAlbum?.album_notes,
-    resolvedAlbum?.purchase_price,
-    resolvedAlbum?.condition,
-    resolvedAlbum?.library_identifier,
-  ]);
-
-  const handleSave = async () => {
     if (!resolvedAlbum) return;
-    await updateMutation.mutateAsync({
-      release_id: resolvedAlbum.release_id,
-      friend_id: resolvedAlbum.friend_id,
-      album_rating: rating,
-      album_notes: notes,
-      purchase_price: purchasePrice ? parseFloat(purchasePrice) : undefined,
-      condition: condition || undefined,
-      library_identifier: libraryIdentifier || null,
-    });
-    setIsEditing(false);
-  };
-
-  const resetForm = () => {
-    setIsEditing(false);
-    setNotes(resolvedAlbum?.album_notes || "");
-    setPurchasePrice(resolvedAlbum?.purchase_price?.toString() || "");
-    setCondition(resolvedAlbum?.condition || "");
-    setLibraryIdentifier(resolvedAlbum?.library_identifier || "");
-  };
+    setRating(resolvedAlbum.album_rating || 0);
+  }, [resolvedAlbum, resolvedAlbum?.album_rating]);
 
   if (!resolvedAlbum) return null;
 
@@ -152,8 +104,13 @@ export default function AlbumResult({
             </Link>
           )}
           {showEditFields && (
-            <Button size="xs" variant="outline" onClick={() => setIsEditing(true)} px={1}>
-              <Icon as={FiEdit} />
+            <Button asChild size="xs" variant="outline" px={1}>
+              <Link
+                as={NextLink}
+                href={`/albums/${resolvedAlbum.release_id}/edit?friend_id=${resolvedAlbum.friend_id}`}
+              >
+                Edit
+              </Link>
             </Button>
           )}
           {buttons}
@@ -260,13 +217,11 @@ export default function AlbumResult({
               value={rating}
               onValueChange={(details) => {
                 setRating(details.value);
-                if (!isEditing) {
-                  updateMutation.mutate({
-                    release_id: resolvedAlbum.release_id,
-                    friend_id: resolvedAlbum.friend_id,
-                    album_rating: details.value,
-                  });
-                }
+                updateMutation.mutate({
+                  release_id: resolvedAlbum.release_id,
+                  friend_id: resolvedAlbum.friend_id,
+                  album_rating: details.value,
+                });
               }}
               count={5}
               size="xs"
@@ -315,105 +270,15 @@ export default function AlbumResult({
             albumTitle={resolvedAlbum.title}
             albumArtist={resolvedAlbum.artist}
             discogsUrl={resolvedAlbum.discogs_url}
-            onEditDetails={showEditFields && !isEditing ? () => setIsEditing(true) : undefined}
             editAlbumHref={showEditFields ? `/albums/${resolvedAlbum.release_id}/edit?friend_id=${resolvedAlbum.friend_id}` : undefined}
           />
         </Flex>
       </Flex>
 
-      {!isEditing && resolvedAlbum.album_notes && (
-        <Box
-          mt={3}
-          p={2}
-          bg={panelBg}
-          borderRadius="md"
-          borderWidth="1px"
-          borderColor={panelBorder}
-        >
-          <Text fontSize="sm">{resolvedAlbum.album_notes}</Text>
-        </Box>
-      )}
-
-      {!isEditing && (resolvedAlbum.purchase_price || resolvedAlbum.condition) && (
+      {resolvedAlbum.condition && (
         <Flex mt={3} gap={3} fontSize="sm" color={subtleText} flexWrap="wrap">
-          {resolvedAlbum.purchase_price && <Text>Price: ${resolvedAlbum.purchase_price}</Text>}
-          {resolvedAlbum.condition && <Text>Condition: {resolvedAlbum.condition}</Text>}
+          <Text>Condition: {resolvedAlbum.condition}</Text>
         </Flex>
-      )}
-
-      {showEditFields && isEditing && (
-        <Box
-          mt={3}
-          p={3}
-          borderWidth="1px"
-          borderRadius="md"
-          bg={panelBg}
-          borderColor={panelBorder}
-        >
-          <Flex direction="column" gap={2}>
-            <Box>
-              <Text fontSize="sm" fontWeight="bold" mb={1}>
-                Notes
-              </Text>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add notes about this album..."
-                size="sm"
-              />
-            </Box>
-
-            <Flex gap={2} direction={{ base: "column", md: "row" }}>
-              <Box flex="1">
-                <Text fontSize="sm" fontWeight="bold" mb={1}>
-                  Purchase Price
-                </Text>
-                <Input
-                  value={purchasePrice}
-                  onChange={(e) => setPurchasePrice(e.target.value)}
-                  placeholder="25.99"
-                  size="sm"
-                  type="number"
-                  step="0.01"
-                />
-              </Box>
-
-              <Box flex="1">
-                <Text fontSize="sm" fontWeight="bold" mb={1}>
-                  Condition
-                </Text>
-                <Input
-                  value={condition}
-                  onChange={(e) => setCondition(e.target.value)}
-                  placeholder="Near Mint, VG+, etc."
-                  size="sm"
-                />
-              </Box>
-            </Flex>
-
-            <Box>
-              <Text fontSize="sm" fontWeight="bold" mb={1}>
-                Library Identifier (e.g., LP001)
-              </Text>
-              <Input
-                value={libraryIdentifier}
-                onChange={(e) => setLibraryIdentifier(e.target.value)}
-                placeholder="LP001"
-                size="sm"
-                maxLength={50}
-              />
-            </Box>
-
-            <Flex gap={2} mt={2}>
-              <Button size="sm" colorScheme="blue" onClick={handleSave}>
-                Save
-              </Button>
-              <Button size="sm" variant="ghost" onClick={resetForm}>
-                Cancel
-              </Button>
-            </Flex>
-          </Flex>
-        </Box>
       )}
     </Box>
   );
