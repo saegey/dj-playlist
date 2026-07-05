@@ -13,7 +13,6 @@ cd "${PROJECT_DIR}"
 
 PROJECT_NAME="${PROJECT_NAME:-dj-playlist}"
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.prod.yml)
-MIGRATE_COMPOSE_FILES=(-f docker-compose.yml)
 if [[ -f "${PROJECT_DIR}/.env" ]]; then
   COMPOSE_ENV_FILE="${PROJECT_DIR}/.env"
 elif [[ -f "${PROJECT_DIR}/my-collection-search/.env" ]]; then
@@ -106,7 +105,7 @@ echo "==> Starting database dependencies"
 wait_for_db_ready
 
 echo "==> Running migrations"
-"${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${MIGRATE_COMPOSE_FILES[@]}" run --build --rm --use-aliases migrate
+"${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" run --build --rm --use-aliases migrate
 
 echo "==> Starting services"
 remove_stale_named_containers
