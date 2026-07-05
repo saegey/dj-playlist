@@ -443,7 +443,7 @@ describe("updateTrackFields()", () => {
     await makeRepo().updateTrackFields({
       track_id: "t1",
       friend_id: 1,
-      bpm: 128,
+      bpm: "128",
       duration_seconds: 300,
     });
 

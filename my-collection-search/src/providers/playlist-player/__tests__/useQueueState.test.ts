@@ -33,7 +33,7 @@ function makeTrack(id: string, extra: Partial<Track> = {}): Track {
   } as Track;
 }
 
-const tracks = ["a", "b", "c", "d"].map(makeTrack);
+const tracks = ["a", "b", "c", "d"].map(id => makeTrack(id));
 
 function makeHook(initial: Track[] = []) {
   return renderHook(() => useQueueState({ initial }));
@@ -214,7 +214,7 @@ describe("playTrack()", () => {
 describe("replacePlaylist()", () => {
   it("replaces the playlist and starts at index 0 by default", () => {
     const { result } = makeHook([]);
-    const next = ["x", "y"].map(makeTrack);
+    const next = ["x", "y"].map(id => makeTrack(id));
 
     act(() => { result.current.replacePlaylist(next); });
 
@@ -224,7 +224,7 @@ describe("replacePlaylist()", () => {
 
   it("starts at the specified startIndex", () => {
     const { result } = makeHook([]);
-    const next = ["x", "y", "z"].map(makeTrack);
+    const next = ["x", "y", "z"].map(id => makeTrack(id));
 
     act(() => { result.current.replacePlaylist(next, { startIndex: 2 }); });
 
@@ -233,7 +233,7 @@ describe("replacePlaylist()", () => {
 
   it("clamps out-of-range startIndex to null", () => {
     const { result } = makeHook([]);
-    const next = ["x"].map(makeTrack);
+    const next = ["x"].map(id => makeTrack(id));
 
     act(() => { result.current.replacePlaylist(next, { startIndex: 5 }); });
 
@@ -242,7 +242,7 @@ describe("replacePlaylist()", () => {
 
   it("finds the track by startTrackId", () => {
     const { result } = makeHook([]);
-    const next = ["x", "y", "z"].map(makeTrack);
+    const next = ["x", "y", "z"].map(id => makeTrack(id));
 
     act(() => { result.current.replacePlaylist(next, { startTrackId: "z" }); });
 
@@ -251,7 +251,7 @@ describe("replacePlaylist()", () => {
 
   it("falls back to index 0 when startTrackId is not found in a non-empty list", () => {
     const { result } = makeHook([]);
-    const next = ["x", "y"].map(makeTrack);
+    const next = ["x", "y"].map(id => makeTrack(id));
 
     act(() => { result.current.replacePlaylist(next, { startTrackId: "missing" }); });
 
@@ -260,7 +260,7 @@ describe("replacePlaylist()", () => {
 
   it("sets isPlaying=true when autoplay=true and a valid index is resolved", () => {
     const { result } = makeHook([]);
-    const next = ["x"].map(makeTrack);
+    const next = ["x"].map(id => makeTrack(id));
 
     act(() => { result.current.replacePlaylist(next, { autoplay: true }); });
 
@@ -269,7 +269,7 @@ describe("replacePlaylist()", () => {
 
   it("sets isPlaying=false when autoplay=false", () => {
     const { result } = makeHook([]);
-    const next = ["x"].map(makeTrack);
+    const next = ["x"].map(id => makeTrack(id));
     act(() => { result.current.replacePlaylist(next, { autoplay: true }); });
 
     act(() => { result.current.replacePlaylist(next, { autoplay: false }); });
@@ -302,7 +302,7 @@ describe("appendToQueue()", () => {
 
   it("accepts an array of tracks", () => {
     const { result } = makeHook([]);
-    const extra = ["x", "y"].map(makeTrack);
+    const extra = ["x", "y"].map(id => makeTrack(id));
 
     act(() => { result.current.appendToQueue(extra); });
 
