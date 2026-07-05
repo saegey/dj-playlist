@@ -122,6 +122,7 @@ ensure_worktree_env() {
   ensure_dirs
   env_file="$(worktree_env_file)"
   if [[ -f "$env_file" ]]; then
+    ensure_worktree_audio_mount_env "$env_file"
     load_worktree_env
     return 0
   fi
@@ -138,7 +139,40 @@ WORKTREE_HOST=$host
 APP_PORT=$port
 EOF
 
+  ensure_worktree_audio_mount_env "$env_file"
   load_worktree_env
+}
+
+default_worktree_audio_mount() {
+  local music_mount="${MUSIC_MOUNT:-}"
+
+  if [[ -z "$music_mount" ]]; then
+    if [[ -d "/Volumes/music" ]]; then
+      music_mount="/Volumes/music"
+    elif [[ -d "$HOME/groovenet-music" ]]; then
+      music_mount="$HOME/groovenet-music"
+    fi
+  fi
+
+  if [[ -n "$music_mount" ]]; then
+    printf '%s:/app/audio' "$music_mount"
+  fi
+}
+
+ensure_worktree_audio_mount_env() {
+  local env_file="$1"
+  local default_mount
+
+  default_mount="$(default_worktree_audio_mount)"
+  [[ -n "$default_mount" ]] || return 0
+
+  if ! grep -q '^APP_AUDIO_MOUNT=' "$env_file"; then
+    printf 'APP_AUDIO_MOUNT=%s\n' "$default_mount" >>"$env_file"
+  fi
+
+  if ! grep -q '^WORKER_AUDIO_MOUNT=' "$env_file"; then
+    printf 'WORKER_AUDIO_MOUNT=%s\n' "$default_mount" >>"$env_file"
+  fi
 }
 
 compose_files=(
@@ -171,8 +205,17 @@ compose_exec() {
     set +a
     cd "$REPO_ROOT"
     if command -v op >/dev/null 2>&1 && [[ -f "$COMPOSE_DIR/.env.tpl" ]]; then
-      op run --env-file="$COMPOSE_DIR/.env.tpl" -- \
+      if ! op run --env-file="$COMPOSE_DIR/.env.tpl" -- \
+        env \
+          COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-}" \
+          WORKTREE_HOST="${WORKTREE_HOST:-}" \
+          APP_PORT="${APP_PORT:-}" \
+          APP_AUDIO_MOUNT="${APP_AUDIO_MOUNT:-}" \
+          WORKER_AUDIO_MOUNT="${WORKER_AUDIO_MOUNT:-}" \
+          docker compose "${compose_args[@]}" "$@"; then
+        echo "Warning: falling back to docker compose without 1Password env injection" >&2
         docker compose "${compose_args[@]}" "$@"
+      fi
     else
       docker compose "${compose_args[@]}" "$@"
     fi
@@ -207,8 +250,17 @@ compose_exec_detect() {
       export COMPOSE_PROJECT_NAME="$detected_project"
     fi
     if command -v op >/dev/null 2>&1 && [[ -f "$COMPOSE_DIR/.env.tpl" ]]; then
-      op run --env-file="$COMPOSE_DIR/.env.tpl" -- \
+      if ! op run --env-file="$COMPOSE_DIR/.env.tpl" -- \
+        env \
+          COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-}" \
+          WORKTREE_HOST="${WORKTREE_HOST:-}" \
+          APP_PORT="${APP_PORT:-}" \
+          APP_AUDIO_MOUNT="${APP_AUDIO_MOUNT:-}" \
+          WORKER_AUDIO_MOUNT="${WORKER_AUDIO_MOUNT:-}" \
+          docker compose "${compose_args[@]}" "$@"; then
+        echo "Warning: falling back to docker compose without 1Password env injection" >&2
         docker compose "${compose_args[@]}" "$@"
+      fi
     else
       docker compose "${compose_args[@]}" "$@"
     fi

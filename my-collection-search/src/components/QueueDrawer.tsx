@@ -79,10 +79,10 @@ function QueueProgressSlider({
         </Slider.Control>
       </Slider.Root>
       <Flex justify="space-between" mt={1.5}>
-        <Text fontSize="xs" color="whiteAlpha.900">
+        <Text fontSize="xs" color="whiteAlpha.900" fontVariantNumeric="tabular-nums">
           {formatSeconds(currentTime || 0)}
         </Text>
-        <Text fontSize="xs" color="whiteAlpha.900">
+        <Text fontSize="xs" color="whiteAlpha.900" fontVariantNumeric="tabular-nums">
           -{formatSeconds(Math.max((duration || 0) - (currentTime || 0), 0))}
         </Text>
       </Flex>

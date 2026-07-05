@@ -3,11 +3,11 @@ services:
     ports:
       - "127.0.0.1:${APP_PORT:-3000}:3000"
     volumes:
-      - worktree_audio:/app/audio
+      - ${APP_AUDIO_MOUNT:-worktree_audio:/app/audio}
 
   download-worker:
     volumes:
-      - worktree_audio:/app/audio
+      - ${WORKER_AUDIO_MOUNT:-worktree_audio:/app/audio}
 
 volumes:
   worktree_audio:

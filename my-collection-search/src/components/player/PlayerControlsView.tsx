@@ -128,40 +128,59 @@ export default function PlayerControlsView({
             </Text>
           </VStack>
 
-          {isPlaying ? (
+          <HStack gap={1.5}>
+            {isPlaying ? (
+              <IconButton
+                aria-label="Pause"
+                size="sm"
+                minW="36px"
+                h="36px"
+                borderRadius="full"
+                variant="solid"
+                colorPalette="gray"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onPause();
+                }}
+              >
+                <FiPause />
+              </IconButton>
+            ) : (
+              <IconButton
+                aria-label="Play"
+                size="sm"
+                minW="36px"
+                h="36px"
+                borderRadius="full"
+                variant="solid"
+                colorPalette="gray"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onPlay();
+                }}
+                disabled={safeLen === 0}
+              >
+                <FiPlay />
+              </IconButton>
+            )}
+
             <IconButton
-              aria-label="Pause"
+              aria-label="Next"
               size="sm"
               minW="36px"
               h="36px"
               borderRadius="full"
-              variant="solid"
-              colorPalette="gray"
+              variant="ghost"
+              color="fg.muted"
               onClick={(event) => {
                 event.stopPropagation();
-                onPause();
+                playNext();
               }}
+              disabled={!canNext}
             >
-              <FiPause />
+              <FiSkipForward />
             </IconButton>
-          ) : (
-            <IconButton
-              aria-label="Play"
-              size="sm"
-              minW="36px"
-              h="36px"
-              borderRadius="full"
-              variant="solid"
-              colorPalette="gray"
-              onClick={(event) => {
-                event.stopPropagation();
-                onPlay();
-              }}
-              disabled={safeLen === 0}
-            >
-              <FiPlay />
-            </IconButton>
-          )}
+          </HStack>
         </Flex>
       </Box>
     );
