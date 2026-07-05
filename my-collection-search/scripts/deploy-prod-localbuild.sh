@@ -41,6 +41,33 @@ NAMED_CONTAINERS=(myapp essentia-api ga-service download-worker)
 MIN_FREE_GB="${MIN_FREE_GB:-5}"
 PGUSER="${POSTGRES_USER:-djplaylist}"
 PGDB="${POSTGRES_DB:-djplaylist}"
+APP_IMAGE="ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}"
+
+latest_migration_name() {
+  find "${PROJECT_DIR}/my-collection-search/migrations" -maxdepth 1 -name '*.js' -type f \
+    -exec basename {} .js \; | sort | tail -n 1
+}
+
+verify_app_image_cmd() {
+  local cmd
+  cmd="$(docker image inspect "${APP_IMAGE}" --format '{{json .Config.Cmd}}' 2>/dev/null || true)"
+  if [[ "${cmd}" != '["npm","run","start"]' ]]; then
+    echo "ERROR: built app image has unexpected Cmd: ${cmd}"
+    exit 1
+  fi
+}
+
+verify_latest_migration_applied() {
+  local migration_name applied
+  migration_name="$(latest_migration_name)"
+  applied="$("${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" exec -T db \
+    psql -U "${PGUSER}" -d "${PGDB}" -tAc \
+    "SELECT EXISTS(SELECT 1 FROM pgmigrations WHERE name = '${migration_name}')" | tr -d ' ' || echo "f")"
+  if [[ "${applied}" != "t" ]]; then
+    echo "ERROR: latest migration ${migration_name} is not recorded in pgmigrations"
+    exit 1
+  fi
+}
 
 check_disk_space() {
   local avail_kb required_kb
@@ -99,6 +126,7 @@ check_disk_space
 
 echo "==> Building images locally on server"
 "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" build "${BUILD_SERVICES[@]}"
+verify_app_image_cmd
 
 echo "==> Starting database dependencies"
 "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d db redis
@@ -106,6 +134,7 @@ wait_for_db_ready
 
 echo "==> Running migrations"
 "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" run --build --rm --use-aliases migrate
+verify_latest_migration_applied
 
 echo "==> Starting services"
 remove_stale_named_containers

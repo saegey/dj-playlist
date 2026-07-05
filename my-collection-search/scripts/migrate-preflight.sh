@@ -26,3 +26,18 @@ for f in /app/migrations/*.js; do
     > /dev/null
 done
 echo "Backfilled $(ls /app/migrations/*.js | wc -l) migration records."
+
+DEFAULT_LIBRARY_TABLE_EXISTS=$(psql "$DATABASE_URL" -tAc \
+  "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='default_library_settings')" \
+  2>/dev/null | tr -d ' ' || echo "f")
+
+DEFAULT_LIBRARY_MIGRATION_EXISTS=$(psql "$DATABASE_URL" -tAc \
+  "SELECT EXISTS(SELECT 1 FROM pgmigrations WHERE name='1772300000001_add-default-library-settings')" \
+  2>/dev/null | tr -d ' ' || echo "f")
+
+if [ "$DEFAULT_LIBRARY_TABLE_EXISTS" = "t" ] && [ "$DEFAULT_LIBRARY_MIGRATION_EXISTS" != "t" ]; then
+  echo "default_library_settings exists without migration record — backfilling 1772300000001_add-default-library-settings"
+  psql "$DATABASE_URL" -c \
+    "INSERT INTO pgmigrations (name, run_on) VALUES ('1772300000001_add-default-library-settings', NOW()) ON CONFLICT DO NOTHING" \
+    > /dev/null
+fi

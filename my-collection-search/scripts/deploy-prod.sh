@@ -41,6 +41,23 @@ MIN_FREE_GB="${MIN_FREE_GB:-5}"
 PGUSER="${POSTGRES_USER:-djplaylist}"
 PGDB="${POSTGRES_DB:-djplaylist}"
 
+latest_migration_name() {
+  find "${PROJECT_DIR}/my-collection-search/migrations" -maxdepth 1 -name '*.js' -type f \
+    -exec basename {} .js \; | sort | tail -n 1
+}
+
+verify_latest_migration_applied() {
+  local migration_name applied
+  migration_name="$(latest_migration_name)"
+  applied="$(IMAGE_TAG="${TAG}" "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" exec -T db \
+    psql -U "${PGUSER}" -d "${PGDB}" -tAc \
+    "SELECT EXISTS(SELECT 1 FROM pgmigrations WHERE name = '${migration_name}')" | tr -d ' ' || echo "f")"
+  if [[ "${applied}" != "t" ]]; then
+    echo "ERROR: latest migration ${migration_name} is not recorded in pgmigrations"
+    exit 1
+  fi
+}
+
 check_disk_space() {
   local avail_kb required_kb
   avail_kb="$(df -Pk "${PROJECT_DIR}" | awk 'NR==2 {print $4}')"
@@ -91,6 +108,7 @@ wait_for_db_ready
 
 echo "==> Running migrations"
 IMAGE_TAG="${TAG}" "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" run --rm --use-aliases migrate
+verify_latest_migration_applied
 
 echo "==> Starting services"
 IMAGE_TAG="${TAG}" "${COMPOSE_CMD[@]}" -p "${PROJECT_NAME}" "${COMPOSE_FILES[@]}" up -d --remove-orphans
