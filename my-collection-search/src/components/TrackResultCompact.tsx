@@ -37,6 +37,8 @@ export type TrackResultCompactProps = {
   track: Track | (Track & { camelot_key?: string });
   buttons?: React.ReactNode;
   footer?: React.ReactNode;
+  variant?: "card" | "row";
+  onRowClick?: () => void;
   playlistCount?: number;
   showUsername?: boolean;
   showRating?: boolean;
@@ -53,6 +55,8 @@ export default function TrackResultCompact({
   track,
   buttons,
   footer,
+  variant = "card",
+  onRowClick,
   playlistCount,
   showUsername = true,
   showRating = true,
@@ -99,6 +103,110 @@ export default function TrackResultCompact({
   }
   if (track.danceability) {
     details.push({ icon: "💃", value: track.danceability });
+  }
+
+  if (variant === "row") {
+    return (
+      <Flex
+        align="center"
+        gap={3}
+        py={1.25}
+        px={1}
+        mb={1}
+        borderBottomWidth="1px"
+        borderColor="whiteAlpha.200"
+        width="100%"
+        cursor={onRowClick ? "pointer" : "default"}
+        onClick={onRowClick}
+      >
+        <Box
+          position="relative"
+          flexShrink={0}
+          width="48px"
+          height="48px"
+        >
+          {track.local_audio_url ? (
+            <Box
+              position="relative"
+              borderRadius="lg"
+              overflow="hidden"
+              cursor="pointer"
+              width="100%"
+              height="100%"
+              onClick={() =>
+                replacePlaylist([track], { autoplay: true, startIndex: 0 })
+              }
+              _hover={{ "& .overlay": { opacity: 1 } }}
+            >
+              <Image
+                src={artworkSrc}
+                alt={track.title}
+                width="100%"
+                height="100%"
+                objectFit="cover"
+                borderRadius="lg"
+                draggable={false}
+              />
+              <Box
+                className="overlay"
+                position="absolute"
+                inset={0}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                opacity={0}
+                transition="opacity 0.15s ease"
+                bg="blackAlpha.500"
+                borderRadius="lg"
+              >
+                <Icon as={FaPlay} boxSize={5} color="white" />
+              </Box>
+            </Box>
+          ) : (
+            <Image
+              src={artworkSrc}
+              alt={track.title}
+              width="100%"
+              height="100%"
+              objectFit="cover"
+              borderRadius="lg"
+            />
+          )}
+        </Box>
+
+        <Flex direction="column" flex="1" minW={0}>
+          <Text
+            fontSize="md"
+            color="white"
+            lineHeight="1.1"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            whiteSpace="nowrap"
+          >
+            {track.title}
+          </Text>
+          <Text
+            fontSize="sm"
+            color="whiteAlpha.700"
+            lineHeight="1.2"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            whiteSpace="nowrap"
+          >
+            {track.artist}
+          </Text>
+        </Flex>
+
+        <Flex align="center" gap={3} flexShrink={0}>
+          {getTrackDurationSeconds(track) ? (
+            <Text fontSize="sm" color="whiteAlpha.700" minW="36px" textAlign="right">
+              {formatSeconds(getTrackDurationSeconds(track) || 0)}
+            </Text>
+          ) : null}
+          {buttons}
+        </Flex>
+      </Flex>
+    );
   }
 
   return (

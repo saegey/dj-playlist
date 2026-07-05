@@ -189,7 +189,7 @@ export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
       {/* Mobile: bottom sheet */}
       <Box display={{ base: "block", md: "none" }}>
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           px={2}
           onClick={() => setDrawerOpen(true)}

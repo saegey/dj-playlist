@@ -65,6 +65,13 @@ function isActiveRoute(currentPath: string, href: string) {
   return currentPath === href || currentPath.startsWith(`${href}/`);
 }
 
+function isMobileFullscreenEditRoute(pathname: string) {
+  return (
+    (pathname.startsWith("/tracks/") || pathname.startsWith("/albums/")) &&
+    pathname.endsWith("/edit")
+  );
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const CONTENT_MAX_W = "1360px";
   const pathname = usePathname();
@@ -76,6 +83,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (pathname === "/") return "/";
     return pathname.split("?")[0];
   }, [pathname]);
+  const isFullscreenEditMobile = isMobileFullscreenEditRoute(current);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { setPaletteOpen } = useCommandPalette();
@@ -353,7 +361,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom navigation */}
       <Box
-        display={{ base: "block", md: "none" }}
+        display={
+          isFullscreenEditMobile
+            ? { base: "none", md: "none" }
+            : { base: "block", md: "none" }
+        }
         position="fixed"
         left={4}
         right={4}
@@ -369,7 +381,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           justify="space-between"
           gap={1}
           px={2}
-          py={2}
+          py={1.5}
           borderWidth="1px"
           borderColor="border"
           borderRadius="2xl"
@@ -389,7 +401,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <VStack
                   gap={1}
-                  py={2}
+                  py={1.5}
                   px={1}
                   borderRadius="xl"
                   bg={active ? "bg.subtle" : "transparent"}
@@ -417,7 +429,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             onClick={() => setDrawerOpen(true)}
             flex="1 1 0"
             h="auto"
-            py={2}
+            py={1.5}
             px={1}
             borderRadius="xl"
           >
@@ -438,7 +450,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         px={{ base: 4, md: 6 }}
         py={{ base: 4, md: 6 }}
         pb={{
-          base: mobileContentBottomPadding,
+          base: isFullscreenEditMobile ? 6 : mobileContentBottomPadding,
           md: 6,
         }}
       >

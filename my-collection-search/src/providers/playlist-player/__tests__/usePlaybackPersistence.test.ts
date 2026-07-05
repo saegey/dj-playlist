@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { usePlaybackPersistence } from "@/providers/playlist-player/usePlaybackPersistence";
 import type { Track } from "@/types/track";
-import { useRef } from "react";
 
 const KEY = "test-playback-state";
 

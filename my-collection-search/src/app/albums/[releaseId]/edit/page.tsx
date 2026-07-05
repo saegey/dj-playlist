@@ -9,12 +9,10 @@ import { useAlbumDetailQuery } from "@/hooks/useAlbumsQuery";
 import { useAlbum, useAlbumHydrated } from "@/hooks/useAlbum";
 import { useTracksByRelease, useTracksByReleaseHydrated } from "@/hooks/useTrack";
 import { useUsername } from "@/providers/UsernameProvider";
-import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import AlbumForm, { AlbumFormData } from "@/components/AlbumForm";
 import CoverArtUpload from "@/components/CoverArtUpload";
 import TrackListBuilder, { TrackFormData } from "@/components/TrackListBuilder";
 import PageContainer from "@/components/layout/PageContainer";
-import { getMobileBottomOverlayOffset } from "@/lib/mobileLayout";
 
 function EditAlbumContent() {
   const router = useRouter();
@@ -22,8 +20,6 @@ function EditAlbumContent() {
   const searchParams = useSearchParams();
   const updateMutation = useUpdateAlbumWithTracksMutation();
   const { friend: currentUserFriend } = useUsername();
-  const { playlistLength } = usePlaylistPlayer();
-  const mobileBottomOverlayOffset = getMobileBottomOverlayOffset(playlistLength);
 
   const releaseId = params.releaseId as string;
   const friendId = parseInt(searchParams.get("friend_id") || "0");
@@ -270,7 +266,6 @@ function EditAlbumContent() {
     <PageContainer
       size="standard"
       py={{ base: 0, md: 4 }}
-      mb={playlistLength > 0 ? "120px" : "0"}
     >
       <Stack gap={6}>
         <Heading size="2xl">Edit Album</Heading>
@@ -310,7 +305,7 @@ function EditAlbumContent() {
 
         <Box
           display={{ base: "block", md: "none" }}
-          h={`calc(${mobileBottomOverlayOffset} + 108px)`}
+          h="108px"
         />
 
         <Flex
@@ -318,7 +313,7 @@ function EditAlbumContent() {
           position="fixed"
           left="0"
           right="0"
-          bottom={mobileBottomOverlayOffset}
+          bottom="0"
           px={4}
           pb="calc(env(safe-area-inset-bottom, 0px) + 12px)"
           pt={3}

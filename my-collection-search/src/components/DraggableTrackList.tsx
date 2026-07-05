@@ -32,6 +32,8 @@ interface DraggableTrackListProps {
   /** Additional props for TrackResultStore */
   trackResultProps?: {
     compact?: boolean;
+    compactVariant?: "card" | "row";
+    onRowClick?: (track: Track | undefined, index: number) => void;
     playlistCount?: Record<string, number>;
     playlistMode?: boolean;
   };
@@ -67,6 +69,7 @@ export default function DraggableTrackList({
               // Playlists can contain duplicate track refs; include index to ensure uniqueness.
               const draggableKey = `${trackPlay.track_id}:${trackPlay.friend_id}:${idx}`;
               const isCurrentTrack = currentTrackIndex === idx;
+              const useRowVariant = trackResultProps?.compactVariant === "row";
               const sortPositionChange =
                 sortPositionChanges[
                   `${trackPlay.track_id}:${trackPlay.friend_id}:${idx}`
@@ -87,8 +90,14 @@ export default function DraggableTrackList({
                       {...dragProvided.draggableProps}
                       {...dragProvided.dragHandleProps}
                       opacity={snapshot.isDragging ? 0.9 : 1}
-                      bg={isCurrentTrack ? "bg.muted" : undefined}
-                      borderRadius={isCurrentTrack ? "md" : undefined}
+                      bg={
+                        isCurrentTrack
+                          ? useRowVariant
+                            ? "whiteAlpha.100"
+                            : "bg.muted"
+                          : undefined
+                      }
+                      borderRadius={isCurrentTrack ? (useRowVariant ? "xl" : "md") : undefined}
                     >
                       <TrackResultStore
                         key={`${droppableId}-${trackPlay.track_id}:${trackPlay.friend_id}:${idx}`}
@@ -101,6 +110,12 @@ export default function DraggableTrackList({
                             : undefined
                         }
                         compact={trackResultProps?.compact}
+                        compactVariant={trackResultProps?.compactVariant}
+                        onRowClick={
+                          trackResultProps?.onRowClick
+                            ? () => trackResultProps.onRowClick?.(track, idx)
+                            : undefined
+                        }
                         playlistCount={
                           trackResultProps?.playlistCount?.[
                             `${trackPlay.track_id}:${trackPlay.friend_id}`

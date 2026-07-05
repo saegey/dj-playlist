@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import { Box, HStack, Slider, Text } from "@chakra-ui/react";
 import { usePlaylistPlayerTime } from "@/providers/PlaylistPlayerProvider";
+import { formatSeconds } from "@/lib/trackUtils";
 
 type Props = { seek: (time: number) => void };
 
@@ -14,16 +15,16 @@ const ProgressSlider: React.FC<Props> = React.memo(({ seek }) => {
     return Math.max(0, Math.min(100, (currentTime / duration) * 100));
   }, [currentTime, duration]);
 
-  const fmt = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const remainder = Math.floor(secs % 60);
-    return `${mins}:${remainder.toString().padStart(2, "0")}`;
-  };
-
   return (
     <HStack gap={3} align="center" mb={2}>
-      <Text fontSize="xs" minW="36px" textAlign="right" color="fg.muted">
-        {fmt(currentTime || 0)}
+      <Text
+        fontSize="xs"
+        minW="36px"
+        textAlign="right"
+        color="fg.muted"
+        fontVariantNumeric="tabular-nums"
+      >
+        {formatSeconds(currentTime || 0)}
       </Text>
       <Box flex="1">
         <Slider.Root
@@ -45,8 +46,13 @@ const ProgressSlider: React.FC<Props> = React.memo(({ seek }) => {
           </Slider.Control>
         </Slider.Root>
       </Box>
-      <Text fontSize="xs" minW="36px" color="fg.muted">
-        {fmt(duration || 0)}
+      <Text
+        fontSize="xs"
+        minW="36px"
+        color="fg.muted"
+        fontVariantNumeric="tabular-nums"
+      >
+        {formatSeconds(duration || 0)}
       </Text>
     </HStack>
   );

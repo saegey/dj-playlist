@@ -117,7 +117,7 @@ export default function TrackResult({
   const displayStyles = explodeDisplayTags(track.styles);
   const displayLocalTags = explodeDisplayTags(track.local_tags);
 
-  const artworkSize = { base: "70px", md: "80px", lg: "90px" };
+  const artworkSize = { base: "60px", md: "68px", lg: "76px" };
 
   // --- Album art block (shared) ---
   const artworkBlock = (
@@ -252,6 +252,10 @@ export default function TrackResult({
           <Link
             as={NextLink}
             href={trackHref}
+            display="block"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            whiteSpace="nowrap"
             onMouseDown={playlistMode ? (e) => e.stopPropagation() : undefined}
             onPointerDown={playlistMode ? (e) => e.stopPropagation() : undefined}
             _hover={{ textDecoration: "underline" }}
@@ -327,7 +331,16 @@ export default function TrackResult({
           whiteSpace="nowrap"
         >
           <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
-            <Text as="span">{track.album}{track.year && ` (${track.year})`}</Text>
+            <Text
+              as="span"
+              display="block"
+              overflow="hidden"
+              textOverflow="ellipsis"
+              whiteSpace="nowrap"
+            >
+              {track.album}
+              {track.year && ` (${track.year})`}
+            </Text>
           </AlbumLink>
         </Box>
         {showUsername && track.username && (
@@ -414,6 +427,10 @@ export default function TrackResult({
           <Link
             as={NextLink}
             href={trackHref}
+            display="block"
+            overflow="hidden"
+            textOverflow="ellipsis"
+            whiteSpace="nowrap"
             onMouseDown={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             _hover={{ textDecoration: "underline" }}
@@ -448,11 +465,18 @@ export default function TrackResult({
         fontSize="xs"
         color="gray.500"
         alignItems="center"
-        flexWrap="wrap"
+        flexWrap={{ base: "wrap", md: "nowrap" }}
+        minW={0}
       >
-        <Box minW={0} maxW="100%">
+        <Box minW={0} flex="1 1 auto" overflow="hidden">
           <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
-            <Text as="span">
+            <Text
+              as="span"
+              display="block"
+              overflow="hidden"
+              textOverflow="ellipsis"
+              whiteSpace="nowrap"
+            >
               {track.album}
               {track.year && ` (${track.year})`}
             </Text>
@@ -460,8 +484,8 @@ export default function TrackResult({
         </Box>
         {showUsername && track.username && (
           <>
-            <Text color="gray.400">·</Text>
-            <Text>{track.username}</Text>
+            <Text color="gray.400" flexShrink={0}>·</Text>
+            <Text flexShrink={0}>{track.username}</Text>
           </>
         )}
       </Flex>
@@ -469,10 +493,12 @@ export default function TrackResult({
       <Flex
         gap={3}
         fontSize="xs"
-        flexWrap="wrap"
+        flexWrap={{ base: "wrap", md: "nowrap" }}
         alignItems="center"
         color="gray.500"
         mt={0.5}
+        minW={0}
+        overflow="hidden"
       >
         {showRating && (
           <RatingGroup.Root
@@ -490,28 +516,30 @@ export default function TrackResult({
           </RatingGroup.Root>
         )}
         {!hasEmbedding && (
-          <Badge colorPalette="red" size="sm">No embedding</Badge>
+          <Badge colorPalette="red" size="sm" flexShrink={0}>No embedding</Badge>
         )}
         {!hasBpm && (
-          <Badge colorPalette="orange" size="sm">No BPM</Badge>
+          <Badge colorPalette="orange" size="sm" flexShrink={0}>No BPM</Badge>
         )}
         {track.library_identifier && (
-          <Badge colorPalette="blue" size="sm" fontWeight="bold">{track.library_identifier}</Badge>
+          <Text color="blue.600" fontWeight="bold" flexShrink={0}>
+            {track.library_identifier}
+          </Text>
         )}
         {sortPositionChange && (
-          <Badge colorPalette="purple" size="sm">
+          <Badge colorPalette="purple" size="sm" flexShrink={0}>
             #{sortPositionChange.currentPosition} was #{sortPositionChange.previousPosition}
           </Badge>
         )}
         {track.position && (
-          <Text color="gray.400">{track.position}</Text>
+          <Text color="gray.400" flexShrink={0}>{track.position}</Text>
         )}
         {getTrackDurationSeconds(track) && (
-          <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
+          <Text flexShrink={0}>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
         )}
-        {track.bpm && <Text>{track.bpm} BPM</Text>}
+        {track.bpm && <Text flexShrink={0}>{track.bpm} BPM</Text>}
         {track.key && (
-          <Text display={{ base: "none", md: "block" }}>
+          <Text display={{ base: "none", md: "block" }} flexShrink={0}>
             {track.key} ({keyToCamelot(track.key)})
           </Text>
         )}

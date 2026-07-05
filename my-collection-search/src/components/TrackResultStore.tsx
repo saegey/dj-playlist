@@ -11,6 +11,8 @@ interface TrackResultStoreProps extends Omit<TrackResultProps, 'track'> {
   friendId: number;
   fallbackTrack?: Track;
   compact?: boolean;
+  compactVariant?: "card" | "row";
+  onRowClick?: () => void;
   playlistMode?: boolean;
   fetchIfMissing?: boolean;
   isSelected?: boolean;
@@ -28,6 +30,7 @@ export default function TrackResultStore({
   friendId,
   fallbackTrack,
   compact = false,
+  compactVariant = "card",
   fetchIfMissing = false,
   isSelected,
   onToggleSelect,
@@ -71,7 +74,24 @@ export default function TrackResultStore({
     return null; // Could render a skeleton or placeholder here
   }
 
-  const Component = compact ? TrackResultCompact : TrackResult;
+  if (compact) {
+    return (
+      <TrackResultCompact
+        track={track}
+        variant={compactVariant}
+        isSelected={isSelected}
+        onToggleSelect={onToggleSelect}
+        {...props}
+      />
+    );
+  }
 
-  return <Component track={track} isSelected={isSelected} onToggleSelect={onToggleSelect} {...props} />;
+  return (
+    <TrackResult
+      track={track}
+      isSelected={isSelected}
+      onToggleSelect={onToggleSelect}
+      {...props}
+    />
+  );
 }
