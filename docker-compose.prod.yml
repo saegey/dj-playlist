@@ -6,7 +6,6 @@ services:
   app:
     image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
     container_name: myapp
-    command: ["node", "server.js"]
     env_file:
       - .env
     environment:
