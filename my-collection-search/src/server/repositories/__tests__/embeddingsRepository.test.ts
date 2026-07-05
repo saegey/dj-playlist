@@ -1,0 +1,379 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { EmbeddingsRepository } from "../embeddingsRepository";
+
+const dbQuery = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/serverDb", () => ({ dbQuery }));
+
+beforeEach(() => {
+  vi.resetAllMocks();
+});
+
+function makeRepo() {
+  return new EmbeddingsRepository();
+}
+
+function makeClient() {
+  return { query: vi.fn() };
+}
+
+// ─── listTracksForBackfill ────────────────────────────────────────────────────
+
+describe("listTracksForBackfill()", () => {
+  it("returns rows from dbQuery", async () => {
+    const rows = [{ track_id: "t1", friend_id: 1 }];
+    dbQuery.mockResolvedValue({ rows });
+
+    const result = await makeRepo().listTracksForBackfill({ type: "identity" });
+
+    expect(result).toEqual(rows);
+  });
+
+  it("force=false, type=identity: LEFT JOINs track_embeddings for missing identity rows", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().listTracksForBackfill({ type: "identity", force: false });
+
+    const [sql] = dbQuery.mock.calls[0];
+    expect(sql).toContain("track_embeddings");
+    expect(sql).toContain("identity");
+    expect(sql).not.toContain("bpm");
+  });
+
+  it("force=false, type=audio_vibe: filters for tracks with audio features", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().listTracksForBackfill({ type: "audio_vibe", force: false });
+
+    const [sql] = dbQuery.mock.calls[0];
+    expect(sql).toContain("audio_vibe");
+    expect(sql).toContain("bpm");
+  });
+
+  it("force=true, type=identity: selects all tracks", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().listTracksForBackfill({ type: "identity", force: true });
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(sql).not.toContain("track_embeddings");
+    expect(sql).not.toContain("bpm");
+    expect(params).toEqual([]);
+  });
+
+  it("force=true, type=audio_vibe: filters for tracks with audio features", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().listTracksForBackfill({ type: "audio_vibe", force: true });
+
+    const [sql] = dbQuery.mock.calls[0];
+    expect(sql).toContain("bpm");
+    expect(sql).not.toContain("track_embeddings");
+  });
+
+  it("adds friend_id param when provided", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().listTracksForBackfill({ type: "identity", friend_id: 7 });
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(sql).toContain("friend_id");
+    expect(params).toContain(7);
+  });
+
+  it("adds limit param when provided", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().listTracksForBackfill({ type: "identity", limit: 50 });
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(sql).toContain("LIMIT");
+    expect(params).toContain(50);
+  });
+
+  it("adds both friend_id and limit params in the correct order", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().listTracksForBackfill({ type: "identity", friend_id: 3, limit: 10, force: false });
+
+    const [, params] = dbQuery.mock.calls[0];
+    expect(params).toEqual([3, 10]);
+  });
+});
+
+// ─── listTracksNeedingIdentityEmbeddings ──────────────────────────────────────
+
+describe("listTracksNeedingIdentityEmbeddings()", () => {
+  it("delegates to listTracksForBackfill with type='identity'", async () => {
+    const rows = [{ track_id: "t1", friend_id: 1 }];
+    dbQuery.mockResolvedValue({ rows });
+
+    const result = await makeRepo().listTracksNeedingIdentityEmbeddings({ friend_id: 2 });
+
+    expect(result).toEqual(rows);
+    const [sql] = dbQuery.mock.calls[0];
+    expect(sql).toContain("identity");
+  });
+});
+
+// ─── setIvfflatProbes ─────────────────────────────────────────────────────────
+
+describe("setIvfflatProbes()", () => {
+  it("calls client.query with the stringified probe count", async () => {
+    const client = makeClient();
+    client.query.mockResolvedValue({ rows: [] });
+
+    await makeRepo().setIvfflatProbes(client as any, 4);
+
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining("set_config"),
+      ["4"]
+    );
+  });
+});
+
+// ─── findSourceEmbedding ──────────────────────────────────────────────────────
+
+describe("findSourceEmbedding()", () => {
+  it("returns the embedding when found", async () => {
+    const client = makeClient();
+    const embedding = [0.1, 0.2, 0.3];
+    client.query.mockResolvedValue({ rows: [{ embedding }] });
+
+    const result = await makeRepo().findSourceEmbedding(client as any, "t1", 1, "identity");
+
+    expect(result).toEqual(embedding);
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining("track_embeddings"),
+      ["t1", 1, "identity"]
+    );
+  });
+
+  it("returns null when not found", async () => {
+    const client = makeClient();
+    client.query.mockResolvedValue({ rows: [] });
+
+    const result = await makeRepo().findSourceEmbedding(client as any, "t1", 1, "audio_vibe");
+
+    expect(result).toBeNull();
+  });
+});
+
+// ─── findSimilarIdentityTracks ────────────────────────────────────────────────
+
+describe("findSimilarIdentityTracks()", () => {
+  it("returns tracks with distance coerced to number", async () => {
+    const client = makeClient();
+    client.query.mockResolvedValue({
+      rows: [{ track_id: "t2", friend_id: 1, distance: "0.45" }],
+    });
+
+    const result = await makeRepo().findSimilarIdentityTracks(client as any, {
+      sourceEmbedding: [0.1],
+      sourceTrackId: "t1",
+      sourceFriendId: 1,
+      limit: 5,
+      filters: {},
+    });
+
+    expect(result[0].distance).toBe(0.45);
+    expect(typeof result[0].distance).toBe("number");
+  });
+
+  it("includes country filter clause when filters.country is set", async () => {
+    const client = makeClient();
+    client.query.mockResolvedValue({ rows: [] });
+
+    await makeRepo().findSimilarIdentityTracks(client as any, {
+      sourceEmbedding: [0.1],
+      sourceTrackId: "t1",
+      sourceFriendId: 1,
+      limit: 5,
+      filters: { country: "DE" },
+    });
+
+    const [sql, params] = client.query.mock.calls[0];
+    expect(sql).toContain("country");
+    expect(params).toContain("DE");
+  });
+
+  it("includes tag LIKE clauses when filters.tags is set", async () => {
+    const client = makeClient();
+    client.query.mockResolvedValue({ rows: [] });
+
+    await makeRepo().findSimilarIdentityTracks(client as any, {
+      sourceEmbedding: [0.1],
+      sourceTrackId: "t1",
+      sourceFriendId: 1,
+      limit: 5,
+      filters: { tags: ["techno", "dark"] },
+    });
+
+    const [sql, params] = client.query.mock.calls[0];
+    expect(sql).toContain("LIKE");
+    expect(params).toContain("%techno%");
+    expect(params).toContain("%dark%");
+  });
+
+  it("includes no filter clauses when filters is empty", async () => {
+    const client = makeClient();
+    client.query.mockResolvedValue({ rows: [] });
+
+    await makeRepo().findSimilarIdentityTracks(client as any, {
+      sourceEmbedding: [0.1],
+      sourceTrackId: "t1",
+      sourceFriendId: 1,
+      limit: 5,
+      filters: {},
+    });
+
+    const [sql] = client.query.mock.calls[0];
+    expect(sql).not.toContain("country");
+    expect(sql).not.toContain("LIKE");
+  });
+});
+
+// ─── findSimilarAudioVibeTracks ───────────────────────────────────────────────
+
+describe("findSimilarAudioVibeTracks()", () => {
+  it("returns tracks with distance coerced to number", async () => {
+    const client = makeClient();
+    client.query.mockResolvedValue({
+      rows: [{ track_id: "t2", friend_id: 1, distance: "0.12" }],
+    });
+
+    const result = await makeRepo().findSimilarAudioVibeTracks(client as any, {
+      sourceEmbedding: [0.1],
+      sourceTrackId: "t1",
+      sourceFriendId: 1,
+      limit: 10,
+    });
+
+    expect(result[0].distance).toBe(0.12);
+    expect(typeof result[0].distance).toBe("number");
+  });
+
+  it("passes all four params in the correct positions", async () => {
+    const client = makeClient();
+    client.query.mockResolvedValue({ rows: [] });
+    const embedding = [0.5];
+
+    await makeRepo().findSimilarAudioVibeTracks(client as any, {
+      sourceEmbedding: embedding,
+      sourceTrackId: "t1",
+      sourceFriendId: 3,
+      limit: 20,
+    });
+
+    const [, params] = client.query.mock.calls[0];
+    expect(params).toEqual([embedding, "t1", 3, 20]);
+  });
+});
+
+// ─── upsertTrackEmbedding ─────────────────────────────────────────────────────
+
+describe("upsertTrackEmbedding()", () => {
+  it("formats the embedding array as a pgvector string", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().upsertTrackEmbedding({
+      trackId: "t1",
+      friendId: 1,
+      embeddingType: "identity",
+      model: "text-embedding-3-small",
+      dims: 3,
+      embedding: [0.1, 0.2, 0.3],
+      sourceHash: "abc123",
+      identityText: "Some Artist - Some Track",
+    });
+
+    const [, params] = dbQuery.mock.calls[0];
+    expect(params[5]).toBe("[0.1,0.2,0.3]");
+  });
+
+  it("passes all 8 params in the correct order", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().upsertTrackEmbedding({
+      trackId: "t1",
+      friendId: 2,
+      embeddingType: "audio_vibe",
+      model: "audio-model",
+      dims: 512,
+      embedding: [0.5],
+      sourceHash: "hash1",
+      identityText: "text",
+    });
+
+    const [, params] = dbQuery.mock.calls[0];
+    expect(params[0]).toBe("t1");
+    expect(params[1]).toBe(2);
+    expect(params[2]).toBe("audio_vibe");
+    expect(params[3]).toBe("audio-model");
+    expect(params[4]).toBe(512);
+    expect(params[6]).toBe("hash1");
+    expect(params[7]).toBe("text");
+  });
+});
+
+// ─── findEmbeddingSourceHash ──────────────────────────────────────────────────
+
+describe("findEmbeddingSourceHash()", () => {
+  it("returns the source hash when found", async () => {
+    dbQuery.mockResolvedValue({ rows: [{ source_hash: "abc123" }] });
+
+    const result = await makeRepo().findEmbeddingSourceHash("t1", 1, "identity");
+
+    expect(result).toBe("abc123");
+  });
+
+  it("returns null when not found", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    const result = await makeRepo().findEmbeddingSourceHash("t1", 1, "audio_vibe");
+
+    expect(result).toBeNull();
+  });
+});
+
+// ─── listEmbeddingTypesForTrack ────────────────────────────────────────────────
+
+describe("listEmbeddingTypesForTrack()", () => {
+  it("returns the list of embedding types for a track", async () => {
+    dbQuery.mockResolvedValue({
+      rows: [{ embedding_type: "identity" }, { embedding_type: "audio_vibe" }],
+    });
+
+    const result = await makeRepo().listEmbeddingTypesForTrack("t1", 1);
+
+    expect(result).toEqual(["identity", "audio_vibe"]);
+  });
+});
+
+// ─── listEmbeddingTypesForTrackPairs ──────────────────────────────────────────
+
+describe("listEmbeddingTypesForTrackPairs()", () => {
+  it("returns empty array without querying for an empty input", async () => {
+    const result = await makeRepo().listEmbeddingTypesForTrackPairs([]);
+
+    expect(result).toEqual([]);
+    expect(dbQuery).not.toHaveBeenCalled();
+  });
+
+  it("returns distinct embedding types across seed pairs", async () => {
+    dbQuery.mockResolvedValue({
+      rows: [{ embedding_type: "identity" }],
+    });
+
+    const result = await makeRepo().listEmbeddingTypesForTrackPairs([
+      { trackId: "t1", friendId: 1 },
+      { trackId: "t2", friendId: 1 },
+    ]);
+
+    expect(result).toEqual(["identity"]);
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(sql).toContain("$1");
+    expect(sql).toContain("$3");
+    expect(params).toEqual(["t1", 1, "t2", 1]);
+  });
+});
