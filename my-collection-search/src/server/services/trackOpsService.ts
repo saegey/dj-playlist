@@ -1,8 +1,12 @@
 import fs from "fs";
-import { getEssentiaAnalysisPath } from "@/lib/essentia-storage";
+import {
+  getEssentiaAnalysisPath,
+  readEssentiaAnalysis,
+} from "@/lib/essentia-storage";
 import {
   trackRepository,
   type CoverArtBackfillCandidateRow,
+  type TrackEssentiaBackfillRow,
 } from "@/server/repositories/trackRepository";
 import { redisJobService } from "@/server/services/redisJobService";
 
@@ -105,7 +109,13 @@ export class TrackOpsService {
 
         if (!params.force) {
           const analysisPath = getEssentiaAnalysisPath(row.track_id, row.friend_id);
-          if (fs.existsSync(analysisPath)) {
+          const savedAnalysis = fs.existsSync(analysisPath)
+            ? readEssentiaAnalysis(row.track_id, row.friend_id)
+            : null;
+          const hasPersistedMetadata = this.hasPersistedEssentiaMetadata(row);
+          const hasUsableAnalysisFile = this.hasUsableSavedAnalysis(savedAnalysis?.payload);
+
+          if (hasPersistedMetadata && hasUsableAnalysisFile) {
             skippedExisting += 1;
             continue;
           }
@@ -185,6 +195,40 @@ export class TrackOpsService {
     if (!row.release_id) {
       throw new Error("Missing release_id");
     }
+  }
+
+  private hasPersistedEssentiaMetadata(row: TrackEssentiaBackfillRow): boolean {
+    return (
+      row.bpm != null &&
+      row.key != null &&
+      row.danceability != null &&
+      row.duration_seconds != null
+    );
+  }
+
+  private hasUsableSavedAnalysis(payload: unknown): boolean {
+    if (!payload || typeof payload !== "object") return false;
+
+    const root = payload as { analysis?: unknown };
+    const analysis = root.analysis;
+    if (!analysis || typeof analysis !== "object") return false;
+
+    const typedAnalysis = analysis as {
+      error?: unknown;
+      rhythm?: unknown;
+      tonal?: unknown;
+      metadata?: unknown;
+      highlevel?: unknown;
+    };
+
+    if (typedAnalysis.error) return false;
+
+    return Boolean(
+      typedAnalysis.rhythm ||
+        typedAnalysis.tonal ||
+        typedAnalysis.metadata ||
+        typedAnalysis.highlevel
+    );
   }
 }
 
