@@ -17,6 +17,7 @@ const jobService = vi.hoisted(() => ({
 }));
 
 const mockFsExistsSync = vi.hoisted(() => vi.fn());
+const mockReadEssentiaAnalysis = vi.hoisted(() => vi.fn());
 
 vi.mock("@/server/repositories/trackRepository", () => ({
   trackRepository: trackRepo,
@@ -35,12 +36,15 @@ vi.mock("fs", () => ({
 vi.mock("@/lib/essentia-storage", () => ({
   getEssentiaAnalysisPath: (trackId: string, friendId: number) =>
     `/audio/${friendId}/${trackId}.json`,
+  readEssentiaAnalysis: mockReadEssentiaAnalysis,
 }));
 
 // ─── setup ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockFsExistsSync.mockReturnValue(false);
+  mockReadEssentiaAnalysis.mockReturnValue(null);
 });
 
 function makeService() {
@@ -175,9 +179,25 @@ describe("queueEssentiaBackfillJobs()", () => {
 
   it("skips tracks whose analysis file already exists when force is false", async () => {
     trackRepo.findTracksForEssentiaBackfill.mockResolvedValue([
-      { track_id: "t1", friend_id: 1, local_audio_url: "/audio/t1.m4a" },
+      {
+        track_id: "t1",
+        friend_id: 1,
+        local_audio_url: "/audio/t1.m4a",
+        bpm: 120,
+        key: "C major",
+        danceability: 0.5,
+        duration_seconds: 200,
+        mood_happy: 0.1,
+        mood_sad: 0.2,
+        mood_relaxed: 0.3,
+        mood_aggressive: 0.4,
+      },
     ]);
-    mockFsExistsSync.mockReturnValue(true); // analysis file exists
+    mockFsExistsSync.mockReturnValue(true);
+    mockReadEssentiaAnalysis.mockReturnValue({
+      file_path: "/audio/1/t1.json",
+      payload: { analysis: { rhythm: { bpm: 120 } } },
+    });
 
     const result = await makeService().queueEssentiaBackfillJobs({
       friend_id: null,
@@ -191,7 +211,19 @@ describe("queueEssentiaBackfillJobs()", () => {
 
   it("queues tracks even when analysis file exists when force is true", async () => {
     trackRepo.findTracksForEssentiaBackfill.mockResolvedValue([
-      { track_id: "t1", friend_id: 1, local_audio_url: "/audio/t1.m4a" },
+      {
+        track_id: "t1",
+        friend_id: 1,
+        local_audio_url: "/audio/t1.m4a",
+        bpm: 120,
+        key: "C major",
+        danceability: 0.5,
+        duration_seconds: 200,
+        mood_happy: 0.1,
+        mood_sad: 0.2,
+        mood_relaxed: 0.3,
+        mood_aggressive: 0.4,
+      },
     ]);
     mockFsExistsSync.mockReturnValue(true);
     jobService.createAnalyzeLocalJob.mockResolvedValue("job-1");
@@ -222,7 +254,19 @@ describe("queueEssentiaBackfillJobs()", () => {
 
   it("queues tracks whose analysis file does not exist", async () => {
     trackRepo.findTracksForEssentiaBackfill.mockResolvedValue([
-      { track_id: "t1", friend_id: 1, local_audio_url: "/audio/t1.m4a" },
+      {
+        track_id: "t1",
+        friend_id: 1,
+        local_audio_url: "/audio/t1.m4a",
+        bpm: 120,
+        key: "C major",
+        danceability: 0.5,
+        duration_seconds: 200,
+        mood_happy: 0.1,
+        mood_sad: 0.2,
+        mood_relaxed: 0.3,
+        mood_aggressive: 0.4,
+      },
     ]);
     mockFsExistsSync.mockReturnValue(false);
     jobService.createAnalyzeLocalJob.mockResolvedValue("job-1");
@@ -242,6 +286,70 @@ describe("queueEssentiaBackfillJobs()", () => {
     await makeService().queueEssentiaBackfillJobs({ friend_id: 3, force: false });
 
     expect(trackRepo.findTracksForEssentiaBackfill).toHaveBeenCalledWith(3, undefined);
+  });
+
+  it("queues tracks when saved analysis exists but is an error payload", async () => {
+    trackRepo.findTracksForEssentiaBackfill.mockResolvedValue([
+      {
+        track_id: "t1",
+        friend_id: 1,
+        local_audio_url: "/audio/t1.m4a",
+        bpm: null,
+        key: null,
+        danceability: null,
+        duration_seconds: null,
+        mood_happy: null,
+        mood_sad: null,
+        mood_relaxed: null,
+        mood_aggressive: null,
+      },
+    ]);
+    mockFsExistsSync.mockReturnValue(true);
+    mockReadEssentiaAnalysis.mockReturnValue({
+      file_path: "/audio/1/t1.json",
+      payload: { analysis: { error: "Invalid or disallowed URL" } },
+    });
+    jobService.createAnalyzeLocalJob.mockResolvedValue("job-1");
+
+    const result = await makeService().queueEssentiaBackfillJobs({
+      friend_id: null,
+      force: false,
+    });
+
+    expect(result.queued).toBe(1);
+    expect(result.skipped_existing).toBe(0);
+  });
+
+  it("queues tracks when metadata is missing even if a valid analysis file exists", async () => {
+    trackRepo.findTracksForEssentiaBackfill.mockResolvedValue([
+      {
+        track_id: "t1",
+        friend_id: 1,
+        local_audio_url: "/audio/t1.m4a",
+        bpm: 120,
+        key: null,
+        danceability: 0.5,
+        duration_seconds: 200,
+        mood_happy: 0.1,
+        mood_sad: 0.2,
+        mood_relaxed: 0.3,
+        mood_aggressive: 0.4,
+      },
+    ]);
+    mockFsExistsSync.mockReturnValue(true);
+    mockReadEssentiaAnalysis.mockReturnValue({
+      file_path: "/audio/1/t1.json",
+      payload: { analysis: { rhythm: { bpm: 120 }, tonal: { key_edma: { key: "C", scale: "major" } } } },
+    });
+    jobService.createAnalyzeLocalJob.mockResolvedValue("job-1");
+
+    const result = await makeService().queueEssentiaBackfillJobs({
+      friend_id: null,
+      force: false,
+    });
+
+    expect(result.queued).toBe(1);
+    expect(result.skipped_existing).toBe(0);
   });
 
   it("collects errors for failed jobs and continues processing", async () => {

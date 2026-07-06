@@ -113,7 +113,9 @@ export async function POST(req: NextRequest) {
   try {
     const essentiaApiUrl =
       process.env.ESSENTIA_API_URL || "http://essentia:8001/analyze";
-    const fileUrl = wavDest;
+    const fileUrl = `http://app:3000/api/audio?filename=${encodeURIComponent(
+      wavFileName
+    )}`;
     const res = await fetch(essentiaApiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

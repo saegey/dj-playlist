@@ -49,6 +49,10 @@ def update_track_analysis(
         key = None
         danceability = None
         duration_seconds = None
+        mood_happy = None
+        mood_sad = None
+        mood_relaxed = None
+        mood_aggressive = None
 
         if 'rhythm' in analysis_data and analysis_data['rhythm']:
             rhythm = analysis_data['rhythm']
@@ -71,6 +75,13 @@ def update_track_analysis(
                 if 'length' in audio_props and isinstance(audio_props['length'], (int, float)):
                     duration_seconds = int(round(audio_props['length']))
 
+        if 'highlevel' in analysis_data and analysis_data['highlevel']:
+            highlevel = analysis_data['highlevel']
+            mood_happy = _extract_highlevel_mood(highlevel, 'mood_happy', 'happy')
+            mood_sad = _extract_highlevel_mood(highlevel, 'mood_sad', 'sad')
+            mood_relaxed = _extract_highlevel_mood(highlevel, 'mood_relaxed', 'relaxed')
+            mood_aggressive = _extract_highlevel_mood(highlevel, 'mood_aggressive', 'aggressive')
+
         body = PatchApiTracksBody(track_id=track_id, friend_id=friend_id)
         if bpm is not None:
             body["bpm"] = bpm
@@ -80,6 +91,14 @@ def update_track_analysis(
             body["danceability"] = danceability
         if duration_seconds is not None:
             body["duration_seconds"] = duration_seconds
+        if mood_happy is not None:
+            body["mood_happy"] = mood_happy
+        if mood_sad is not None:
+            body["mood_sad"] = mood_sad
+        if mood_relaxed is not None:
+            body["mood_relaxed"] = mood_relaxed
+        if mood_aggressive is not None:
+            body["mood_aggressive"] = mood_aggressive
         if audio_year is not None:
             body["year"] = str(audio_year)
 
@@ -91,6 +110,23 @@ def update_track_analysis(
 
     except Exception as e:
         logger.error(f"Failed to update track analysis: {e}")
+
+
+def _extract_highlevel_mood(
+    highlevel_data: dict[str, Any],
+    section: str,
+    key: str,
+) -> Optional[float]:
+    section_data = highlevel_data.get(section)
+    if not isinstance(section_data, dict):
+        return None
+    all_data = section_data.get('all')
+    if not isinstance(all_data, dict):
+        return None
+    value = all_data.get(key)
+    if not isinstance(value, (int, float)):
+        return None
+    return round(float(value), 3)
 
 
 def analyze_audio_file(
@@ -123,6 +159,8 @@ def analyze_audio_file(
             raise Exception(f"Essentia API error: {response.status_code} {response.text}")
 
         analysis_result = response.json()
+        if isinstance(analysis_result, dict) and analysis_result.get('error'):
+            raise Exception(f"Essentia API error: {analysis_result['error']}")
         logger.info("Audio analysis completed successfully")
 
         try:
