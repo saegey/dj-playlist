@@ -9,7 +9,6 @@ import {
   Dialog,
   Drawer,
   Flex,
-  Link,
   Menu,
   Portal,
   Stack,
@@ -25,6 +24,7 @@ import {
   FiTrash,
 } from "react-icons/fi";
 import type { Track } from "@/types/track";
+import { menuDivider, drawerDivider, DrawerItem } from "@/components/ui/action-menu-primitives";
 import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
 import PlaylistRecommendations from "./PlaylistRecommendations";
 import { analyzeTrackAsync } from "@/services/internalApi/tracks";
@@ -40,77 +40,6 @@ export interface PlaylistItemMenuProps {
   size?: "xs" | "sm" | "md" | "lg";
 }
 
-const menuDivider = (
-  <Box
-    as="hr"
-    my={1}
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
-    borderWidth={0}
-    borderTopWidth={1}
-  />
-);
-
-const drawerDivider = (
-  <Box
-    as="hr"
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
-    borderWidth={0}
-    borderTopWidth={1}
-  />
-);
-
-function DrawerItem({
-  icon,
-  label,
-  onClick,
-  href,
-  disabled,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  href?: string;
-  disabled?: boolean;
-  color?: string;
-}) {
-  const inner = (
-    <Flex
-      align="center"
-      gap={4}
-      px={5}
-      py={3.5}
-      w="full"
-      color={disabled ? "fg.subtle" : color}
-      _hover={disabled ? undefined : { bg: "bg.subtle" }}
-      opacity={disabled ? 0.4 : 1}
-    >
-      <Box flexShrink={0} fontSize="md">{icon}</Box>
-      <Text fontSize="md">{label}</Text>
-    </Flex>
-  );
-
-  if (href && !disabled) {
-    return (
-      <Link as={NextLink} href={href} display="block" _hover={{ textDecoration: "none" }}>
-        {inner}
-      </Link>
-    );
-  }
-  return (
-    <Box
-      as="button"
-      onClick={disabled ? undefined : onClick}
-      w="full"
-      textAlign="left"
-      cursor={disabled ? "not-allowed" : "pointer"}
-    >
-      {inner}
-    </Box>
-  );
-}
 
 export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
   idx,

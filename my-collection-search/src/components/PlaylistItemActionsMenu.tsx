@@ -6,12 +6,12 @@ import {
   Button,
   CloseButton,
   Drawer,
-  Flex,
   Menu,
   Portal,
   Stack,
   Text,
 } from "@chakra-ui/react";
+import { menuDivider, drawerDivider, DrawerItem } from "@/components/ui/action-menu-primitives";
 import { FaPlay } from "react-icons/fa";
 import { FiMoreVertical, FiTrash } from "react-icons/fi";
 
@@ -21,47 +21,6 @@ interface PlaylistItemActionsMenuProps {
   onDelete: () => void;
 }
 
-const menuDivider = (
-  <Box
-    as="hr"
-    my={1}
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
-    borderWidth={0}
-    borderTopWidth={1}
-  />
-);
-
-const drawerDivider = (
-  <Box
-    as="hr"
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
-    borderWidth={0}
-    borderTopWidth={1}
-  />
-);
-
-function DrawerItem({
-  icon,
-  label,
-  onClick,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-  color?: string;
-}) {
-  return (
-    <Box as="button" onClick={onClick} w="full" textAlign="left" cursor="pointer">
-      <Flex align="center" gap={4} px={5} py={3.5} w="full" color={color} _hover={{ bg: "bg.subtle" }}>
-        <Box flexShrink={0} fontSize="md">{icon}</Box>
-        <Text fontSize="md">{label}</Text>
-      </Flex>
-    </Box>
-  );
-}
 
 export default function PlaylistItemActionsMenu({
   playlistName,
