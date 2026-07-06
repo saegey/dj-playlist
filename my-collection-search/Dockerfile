@@ -50,6 +50,8 @@ ENV HOSTNAME=0.0.0.0
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
+COPY --from=builder --chown=nextjs:nodejs /app/src ./src
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 
