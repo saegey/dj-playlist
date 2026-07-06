@@ -12,6 +12,7 @@ import {
   Stack,
   CloseButton,
 } from "@chakra-ui/react";
+import { menuDivider, drawerDivider, DrawerItem, DrawerSectionLabel } from "@/components/ui/action-menu-primitives";
 import {
   FiCopy,
   FiDownload,
@@ -47,66 +48,6 @@ export interface PlaylistActionsMenuProps {
   playlistName?: string;
 }
 
-const menuDivider = (
-  <Box
-    as="hr"
-    my={1}
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
-    borderWidth={0}
-    borderTopWidth={1}
-  />
-);
-
-const drawerDivider = (
-  <Box
-    as="hr"
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
-    borderWidth={0}
-    borderTopWidth={1}
-  />
-);
-
-function DrawerItem({
-  icon,
-  label,
-  onClick,
-  disabled,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  disabled?: boolean;
-  color?: string;
-}) {
-  return (
-    <Box
-      as="button"
-      onClick={disabled ? undefined : onClick}
-      w="full"
-      textAlign="left"
-      cursor={disabled ? "not-allowed" : "pointer"}
-      opacity={disabled ? 0.4 : 1}
-    >
-      <Flex align="center" gap={4} px={5} py={3.5} w="full" color={color} _hover={{ bg: "bg.subtle" }}>
-        <Box flexShrink={0} fontSize="md">{icon}</Box>
-        <Text fontSize="md">{label}</Text>
-      </Flex>
-    </Box>
-  );
-}
-
-function DrawerSectionLabel({ label }: { label: string }) {
-  return (
-    <Flex px={5} pt={3} pb={1}>
-      <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
-        {label}
-      </Text>
-    </Flex>
-  );
-}
 
 export default function PlaylistActionsMenu({
   disabled,

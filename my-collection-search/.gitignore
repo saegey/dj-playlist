@@ -57,3 +57,7 @@ next-env.d.ts
 
 # Mobile screenshot tool output
 /mobile-screenshots/
+
+*storybook.log
+storybook-static
+storybook-static

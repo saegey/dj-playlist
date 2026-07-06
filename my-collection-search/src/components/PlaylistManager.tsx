@@ -3,7 +3,7 @@
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import DeletePlaylistDialog from "@/components/DeletePlaylistDialog";
-import PlaylistItemActionsMenu from "@/components/PlaylistItemActionsMenu";
+import PlaylistListItem from "@/components/PlaylistListItem";
 import FriendSelectDialog from "@/components/FriendSelectDialog";
 import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
 import {
@@ -14,7 +14,6 @@ import {
   EmptyState,
   VStack,
   HStack,
-  Spinner,
   Menu,
 } from "@chakra-ui/react";
 
@@ -263,74 +262,23 @@ export default function PlaylistManager() {
               loadingPlaylists !== null &&
               pl.id === loadingPlaylists.id;
             return (
-              <Box
+              <PlaylistListItem
                 key={pl.id}
-                w="100%"
-                textAlign="left"
-                px={3}
-                py={2}
-                borderWidth="1px"
-                borderRadius="md"
-                _hover={{ bg: "bg.muted" }}
-                _active={{ bg: "bg.subtle" }}
-              >
-                <HStack justify="space-between" align="center" gap={3}>
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    gap={3}
-                    minW={0}
-                    cursor="pointer"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => router.push(`/playlists/${pl.id}`)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') router.push(`/playlists/${pl.id}`);
-                    }}
-                  >
-                    <Box
-                      boxSize="10"
-                      rounded="md"
-                      bg="blue.500"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      color="white"
-                      flexShrink={0}
-                      fontWeight="bold"
-                      fontSize="sm"
-                    >
-                      {pl.tracks.length}
-                    </Box>
-                    <VStack align="start" gap={0} minW={0}>
-                      <Text fontWeight="semibold" fontSize="sm" lineClamp={1}>
-                        {pl.name}
-                      </Text>
-                      <HStack gap={2} color="fg.muted" fontSize="xs">
-                        <Text>{formatDateWithRelative(pl.created_at)}</Text>
-                      </HStack>
-                    </VStack>
-                  </Box>
-
-                  <HStack gap={1} flexShrink={0}>
-                    {isRowLoading && <Spinner size="xs" />}
-                    <PlaylistItemActionsMenu
-                      playlistName={pl.name}
-                      onPlay={async () => {
-                        const tracks = await fetchTracksByIds(pl.tracks);
-                        replacePlaylist(tracks, { autoplay: true, startIndex: 0 });
-                        posthog.capture("playback_started", {
-                          playlist_id: pl.id,
-                          playlist_name: pl.name,
-                          track_count: pl.tracks.length,
-                          source: "playlist_manager",
-                        });
-                      }}
-                      onDelete={() => setDeleteDialogState({ open: true, playlistId: pl.id })}
-                    />
-                  </HStack>
-                </HStack>
-              </Box>
+                playlist={pl}
+                isLoading={isRowLoading}
+                onClick={() => router.push(`/playlists/${pl.id}`)}
+                onPlay={async () => {
+                  const tracks = await fetchTracksByIds(pl.tracks);
+                  replacePlaylist(tracks, { autoplay: true, startIndex: 0 });
+                  posthog.capture("playback_started", {
+                    playlist_id: pl.id,
+                    playlist_name: pl.name,
+                    track_count: pl.tracks.length,
+                    source: "playlist_manager",
+                  });
+                }}
+                onDelete={() => setDeleteDialogState({ open: true, playlistId: pl.id })}
+              />
             );
           })
         )}

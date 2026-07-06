@@ -305,6 +305,9 @@ migrate-create NAME:
   @if [ -z "{{NAME}}" ]; then echo "Usage: just migrate-create <name>"; exit 1; fi
   cd {{app_dir}} && npm run migrate create {{NAME}}
 
+storybook:
+  cd {{app_dir}} && npm run storybook
+
 sync-album-covers:
   ./{{app_dir}}/scripts/sync-album-covers.sh \
     "{{album_covers_remote_host}}" \

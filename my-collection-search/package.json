@@ -23,7 +23,9 @@
     "backfill-audio-vibe": "tsx src/scripts/backfill-identity.ts -- --type=audio_vibe",
     "backfill-essentia": "tsx src/scripts/backfill-essentia.ts",
     "openapi:check": "node --import tsx/esm scripts/check-openapi.ts",
-    "openapi:generate-spec": "node --import tsx/esm scripts/generate-openapi-json.ts ../openapi-generated.json"
+    "openapi:generate-spec": "node --import tsx/esm scripts/generate-openapi-json.ts ../openapi-generated.json",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.36.0",
@@ -72,6 +74,10 @@
     "tsx": "^4.22.4",
     "typescript": "5.9.3",
     "vitest": "^4.1.9",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.0",
+    "storybook": "^10.4.6",
+    "@storybook/nextjs-vite": "^10.4.6",
+    "vite": "^8.1.3",
+    "eslint-plugin-storybook": "^10.4.6"
   }
 }

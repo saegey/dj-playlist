@@ -7,16 +7,16 @@ import {
   Portal,
   Drawer,
   Box,
-  Flex,
-  Text,
   Stack,
   CloseButton,
   Link,
   Icon,
+  Text,
 } from "@chakra-ui/react";
 import { FiDownload, FiEdit, FiFileText, FiMoreVertical, FiPlay } from "react-icons/fi";
 import { SiDiscogs } from "react-icons/si";
 import NextLink from "next/link";
+import { menuDivider, drawerDivider, DrawerItem } from "@/components/ui/action-menu-primitives";
 
 export interface AlbumActionsMenuProps {
   albumTitle?: string;
@@ -29,78 +29,6 @@ export interface AlbumActionsMenuProps {
   editAlbumHref?: string;
 }
 
-const menuDivider = (
-  <Box
-    as="hr"
-    my={1}
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
-    borderWidth={0}
-    borderTopWidth={1}
-  />
-);
-
-const drawerDivider = (
-  <Box
-    as="hr"
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
-    borderWidth={0}
-    borderTopWidth={1}
-  />
-);
-
-function DrawerItem({
-  icon,
-  label,
-  onClick,
-  href,
-  external,
-  disabled,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  href?: string;
-  external?: boolean;
-  disabled?: boolean;
-  color?: string;
-}) {
-  const inner = (
-    <Flex align="center" gap={4} px={5} py={3.5} w="full" color={color} _hover={{ bg: "bg.subtle" }}>
-      <Box flexShrink={0} fontSize="md">{icon}</Box>
-      <Text fontSize="md">{label}</Text>
-    </Flex>
-  );
-
-  if (href && external) {
-    return (
-      <Link href={href} target="_blank" rel="noopener noreferrer" display="block" _hover={{ textDecoration: "none" }}>
-        {inner}
-      </Link>
-    );
-  }
-  if (href) {
-    return (
-      <Link as={NextLink} href={href} display="block" _hover={{ textDecoration: "none" }}>
-        {inner}
-      </Link>
-    );
-  }
-  return (
-    <Box
-      as="button"
-      onClick={disabled ? undefined : onClick}
-      w="full"
-      textAlign="left"
-      cursor={disabled ? "not-allowed" : "pointer"}
-      opacity={disabled ? 0.4 : 1}
-    >
-      {inner}
-    </Box>
-  );
-}
 
 export default function AlbumActionsMenu({
   albumTitle,
