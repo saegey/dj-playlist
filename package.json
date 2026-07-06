@@ -2,5 +2,6 @@
   "name": "dj-playlist",
   "private": true,
   "workspaces": ["packages/*", "mcp-server"],
+  "trustedDependencies": ["fsevents"],
   "engines": { "node": ">=20" }
 }

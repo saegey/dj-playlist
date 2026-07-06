@@ -1,12 +1,18 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+
+const DEFAULT_ESSENTIA_DATA_DIR = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../essentia-data"
+);
 
 function safePart(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 export function getEssentiaDataDir(): string {
-  return process.env.ESSENTIA_DATA_DIR || path.join(/* turbopackIgnore: true */ process.cwd(), "essentia-data");
+  return process.env.ESSENTIA_DATA_DIR || DEFAULT_ESSENTIA_DATA_DIR;
 }
 
 function assertWithinDataDir(filePath: string): void {

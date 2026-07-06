@@ -25,7 +25,9 @@ mise_exec := "mise exec --"
 default:
   @just --list
 
-bootstrap: bootstrap-tools bootstrap-node bootstrap-python
+bootstrap: bootstrap-js bootstrap-python
+
+bootstrap-js: bootstrap-tools bootstrap-node
 
 bootstrap-tools:
   @command -v mise >/dev/null 2>&1 || { \
@@ -35,8 +37,8 @@ bootstrap-tools:
   mise install
 
 bootstrap-node:
-  {{mise_exec}} npm install --workspaces
-  {{mise_exec}} npm install --prefix my-collection-search
+  {{mise_exec}} npm install --workspaces --no-fund --no-audit --loglevel=error
+  {{mise_exec}} npm install --prefix my-collection-search --no-fund --no-audit --loglevel=error
 
 bootstrap-python:
   cd ga-service && {{mise_exec}} uv sync --frozen
