@@ -3,7 +3,13 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { backupPolicyService } from "@/server/services/backupPolicyService";
-import type { BackupPolicy, BackupRetentionPreset } from "@/types/backup";
+import { backupStatusService } from "@/server/services/backupStatusService";
+import type {
+  BackupPolicy,
+  BackupRetentionPreset,
+  BackupSnapshotSummary,
+  BackupStatus,
+} from "@/types/backup";
 
 const execFileAsync = promisify(execFile);
 
@@ -15,6 +21,9 @@ type BackupRunResult = {
   snapshotOutput?: string;
   pruneOutput?: string;
   error?: string;
+  backedUpPaths?: string[];
+  snapshot?: BackupSnapshotSummary | null;
+  missingEnv?: string[];
 };
 
 const GLOBAL_SCHEDULER_KEY = "__groovenetBackupSchedulerStarted";
@@ -168,42 +177,113 @@ function collectBackupPaths(policy: BackupPolicy): string[] {
   return paths;
 }
 
+function parseSnapshotsOutput(raw: string): BackupSnapshotSummary | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const parsed = JSON.parse(trimmed) as unknown;
+  if (!Array.isArray(parsed) || parsed.length === 0) return null;
+
+  const snapshots = parsed
+    .map((entry) => {
+      const obj =
+        typeof entry === "object" && entry !== null
+          ? (entry as Record<string, unknown>)
+          : null;
+      if (!obj || typeof obj.id !== "string" || typeof obj.time !== "string") {
+        return null;
+      }
+      return {
+        id: obj.id,
+        short_id: typeof obj.short_id === "string" ? obj.short_id : null,
+        time: obj.time,
+        hostname: typeof obj.hostname === "string" ? obj.hostname : null,
+        paths: Array.isArray(obj.paths)
+          ? obj.paths.filter((value): value is string => typeof value === "string")
+          : [],
+        tags: Array.isArray(obj.tags)
+          ? obj.tags.filter((value): value is string => typeof value === "string")
+          : [],
+      } satisfies BackupSnapshotSummary;
+    })
+    .filter((value): value is BackupSnapshotSummary => value !== null);
+
+  if (snapshots.length === 0) return null;
+
+  snapshots.sort(
+    (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()
+  );
+  return snapshots[0] ?? null;
+}
+
+async function getLatestSnapshotSummary(): Promise<BackupSnapshotSummary | null> {
+  const snapshots = await execFileAsync("restic", ["snapshots", "--json"], {
+    env: process.env,
+    maxBuffer: 1024 * 1024 * 10,
+  });
+  return parseSnapshotsOutput(`${snapshots.stdout || ""}${snapshots.stderr || ""}`);
+}
+
+function persistStatus(result: BackupRunResult): void {
+  const status: Omit<BackupStatus, "stored_at"> = {
+    started_at: result.startedAt,
+    finished_at: result.finishedAt,
+    status: result.status,
+    reason: result.reason,
+    backed_up_paths: result.backedUpPaths ?? [],
+    snapshot: result.snapshot ?? null,
+    ...(result.error ? { error: result.error } : {}),
+    ...(result.missingEnv ? { missing_env: result.missingEnv } : {}),
+  };
+
+  try {
+    backupStatusService.writeStatus(status);
+  } catch (error) {
+    console.error("[backup-status] failed to persist backup status:", error);
+  }
+}
+
 export async function runBackupNow(
   reason: "manual" | "scheduled" = "manual"
 ): Promise<BackupRunResult> {
   const g = globalThis as GlobalWithBackup;
   const startedAt = new Date().toISOString();
+  const finish = (result: BackupRunResult): BackupRunResult => {
+    persistStatus(result);
+    return result;
+  };
 
   if (g[GLOBAL_BACKUP_RUNNING_KEY]) {
-    return {
+    return finish({
       startedAt,
       finishedAt: new Date().toISOString(),
       status: "skipped",
       reason: "backup-already-running",
-    };
+    });
   }
 
   g[GLOBAL_BACKUP_RUNNING_KEY] = true;
   try {
     const policy = backupPolicyService.getPolicy();
     if (reason === "scheduled" && !policy.enabled) {
-      return {
+      return finish({
         startedAt,
         finishedAt: new Date().toISOString(),
         status: "skipped",
         reason: "policy-disabled",
-      };
+      });
     }
 
     const envCheck = requiredEnvConfigured();
     if (!envCheck.ok) {
-      return {
+      return finish({
         startedAt,
         finishedAt: new Date().toISOString(),
         status: "failed",
         reason: "missing-env",
         error: `Missing env vars: ${envCheck.missing.join(", ")}`,
-      };
+        missingEnv: envCheck.missing,
+      });
     }
 
     if (policy.include_database) {
@@ -212,12 +292,13 @@ export async function runBackupNow(
 
     const backupPaths = collectBackupPaths(policy);
     if (backupPaths.length === 0) {
-      return {
+      return finish({
         startedAt,
         finishedAt: new Date().toISOString(),
         status: "skipped",
         reason: "no-paths-selected",
-      };
+        backedUpPaths: [],
+      });
     }
 
     const tag = `groovenet-${reason}`;
@@ -233,22 +314,26 @@ export async function runBackupNow(
       { env: process.env, maxBuffer: 1024 * 1024 * 10 }
     );
 
-    return {
+    const latestSnapshot = await getLatestSnapshotSummary();
+
+    return finish({
       startedAt,
       finishedAt: new Date().toISOString(),
       status: "success",
       reason,
       snapshotOutput: `${snapshot.stdout || ""}${snapshot.stderr || ""}`.trim(),
       pruneOutput: `${prune.stdout || ""}${prune.stderr || ""}`.trim(),
-    };
+      backedUpPaths: backupPaths,
+      snapshot: latestSnapshot,
+    });
   } catch (error) {
-    return {
+    return finish({
       startedAt,
       finishedAt: new Date().toISOString(),
       status: "failed",
       reason,
       error: error instanceof Error ? error.message : String(error),
-    };
+    });
   } finally {
     g[GLOBAL_BACKUP_RUNNING_KEY] = false;
   }

@@ -269,6 +269,31 @@ export const backupPolicyPutResponseSchema = z.object({
   policy: backupPolicySchema,
 });
 
+export const backupSnapshotSummarySchema = z.object({
+  id: z.string(),
+  short_id: z.string().nullable(),
+  time: z.string(),
+  hostname: z.string().nullable(),
+  paths: z.array(z.string()),
+  tags: z.array(z.string()),
+});
+
+export const backupStatusSchema = z.object({
+  started_at: z.string(),
+  finished_at: z.string(),
+  stored_at: z.string(),
+  status: z.enum(["success", "failed", "skipped"]),
+  reason: z.string(),
+  backed_up_paths: z.array(z.string()),
+  snapshot: backupSnapshotSummarySchema.nullable(),
+  error: z.string().optional(),
+  missing_env: z.array(z.string()).optional(),
+});
+
+export const backupStatusGetResponseSchema = z.object({
+  status: backupStatusSchema.nullable(),
+});
+
 export const defaultLibrarySettingsGetResponseSchema = z.object({
   friend_id: z.number().int().nullable(),
 });

@@ -21,6 +21,7 @@ import {
   backupPolicyPutResponseSchema,
   backupCreateResponseSchema,
   backupCreateCustomResponseSchema,
+  backupStatusGetResponseSchema,
   defaultLibrarySettingsGetResponseSchema,
   defaultLibrarySettingsPutBodySchema,
   defaultLibrarySettingsPutResponseSchema,
@@ -1451,6 +1452,102 @@ export const apiContractRoutes: ApiContractRoute[] = [
         "400": {
           description: "Invalid update payload",
           content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getBackupStatus",
+    method: "get",
+    path: "/api/settings/backup/status",
+    summary: "Get last remote backup run status",
+    tags: ["Settings"],
+    successSchema: backupStatusGetResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Last known backup status",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  status: {
+                    anyOf: [
+                      {
+                        type: "object",
+                        properties: {
+                          started_at: { type: "string" },
+                          finished_at: { type: "string" },
+                          stored_at: { type: "string" },
+                          status: {
+                            type: "string",
+                            enum: ["success", "failed", "skipped"],
+                          },
+                          reason: { type: "string" },
+                          backed_up_paths: {
+                            type: "array",
+                            items: { type: "string" },
+                          },
+                          snapshot: {
+                            anyOf: [
+                              {
+                                type: "object",
+                                properties: {
+                                  id: { type: "string" },
+                                  short_id: { type: "string", nullable: true },
+                                  time: { type: "string" },
+                                  hostname: { type: "string", nullable: true },
+                                  paths: {
+                                    type: "array",
+                                    items: { type: "string" },
+                                  },
+                                  tags: {
+                                    type: "array",
+                                    items: { type: "string" },
+                                  },
+                                },
+                                required: [
+                                  "id",
+                                  "short_id",
+                                  "time",
+                                  "hostname",
+                                  "paths",
+                                  "tags",
+                                ],
+                              },
+                              { type: "null" },
+                            ],
+                          },
+                          error: { type: "string" },
+                          missing_env: {
+                            type: "array",
+                            items: { type: "string" },
+                          },
+                        },
+                        required: [
+                          "started_at",
+                          "finished_at",
+                          "stored_at",
+                          "status",
+                          "reason",
+                          "backed_up_paths",
+                          "snapshot",
+                        ],
+                      },
+                      { type: "null" },
+                    ],
+                  },
+                },
+                required: ["status"],
+              },
+            },
+          },
         },
         "500": {
           description: "Server error",

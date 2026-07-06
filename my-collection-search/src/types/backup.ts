@@ -21,3 +21,24 @@ export type BackupPolicyUpdate = Partial<
     provider: BackupProvider;
   }
 >;
+
+export type BackupSnapshotSummary = {
+  id: string;
+  short_id: string | null;
+  time: string;
+  hostname: string | null;
+  paths: string[];
+  tags: string[];
+};
+
+export type BackupStatus = {
+  started_at: string;
+  finished_at: string;
+  stored_at: string;
+  status: "success" | "failed" | "skipped";
+  reason: string;
+  backed_up_paths: string[];
+  snapshot: BackupSnapshotSummary | null;
+  error?: string;
+  missing_env?: string[];
+};
