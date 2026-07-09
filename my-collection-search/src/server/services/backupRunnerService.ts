@@ -136,6 +136,8 @@ async function createDatabaseDump(): Promise<string> {
     "-F",
     "c",
     "--no-acl",
+    "-n",
+    "public",
     "-d",
     pg.pathname.replace(/^\//, ""),
   ];

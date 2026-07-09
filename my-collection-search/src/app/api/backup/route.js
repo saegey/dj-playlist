@@ -61,6 +61,7 @@ export async function POST() {
           '-F', 'p',
           '--encoding=UTF8',
           '--no-acl',
+          '-n', 'public',
           '-d', pg.db,
         ], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PGPASSWORD: pg.pass || '' }, maxBuffer: 1024 * 1024 * 512 });
       } catch (pgErr) {
