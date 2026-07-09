@@ -173,6 +173,16 @@ function collectBackupPaths(policy: BackupPolicy): string[] {
     );
     if (coversPath) paths.push(coversPath);
   }
+  if (policy.include_discogs_exports) {
+    const discogsExportsPath = getExistingPath(
+      path.resolve(process.cwd(), "discogs_exports")
+    );
+    if (discogsExportsPath) paths.push(discogsExportsPath);
+  }
+  if (policy.include_essentia_files) {
+    const essentiaPath = getExistingPath(path.resolve(process.cwd(), "essentia-data"));
+    if (essentiaPath) paths.push(essentiaPath);
+  }
   if (policy.include_uploads) {
     const uploadsPath = getExistingPath(path.resolve(process.cwd(), "uploads"));
     if (uploadsPath) paths.push(uploadsPath);

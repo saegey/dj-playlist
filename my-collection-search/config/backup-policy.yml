@@ -5,5 +5,7 @@ retention_preset: balanced
 include_database: true
 include_audio_files: true
 include_album_covers: true
+include_discogs_exports: true
+include_essentia_files: true
 include_uploads: true
 updated_at: 2026-07-06T22:50:30.086Z

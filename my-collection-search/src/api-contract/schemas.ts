@@ -242,6 +242,8 @@ export const backupPolicySchema = z.object({
   include_database: z.boolean(),
   include_audio_files: z.boolean(),
   include_album_covers: z.boolean(),
+  include_discogs_exports: z.boolean(),
+  include_essentia_files: z.boolean(),
   include_uploads: z.boolean(),
   updated_at: z.string(),
 });
@@ -259,6 +261,8 @@ export const backupPolicyPutBodySchema = z
     include_database: z.boolean().optional(),
     include_audio_files: z.boolean().optional(),
     include_album_covers: z.boolean().optional(),
+    include_discogs_exports: z.boolean().optional(),
+    include_essentia_files: z.boolean().optional(),
     include_uploads: z.boolean().optional(),
   })
   .strict();

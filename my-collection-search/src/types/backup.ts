@@ -12,6 +12,8 @@ export type BackupPolicy = {
   include_database: boolean;
   include_audio_files: boolean;
   include_album_covers: boolean;
+  include_discogs_exports: boolean;
+  include_essentia_files: boolean;
   include_uploads: boolean;
   updated_at: string;
 };
