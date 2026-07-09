@@ -135,6 +135,7 @@ async function createDatabaseDump(): Promise<string> {
     decodeURIComponent(pg.username),
     "-F",
     "c",
+    "--no-acl",
     "-d",
     pg.pathname.replace(/^\//, ""),
   ];

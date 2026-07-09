@@ -60,6 +60,7 @@ export async function POST() {
           '-p', String(pg.port || 5432),
           '-F', 'p',
           '--encoding=UTF8',
+          '--no-acl',
           '-d', pg.db,
         ], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PGPASSWORD: pg.pass || '' }, maxBuffer: 1024 * 1024 * 512 });
       } catch (pgErr) {

@@ -63,6 +63,7 @@ export async function POST() {
         '-h', pg.host || 'localhost',
         '-p', String(pg.port || 5432),
         '-F', 'c',
+        '--no-acl',
         '-d', pg.db,
       ], {
         stdio: ['ignore', 'pipe', 'pipe'],
