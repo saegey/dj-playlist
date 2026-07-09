@@ -36,7 +36,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       mediainfo \
       restic \
       postgresql-client-15 \
-      docker-ce-cli
+      docker-ce-cli \
+      gosu
 
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 --gid nodejs -m nextjs
@@ -58,8 +59,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 RUN mkdir -p cookies dumps discogs_exports audio essentia-data public/uploads/album-covers && \
     chown -R nextjs:nodejs /app
 
-USER nextjs
+COPY --chmod=755 entrypoint.sh /entrypoint.sh
+
 EXPOSE 3000
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["npm", "run", "start"]
 
 FROM base AS migrator

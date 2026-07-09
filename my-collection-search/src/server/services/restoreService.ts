@@ -58,7 +58,11 @@ function runShell(cmd: string, pass: string): void {
   });
 }
 
-function classifyBackup(fileName: string, content: Buffer): {
+function quoteIdentifier(value: string): string {
+  return `"${value.replace(/"/g, "\"\"")}"`;
+}
+
+export function classifyBackup(fileName: string, content: Buffer): {
   fileType: "sql" | "dump";
   backupType: "schema+data" | "data-only";
 } {
@@ -75,6 +79,35 @@ function classifyBackup(fileName: string, content: Buffer): {
     fileType: "sql",
     backupType: hasSchema ? "schema+data" : "data-only",
   };
+}
+
+export function buildRestorePrepSql(
+  backupType: "schema+data" | "data-only",
+  pgUser: string
+): string | null {
+  if (backupType === "data-only") {
+    return `
+DO $$
+DECLARE
+  tables_to_truncate text;
+BEGIN
+  SELECT string_agg(format('%I.%I', schemaname, tablename), ', ')
+    INTO tables_to_truncate
+  FROM pg_tables
+  WHERE schemaname = 'public' AND tablename <> 'pgmigrations';
+
+  IF tables_to_truncate IS NOT NULL THEN
+    EXECUTE 'TRUNCATE TABLE ' || tables_to_truncate || ' RESTART IDENTITY CASCADE';
+  END IF;
+END $$;
+`.trim();
+  }
+
+  return `
+DROP OWNED BY ${quoteIdentifier(pgUser)} CASCADE;
+GRANT ALL ON SCHEMA public TO ${quoteIdentifier(pgUser)};
+GRANT ALL ON SCHEMA public TO public;
+`.trim();
 }
 
 function removePgMigrationsData(sqlContent: string): string {
@@ -126,28 +159,26 @@ export async function restoreDatabaseFromUpload(file: File): Promise<RestoreResu
 
     const pg = getPgConfig();
 
-    // Always do full schema restore semantics.
-    const cleanSql = `
-DROP SCHEMA IF EXISTS public CASCADE;
-CREATE SCHEMA public;
-GRANT ALL ON SCHEMA public TO ${pg.user};
-GRANT ALL ON SCHEMA public TO public;
-`;
-    const cleanPath = path.join(restoreDir, "restore-clean.sql");
-    fs.writeFileSync(cleanPath, cleanSql);
-    runShell(
-      `psql -U ${pg.user} -h ${pg.host} -p ${pg.port} -d ${pg.db} -f '${cleanPath}'`,
-      pg.pass
-    );
-
-    // Data-only backups need schema created first.
     if (backupType === "data-only") {
       runShell("npm run migrate up", pg.pass);
     }
 
+    const prepSql =
+      fileType === "dump" && backupType === "schema+data"
+        ? null
+        : buildRestorePrepSql(backupType, pg.user);
+    if (prepSql) {
+      const cleanPath = path.join(restoreDir, "restore-clean.sql");
+      fs.writeFileSync(cleanPath, `${prepSql}\n`);
+      runShell(
+        `psql -U ${pg.user} -h ${pg.host} -p ${pg.port} -d ${pg.db} -v ON_ERROR_STOP=1 -f '${cleanPath}'`,
+        pg.pass
+      );
+    }
+
     if (fileType === "dump") {
       runShell(
-        `pg_restore -U ${pg.user} -h ${pg.host} -p ${pg.port} -d ${pg.db} --single-transaction --no-owner --no-acl '${restorePath}'`,
+        `pg_restore -U ${pg.user} -h ${pg.host} -p ${pg.port} -d ${pg.db} --single-transaction --clean --if-exists --no-owner --no-acl '${restorePath}'`,
         pg.pass
       );
     } else {

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 // This assumes your DB file is at the project root as 'djplaylist_backup_2025-07-10.sql' or similar
 // Adjust DB_PATH as needed for your actual DB file
@@ -52,8 +52,21 @@ export async function POST() {
       // Compose pg_dump command (schema + data)
       // Removed --data-only to include schema (tables, sequences, etc.)
       // This ensures schema is always in sync with data
-      let cmd = `PGPASSWORD='${pg.pass || ''}' pg_dump -U ${pg.user} -h ${pg.host || 'localhost'} -p ${pg.port || 5432} -F p --encoding=UTF8 -d ${pg.db} -f '${backupFile}'`;
-      execSync(cmd, { stdio: 'ignore', env: { ...process.env, PGPASSWORD: pg.pass || '' } });
+      let dumpOutput;
+      try {
+        dumpOutput = execFileSync('/usr/lib/postgresql/15/bin/pg_dump', [
+          '-U', pg.user,
+          '-h', pg.host || 'localhost',
+          '-p', String(pg.port || 5432),
+          '-F', 'p',
+          '--encoding=UTF8',
+          '-d', pg.db,
+        ], { stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, PGPASSWORD: pg.pass || '' }, maxBuffer: 1024 * 1024 * 512 });
+      } catch (pgErr) {
+        console.error('[backup] pg_dump stderr:', pgErr.stderr?.toString() || '');
+        throw pgErr;
+      }
+      fs.writeFileSync(backupFile, dumpOutput);
       usedPg = true;
     }
     if (!usedPg) {

@@ -137,17 +137,18 @@ async function createDatabaseDump(): Promise<string> {
     "c",
     "-d",
     pg.pathname.replace(/^\//, ""),
-    "-f",
-    dumpPath,
   ];
 
-  await execFileAsync("pg_dump", args, {
+  const { stdout } = await execFileAsync("/usr/lib/postgresql/15/bin/pg_dump", args, {
     env: {
       ...process.env,
       PGPASSWORD: decodeURIComponent(pg.password),
     },
-    maxBuffer: 1024 * 1024 * 10,
+    encoding: "buffer",
+    maxBuffer: 1024 * 1024 * 512,
   });
+
+  fs.writeFileSync(dumpPath, stdout);
 
   return dumpPath;
 }
