@@ -35,7 +35,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       ffmpeg \
       mediainfo \
       restic \
-      postgresql-client-15 \
+      postgresql-client-16 \
       docker-ce-cli \
       gosu
 

@@ -54,7 +54,7 @@ export async function POST() {
       // This ensures schema is always in sync with data
       let dumpOutput;
       try {
-        dumpOutput = execFileSync('/usr/lib/postgresql/15/bin/pg_dump', [
+        dumpOutput = execFileSync('/usr/lib/postgresql/16/bin/pg_dump', [
           '-U', pg.user,
           '-h', pg.host || 'localhost',
           '-p', String(pg.port || 5432),

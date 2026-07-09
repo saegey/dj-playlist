@@ -139,7 +139,7 @@ async function createDatabaseDump(): Promise<string> {
     pg.pathname.replace(/^\//, ""),
   ];
 
-  const { stdout } = await execFileAsync("/usr/lib/postgresql/15/bin/pg_dump", args, {
+  const { stdout } = await execFileAsync("/usr/lib/postgresql/16/bin/pg_dump", args, {
     env: {
       ...process.env,
       PGPASSWORD: decodeURIComponent(pg.password),
