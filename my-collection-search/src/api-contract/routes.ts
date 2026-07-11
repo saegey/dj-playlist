@@ -21,6 +21,7 @@ import {
   backupPolicyPutResponseSchema,
   backupCreateResponseSchema,
   backupCreateCustomResponseSchema,
+  backupStatusGetResponseSchema,
   defaultLibrarySettingsGetResponseSchema,
   defaultLibrarySettingsPutBodySchema,
   defaultLibrarySettingsPutResponseSchema,
@@ -1460,6 +1461,102 @@ export const apiContractRoutes: ApiContractRoute[] = [
     },
   },
   {
+    operationId: "getBackupStatus",
+    method: "get",
+    path: "/api/settings/backup/status",
+    summary: "Get last remote backup run status",
+    tags: ["Settings"],
+    successSchema: backupStatusGetResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description: "Last known backup status",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  status: {
+                    anyOf: [
+                      {
+                        type: "object",
+                        properties: {
+                          started_at: { type: "string" },
+                          finished_at: { type: "string" },
+                          stored_at: { type: "string" },
+                          status: {
+                            type: "string",
+                            enum: ["success", "failed", "skipped"],
+                          },
+                          reason: { type: "string" },
+                          backed_up_paths: {
+                            type: "array",
+                            items: { type: "string" },
+                          },
+                          snapshot: {
+                            anyOf: [
+                              {
+                                type: "object",
+                                properties: {
+                                  id: { type: "string" },
+                                  short_id: { type: "string", nullable: true },
+                                  time: { type: "string" },
+                                  hostname: { type: "string", nullable: true },
+                                  paths: {
+                                    type: "array",
+                                    items: { type: "string" },
+                                  },
+                                  tags: {
+                                    type: "array",
+                                    items: { type: "string" },
+                                  },
+                                },
+                                required: [
+                                  "id",
+                                  "short_id",
+                                  "time",
+                                  "hostname",
+                                  "paths",
+                                  "tags",
+                                ],
+                              },
+                              { type: "null" },
+                            ],
+                          },
+                          error: { type: "string" },
+                          missing_env: {
+                            type: "array",
+                            items: { type: "string" },
+                          },
+                        },
+                        required: [
+                          "started_at",
+                          "finished_at",
+                          "stored_at",
+                          "status",
+                          "reason",
+                          "backed_up_paths",
+                          "snapshot",
+                        ],
+                      },
+                      { type: "null" },
+                    ],
+                  },
+                },
+                required: ["status"],
+              },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
     operationId: "getBackupPolicy",
     method: "get",
     path: "/api/settings/backup",
@@ -1489,6 +1586,8 @@ export const apiContractRoutes: ApiContractRoute[] = [
                       include_database: { type: "boolean" },
                       include_audio_files: { type: "boolean" },
                       include_album_covers: { type: "boolean" },
+                      include_discogs_exports: { type: "boolean" },
+                      include_essentia_files: { type: "boolean" },
                       include_uploads: { type: "boolean" },
                       updated_at: { type: "string" },
                     },
@@ -1500,6 +1599,8 @@ export const apiContractRoutes: ApiContractRoute[] = [
                       "include_database",
                       "include_audio_files",
                       "include_album_covers",
+                      "include_discogs_exports",
+                      "include_essentia_files",
                       "include_uploads",
                       "updated_at",
                     ],
@@ -1544,6 +1645,8 @@ export const apiContractRoutes: ApiContractRoute[] = [
                 include_database: { type: "boolean" },
                 include_audio_files: { type: "boolean" },
                 include_album_covers: { type: "boolean" },
+                include_discogs_exports: { type: "boolean" },
+                include_essentia_files: { type: "boolean" },
                 include_uploads: { type: "boolean" },
               },
               additionalProperties: false,

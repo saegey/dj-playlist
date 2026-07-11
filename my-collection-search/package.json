@@ -3,6 +3,14 @@
   "name": "my-collection-search",
   "version": "0.1.0",
   "private": true,
+  "trustedDependencies": [
+    "@sentry/cli",
+    "core-js",
+    "esbuild",
+    "fsevents",
+    "sharp",
+    "unrs-resolver"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",

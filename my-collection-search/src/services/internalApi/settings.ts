@@ -8,6 +8,8 @@ import {
   backupPolicyPutBodySchema,
   backupPolicyPutResponseSchema,
   backupPolicySchema,
+  backupStatusGetResponseSchema,
+  backupStatusSchema,
   defaultLibrarySettingsGetResponseSchema,
   defaultLibrarySettingsPutBodySchema,
   defaultLibrarySettingsPutResponseSchema,
@@ -66,6 +68,8 @@ export type UpdateBackupPolicyBody = z.input<typeof backupPolicyPutBodySchema>;
 export type UpdateBackupPolicyResponse = z.infer<
   typeof backupPolicyPutResponseSchema
 >;
+export type BackupStatus = z.infer<typeof backupStatusSchema>;
+export type BackupStatusResponse = z.infer<typeof backupStatusGetResponseSchema>;
 export type DefaultLibrarySettingsResponse = z.infer<
   typeof defaultLibrarySettingsGetResponseSchema
 >;
@@ -198,6 +202,20 @@ export async function fetchBackupPolicy(): Promise<BackupPolicyResponse> {
   return await http<BackupPolicyResponse>("/api/settings/backup", {
     method: "GET",
     cache: "no-store",
+  });
+}
+
+export async function fetchBackupStatus(): Promise<BackupStatusResponse> {
+  return await http<BackupStatusResponse>("/api/settings/backup/status", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export async function runBackupNow(): Promise<BackupStatusResponse> {
+  return await http<BackupStatusResponse>("/api/settings/backup/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
   });
 }
 

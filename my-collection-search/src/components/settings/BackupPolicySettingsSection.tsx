@@ -53,6 +53,8 @@ export default function BackupPolicySettingsSection(): React.JSX.Element {
         include_database: policy.include_database,
         include_audio_files: policy.include_audio_files,
         include_album_covers: policy.include_album_covers,
+        include_discogs_exports: policy.include_discogs_exports,
+        include_essentia_files: policy.include_essentia_files,
         include_uploads: policy.include_uploads,
       });
       setPolicy(data.policy);
@@ -200,6 +202,36 @@ export default function BackupPolicySettingsSection(): React.JSX.Element {
               <Checkbox.HiddenInput />
               <Checkbox.Control />
               <Checkbox.Label>Include album covers</Checkbox.Label>
+            </Checkbox.Root>
+
+            <Checkbox.Root
+              checked={policy.include_discogs_exports}
+              onCheckedChange={(details) =>
+                setPolicy((prev) =>
+                  prev
+                    ? { ...prev, include_discogs_exports: Boolean(details.checked) }
+                    : prev
+                )
+              }
+            >
+              <Checkbox.HiddenInput />
+              <Checkbox.Control />
+              <Checkbox.Label>Include Discogs JSON exports</Checkbox.Label>
+            </Checkbox.Root>
+
+            <Checkbox.Root
+              checked={policy.include_essentia_files}
+              onCheckedChange={(details) =>
+                setPolicy((prev) =>
+                  prev
+                    ? { ...prev, include_essentia_files: Boolean(details.checked) }
+                    : prev
+                )
+              }
+            >
+              <Checkbox.HiddenInput />
+              <Checkbox.Control />
+              <Checkbox.Label>Include Essentia analysis files</Checkbox.Label>
             </Checkbox.Root>
 
             <Checkbox.Root

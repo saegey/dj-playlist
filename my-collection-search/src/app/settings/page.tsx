@@ -9,6 +9,7 @@ import ActionsGrid from "@/components/settings/ActionsGrid";
 import FriendsDiscogsSection from "@/components/settings/FriendsDiscogsSection";
 import DatabaseBackups from "@/components/settings/DatabaseBackups";
 import DatabaseRestore from "@/components/settings/DatabaseRestore";
+import BackupStatusSection from "@/components/settings/BackupStatusSection";
 import BackupPolicySettingsSection from "@/components/settings/BackupPolicySettingsSection";
 import GamdlSettingsSection from "@/components/settings/GamdlSettingsSection";
 import AiPromptSettingsSection from "@/components/settings/AiPromptSettingsSection";
@@ -63,6 +64,7 @@ export default function SettingsPage() {
         description: "remote policy, local backups, and restore",
         content: (
           <>
+            <BackupStatusSection />
             <BackupPolicySettingsSection />
             <DatabaseBackups />
             <DatabaseRestore />

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 const BACKUP_DIR = path.resolve(process.cwd(), 'dumps');
 
@@ -56,16 +56,26 @@ export async function POST() {
     const unique = `${timestamp}-${Math.floor(Math.random() * 1e6)}`;
     const backupFile = path.join(BACKUP_DIR, `pg-backup-custom-${unique}.dump`);
 
-    // Use custom format (-F c) which is binary and handles special characters better
-    // Include schema (removed --data-only) to avoid migration conflicts
-    const cmd = `PGPASSWORD='${pg.pass || ''}' pg_dump -U ${pg.user} -h ${
-      pg.host || 'localhost'
-    } -p ${pg.port || 5432} -F c -d ${pg.db} -f '${backupFile}'`;
-
-    execSync(cmd, {
-      stdio: 'pipe',
-      env: { ...process.env, PGPASSWORD: pg.pass || '' },
-    });
+    let dumpOutput;
+    try {
+      dumpOutput = execFileSync('/usr/lib/postgresql/16/bin/pg_dump', [
+        '-U', pg.user,
+        '-h', pg.host || 'localhost',
+        '-p', String(pg.port || 5432),
+        '-F', 'c',
+        '--no-acl',
+        '-n', 'public',
+        '-d', pg.db,
+      ], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, PGPASSWORD: pg.pass || '' },
+        maxBuffer: 1024 * 1024 * 512,
+      });
+    } catch (pgErr) {
+      console.error('[backup-custom] pg_dump stderr:', pgErr.stderr?.toString() || '');
+      throw pgErr;
+    }
+    fs.writeFileSync(backupFile, dumpOutput);
 
     return new Response(
       JSON.stringify({
