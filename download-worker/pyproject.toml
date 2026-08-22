@@ -4,7 +4,7 @@ version = "1.0.0"
 requires-python = ">=3.12"
 dependencies = [
     "redis==5.0.1",
-    "yt-dlp==2026.6.9",
+    "yt-dlp==2026.7.4",
     "gamdl==3.8.1",
     "requests==2.33.0",
     "psycopg2-binary>=2.9.9,<2.10",
