@@ -19,6 +19,12 @@ from optimizer import (
 
 app = FastAPI()
 
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 # Custom handler to ensure validation errors return 422 and are logged
 @app.exception_handler(FastAPIRequestValidationError)
 async def validation_exception_handler(request: Request, exc: FastAPIRequestValidationError):

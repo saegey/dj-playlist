@@ -33,4 +33,9 @@ COPY download-worker/ /app/download-worker/
 
 RUN mkdir -p /app/audio /app/downloads
 
+# The worker has no HTTP server; liveness is a recent heartbeat key in Redis
+# refreshed by the main loop (worker.healthcheck reads it).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD python -m worker.healthcheck
+
 CMD ["python", "-m", "worker.main"]
