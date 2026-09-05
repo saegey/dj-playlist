@@ -4,9 +4,11 @@ import pytest
 
 
 class TestUpdateTrackAnalysis:
-    @patch("worker.track_api.patch_api_tracks.sync", return_value={"ok": True})
+    @patch("worker.track_api.requests.patch")
     def test_updates_extracted_essentia_fields(self, mock_patch):
         from worker.track_api import update_track_analysis
+
+        mock_patch.return_value.ok = True
 
         update_track_analysis(
             "track-1",
@@ -25,7 +27,7 @@ class TestUpdateTrackAnalysis:
             audio_year=1999,
         )
 
-        body = mock_patch.call_args.kwargs["body"]
+        body = mock_patch.call_args.kwargs["json"]
         assert body["bpm"] == 124
         assert body["key"] == "C major"
         assert body["danceability"] == 0.812
