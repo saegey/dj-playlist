@@ -110,9 +110,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tags="ghcr.io/${{ github.repository_owner }}/myapp:${{ env.IMAGE_TAG }}"
+          owner="${{ github.repository_owner }}"
+          owner="${owner,,}"  # ghcr requires a lowercase repository name
+          tags="ghcr.io/${owner}/myapp:${{ env.IMAGE_TAG }}"
           if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
-            tags="${tags}"$'\n'"ghcr.io/${{ github.repository_owner }}/myapp:latest"
+            tags="${tags}"$'\n'"ghcr.io/${owner}/myapp:latest"
           fi
           {
             echo "tags<<EOF"
@@ -174,9 +176,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tags="ghcr.io/${{ github.repository_owner }}/essentia-api:${{ env.IMAGE_TAG }}"
+          owner="${{ github.repository_owner }}"
+          owner="${owner,,}"  # ghcr requires a lowercase repository name
+          tags="ghcr.io/${owner}/essentia-api:${{ env.IMAGE_TAG }}"
           if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
-            tags="${tags}"$'\n'"ghcr.io/${{ github.repository_owner }}/essentia-api:latest"
+            tags="${tags}"$'\n'"ghcr.io/${owner}/essentia-api:latest"
           fi
           {
             echo "tags<<EOF"
@@ -228,9 +232,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tags="ghcr.io/${{ github.repository_owner }}/ga-service:${{ env.IMAGE_TAG }}"
+          owner="${{ github.repository_owner }}"
+          owner="${owner,,}"  # ghcr requires a lowercase repository name
+          tags="ghcr.io/${owner}/ga-service:${{ env.IMAGE_TAG }}"
           if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
-            tags="${tags}"$'\n'"ghcr.io/${{ github.repository_owner }}/ga-service:latest"
+            tags="${tags}"$'\n'"ghcr.io/${owner}/ga-service:latest"
           fi
           {
             echo "tags<<EOF"
@@ -282,9 +288,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tags="ghcr.io/${{ github.repository_owner }}/download-worker:${{ env.IMAGE_TAG }}"
+          owner="${{ github.repository_owner }}"
+          owner="${owner,,}"  # ghcr requires a lowercase repository name
+          tags="ghcr.io/${owner}/download-worker:${{ env.IMAGE_TAG }}"
           if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
-            tags="${tags}"$'\n'"ghcr.io/${{ github.repository_owner }}/download-worker:latest"
+            tags="${tags}"$'\n'"ghcr.io/${owner}/download-worker:latest"
           fi
           {
             echo "tags<<EOF"
