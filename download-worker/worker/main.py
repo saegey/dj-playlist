@@ -4,7 +4,7 @@ import traceback
 
 import redis
 
-from .config import logger, redis_conn
+from .config import logger, redis_conn, HEARTBEAT_KEY, HEARTBEAT_TTL
 from .jobs.analyze import analyze_local_audio
 from .jobs.cover_art import extract_embedded_cover_art, extract_embedded_cover_art_album
 from .jobs.download import download_audio, has_download_urls
@@ -26,6 +26,13 @@ def main() -> None:
 
     while True:
         try:
+            # Liveness heartbeat for the container HEALTHCHECK. brpop below wakes
+            # at least every 5s, so this key stays fresh while the loop is alive.
+            try:
+                redis_conn.set(HEARTBEAT_KEY, int(time.time()), ex=HEARTBEAT_TTL)
+            except Exception as hb_err:
+                logger.warning(f"Failed to write heartbeat: {hb_err}")
+
             logger.info("Waiting for jobs...")
             job_data = redis_conn.brpop('download_queue', timeout=5)
 
