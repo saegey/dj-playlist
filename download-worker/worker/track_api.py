@@ -139,7 +139,14 @@ def analyze_audio_file(
     friend_id: int,
     log_sink: Optional[list[str]] = None,
 ) -> dict[str, Any]:
-    wav_path = file_path.replace(os.path.splitext(file_path)[1], '.wav')
+    # Write the WAV into the shared audio dir the app serves from — NOT next to
+    # the source file, which may be a worker-local /tmp download the app can't
+    # see. Essentia has no access to the audio volume, so it fetches the WAV
+    # from the app by filename; the file must therefore live under AUDIO_DIR.
+    audio_dir = os.getenv('AUDIO_DIR', '/app/audio')
+    wav_path = os.path.join(
+        audio_dir, os.path.splitext(os.path.basename(file_path))[0] + '.wav'
+    )
     try:
         # -vn drops any embedded cover-art/video stream, which otherwise
         # trips up the Essentia extractor on some files.
