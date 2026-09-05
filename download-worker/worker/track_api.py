@@ -102,12 +102,19 @@ def update_track_analysis(
         if audio_year is not None:
             body["year"] = str(audio_year)
 
-        response = patch_api_tracks.sync(client=get_groovenet_client(), body=body)
-        if response is None:
-            # Most commonly a 404: track missing or soft-deleted. Surface it so
-            # the job fails loudly instead of silently discarding the analysis.
+        # Send the PATCH directly rather than via the generated client, which
+        # force-parses the response with response.json() and crashes with
+        # "Expecting value: line 1 column 1 (char 0)" whenever the app returns
+        # an empty/non-JSON body — even though the update itself succeeded.
+        # Here we only care about the status code.
+        app_url = os.getenv("APP_URL", "http://app:3000")
+        resp = requests.patch(f"{app_url}/api/tracks", json=body.to_dict(), timeout=30)
+        if not resp.ok:
+            # 404 => track missing or soft-deleted. Surface it loudly so the job
+            # fails instead of silently discarding the analysis.
             raise Exception(
-                f"Track update rejected (not found or soft-deleted) for {track_id}/{friend_id}"
+                f"Track update failed: HTTP {resp.status_code} "
+                f"{resp.text[:300]!r} for {track_id}/{friend_id}"
             )
         logger.info(f"Track {track_id} updated with analysis data")
 
@@ -139,7 +146,14 @@ def analyze_audio_file(
     friend_id: int,
     log_sink: Optional[list[str]] = None,
 ) -> dict[str, Any]:
-    wav_path = file_path.replace(os.path.splitext(file_path)[1], '.wav')
+    # Write the WAV into the shared audio dir the app serves from — NOT next to
+    # the source file, which may be a worker-local /tmp download the app can't
+    # see. Essentia has no access to the audio volume, so it fetches the WAV
+    # from the app by filename; the file must therefore live under AUDIO_DIR.
+    audio_dir = os.getenv('AUDIO_DIR', '/app/audio')
+    wav_path = os.path.join(
+        audio_dir, os.path.splitext(os.path.basename(file_path))[0] + '.wav'
+    )
     try:
         # -vn drops any embedded cover-art/video stream, which otherwise
         # trips up the Essentia extractor on some files.

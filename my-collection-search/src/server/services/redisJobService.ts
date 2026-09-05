@@ -45,11 +45,19 @@ export interface JobStatus {
   friend_id: number;
   release_id?: string | null;
   error?: string;
+  /**
+   * Set when a non-fatal analysis step failed on an otherwise successful job
+   * (the download completed, but Essentia/track-update did not). Lets the UI
+   * flag a completed job as "analysis failed".
+   */
+  analysis_error?: string;
   result?: {
     file_path?: string;
     file_url?: string;
     duration?: number;
     format?: string;
+    analysis_status?: "ok" | "failed";
+    analysis_error?: string;
     [key: string]: unknown;
   };
 }
@@ -104,6 +112,7 @@ export class RedisJobService {
       friend_id: parseInt(jobData.friend_id),
       release_id: jobData.release_id || null,
       error: jobData.error,
+      analysis_error: jobData.analysis_error,
       result: jobData.result ? JSON.parse(jobData.result) : undefined,
     };
   }

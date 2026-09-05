@@ -17,6 +17,7 @@ def update_job_status(
     progress: int = 0,
     error: str = None,
     result: Dict = None,
+    analysis_error: str = None,
 ):
     now_ms = int(time.time() * 1000)
     job_data = {
@@ -26,6 +27,10 @@ def update_job_status(
     }
     if error:
         job_data['error'] = error
+    if analysis_error:
+        # Non-fatal analysis failure on an otherwise successful job. Recorded as
+        # a first-class field so the UI can flag it without parsing the result.
+        job_data['analysis_error'] = analysis_error
     if result:
         job_data['result'] = json.dumps(result)
 
