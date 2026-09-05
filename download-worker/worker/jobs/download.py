@@ -362,14 +362,16 @@ def download_audio(job_data: JobData) -> JobResult:
         update_job_status(job_id, 'processing', 80)
 
         analysis_result = None
+        analysis_error = None
         try:
             logger.info(f"Starting audio analysis for {downloaded_file}")
             analysis_result = analyze_audio_file(downloaded_file, track_id, friend_id, log_sink=log_sink)
             append_job_logs(job_id, log_sink)
             log_sink.clear()
         except Exception as e:
+            analysis_error = str(e)
             logger.warning(f"Audio analysis failed (download still succeeded): {e}")
-            log_sink.append(f"Analysis failed (non-fatal): {str(e)}")
+            log_sink.append(f"Analysis failed (non-fatal): {analysis_error}")
             append_job_logs(job_id, log_sink)
             log_sink.clear()
 
@@ -387,11 +389,14 @@ def download_audio(job_data: JobData) -> JobResult:
             'friend_id': friend_id,
             'downloader': successful_downloader,
             'source_url_key': successful_url_key,
+            'analysis_status': 'failed' if analysis_error else 'ok',
         }
         if analysis_result:
             result['analysis'] = analysis_result
+        if analysis_error:
+            result['analysis_error'] = analysis_error
 
-        update_job_status(job_id, 'completed', 100, result=result)
+        update_job_status(job_id, 'completed', 100, result=result, analysis_error=analysis_error)
         logger.info(f"Job {job_id} completed successfully")
         return result
 
