@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance } from "axios";
+import { Agent as HttpsAgent } from "https";
 import type {
   Track,
   Playlist,
@@ -32,6 +33,8 @@ import type {
 export interface GroovenetClientConfig {
   baseUrl: string;
   apiKey?: string;
+  /** Skip TLS certificate verification (internal CA / self-signed hosts). */
+  insecureTls?: boolean;
 }
 
 export class GroovenetClient {
@@ -46,6 +49,9 @@ export class GroovenetClient {
           ? { Authorization: `Bearer ${config.apiKey}` }
           : {}),
       },
+      ...(config.insecureTls
+        ? { httpsAgent: new HttpsAgent({ rejectUnauthorized: false }) }
+        : {}),
     });
   }
 
@@ -118,6 +124,35 @@ export class GroovenetClient {
       tracks: refs,
       ...(options?.include_vectors ? { include_vectors: true } : {}),
     });
+  }
+
+  async listDeletedTracks(
+    friendId?: number,
+    options?: { limit?: number; offset?: number }
+  ): Promise<{ tracks: Track[]; total: number }> {
+    const params: Record<string, string | number | undefined> = {
+      friend_id: friendId,
+      limit: options?.limit,
+      offset: options?.offset,
+    };
+    return this.request<{ tracks: Track[]; total: number }>(
+      "GET",
+      "/tracks/deleted",
+      undefined,
+      params
+    );
+  }
+
+  async restoreTrack(
+    trackId: string,
+    friendId: number
+  ): Promise<{ success: boolean; track_id: string; friend_id: number; track: Track }> {
+    return this.request<{
+      success: boolean;
+      track_id: string;
+      friend_id: number;
+      track: Track;
+    }>("POST", `/tracks/${trackId}/restore`, undefined, { friend_id: friendId });
   }
 
   // ── Albums ──────────────────────────────────────────────────────────────────

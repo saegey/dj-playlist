@@ -95,4 +95,10 @@ async def analyze(request: Request):
     if proc.returncode != 0:
         return JSONResponse({"error": proc.stderr}, status_code=500)
 
-    return json.loads(proc.stdout)
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as e:
+        return JSONResponse(
+            {"error": f"Essentia produced invalid JSON: {e}"},
+            status_code=500,
+        )
