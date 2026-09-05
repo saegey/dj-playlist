@@ -84,13 +84,17 @@ def update_track_analysis(
             body["year"] = str(audio_year)
 
         response = patch_api_tracks.sync(client=get_groovenet_client(), body=body)
-        if response is not None:
-            logger.info(f"Track {track_id} updated with analysis data")
-        else:
-            logger.warning(f"Failed to update track {track_id} with analysis data")
+        if response is None:
+            # Most commonly a 404: track missing or soft-deleted. Surface it so
+            # the job fails loudly instead of silently discarding the analysis.
+            raise Exception(
+                f"Track update rejected (not found or soft-deleted) for {track_id}/{friend_id}"
+            )
+        logger.info(f"Track {track_id} updated with analysis data")
 
     except Exception as e:
         logger.error(f"Failed to update track analysis: {e}")
+        raise
 
 
 def analyze_audio_file(
@@ -101,7 +105,9 @@ def analyze_audio_file(
 ) -> dict[str, Any]:
     wav_path = file_path.replace(os.path.splitext(file_path)[1], '.wav')
     try:
-        ffmpeg_cmd = ['ffmpeg', '-y', '-i', file_path, '-ac', '1', wav_path]
+        # -vn drops any embedded cover-art/video stream, which otherwise
+        # trips up the Essentia extractor on some files.
+        ffmpeg_cmd = ['ffmpeg', '-y', '-i', file_path, '-vn', '-ac', '1', wav_path]
         result = run_subprocess(ffmpeg_cmd, timeout=120, log_sink=log_sink)
 
         if result.returncode != 0:
@@ -123,6 +129,20 @@ def analyze_audio_file(
             raise Exception(f"Essentia API error: {response.status_code} {response.text}")
 
         analysis_result = response.json()
+
+        # Essentia (older builds) may return HTTP 200 with an error payload
+        # instead of a real analysis. Treat that as a hard failure so the job
+        # is marked failed rather than silently storing nothing.
+        if not isinstance(analysis_result, dict):
+            raise Exception(f"Essentia returned unexpected payload: {analysis_result!r}")
+        if 'error' in analysis_result or 'detail' in analysis_result:
+            err = analysis_result.get('error') or analysis_result.get('detail')
+            raise Exception(f"Essentia analysis error: {err}")
+        if not any(k in analysis_result for k in ('rhythm', 'tonal', 'metadata')):
+            raise Exception(
+                f"Essentia returned no analysis fields (keys: {sorted(analysis_result.keys())})"
+            )
+
         logger.info("Audio analysis completed successfully")
 
         try:

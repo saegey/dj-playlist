@@ -2,7 +2,7 @@ import os, subprocess, json, tempfile, requests, re
 import socket, ipaddress
 
 from urllib.parse import urlparse
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 
 app = FastAPI()
 
@@ -35,14 +35,17 @@ async def analyze(request: Request):
     data = await request.json()
     url = data.get("filename")           # really a URL now
     if not url:
-        return {"error": "No URL provided"}
+        raise HTTPException(status_code=400, detail="No URL provided")
     if not is_public_http_url(url):
-        return {"error": "Invalid or disallowed URL"}
+        raise HTTPException(status_code=400, detail="Invalid or disallowed URL")
 
     # download it to a temp file
     resp = requests.get(url, allow_redirects=False, timeout=10)
     if not resp.ok:
-        return {"error": f"Couldn’t download file: {resp.status_code}"}
+        raise HTTPException(
+            status_code=502,
+            detail=f"Couldn’t download file: {resp.status_code}",
+        )
 
     parsed = urlparse(url)
     path_ext = os.path.splitext(os.path.basename(parsed.path))[1].lower()
@@ -62,6 +65,15 @@ async def analyze(request: Request):
     os.unlink(tf.name)
 
     if proc.returncode != 0:
-        return {"error": proc.stderr}
+        raise HTTPException(
+            status_code=422,
+            detail=f"Essentia extractor failed: {proc.stderr.strip()}",
+        )
 
-    return json.loads(proc.stdout)
+    try:
+        return json.loads(proc.stdout)
+    except json.JSONDecodeError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Essentia produced invalid JSON: {e}",
+        )

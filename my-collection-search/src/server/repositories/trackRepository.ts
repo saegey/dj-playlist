@@ -174,6 +174,53 @@ export class TrackRepository {
     return rows[0] ?? null;
   }
 
+  async restoreTrack(trackId: string, friendId: number): Promise<Track | null> {
+    const { rows } = await dbQuery<Track>(
+      `
+      UPDATE tracks
+      SET deleted_at = NULL
+      WHERE track_id = $1 AND friend_id = $2 AND deleted_at IS NOT NULL
+      RETURNING *
+      `,
+      [trackId, friendId]
+    );
+    return rows[0] ?? null;
+  }
+
+  async findDeletedTracks(
+    friendId?: number,
+    limit = 100,
+    offset = 0
+  ): Promise<{ tracks: Track[]; total: number }> {
+    const where: string[] = ["deleted_at IS NOT NULL"];
+    const params: unknown[] = [];
+    if (friendId !== undefined) {
+      params.push(friendId);
+      where.push(`friend_id = $${params.length}`);
+    }
+    const whereClause = where.join(" AND ");
+
+    const countResult = await dbQuery<{ count: string }>(
+      `SELECT COUNT(*)::int AS count FROM tracks WHERE ${whereClause}`,
+      params
+    );
+    const total = Number(countResult.rows[0]?.count ?? 0);
+
+    const limitIdx = params.length + 1;
+    const offsetIdx = params.length + 2;
+    const { rows } = await dbQuery<Track>(
+      `
+      SELECT *
+      FROM tracks
+      WHERE ${whereClause}
+      ORDER BY deleted_at DESC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
+      `,
+      [...params, limit, offset]
+    );
+    return { tracks: rows, total };
+  }
+
   async findTrackWithLocalAudio(
     trackId: string,
     friendId: number

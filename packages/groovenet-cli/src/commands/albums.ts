@@ -7,7 +7,7 @@ import { printJson, printSuccess, printError, printTracks } from "../output.js";
 
 function makeClient(): GroovenetClient {
   const cfg = loadConfig();
-  return new GroovenetClient({ baseUrl: cfg.api_base, apiKey: cfg.api_key });
+  return new GroovenetClient({ baseUrl: cfg.api_base, apiKey: cfg.api_key, insecureTls: cfg.insecure_tls });
 }
 
 function defaultFriendId(): number {

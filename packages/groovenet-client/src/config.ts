@@ -7,6 +7,8 @@ export interface GroovenetConfig {
   api_key?: string;
   default_friend_id: number;
   username?: string;
+  /** Skip TLS certificate verification (e.g. internal CA / self-signed hosts). */
+  insecure_tls?: boolean;
 }
 
 const CONFIG_DIR = join(homedir(), ".groovenet");

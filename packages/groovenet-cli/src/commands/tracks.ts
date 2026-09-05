@@ -12,7 +12,7 @@ import chalk from "chalk";
 
 function makeClient(): GroovenetClient {
   const cfg = loadConfig();
-  return new GroovenetClient({ baseUrl: cfg.api_base, apiKey: cfg.api_key });
+  return new GroovenetClient({ baseUrl: cfg.api_base, apiKey: cfg.api_key, insecureTls: cfg.insecure_tls });
 }
 
 export function addTracksCommands(program: Command): void {
@@ -171,6 +171,56 @@ export function addTracksCommands(program: Command): void {
         }
       }
     );
+
+  tracks
+    .command("deleted")
+    .description("List soft-deleted tracks")
+    .option("--friend-id <n>", "Filter by friend ID", parseInt)
+    .option("--limit <n>", "Max results", parseInt, 100)
+    .option("--offset <n>", "Offset", parseInt, 0)
+    .option("--json", "Output as JSON")
+    .action(
+      async (opts: {
+        friendId?: number;
+        limit: number;
+        offset: number;
+        json?: boolean;
+      }) => {
+        try {
+          const client = makeClient();
+          const result = await client.listDeletedTracks(opts.friendId, {
+            limit: opts.limit,
+            offset: opts.offset,
+          });
+          if (opts.json) {
+            printJson(result);
+          } else {
+            console.log(`Deleted tracks: ${result.total} total`);
+            printTracks(result.tracks, false);
+          }
+        } catch (err: unknown) {
+          printError(err instanceof Error ? err.message : String(err));
+          process.exit(1);
+        }
+      }
+    );
+
+  tracks
+    .command("restore <id>")
+    .description("Restore a soft-deleted track")
+    .option("--friend-id <n>", "Friend ID (defaults to config default_friend_id)", parseInt)
+    .action(async (id: string, opts: { friendId?: number }) => {
+      try {
+        const cfg = loadConfig();
+        const client = makeClient();
+        const friendId = opts.friendId ?? cfg.default_friend_id;
+        await client.restoreTrack(id, friendId);
+        printSuccess(`✓ Track ${id} restored.`);
+      } catch (err: unknown) {
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+    });
 
   tracks
     .command("recommend <id>")

@@ -2,9 +2,20 @@ import { Command } from "commander";
 import { loadConfig, saveConfig } from "@groovenet/client";
 import { printJson, printSuccess, printError } from "../output.js";
 
-type ConfigKey = "api_base" | "api_key" | "default_friend_id" | "username";
+type ConfigKey =
+  | "api_base"
+  | "api_key"
+  | "default_friend_id"
+  | "username"
+  | "insecure_tls";
 
-const VALID_KEYS: ConfigKey[] = ["api_base", "api_key", "default_friend_id", "username"];
+const VALID_KEYS: ConfigKey[] = [
+  "api_base",
+  "api_key",
+  "default_friend_id",
+  "username",
+  "insecure_tls",
+];
 
 export function addConfigCommands(program: Command): void {
   const config = program.command("config").description("Manage CLI configuration");
@@ -17,7 +28,7 @@ export function addConfigCommands(program: Command): void {
         printError(`Unknown config key "${key}". Valid keys: ${VALID_KEYS.join(", ")}`);
         process.exit(2);
       }
-      const update: Record<string, string | number> = {};
+      const update: Record<string, string | number | boolean> = {};
       if (key === "default_friend_id") {
         const num = parseInt(value, 10);
         if (isNaN(num)) {
@@ -25,6 +36,15 @@ export function addConfigCommands(program: Command): void {
           process.exit(2);
         }
         update[key] = num;
+      } else if (key === "insecure_tls") {
+        const truthy = ["true", "1", "yes", "on"];
+        const falsy = ["false", "0", "no", "off"];
+        const v = value.toLowerCase();
+        if (!truthy.includes(v) && !falsy.includes(v)) {
+          printError(`insecure_tls must be true or false`);
+          process.exit(2);
+        }
+        update[key] = truthy.includes(v);
       } else {
         update[key] = value;
       }
