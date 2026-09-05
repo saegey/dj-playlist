@@ -1,20 +1,40 @@
-import os, subprocess, json, tempfile, requests, re
-import socket, ipaddress
+import json
+import os
+import re
+import socket
+import subprocess
+import tempfile
+import ipaddress
+
+import requests
 
 from urllib.parse import urlparse
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
-def is_public_http_url(url: str) -> bool:
+def get_allowed_internal_hosts() -> set[str]:
+    raw = os.getenv(
+        "ESSENTIA_ALLOWED_HOSTS",
+        "app,localhost,127.0.0.1,host.docker.internal",
+    )
+    return {host.strip().lower() for host in raw.split(",") if host.strip()}
+
+def is_allowed_http_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
         if parsed.scheme not in ("http", "https"):
             return False
         if not parsed.hostname:
             return False
+        if parsed.hostname.lower() in get_allowed_internal_hosts():
+            return True
 
-        infos = socket.getaddrinfo(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80))
+        infos = socket.getaddrinfo(
+            parsed.hostname,
+            parsed.port or (443 if parsed.scheme == "https" else 80),
+        )
         for info in infos:
             ip = ipaddress.ip_address(info[4][0])
             if (
@@ -33,47 +53,52 @@ def is_public_http_url(url: str) -> bool:
 @app.post("/analyze")
 async def analyze(request: Request):
     data = await request.json()
-    url = data.get("filename")           # really a URL now
-    if not url:
-        raise HTTPException(status_code=400, detail="No URL provided")
-    if not is_public_http_url(url):
-        raise HTTPException(status_code=400, detail="Invalid or disallowed URL")
+    source = data.get("filename")
+    if not source:
+        return JSONResponse({"error": "No filename provided"}, status_code=400)
 
-    # download it to a temp file
-    resp = requests.get(url, allow_redirects=False, timeout=10)
-    if not resp.ok:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Couldn’t download file: {resp.status_code}",
-        )
+    temp_file_path = None
+    if isinstance(source, str) and os.path.isfile(source):
+        analysis_path = source
+    else:
+        if not isinstance(source, str) or not is_allowed_http_url(source):
+            return JSONResponse({"error": "Invalid or disallowed URL"}, status_code=400)
 
-    parsed = urlparse(url)
-    path_ext = os.path.splitext(os.path.basename(parsed.path))[1].lower()
-    suffix = path_ext if re.fullmatch(r"\.[a-z0-9]{1,10}", path_ext) else ".mp3"
-    tf = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-    tf.write(resp.content)
-    tf.flush(); tf.close()
+        resp = requests.get(source, allow_redirects=False, timeout=10)
+        if not resp.ok:
+            return JSONResponse(
+                {"error": f"Couldn’t download file: {resp.status_code}"},
+                status_code=502,
+            )
+
+        parsed = urlparse(source)
+        path_ext = os.path.splitext(os.path.basename(parsed.path))[1].lower()
+        suffix = path_ext if re.fullmatch(r"\.[a-z0-9]{1,10}", path_ext) else ".mp3"
+        tf = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        tf.write(resp.content)
+        tf.flush()
+        tf.close()
+        temp_file_path = tf.name
+        analysis_path = temp_file_path
 
     # run Essentia on that temp file
     cmd = [
         "essentia_streaming_extractor_music",
-        tf.name,
+        analysis_path,
         "-",
         "/etc/essentia/profile.yaml"
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True)
-    os.unlink(tf.name)
+    if temp_file_path and os.path.exists(temp_file_path):
+        os.unlink(temp_file_path)
 
     if proc.returncode != 0:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Essentia extractor failed: {proc.stderr.strip()}",
-        )
+        return JSONResponse({"error": proc.stderr}, status_code=500)
 
     try:
         return json.loads(proc.stdout)
     except json.JSONDecodeError as e:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Essentia produced invalid JSON: {e}",
+        return JSONResponse(
+            {"error": f"Essentia produced invalid JSON: {e}"},
+            status_code=500,
         )

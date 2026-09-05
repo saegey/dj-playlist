@@ -15,6 +15,8 @@ const DEFAULT_POLICY: BackupPolicy = {
   include_database: true,
   include_audio_files: true,
   include_album_covers: true,
+  include_discogs_exports: true,
+  include_essentia_files: true,
   include_uploads: false,
   updated_at: new Date(0).toISOString(),
 };
@@ -40,6 +42,12 @@ function parsePolicy(raw: unknown): Omit<BackupPolicy, "updated_at"> {
     include_database: Boolean(obj.include_database ?? DEFAULT_POLICY.include_database),
     include_audio_files: Boolean(obj.include_audio_files ?? DEFAULT_POLICY.include_audio_files),
     include_album_covers: Boolean(obj.include_album_covers ?? DEFAULT_POLICY.include_album_covers),
+    include_discogs_exports: Boolean(
+      obj.include_discogs_exports ?? DEFAULT_POLICY.include_discogs_exports
+    ),
+    include_essentia_files: Boolean(
+      obj.include_essentia_files ?? DEFAULT_POLICY.include_essentia_files
+    ),
     include_uploads: Boolean(obj.include_uploads ?? DEFAULT_POLICY.include_uploads),
   };
 }

@@ -25,7 +25,9 @@ mise_exec := "mise exec --"
 default:
   @just --list
 
-bootstrap: bootstrap-tools bootstrap-node bootstrap-python
+bootstrap: bootstrap-js bootstrap-python
+
+bootstrap-js: bootstrap-tools bootstrap-node
 
 bootstrap-tools:
   @command -v mise >/dev/null 2>&1 || { \
@@ -35,8 +37,8 @@ bootstrap-tools:
   mise install
 
 bootstrap-node:
-  {{mise_exec}} npm install --workspaces
-  {{mise_exec}} npm install --prefix my-collection-search
+  {{mise_exec}} npm install --workspaces --no-fund --no-audit --loglevel=error
+  {{mise_exec}} npm install --prefix my-collection-search --no-fund --no-audit --loglevel=error
 
 bootstrap-python:
   cd ga-service && {{mise_exec}} uv sync --frozen
@@ -304,6 +306,9 @@ migrate-down: check-compose
 migrate-create NAME:
   @if [ -z "{{NAME}}" ]; then echo "Usage: just migrate-create <name>"; exit 1; fi
   cd {{app_dir}} && npm run migrate create {{NAME}}
+
+storybook:
+  cd {{app_dir}} && npm run storybook
 
 sync-album-covers:
   ./{{app_dir}}/scripts/sync-album-covers.sh \

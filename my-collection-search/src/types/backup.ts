@@ -12,6 +12,8 @@ export type BackupPolicy = {
   include_database: boolean;
   include_audio_files: boolean;
   include_album_covers: boolean;
+  include_discogs_exports: boolean;
+  include_essentia_files: boolean;
   include_uploads: boolean;
   updated_at: string;
 };
@@ -21,3 +23,24 @@ export type BackupPolicyUpdate = Partial<
     provider: BackupProvider;
   }
 >;
+
+export type BackupSnapshotSummary = {
+  id: string;
+  short_id: string | null;
+  time: string;
+  hostname: string | null;
+  paths: string[];
+  tags: string[];
+};
+
+export type BackupStatus = {
+  started_at: string;
+  finished_at: string;
+  stored_at: string;
+  status: "success" | "failed" | "skipped";
+  reason: string;
+  backed_up_paths: string[];
+  snapshot: BackupSnapshotSummary | null;
+  error?: string;
+  missing_env?: string[];
+};

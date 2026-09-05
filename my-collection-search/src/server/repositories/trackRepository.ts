@@ -6,6 +6,19 @@ export type TrackLocalAudioRow = Pick<
   "track_id" | "friend_id" | "local_audio_url"
 >;
 
+export type TrackEssentiaBackfillRow = TrackLocalAudioRow &
+  Pick<
+    Track,
+    | "bpm"
+    | "key"
+    | "danceability"
+    | "duration_seconds"
+    | "mood_happy"
+    | "mood_sad"
+    | "mood_relaxed"
+    | "mood_aggressive"
+  >;
+
 export type CoverArtBackfillCandidateRow = TrackRef & {
   release_id: string | null;
   missing_tracks: string | number;
@@ -31,6 +44,10 @@ type UpdatableTrackFields = Partial<
     | "bpm"
     | "key"
     | "danceability"
+    | "mood_happy"
+    | "mood_sad"
+    | "mood_relaxed"
+    | "mood_aggressive"
     | "star_rating"
   >
 >;
@@ -94,6 +111,10 @@ const UPDATABLE_COLUMNS = {
   bpm: "bpm",
   key: "key",
   danceability: "danceability",
+  mood_happy: "mood_happy",
+  mood_sad: "mood_sad",
+  mood_relaxed: "mood_relaxed",
+  mood_aggressive: "mood_aggressive",
   star_rating: "star_rating",
 } as const;
 
@@ -252,9 +273,20 @@ export class TrackRepository {
   async findTracksForEssentiaBackfill(
     friendId: number | null,
     limit?: number
-  ): Promise<TrackLocalAudioRow[]> {
+  ): Promise<TrackEssentiaBackfillRow[]> {
     const query = `
-      SELECT track_id, friend_id, local_audio_url
+      SELECT
+        track_id,
+        friend_id,
+        local_audio_url,
+        bpm,
+        key,
+        danceability,
+        duration_seconds,
+        mood_happy,
+        mood_sad,
+        mood_relaxed,
+        mood_aggressive
       FROM tracks
       WHERE local_audio_url IS NOT NULL
         AND local_audio_url <> ''
@@ -263,7 +295,7 @@ export class TrackRepository {
       ${limit ? `LIMIT $${friendId !== null ? 2 : 1}` : ""}
     `;
 
-    const { rows } = await dbQuery<TrackLocalAudioRow>(
+    const { rows } = await dbQuery<TrackEssentiaBackfillRow>(
       query,
       friendId !== null
         ? limit

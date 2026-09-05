@@ -242,6 +242,8 @@ export const backupPolicySchema = z.object({
   include_database: z.boolean(),
   include_audio_files: z.boolean(),
   include_album_covers: z.boolean(),
+  include_discogs_exports: z.boolean(),
+  include_essentia_files: z.boolean(),
   include_uploads: z.boolean(),
   updated_at: z.string(),
 });
@@ -259,6 +261,8 @@ export const backupPolicyPutBodySchema = z
     include_database: z.boolean().optional(),
     include_audio_files: z.boolean().optional(),
     include_album_covers: z.boolean().optional(),
+    include_discogs_exports: z.boolean().optional(),
+    include_essentia_files: z.boolean().optional(),
     include_uploads: z.boolean().optional(),
   })
   .strict();
@@ -267,6 +271,31 @@ export const backupPolicyPutResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
   policy: backupPolicySchema,
+});
+
+export const backupSnapshotSummarySchema = z.object({
+  id: z.string(),
+  short_id: z.string().nullable(),
+  time: z.string(),
+  hostname: z.string().nullable(),
+  paths: z.array(z.string()),
+  tags: z.array(z.string()),
+});
+
+export const backupStatusSchema = z.object({
+  started_at: z.string(),
+  finished_at: z.string(),
+  stored_at: z.string(),
+  status: z.enum(["success", "failed", "skipped"]),
+  reason: z.string(),
+  backed_up_paths: z.array(z.string()),
+  snapshot: backupSnapshotSummarySchema.nullable(),
+  error: z.string().optional(),
+  missing_env: z.array(z.string()).optional(),
+});
+
+export const backupStatusGetResponseSchema = z.object({
+  status: backupStatusSchema.nullable(),
 });
 
 export const defaultLibrarySettingsGetResponseSchema = z.object({

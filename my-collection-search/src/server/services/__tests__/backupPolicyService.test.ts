@@ -34,6 +34,8 @@ describe("BackupPolicyService.getPolicy()", () => {
     expect(policy.include_database).toBe(true);
     expect(policy.include_audio_files).toBe(true);
     expect(policy.include_album_covers).toBe(true);
+    expect(policy.include_discogs_exports).toBe(true);
+    expect(policy.include_essentia_files).toBe(true);
     expect(policy.include_uploads).toBe(false);
     expect(typeof policy.updated_at).toBe("string");
   });
@@ -53,6 +55,8 @@ describe("BackupPolicyService.getPolicy()", () => {
       include_database: true,
       include_audio_files: false,
       include_album_covers: false,
+      include_discogs_exports: false,
+      include_essentia_files: false,
       include_uploads: true,
       updated_at: "2024-06-01T00:00:00.000Z",
     };
@@ -63,6 +67,8 @@ describe("BackupPolicyService.getPolicy()", () => {
     expect(policy.schedule_cron).toBe("0 2 * * *");
     expect(policy.retention_preset).toBe("archive");
     expect(policy.include_audio_files).toBe(false);
+    expect(policy.include_discogs_exports).toBe(false);
+    expect(policy.include_essentia_files).toBe(false);
     expect(policy.include_uploads).toBe(true);
     expect(policy.updated_at).toBe("2024-06-01T00:00:00.000Z");
   });
@@ -77,6 +83,8 @@ describe("BackupPolicyService.getPolicy()", () => {
       include_database: true,
       include_audio_files: true,
       include_album_covers: true,
+      include_discogs_exports: true,
+      include_essentia_files: true,
       include_uploads: false,
     };
     fs.writeFileSync(policyPath(), yaml.stringify(withoutUpdatedAt), "utf8");

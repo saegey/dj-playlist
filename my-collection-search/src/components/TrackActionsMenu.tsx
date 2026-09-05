@@ -8,12 +8,11 @@ import {
   Dialog,
   Drawer,
   Box,
-  Flex,
   Icon,
   Link,
-  Text,
   Stack,
   CloseButton,
+  Text,
 } from "@chakra-ui/react";
 import {
   FiCode,
@@ -30,6 +29,7 @@ import { SiApplemusic, SiYoutube, SiSoundcloud } from "react-icons/si";
 import NextLink from "next/link";
 
 import type { Track } from "@/types/track";
+import { menuDivider, drawerDivider, DrawerItem } from "@/components/ui/action-menu-primitives";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
 import { analyzeTrackAsync, softDeleteTrack } from "@/services/internalApi/tracks";
@@ -42,69 +42,6 @@ type Props = {
   onOpenTrackDebug?: () => void;
 };
 
-const menuDivider = (
-  <Box
-    as="hr"
-    my={1}
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
-    borderWidth={0}
-    borderTopWidth={1}
-  />
-);
-
-const drawerDivider = (
-  <Box
-    as="hr"
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
-    borderWidth={0}
-    borderTopWidth={1}
-  />
-);
-
-function DrawerItem({
-  icon,
-  label,
-  onClick,
-  href,
-  external,
-  color,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-  href?: string;
-  external?: boolean;
-  color?: string;
-}) {
-  const inner = (
-    <Flex align="center" gap={4} px={5} py={3.5} w="full" color={color} _hover={{ bg: "bg.subtle" }}>
-      <Box flexShrink={0} fontSize="md">{icon}</Box>
-      <Text fontSize="md">{label}</Text>
-    </Flex>
-  );
-
-  if (href && external) {
-    return (
-      <Link href={href} target="_blank" rel="noopener noreferrer" display="block" _hover={{ textDecoration: "none" }}>
-        {inner}
-      </Link>
-    );
-  }
-  if (href) {
-    return (
-      <Link as={NextLink} href={href} display="block" _hover={{ textDecoration: "none" }}>
-        {inner}
-      </Link>
-    );
-  }
-  return (
-    <Box as="button" onClick={onClick} w="full" textAlign="left" cursor="pointer">
-      {inner}
-    </Box>
-  );
-}
 
 export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
   const { appendToQueue, replacePlaylist } = usePlaylistPlayer();

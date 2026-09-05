@@ -41,7 +41,7 @@ const tools = [
       type: "object",
       properties: {
         track_id: { type: "string", description: "The track ID" },
-        username: { type: "string", description: "Username (optional, uses default if not provided)" },
+        friend_id: { type: "number", description: "Friend ID (owner of the track, uses default if omitted)" },
       },
       required: ["track_id"],
     },
@@ -351,7 +351,10 @@ async function handleToolCall(name: string, args: ToolArgs) {
     }
 
     case "get_track_details": {
-      const track = await client.getTrack(args.track_id!, args.username);
+      const track = await client.getTrack(
+        args.track_id!,
+        args.friend_id ?? DEFAULT_FRIEND_ID
+      );
       const details = `
 **${track.title}** by ${track.artist}
 ${track.album ? `Album: ${track.album}` : ""}
