@@ -82,7 +82,7 @@ Multi-service vinyl collection management system combining a Next.js web app wit
   - Extracts audio features: BPM, musical key, danceability
   - Mood analysis: happy, sad, aggressive, relaxed scores
   - Runs **after** audio files are downloaded
-- **Image**: `ghcr.io/saegey/essentia-api:v1.0.78` (prod)
+- **Image**: `ghcr.io/public-vinyl-radio/essentia-api:v1.0.78` (prod)
 - **Source**: `essentia-api/` directory
 
 #### 6. Download Worker (Python)
@@ -95,7 +95,7 @@ Multi-service vinyl collection management system combining a Next.js web app wit
   - Saves files to shared `/audio` volume
   - Triggers Essentia API for audio analysis
   - Updates database via Next.js API with extracted metadata
-- **Image**: `ghcr.io/saegey/download-worker:v1.0.78` (prod)
+- **Image**: `ghcr.io/public-vinyl-radio/download-worker:v1.0.78` (prod)
 - **Cookie Storage**: Shared `cookie_data` volume for gamdl authentication
 
 #### 7. GA Service (Genetic Algorithm Playlist Generator)
@@ -106,7 +106,7 @@ Multi-service vinyl collection management system combining a Next.js web app wit
   - Accepts seed playlist tracks
   - Applies fitness function based on BPM matching, key compatibility, mood progression
   - Generates optimized playlist flow
-- **Image**: `ghcr.io/saegey/ga-service:v1.0.78` (prod)
+- **Image**: `ghcr.io/public-vinyl-radio/ga-service:v1.0.78` (prod)
 
 #### 8. Shared Client Package (`packages/groovenet-client`)
 - **Package name**: `@groovenet/client`
@@ -262,12 +262,12 @@ See `my-collection-search/.env.example` for full list. Key variables:
 
 ### Image Building
 - **Trigger**: Push git tag (e.g., `v1.0.78`)
-- **Process**: GitHub Actions builds and pushes images to `ghcr.io/saegey/*`
+- **Process**: GitHub Actions builds and pushes images to `ghcr.io/public-vinyl-radio/*`
 - **Images**:
-  - `ghcr.io/saegey/webapp:v1.0.78` (Next.js app)
-  - `ghcr.io/saegey/essentia-api:v1.0.78`
-  - `ghcr.io/saegey/ga-service:v1.0.78`
-  - `ghcr.io/saegey/download-worker:v1.0.78`
+  - `ghcr.io/public-vinyl-radio/webapp:v1.0.78` (Next.js app)
+  - `ghcr.io/public-vinyl-radio/essentia-api:v1.0.78`
+  - `ghcr.io/public-vinyl-radio/ga-service:v1.0.78`
+  - `ghcr.io/public-vinyl-radio/download-worker:v1.0.78`
 
 ### Version Updates
 - **Current Process**: Manual

@@ -41,8 +41,8 @@ NAMED_CONTAINERS=(webapp essentia-api ga-service download-worker)
 MIN_FREE_GB="${MIN_FREE_GB:-5}"
 PGUSER="${POSTGRES_USER:-djplaylist}"
 PGDB="${POSTGRES_DB:-djplaylist}"
-APP_IMAGE="ghcr.io/saegey/webapp:${IMAGE_TAG:-latest}"
-MIGRATE_IMAGE="ghcr.io/saegey/webapp-migrate:${IMAGE_TAG:-latest}"
+APP_IMAGE="${REGISTRY:-ghcr.io/public-vinyl-radio}/webapp:${IMAGE_TAG:-latest}"
+MIGRATE_IMAGE="${REGISTRY:-ghcr.io/public-vinyl-radio}/webapp-migrate:${IMAGE_TAG:-latest}"
 EXPECTED_APP_CMD='["npm","run","start"]'
 
 latest_migration_name() {

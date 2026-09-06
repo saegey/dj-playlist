@@ -371,6 +371,66 @@ jobs:
           cache-from: type=gha,scope=download-worker
           cache-to: type=gha,mode=max,scope=download-worker
 
+  # The DB migration image (Dockerfile `migrator` target). Tracks the webapp
+  # since it lives in the same source dir, and is promoted alongside it so
+  # webapp-migrate:vX.Y.Z exists for the deploy's migrate step.
+  build-migrate:
+    needs: [changes, test]
+    if: github.ref_type != 'tag' && (needs.changes.outputs.force_all == 'true' || needs.changes.outputs.webapp == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      SHOULD_PUSH: ${{ needs.changes.outputs.should_push }}
+      IMAGE_TAG: ${{ needs.changes.outputs.image_tag }}
+      PLATFORMS: ${{ needs.changes.outputs.platforms }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Prepare image tags
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner="${{ github.repository_owner }}"
+          owner="${owner,,}"  # ghcr requires a lowercase repository name
+          tags="ghcr.io/${owner}/webapp-migrate:${{ env.IMAGE_TAG }}"
+          if [[ "${{ env.SHOULD_PUSH }}" == "true" && "${{ env.IMAGE_TAG }}" == v* ]]; then
+            tags="${tags}"$'\n'"ghcr.io/${owner}/webapp-migrate:latest"
+          fi
+          {
+            echo "tags<<EOF"
+            echo "$tags"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: env.SHOULD_PUSH == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push migrate image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./my-collection-search
+          file: ./my-collection-search/Dockerfile
+          target: migrator
+          push: ${{ env.SHOULD_PUSH == 'true' }}
+          platforms: ${{ env.PLATFORMS }}
+          tags: ${{ steps.tags.outputs.tags }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=webapp-migrate
+          cache-to: type=gha,mode=max,scope=webapp-migrate
+
   # On a release tag (vX.Y.Z), promote the already-built, already-tested
   # candidate images (sha-<short> from the commit's main-branch push) to the
   # version tag + latest. This re-tags multi-arch images by digest — no rebuild,
@@ -402,7 +462,7 @@ jobs:
           set -euo pipefail
           owner="${{ github.repository_owner }}"
           owner="${owner,,}"
-          services=(webapp essentia-api ga-service download-worker)
+          services=(webapp webapp-migrate essentia-api ga-service download-worker)
           for svc in "${services[@]}"; do
             src="ghcr.io/${owner}/${svc}:${SHA_TAG}"
             # The tag event can race the main-branch build of this commit, so
