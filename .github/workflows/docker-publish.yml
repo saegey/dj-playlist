@@ -22,7 +22,7 @@ jobs:
     permissions:
       contents: read
     outputs:
-      myapp: ${{ steps.filter.outputs.myapp }}
+      webapp: ${{ steps.filter.outputs.webapp }}
       essentia: ${{ steps.filter.outputs.essentia }}
       ga_service: ${{ steps.filter.outputs.ga_service }}
       download_worker: ${{ steps.filter.outputs.download_worker }}
@@ -54,7 +54,7 @@ jobs:
           echo "Changed files:"
           echo "$changed_files"
 
-          myapp=false
+          webapp=false
           essentia=false
           ga_service=false
           download_worker=false
@@ -71,7 +71,7 @@ jobs:
 
             case "$file" in
               my-collection-search/*)
-                myapp=true
+                webapp=true
                 ;;
             esac
 
@@ -98,7 +98,7 @@ jobs:
             force_all=true
           fi
 
-          echo "myapp=$myapp" >> "$GITHUB_OUTPUT"
+          echo "webapp=$webapp" >> "$GITHUB_OUTPUT"
           echo "essentia=$essentia" >> "$GITHUB_OUTPUT"
           echo "ga_service=$ga_service" >> "$GITHUB_OUTPUT"
           echo "download_worker=$download_worker" >> "$GITHUB_OUTPUT"
@@ -113,18 +113,17 @@ jobs:
           #   - PR              -> pr-<number>, build only (no push)
           #   - tag push (v*)   -> <tag> (e.g. v1.2.0), published release
           #   - main branch push-> sha-<short>, tested candidate image
+          # Homelab is amd64-only, so we build a single arch (no slow QEMU arm64).
+          platforms="linux/amd64"
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             image_tag="pr-${{ github.event.pull_request.number }}"
             should_push=false
-            platforms="linux/amd64"
           elif [[ "${{ github.ref_type }}" == "tag" ]]; then
             image_tag="${{ github.ref_name }}"
             should_push=true
-            platforms="linux/amd64,linux/arm64"
           else
             image_tag="sha-${GITHUB_SHA:0:7}"
             should_push=true
-            platforms="linux/amd64,linux/arm64"
           fi
           # The candidate-image tag for this commit (built on the main push),
           # which a release tag promotes instead of rebuilding.
@@ -134,9 +133,9 @@ jobs:
           echo "platforms=$platforms" >> "$GITHUB_OUTPUT"
           echo "release_sha=$release_sha" >> "$GITHUB_OUTPUT"
 
-  build-myapp:
+  build-webapp:
     needs: [changes, test]
-    if: github.ref_type != 'tag' && (needs.changes.outputs.force_all == 'true' || needs.changes.outputs.myapp == 'true')
+    if: github.ref_type != 'tag' && (needs.changes.outputs.force_all == 'true' || needs.changes.outputs.webapp == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -156,9 +155,9 @@ jobs:
           set -euo pipefail
           owner="${{ github.repository_owner }}"
           owner="${owner,,}"  # ghcr requires a lowercase repository name
-          tags="ghcr.io/${owner}/myapp:${{ env.IMAGE_TAG }}"
+          tags="ghcr.io/${owner}/webapp:${{ env.IMAGE_TAG }}"
           if [[ "${{ env.SHOULD_PUSH }}" == "true" && "${{ env.IMAGE_TAG }}" == v* ]]; then
-            tags="${tags}"$'\n'"ghcr.io/${owner}/myapp:latest"
+            tags="${tags}"$'\n'"ghcr.io/${owner}/webapp:latest"
           fi
           {
             echo "tags<<EOF"
@@ -178,7 +177,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build and push myapp
+      - name: Build and push webapp
         uses: docker/build-push-action@v7
         with:
           context: ./my-collection-search
@@ -188,8 +187,8 @@ jobs:
           tags: ${{ steps.tags.outputs.tags }}
           provenance: false
           sbom: false
-          cache-from: type=gha,scope=myapp
-          cache-to: type=gha,mode=max,scope=myapp
+          cache-from: type=gha,scope=webapp
+          cache-to: type=gha,mode=max,scope=webapp
           build-args: |
             OPENAI_API_KEY=dummy
             DISCOGS_USER_TOKEN=dummytoken
@@ -403,7 +402,7 @@ jobs:
           set -euo pipefail
           owner="${{ github.repository_owner }}"
           owner="${owner,,}"
-          services=(myapp essentia-api ga-service download-worker)
+          services=(webapp essentia-api ga-service download-worker)
           for svc in "${services[@]}"; do
             src="ghcr.io/${owner}/${svc}:${SHA_TAG}"
             # The tag event can race the main-branch build of this commit, so

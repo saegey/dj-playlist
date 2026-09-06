@@ -4,8 +4,8 @@
 #
 services:
   app:
-    image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
-    container_name: myapp
+    image: ghcr.io/saegey/webapp:${IMAGE_TAG:-latest}
+    container_name: webapp
     env_file:
       - .env
     environment:
@@ -33,7 +33,7 @@ services:
     # Must not share the app image tag. `docker compose run --build migrate`
     # builds the `migrator` target, and reusing the app tag clobbers the
     # runner image with a stage that falls back to the base Node CMD.
-    image: ghcr.io/saegey/myapp-migrate:${IMAGE_TAG:-latest}
+    image: ghcr.io/saegey/webapp-migrate:${IMAGE_TAG:-latest}
 
   essentia:
     image: ghcr.io/saegey/essentia-api:${IMAGE_TAG:-latest}

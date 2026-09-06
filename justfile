@@ -144,7 +144,7 @@ compose-logs: check-compose
   {{op_env}} {{compose_cmd}} -f docker-compose.yml -f docker-compose.prod.yml logs -f
 
 build-app:
-  {{buildkit_env}} docker buildx build --target runner -t ghcr.io/saegey/myapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
+  {{buildkit_env}} docker buildx build --target runner -t ghcr.io/saegey/webapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
 
 build-essentia:
   {{buildkit_env}} docker buildx build -t ghcr.io/saegey/essentia-api:{{tag}} -f essentia-api/Dockerfile essentia-api
@@ -238,7 +238,7 @@ generate-python-client: generate-spec
     --overwrite
 
 push-images:
-  {{buildkit_env}} docker buildx build --platform {{platform}} --target runner --push -t {{registry}}/myapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
+  {{buildkit_env}} docker buildx build --platform {{platform}} --target runner --push -t {{registry}}/webapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/essentia-api:{{tag}} -f essentia-api/Dockerfile essentia-api
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/ga-service:{{tag}} -f ga-service/Dockerfile ga-service
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/download-worker:{{tag}} -f download-worker/Dockerfile .

@@ -264,7 +264,7 @@ See `my-collection-search/.env.example` for full list. Key variables:
 - **Trigger**: Push git tag (e.g., `v1.0.78`)
 - **Process**: GitHub Actions builds and pushes images to `ghcr.io/saegey/*`
 - **Images**:
-  - `ghcr.io/saegey/myapp:v1.0.78` (Next.js app)
+  - `ghcr.io/saegey/webapp:v1.0.78` (Next.js app)
   - `ghcr.io/saegey/essentia-api:v1.0.78`
   - `ghcr.io/saegey/ga-service:v1.0.78`
   - `ghcr.io/saegey/download-worker:v1.0.78`
@@ -279,8 +279,9 @@ See `my-collection-search/.env.example` for full list. Key variables:
 - Requires the `RELEASE_PLEASE_TOKEN` PAT secret (GITHUB_TOKEN-created tags don't trigger builds).
 
 ### Architecture Note
-- Currently only x86_64/amd64 images are published
-- ARM64 builds pending (blocks Mac users from using prod compose file)
+- Images are published for **x86_64/amd64 only** by design (homelab targets are amd64).
+- arm64 is intentionally not built to avoid slow QEMU emulation in CI. If arm64 is
+  needed later, switch the build to native arm64 runners rather than emulation.
 
 ## Architectural Decisions
 

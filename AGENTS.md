@@ -264,7 +264,7 @@ See `my-collection-search/.env.example` for full list. Key variables:
 - **Trigger**: Push git tag (e.g., `v1.0.78`)
 - **Process**: GitHub Actions builds and pushes images to `ghcr.io/saegey/*`
 - **Images**:
-  - `ghcr.io/saegey/myapp:v1.0.78` (Next.js app)
+  - `ghcr.io/saegey/webapp:v1.0.78` (Next.js app)
   - `ghcr.io/saegey/essentia-api:v1.0.78`
   - `ghcr.io/saegey/ga-service:v1.0.78`
   - `ghcr.io/saegey/download-worker:v1.0.78`

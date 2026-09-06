@@ -49,7 +49,20 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Build metadata surfaced by the About page (/api/version). Passed in by CI.
+# Next.js standalone output (next.config.mjs: output: "standalone"): a
+# self-contained server with a traced, minimal node_modules — far smaller than
+# copying the full dependency tree, so much less to build/push per image.
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+RUN mkdir -p cookies dumps discogs_exports audio essentia-data public/uploads/album-covers && \
+    chown -R nextjs:nodejs /app
+
+COPY --chmod=755 entrypoint.sh /entrypoint.sh
+
+# Build metadata surfaced by the About page (/api/version). Kept last so these
+# per-commit values don't invalidate the cache of the COPY/apt layers above.
 ARG GIT_SHA
 ARG BUILD_TIME
 ARG APP_VERSION
@@ -57,25 +70,13 @@ ENV GIT_SHA=$GIT_SHA
 ENV BUILD_TIME=$BUILD_TIME
 ENV APP_VERSION=$APP_VERSION
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json
-COPY --from=builder --chown=nextjs:nodejs /app/src ./src
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-
-RUN mkdir -p cookies dumps discogs_exports audio essentia-data public/uploads/album-covers && \
-    chown -R nextjs:nodejs /app
-
-COPY --chmod=755 entrypoint.sh /entrypoint.sh
-
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["npm", "run", "start"]
+CMD ["node", "server.js"]
 
 FROM base AS migrator
 WORKDIR /app

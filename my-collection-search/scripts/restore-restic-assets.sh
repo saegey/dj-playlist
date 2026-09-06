@@ -9,7 +9,7 @@ Required:
   --restore-target PATH   Restic restore target directory (from: restic restore ... --target PATH)
 
 Optional:
-  --app-container NAME    Running app container name (default: myapp)
+  --app-container NAME    Running app container name (default: webapp)
   --music-volume NAME     Fallback Docker volume for /app/audio (default: teststack_music_data)
   --covers-volume NAME    Fallback Docker volume for /app/public/uploads/album-covers (default: teststack_album_covers)
   --dumps-volume NAME     Fallback Docker volume for /app/dumps (default: teststack_db_dumps)
@@ -18,13 +18,13 @@ Optional:
 Examples:
   $0 --restore-target /tmp/restore
   $0 --restore-target /tmp/restore --dry-run
-  $0 --restore-target /tmp/restore --app-container myapp
+  $0 --restore-target /tmp/restore --app-container webapp
   $0 --restore-target /tmp/restore --music-volume my_music_volume
 USAGE
 }
 
 RESTORE_TARGET=""
-APP_CONTAINER="${APP_CONTAINER:-myapp}"
+APP_CONTAINER="${APP_CONTAINER:-webapp}"
 MUSIC_VOLUME="${MUSIC_VOLUME:-teststack_music_data}"
 COVERS_VOLUME="${COVERS_VOLUME:-teststack_album_covers}"
 DUMPS_VOLUME="${DUMPS_VOLUME:-teststack_db_dumps}"
