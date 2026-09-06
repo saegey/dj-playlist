@@ -3,10 +3,20 @@ name: Build and Publish Docker Images
 on:
   pull_request:
   push:
+    branches:
+      - main
+    # Semver releases only (vX.Y.Z). Timestamp tags (v2026...Z, no dots) from the
+    # release-localbuild escape hatch intentionally don't trigger a promote.
     tags:
-      - "v*"
+      - "v*.*.*"
 
 jobs:
+  # Test gate: images are only built/published if lint + tests pass.
+  # Skipped on release tags — those promote already-tested images (see promote).
+  test:
+    if: github.ref_type != 'tag'
+    uses: ./.github/workflows/test.yml
+
   changes:
     runs-on: ubuntu-latest
     permissions:
@@ -17,6 +27,10 @@ jobs:
       ga_service: ${{ steps.filter.outputs.ga_service }}
       download_worker: ${{ steps.filter.outputs.download_worker }}
       force_all: ${{ steps.filter.outputs.force_all }}
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      should_push: ${{ steps.meta.outputs.should_push }}
+      platforms: ${{ steps.meta.outputs.platforms }}
+      release_sha: ${{ steps.meta.outputs.release_sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -90,17 +104,47 @@ jobs:
           echo "download_worker=$download_worker" >> "$GITHUB_OUTPUT"
           echo "force_all=$force_all" >> "$GITHUB_OUTPUT"
 
+      - name: Resolve image tag / push policy
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Decide the immutable image tag and whether to push:
+          #   - PR              -> pr-<number>, build only (no push)
+          #   - tag push (v*)   -> <tag> (e.g. v1.2.0), published release
+          #   - main branch push-> sha-<short>, tested candidate image
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            image_tag="pr-${{ github.event.pull_request.number }}"
+            should_push=false
+            platforms="linux/amd64"
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+            image_tag="${{ github.ref_name }}"
+            should_push=true
+            platforms="linux/amd64,linux/arm64"
+          else
+            image_tag="sha-${GITHUB_SHA:0:7}"
+            should_push=true
+            platforms="linux/amd64,linux/arm64"
+          fi
+          # The candidate-image tag for this commit (built on the main push),
+          # which a release tag promotes instead of rebuilding.
+          release_sha="sha-${GITHUB_SHA:0:7}"
+          echo "image_tag=$image_tag" >> "$GITHUB_OUTPUT"
+          echo "should_push=$should_push" >> "$GITHUB_OUTPUT"
+          echo "platforms=$platforms" >> "$GITHUB_OUTPUT"
+          echo "release_sha=$release_sha" >> "$GITHUB_OUTPUT"
+
   build-myapp:
-    needs: changes
-    if: needs.changes.outputs.force_all == 'true' || needs.changes.outputs.myapp == 'true'
+    needs: [changes, test]
+    if: github.ref_type != 'tag' && (needs.changes.outputs.force_all == 'true' || needs.changes.outputs.myapp == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     env:
-      SHOULD_PUSH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-      IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
-      PLATFORMS: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+      SHOULD_PUSH: ${{ needs.changes.outputs.should_push }}
+      IMAGE_TAG: ${{ needs.changes.outputs.image_tag }}
+      PLATFORMS: ${{ needs.changes.outputs.platforms }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -113,13 +157,14 @@ jobs:
           owner="${{ github.repository_owner }}"
           owner="${owner,,}"  # ghcr requires a lowercase repository name
           tags="ghcr.io/${owner}/myapp:${{ env.IMAGE_TAG }}"
-          if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
+          if [[ "${{ env.SHOULD_PUSH }}" == "true" && "${{ env.IMAGE_TAG }}" == v* ]]; then
             tags="${tags}"$'\n'"ghcr.io/${owner}/myapp:latest"
           fi
           {
             echo "tags<<EOF"
             echo "$tags"
             echo "EOF"
+            echo "build_time=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
@@ -155,18 +200,21 @@ jobs:
             APPLE_MUSIC_PRIVATE_KEY_PATH=/path/to/dummy/private/key.pem
             DATABASE_URL=postgres://djplaylist:djplaylistpassword@db:5432/djplaylist
             YOUTUBE_API_KEY=dummyyoutubeapikey
+            APP_VERSION=${{ env.IMAGE_TAG }}
+            GIT_SHA=${{ github.sha }}
+            BUILD_TIME=${{ steps.tags.outputs.build_time }}
 
   build-essentia:
-    needs: changes
-    if: needs.changes.outputs.force_all == 'true' || needs.changes.outputs.essentia == 'true'
+    needs: [changes, test]
+    if: github.ref_type != 'tag' && (needs.changes.outputs.force_all == 'true' || needs.changes.outputs.essentia == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     env:
-      SHOULD_PUSH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-      IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
-      PLATFORMS: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+      SHOULD_PUSH: ${{ needs.changes.outputs.should_push }}
+      IMAGE_TAG: ${{ needs.changes.outputs.image_tag }}
+      PLATFORMS: ${{ needs.changes.outputs.platforms }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -179,7 +227,7 @@ jobs:
           owner="${{ github.repository_owner }}"
           owner="${owner,,}"  # ghcr requires a lowercase repository name
           tags="ghcr.io/${owner}/essentia-api:${{ env.IMAGE_TAG }}"
-          if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
+          if [[ "${{ env.SHOULD_PUSH }}" == "true" && "${{ env.IMAGE_TAG }}" == v* ]]; then
             tags="${tags}"$'\n'"ghcr.io/${owner}/essentia-api:latest"
           fi
           {
@@ -213,16 +261,16 @@ jobs:
           cache-to: type=gha,mode=max,scope=essentia-api
 
   build-ga-service:
-    needs: changes
-    if: needs.changes.outputs.force_all == 'true' || needs.changes.outputs.ga_service == 'true'
+    needs: [changes, test]
+    if: github.ref_type != 'tag' && (needs.changes.outputs.force_all == 'true' || needs.changes.outputs.ga_service == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     env:
-      SHOULD_PUSH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-      IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
-      PLATFORMS: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+      SHOULD_PUSH: ${{ needs.changes.outputs.should_push }}
+      IMAGE_TAG: ${{ needs.changes.outputs.image_tag }}
+      PLATFORMS: ${{ needs.changes.outputs.platforms }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -235,7 +283,7 @@ jobs:
           owner="${{ github.repository_owner }}"
           owner="${owner,,}"  # ghcr requires a lowercase repository name
           tags="ghcr.io/${owner}/ga-service:${{ env.IMAGE_TAG }}"
-          if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
+          if [[ "${{ env.SHOULD_PUSH }}" == "true" && "${{ env.IMAGE_TAG }}" == v* ]]; then
             tags="${tags}"$'\n'"ghcr.io/${owner}/ga-service:latest"
           fi
           {
@@ -269,16 +317,16 @@ jobs:
           cache-to: type=gha,mode=max,scope=ga-service
 
   build-download-worker:
-    needs: changes
-    if: needs.changes.outputs.force_all == 'true' || needs.changes.outputs.download_worker == 'true'
+    needs: [changes, test]
+    if: github.ref_type != 'tag' && (needs.changes.outputs.force_all == 'true' || needs.changes.outputs.download_worker == 'true')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     env:
-      SHOULD_PUSH: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-      IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref_name }}
-      PLATFORMS: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+      SHOULD_PUSH: ${{ needs.changes.outputs.should_push }}
+      IMAGE_TAG: ${{ needs.changes.outputs.image_tag }}
+      PLATFORMS: ${{ needs.changes.outputs.platforms }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -291,7 +339,7 @@ jobs:
           owner="${{ github.repository_owner }}"
           owner="${owner,,}"  # ghcr requires a lowercase repository name
           tags="ghcr.io/${owner}/download-worker:${{ env.IMAGE_TAG }}"
-          if [[ "${{ env.SHOULD_PUSH }}" == "true" ]]; then
+          if [[ "${{ env.SHOULD_PUSH }}" == "true" && "${{ env.IMAGE_TAG }}" == v* ]]; then
             tags="${tags}"$'\n'"ghcr.io/${owner}/download-worker:latest"
           fi
           {
@@ -323,3 +371,59 @@ jobs:
           sbom: false
           cache-from: type=gha,scope=download-worker
           cache-to: type=gha,mode=max,scope=download-worker
+
+  # On a release tag (vX.Y.Z), promote the already-built, already-tested
+  # candidate images (sha-<short> from the commit's main-branch push) to the
+  # version tag + latest. This re-tags multi-arch images by digest — no rebuild,
+  # so the released bits are byte-identical to what CI tested.
+  promote:
+    needs: changes
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      VERSION_TAG: ${{ needs.changes.outputs.image_tag }}
+      SHA_TAG: ${{ needs.changes.outputs.release_sha }}
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Promote candidate images to ${{ needs.changes.outputs.image_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          owner="${{ github.repository_owner }}"
+          owner="${owner,,}"
+          services=(myapp essentia-api ga-service download-worker)
+          for svc in "${services[@]}"; do
+            src="ghcr.io/${owner}/${svc}:${SHA_TAG}"
+            # The tag event can race the main-branch build of this commit, so
+            # wait for the candidate image to appear (up to ~30 min).
+            found=false
+            for attempt in $(seq 1 60); do
+              if docker buildx imagetools inspect "$src" >/dev/null 2>&1; then
+                found=true
+                break
+              fi
+              echo "waiting for ${src} (attempt ${attempt}/60)..."
+              sleep 30
+            done
+            if [[ "$found" != "true" ]]; then
+              echo "ERROR: candidate image ${src} never appeared" >&2
+              exit 1
+            fi
+            docker buildx imagetools create \
+              -t "ghcr.io/${owner}/${svc}:${VERSION_TAG}" \
+              -t "ghcr.io/${owner}/${svc}:latest" \
+              "$src"
+            echo "promoted ${svc}: ${SHA_TAG} -> ${VERSION_TAG} + latest"
+          done

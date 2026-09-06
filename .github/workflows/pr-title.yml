@@ -1,0 +1,40 @@
+name: PR Title
+
+# Ensures PR titles follow Conventional Commits. Because PRs are squash-merged,
+# the PR title becomes the commit message on main that release-please parses to
+# decide the next version. A non-conventional title = no version bump.
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  pull-requests: read
+
+jobs:
+  lint-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Allowed types. feat -> minor, fix -> patch, feat!/BREAKING CHANGE ->
+          # major (or minor while pre-1.0). Others don't bump the version.
+          types: |
+            feat
+            fix
+            perf
+            deps
+            docs
+            chore
+            refactor
+            test
+            build
+            ci
+            style
+            revert

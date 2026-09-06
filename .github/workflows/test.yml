@@ -1,8 +1,14 @@
 name: Test
 
 on:
+  # main is covered by the gate call from docker-publish.yml, so don't
+  # self-run here on main (avoids duplicate test runs).
   push:
+    branches-ignore:
+      - main
   pull_request:
+  # Allows docker-publish.yml to call this as a gate before building images.
+  workflow_call:
 
 permissions:
   contents: read

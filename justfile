@@ -260,7 +260,23 @@ deploy-prod-remote:
   fi
   ssh {{prod_host}} 'set -euo pipefail; cd {{prod_stack_dir}}; if [ -x ./my-collection-search/scripts/deploy-prod.sh ]; then ./my-collection-search/scripts/deploy-prod.sh {{tag}}; elif [ -x ./scripts/deploy-prod.sh ]; then ./scripts/deploy-prod.sh {{tag}}; else echo "deploy-prod.sh not found"; exit 127; fi'
 
-release: tag-push push-images deploy-prod-remote
+# Deploy a published release (vX.Y.Z) to the prod host (pulls images from GHCR).
+deploy version:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [[ ! "{{version}}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Usage: just deploy v1.2.3   (a published release tag)"
+    exit 1
+  fi
+  TAG="{{version}}" just prod_host="{{prod_host}}" prod_stack_dir="{{prod_stack_dir}}" deploy-prod-remote
+
+# Releases are cut by release-please (merge the Release PR), not from here.
+# See RELEASING.md. This recipe no longer tags/builds/deploys in one shot.
+release:
+  @echo "Releases are automated via release-please — see RELEASING.md:"
+  @echo "  1) Land Conventional Commit PRs on main (feat:/fix:/…)"
+  @echo "  2) Merge the 'chore(main): release X.Y.Z' PR → tags vX.Y.Z, CI publishes images"
+  @echo "  3) Deploy it:  just deploy vX.Y.Z"
 
 deploy-prod-remote-localbuild:
   #!/usr/bin/env bash

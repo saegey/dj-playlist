@@ -49,6 +49,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# Build metadata surfaced by the About page (/api/version). Passed in by CI.
+ARG GIT_SHA
+ARG BUILD_TIME
+ARG APP_VERSION
+ENV GIT_SHA=$GIT_SHA
+ENV BUILD_TIME=$BUILD_TIME
+ENV APP_VERSION=$APP_VERSION
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 COPY --from=builder --chown=nextjs:nodejs /app/tsconfig.json ./tsconfig.json

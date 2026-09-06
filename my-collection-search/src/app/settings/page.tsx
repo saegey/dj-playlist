@@ -15,6 +15,7 @@ import GamdlSettingsSection from "@/components/settings/GamdlSettingsSection";
 import AiPromptSettingsSection from "@/components/settings/AiPromptSettingsSection";
 import EmbeddingPromptSettingsSection from "@/components/settings/EmbeddingPromptSettingsSection";
 import DefaultLibrarySettingsSection from "@/components/settings/DefaultLibrarySettingsSection";
+import AboutSection from "@/components/settings/AboutSection";
 import PageContainer from "@/components/layout/PageContainer";
 import DiscogsSyncDialog from "@/components/settings/dialogs/DiscogsSyncDialog";
 import RemoveFriendDialog from "@/components/settings/dialogs/RemoveFriendDialog"; // your streamed removal dialog
@@ -70,6 +71,12 @@ export default function SettingsPage() {
             <DatabaseRestore />
           </>
         ),
+      },
+      {
+        id: "about",
+        label: "About",
+        description: "version, services, and project info",
+        content: <AboutSection />,
       },
     ],
     []

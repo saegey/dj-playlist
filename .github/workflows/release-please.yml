@@ -1,0 +1,26 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # A PAT (not the default GITHUB_TOKEN) is required so that the
+          # release tag this action creates will trigger docker-publish.yml.
+          # Tags/commits made with GITHUB_TOKEN do NOT trigger other workflows.
+          # Create a fine-grained PAT with Contents: read/write + Pull requests:
+          # read/write on this repo, and save it as the RELEASE_PLEASE_TOKEN secret.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

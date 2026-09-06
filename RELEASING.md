@@ -1,0 +1,85 @@
+# Releasing GrooveNet
+
+Releases are driven by [release-please](https://github.com/googleapis/release-please)
+using [Conventional Commits](https://www.conventionalcommits.org/). You never tag
+by hand — merging a "Release PR" cuts the version, and CI publishes the images.
+
+## The flow
+
+```
+Conventional commits land on main
+        │
+        ▼
+release-please opens/updates a "Release PR"   (bumps version + CHANGELOG.md)
+        │   ← review the version + changelog; this is the "production-worthy" gate
+        ▼
+merge the Release PR
+        │
+        ▼
+release-please creates tag vX.Y.Z + GitHub Release
+        │
+        ▼
+docker-publish.yml builds & pushes ghcr.io/saegey/*:vX.Y.Z (+ :latest)
+        │
+        ▼
+deploy: pin IMAGE_TAG=vX.Y.Z on the homelab box and pull (see below)
+```
+
+## How the version is decided
+
+Commit / PR title prefix → bump (repo is pre-1.0, so bumps are conservative):
+
+| Prefix | Example | Bump (pre-1.0) |
+|--------|---------|----------------|
+| `fix:` | `fix: correct BPM parsing` | patch (0.1.0 → 0.1.1) |
+| `feat:` | `feat: add about page` | patch (pre-1.0) |
+| `feat!:` / `BREAKING CHANGE:` | `feat!: drop v1 API` | minor (pre-1.0) |
+| `chore:`, `docs:`, `refactor:`, `ci:`, … | — | no release |
+
+Because PRs are **squash-merged**, the **PR title** is the commit message that
+release-please reads. The `PR Title` check enforces a valid prefix.
+
+### Going 1.0 (or forcing a version)
+Add a footer to any commit / the Release PR:
+
+```
+Release-As: 1.0.0
+```
+
+## One-time setup
+
+1. **`RELEASE_PLEASE_TOKEN` secret** — release-please must create the tag with a
+   PAT, not the default `GITHUB_TOKEN` (tags made with `GITHUB_TOKEN` do **not**
+   trigger `docker-publish.yml`). Create a fine-grained PAT scoped to this repo
+   with **Contents: read/write** and **Pull requests: read/write**, and save it
+   as the `RELEASE_PLEASE_TOKEN` repository secret.
+2. **Squash merge** — enable "Allow squash merging" and set the default squash
+   commit message to **"Pull request title"** in the repo settings.
+
+## Deploying a release (homelab)
+
+Images are published to GHCR; deploy is always a local pull on the box (nothing
+in CI touches your homelab). The convenient path:
+
+```bash
+just deploy v1.2.0        # pulls ghcr images for that tag, migrates, and restarts
+```
+
+Or manually on the box:
+
+```bash
+# pin the release you want
+echo "IMAGE_TAG=v1.2.0" >> .env
+
+docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm migrate
+```
+
+Rollback = `just deploy v1.1.0` (the previous tag). Images are immutable, so
+rollback is exact.
+
+> `just release` no longer tags/builds/deploys in one shot — releases are cut by
+> release-please. The `release-localbuild-*` recipes remain as an escape hatch
+> for building + deploying locally (e.g. bypassing the registry) and still use
+> timestamp tags, which is fine for non-registry local builds.
