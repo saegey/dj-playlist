@@ -270,12 +270,13 @@ See `my-collection-search/.env.example` for full list. Key variables:
   - `ghcr.io/saegey/download-worker:v1.0.78`
 
 ### Version Updates
-- **Current Process**: Manual
-  1. Update version tag in `docker-compose.prod.yml`
-  2. Commit and push changes
-  3. Tag release: `git tag v1.0.XX && git push origin v1.0.XX`
-  4. GitHub Actions builds and publishes images
-- **Future**: Could automate version bumping with script
+- **Process**: automated via [release-please](https://github.com/googleapis/release-please) + Conventional Commits. See `RELEASING.md`.
+  1. Land Conventional Commit PRs on `main` (PR title is the commit — squash merge).
+  2. release-please opens/updates a **Release PR** (bumps version + `CHANGELOG.md`).
+  3. Merging the Release PR creates tag `vX.Y.Z` → `docker-publish.yml` publishes `ghcr.io/saegey/*:vX.Y.Z` (+ `latest`).
+  4. Deploy by pinning `IMAGE_TAG=vX.Y.Z` and pulling on the box (see `RELEASING.md`).
+- Version source of truth: root `package.json` (mirrored to `my-collection-search/package.json` for the About page).
+- Requires the `RELEASE_PLEASE_TOKEN` PAT secret (GITHUB_TOKEN-created tags don't trigger builds).
 
 ### Architecture Note
 - Currently only x86_64/amd64 images are published
