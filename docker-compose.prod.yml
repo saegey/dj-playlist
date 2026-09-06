@@ -4,8 +4,8 @@
 #
 services:
   app:
-    image: ghcr.io/saegey/myapp:${IMAGE_TAG:-latest}
-    container_name: myapp
+    image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/webapp:${IMAGE_TAG:-latest}
+    container_name: webapp
     env_file:
       - .env
     environment:
@@ -33,18 +33,18 @@ services:
     # Must not share the app image tag. `docker compose run --build migrate`
     # builds the `migrator` target, and reusing the app tag clobbers the
     # runner image with a stage that falls back to the base Node CMD.
-    image: ghcr.io/saegey/myapp-migrate:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/webapp-migrate:${IMAGE_TAG:-latest}
 
   essentia:
-    image: ghcr.io/saegey/essentia-api:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/essentia-api:${IMAGE_TAG:-latest}
     container_name: essentia-api
 
   ga-service:
-    image: ghcr.io/saegey/ga-service:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/ga-service:${IMAGE_TAG:-latest}
     container_name: ga-service
 
   download-worker:
-    image: ghcr.io/saegey/download-worker:${IMAGE_TAG:-latest}
+    image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/download-worker:${IMAGE_TAG:-latest}
     container_name: download-worker
     volumes:
       # Keep worker and app pointed at the same backing store for /app/audio.

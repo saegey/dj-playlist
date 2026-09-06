@@ -19,7 +19,7 @@ merge the Release PR
 release-please creates tag vX.Y.Z + GitHub Release
         │
         ▼
-docker-publish.yml builds & pushes ghcr.io/saegey/*:vX.Y.Z (+ :latest)
+docker-publish.yml builds & pushes ghcr.io/public-vinyl-radio/*:vX.Y.Z (+ :latest)
         │
         ▼
 deploy: pin IMAGE_TAG=vX.Y.Z on the homelab box and pull (see below)

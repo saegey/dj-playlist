@@ -78,7 +78,7 @@ Dry run:
 ./scripts/restore-restic-assets.sh --restore-target /tmp/restore --dry-run
 ```
 
-If your app container name is not `myapp`:
+If your app container name is not `webapp`:
 
 ```bash
 ./scripts/restore-restic-assets.sh --restore-target /tmp/restore --app-container <container_name>

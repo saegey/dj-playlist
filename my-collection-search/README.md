@@ -33,7 +33,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm migrate
 
 That deployment path creates a stable default network named
 `groovenet_default`, which external services like Caddy can join and proxy to
-`http://myapp:3000`.
+`http://webapp:3000`.
 
 ## Useful npm scripts
 

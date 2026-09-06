@@ -2,7 +2,7 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 
 app_dir := env_var_or_default("APP_DIR", "my-collection-search")
 buildkit_env := env_var_or_default("BUILDKIT_ENV", "DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1")
-registry := env_var_or_default("REGISTRY", "ghcr.io/your-org")
+registry := env_var_or_default("REGISTRY", "ghcr.io/public-vinyl-radio")
 platform := env_var_or_default("PLATFORM", "linux/amd64")
 prod_host := env_var_or_default("PROD_HOST", "your-server.example.com")
 prod_stack_dir := env_var_or_default("PROD_STACK_DIR", "/opt/stacks/groovenet")
@@ -144,16 +144,16 @@ compose-logs: check-compose
   {{op_env}} {{compose_cmd}} -f docker-compose.yml -f docker-compose.prod.yml logs -f
 
 build-app:
-  {{buildkit_env}} docker buildx build --target runner -t ghcr.io/saegey/myapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
+  {{buildkit_env}} docker buildx build --target runner -t {{registry}}/webapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
 
 build-essentia:
-  {{buildkit_env}} docker buildx build -t ghcr.io/saegey/essentia-api:{{tag}} -f essentia-api/Dockerfile essentia-api
+  {{buildkit_env}} docker buildx build -t {{registry}}/essentia-api:{{tag}} -f essentia-api/Dockerfile essentia-api
 
 build-ga-service:
-  {{buildkit_env}} docker buildx build -t ghcr.io/saegey/ga-service:{{tag}} -f ga-service/Dockerfile ga-service
+  {{buildkit_env}} docker buildx build -t {{registry}}/ga-service:{{tag}} -f ga-service/Dockerfile ga-service
 
 build-download-worker:
-  {{buildkit_env}} docker buildx build -t ghcr.io/saegey/download-worker:{{tag}} -f download-worker/Dockerfile .
+  {{buildkit_env}} docker buildx build -t {{registry}}/download-worker:{{tag}} -f download-worker/Dockerfile .
 
 rebuild-download-worker: check-compose
   {{op_env}} {{compose_cmd}} -f docker-compose.yml build --no-cache download-worker
@@ -238,7 +238,7 @@ generate-python-client: generate-spec
     --overwrite
 
 push-images:
-  {{buildkit_env}} docker buildx build --platform {{platform}} --target runner --push -t {{registry}}/myapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
+  {{buildkit_env}} docker buildx build --platform {{platform}} --target runner --push -t {{registry}}/webapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/essentia-api:{{tag}} -f essentia-api/Dockerfile essentia-api
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/ga-service:{{tag}} -f ga-service/Dockerfile ga-service
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/download-worker:{{tag}} -f download-worker/Dockerfile .
