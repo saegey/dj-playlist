@@ -1,9 +1,19 @@
 // app/layout.tsx
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import ClientProviders from "./providers"; // <- client wrapper
 import EmotionRegistry from "@/components/EmotionRegistry";
 import AppShell from "@/components/AppShell";
 import { Toaster } from "@/components/ui/toaster";
+
+// Default document title + template so individual pages can extend it.
+export const metadata: Metadata = {
+  title: {
+    default: "GrooveNet",
+    template: "%s · GrooveNet",
+  },
+  description: "Browse, search, and manage your DJ track collection.",
+};
 
 // Let Next.js inject viewport meta into <head>
 export const viewport = {
