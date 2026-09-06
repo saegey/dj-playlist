@@ -9,6 +9,10 @@ services:
     env_file:
       - .env
     environment:
+      # Surfaced on the About page (/api/version). Reflects the deployed image
+      # tag at runtime so it stays accurate without a rebuild.
+      APP_VERSION: ${IMAGE_TAG:-latest}
+      GA_SERVICE_URL: ${GA_SERVICE_URL:-http://ga-service:8002}
       APPLE_MUSIC_TEAM_ID: ${APPLE_MUSIC_TEAM_ID}
       APPLE_MUSIC_KEY_ID: ${APPLE_MUSIC_KEY_ID}
       APPLE_MUSIC_PRIVATE_KEY: ${APPLE_MUSIC_PRIVATE_KEY}
