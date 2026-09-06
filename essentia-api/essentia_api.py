@@ -14,6 +14,12 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 def get_allowed_internal_hosts() -> set[str]:
     raw = os.getenv(
         "ESSENTIA_ALLOWED_HOSTS",
