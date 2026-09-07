@@ -182,6 +182,9 @@ jobs:
         with:
           context: ./my-collection-search
           file: ./my-collection-search/Dockerfile
+          # Without this, buildx builds the last stage in the Dockerfile
+          # (migrator), producing an image that exits 0 and restart-loops.
+          target: runner
           push: ${{ env.SHOULD_PUSH == 'true' }}
           platforms: ${{ env.PLATFORMS }}
           tags: ${{ steps.tags.outputs.tags }}
