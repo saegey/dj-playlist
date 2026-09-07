@@ -21,10 +21,25 @@ export interface StatusInfo {
   checkedAt: string;
 }
 
+export interface UpdateInfo {
+  current: string;
+  comparable: boolean;
+  latest: string | null;
+  updateAvailable: boolean;
+  releaseUrl: string | null;
+  releaseName: string | null;
+  publishedAt: string | null;
+  error: string | null;
+}
+
 export function fetchVersionInfo(): Promise<VersionInfo> {
   return http<VersionInfo>("/api/version");
 }
 
 export function fetchStatusInfo(): Promise<StatusInfo> {
   return http<StatusInfo>("/api/status");
+}
+
+export function fetchUpdateInfo(): Promise<UpdateInfo> {
+  return http<UpdateInfo>("/api/update-check");
 }

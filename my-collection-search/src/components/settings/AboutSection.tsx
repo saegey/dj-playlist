@@ -13,7 +13,11 @@ import {
 } from "@chakra-ui/react";
 import Image from "next/image";
 
-import { useStatusInfo, useVersionInfo } from "@/hooks/useSystemInfo";
+import {
+  useStatusInfo,
+  useUpdateInfo,
+  useVersionInfo,
+} from "@/hooks/useSystemInfo";
 import type { ServiceStatus } from "@/services/internalApi/system";
 
 const REPO_URL = "https://github.com/Public-Vinyl-Radio/groovenet";
@@ -60,6 +64,7 @@ function InfoRow({
 export default function AboutSection(): React.JSX.Element {
   const { data: version, isLoading: versionLoading } = useVersionInfo();
   const { data: status, isLoading: statusLoading } = useStatusInfo();
+  const { data: update } = useUpdateInfo();
 
   return (
     <Box>
@@ -89,6 +94,39 @@ export default function AboutSection(): React.JSX.Element {
         playlist generation. Built for DJs to manage their Discogs collections
         with rich metadata from Apple Music, Spotify, YouTube, and audio analysis.
       </Text>
+
+      {/* Update banner */}
+      {update?.updateAvailable ? (
+        <Box borderWidth={1} borderColor="green.400" borderRadius="lg" p={4} mb={6}>
+          <Flex
+            align={{ base: "flex-start", md: "center" }}
+            justify="space-between"
+            gap={3}
+            flexWrap="wrap"
+          >
+            <Flex align="center" gap={3}>
+              <Badge colorPalette="green" variant="solid">
+                Update available
+              </Badge>
+              <Text fontWeight="semibold" fontSize="sm">
+                {update.current} → {update.latest}
+              </Text>
+            </Flex>
+            {update.releaseUrl ? (
+              <Link
+                href={update.releaseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                color="blue.500"
+                fontSize="sm"
+                fontWeight="medium"
+              >
+                View release notes →
+              </Link>
+            ) : null}
+          </Flex>
+        </Box>
+      ) : null}
 
       <SimpleGrid columns={{ base: 1, md: 2 }} gap={6}>
         {/* Build info */}
@@ -122,6 +160,27 @@ export default function AboutSection(): React.JSX.Element {
               </InfoRow>
               <InfoRow label="Environment">
                 {version?.nodeEnv ?? "—"}
+              </InfoRow>
+              <InfoRow label="Updates">
+                {!update ? (
+                  "—"
+                ) : update.updateAvailable ? (
+                  <Text as="span" color="green.500" fontWeight="semibold">
+                    {update.latest} available
+                  </Text>
+                ) : !update.comparable ? (
+                  <Text as="span" color="gray.400">
+                    n/a (dev build)
+                  </Text>
+                ) : update.error ? (
+                  <Text as="span" color="gray.400">
+                    unavailable
+                  </Text>
+                ) : (
+                  <Text as="span" color="green.500">
+                    up to date
+                  </Text>
+                )}
               </InfoRow>
             </>
           )}

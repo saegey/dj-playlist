@@ -6,6 +6,7 @@ export const queryKeys = {
   defaultLibrary: () => ["settings", "default-library"] as const,
   version: () => ["system", "version"] as const,
   status: () => ["system", "status"] as const,
+  updateCheck: () => ["system", "update-check"] as const,
   playlists: () => ["playlists"] as const,
   friends: () => ["friends"] as const,
   backups: () => ["backups"] as const,
