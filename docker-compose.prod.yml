@@ -27,6 +27,13 @@ services:
       - cookie_data:/app/cookies
       - album_covers:/app/public/uploads/album-covers
       - essentia_data:/app/essentia-data
+    networks:
+      # Keep the old `myapp` name resolvable on the network so existing reverse
+      # proxies (e.g. Caddy: reverse_proxy myapp:3000) keep working after the
+      # container was renamed to `webapp`.
+      default:
+        aliases:
+          - myapp
     restart: unless-stopped
 
   migrate:
