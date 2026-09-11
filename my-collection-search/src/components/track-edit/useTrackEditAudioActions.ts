@@ -15,16 +15,13 @@ type UseTrackEditAudioActionsArgs = {
   form: TrackEditFormState;
   setForm: React.Dispatch<React.SetStateAction<TrackEditFormState>>;
   onSave: (data: TrackEditFormProps) => void | Promise<void>;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
 };
 
 export function useTrackEditAudioActions({
   form,
   setForm,
   onSave,
-  fileInputRef,
 }: UseTrackEditAudioActionsArgs) {
-  const [showRemoveAudioConfirm, setShowRemoveAudioConfirm] = useState(false);
   const [removeAudioLoading, setRemoveAudioLoading] = useState(false);
 
   const { mutateAsync: analyze, isPending: analyzeLoading } =
@@ -32,6 +29,8 @@ export function useTrackEditAudioActions({
   const { mutateAsync: uploadAudio, isPending: uploadLoading } =
     useUploadTrackAudioMutation();
 
+  // Upload the file, then stage the analysis results into the form so the user
+  // can review before saving (server persists local_audio_url on its own).
   const handleFileUpload = async (selectedFile: File) => {
     try {
       const { analysis: data } = await uploadAudio({
@@ -70,13 +69,6 @@ export function useTrackEditAudioActions({
         type: "error",
       });
     }
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const onFileSelected = (file: File | null) => {
-    if (file) {
-      void handleFileUpload(file);
-    }
   };
 
   const handleAnalyzeAudio = async () => {
@@ -110,15 +102,7 @@ export function useTrackEditAudioActions({
     }
   };
 
-  const handleRemoveAudioClick = () => {
-    setShowRemoveAudioConfirm(true);
-  };
-
-  const closeRemoveAudioConfirm = () => {
-    setShowRemoveAudioConfirm(false);
-  };
-
-  const handleRemoveAudioConfirm = async () => {
+  const handleRemoveAudio = async () => {
     setRemoveAudioLoading(true);
     try {
       if (!form.friend_id) {
@@ -143,30 +127,29 @@ export function useTrackEditAudioActions({
         description: "Local audio file has been removed",
         type: "success",
       });
-
-      setShowRemoveAudioConfirm(false);
     } catch (err) {
       toaster.create({
         title: "Remove Audio Failed",
         description: err instanceof Error ? err.message : "Unknown error",
         type: "error",
       });
+      throw err;
     } finally {
       setRemoveAudioLoading(false);
     }
   };
 
+  const analyzeDisabled =
+    analyzeLoading ||
+    (!form.apple_music_url && !form.youtube_url && !form.soundcloud_url);
+
   return {
     analyzeLoading,
+    analyzeDisabled,
     uploadLoading,
     handleAnalyzeAudio,
     handleFileUpload,
-    onFileSelected,
-    showRemoveAudioConfirm,
-    setShowRemoveAudioConfirm,
-    closeRemoveAudioConfirm,
-    handleRemoveAudioClick,
-    handleRemoveAudioConfirm,
+    handleRemoveAudio,
     removeAudioLoading,
   };
 }
