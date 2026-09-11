@@ -78,6 +78,7 @@ export default function TrackEditDialog({
   return (
     <TrackEditForm
       track={(loaded ? loaded : null)!}
+      menuTrack={editTrack}
       onSave={onSave}
       dialogOpen={dialogOpen}
       setDialogOpen={setDialogOpen}

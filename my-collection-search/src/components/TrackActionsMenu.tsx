@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Button,
   Menu,
@@ -23,7 +23,10 @@ import {
   FiPlus,
   FiPlusSquare,
   FiTrash2,
+  FiUpload,
+  FiZap,
 } from "react-icons/fi";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { SiApplemusic, SiYoutube, SiSoundcloud } from "react-icons/si";
 import NextLink from "next/link";
@@ -32,34 +35,63 @@ import type { Track } from "@/types/track";
 import { menuDivider, drawerDivider, DrawerItem } from "@/components/ui/action-menu-primitives";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { useAddToPlaylistDialog } from "@/hooks/useAddToPlaylistDialog";
-import { analyzeTrackAsync, softDeleteTrack } from "@/services/internalApi/tracks";
+import { useEnrichmentStore } from "@/stores/enrichmentStore";
+import { useUploadTrackAudioMutation } from "@/hooks/useUploadTrackAudioMutation";
+import { analyzeTrackAsync, saveTrack, softDeleteTrack } from "@/services/internalApi/tracks";
+import { queryKeys } from "@/lib/queryKeys";
+import { useTrackStore } from "@/stores/trackStore";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import { toaster } from "@/components/ui/toaster";
+import { resolveTrackMenuState, type TrackAudioActions } from "@/components/trackActionsMenuState";
 import posthog from "posthog-js";
+
+export type { TrackAudioActions };
 
 type Props = {
   track: Track;
   onOpenTrackDebug?: () => void;
+  /** Hide the "Edit Track" item (e.g. when already on the edit page). */
+  hideEdit?: boolean;
+  /** Override the audio actions (used by the edit form). */
+  audioActions?: TrackAudioActions;
 };
 
 
-export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
+export default function TrackActionsMenu({ track, onOpenTrackDebug, hideEdit, audioActions }: Props) {
   const { appendToQueue, replacePlaylist } = usePlaylistPlayer();
   const editHref = `/tracks/${encodeURIComponent(track.track_id)}/edit?friend_id=${track.friend_id}`;
   const { openForTrack, playlistDialog, nameDialog } = useAddToPlaylistDialog();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const setEnrichmentQueue = useEnrichmentStore((s) => s.setQueue);
+  const uploadMutation = useUploadTrackAudioMutation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [fetchAudioLoading, setFetchAudioLoading] = useState(false);
+  const [removeAudioConfirmOpen, setRemoveAudioConfirmOpen] = useState(false);
+  const [defaultFetchLoading, setDefaultFetchLoading] = useState(false);
+  const [defaultUploadLoading, setDefaultUploadLoading] = useState(false);
+  const [defaultRemoveLoading, setDefaultRemoveLoading] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const canFetchAudio =
-    !track.local_audio_url &&
-    Boolean(track.apple_music_url || track.youtube_url || track.soundcloud_url);
+  const refreshTrack = () => {
+    if (track.friend_id != null) {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.trackById(track.track_id, track.friend_id),
+      });
+    }
+    queryClient.invalidateQueries({ queryKey: ["tracks"] });
+  };
 
-  const hasStreamingLinks =
-    track.apple_music_url || track.youtube_url || track.soundcloud_url;
+  const handleEnrich = () => {
+    if (track.friend_id == null) {
+      toaster.create({ title: "Track missing friend_id", type: "error" });
+      return;
+    }
+    setEnrichmentQueue([{ trackId: track.track_id, friendId: track.friend_id }]);
+    router.push("/enrich");
+  };
 
   const handleDeleteConfirm = async () => {
     if (!track.friend_id) {
@@ -83,12 +115,14 @@ export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
     }
   };
 
-  const handleFetchAudio = async () => {
+  // --- Default audio handlers (used when no `audioActions` override) ---
+
+  const defaultFetchAudio = async () => {
     if (!track.friend_id) {
       toaster.create({ title: "Track missing friend_id", type: "error" });
       return;
     }
-    setFetchAudioLoading(true);
+    setDefaultFetchLoading(true);
     try {
       const response = await analyzeTrackAsync({
         track_id: track.track_id,
@@ -117,7 +151,117 @@ export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
         type: "error",
       });
     } finally {
-      setFetchAudioLoading(false);
+      setDefaultFetchLoading(false);
+    }
+  };
+
+  const defaultUploadFile = async (file: File) => {
+    setDefaultUploadLoading(true);
+    try {
+      const result = await uploadMutation.mutateAsync({
+        file,
+        track_id: track.track_id,
+      });
+      const analysis = result.analysis;
+      const uploadedUrl =
+        typeof result.local_audio_url === "string"
+          ? result.local_audio_url
+          : track.local_audio_url;
+      if (track.friend_id != null) {
+        useTrackStore.getState().updateTrack(track.track_id, track.friend_id, {
+          local_audio_url: uploadedUrl,
+          bpm:
+            typeof analysis.rhythm?.bpm === "number"
+              ? String(Math.round(analysis.rhythm.bpm))
+              : track.bpm,
+          key:
+            analysis.tonal?.key_edma?.key && analysis.tonal?.key_edma?.scale
+              ? `${analysis.tonal.key_edma.key} ${analysis.tonal.key_edma.scale}`
+              : track.key,
+        });
+      }
+      refreshTrack();
+      toaster.create({
+        title: "Upload Successful",
+        description: "Audio file uploaded and analyzed",
+        type: "success",
+      });
+    } catch (err) {
+      toaster.create({
+        title: "Upload Failed",
+        description: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
+    } finally {
+      setDefaultUploadLoading(false);
+    }
+  };
+
+  const defaultRemoveAudio = async () => {
+    if (!track.friend_id) {
+      toaster.create({ title: "Track missing friend_id", type: "error" });
+      return;
+    }
+    setDefaultRemoveLoading(true);
+    try {
+      await saveTrack({
+        track_id: track.track_id,
+        friend_id: track.friend_id,
+        local_audio_url: null,
+      });
+      useTrackStore.getState().updateTrack(track.track_id, track.friend_id, {
+        local_audio_url: undefined,
+      });
+      refreshTrack();
+      toaster.create({
+        title: "Audio Removed",
+        description: "Local audio file has been removed",
+        type: "success",
+      });
+    } catch (err) {
+      toaster.create({
+        title: "Remove Audio Failed",
+        description: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
+      throw err;
+    } finally {
+      setDefaultRemoveLoading(false);
+    }
+  };
+
+  // --- Resolved menu state + audio actions (override or default) ---
+
+  const {
+    hasAudio,
+    hasStreamingLinks,
+    fetchAudioLoading,
+    fetchAudioDisabled,
+    uploadLoading,
+    removeAudioLoading,
+  } = resolveTrackMenuState(track, {
+    hideEdit,
+    hasTrackDebug: Boolean(onOpenTrackDebug),
+    audioActions,
+    defaultFetchLoading,
+    defaultUploadLoading,
+    defaultRemoveLoading,
+  });
+
+  const fetchAudio = audioActions?.onFetchAudio ?? defaultFetchAudio;
+  const uploadFile = audioActions?.onUploadFile ?? defaultUploadFile;
+  const removeAudio = audioActions?.onRemoveAudio ?? defaultRemoveAudio;
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleRemoveAudioConfirm = async () => {
+    try {
+      await Promise.resolve(removeAudio());
+      setRemoveAudioConfirmOpen(false);
+    } catch {
+      // errors are surfaced via toaster in the handler
     }
   };
 
@@ -150,7 +294,7 @@ export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
                 </Drawer.Header>
                 <Drawer.Body p={0} overflowY="auto">
                   <Stack gap={0}>
-                    {track.local_audio_url && (
+                    {hasAudio && (
                       <DrawerItem
                         icon={<FiPlay />}
                         label="Play"
@@ -162,7 +306,9 @@ export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
                       label="Add to Playlist"
                       onClick={() => { openForTrack(track); setDrawerOpen(false); }}
                     />
-                    <DrawerItem icon={<FiEdit />} label="Edit Track" href={editHref} />
+                    {!hideEdit && (
+                      <DrawerItem icon={<FiEdit />} label="Edit Track" href={editHref} />
+                    )}
                     {onOpenTrackDebug && (
                       <DrawerItem
                         icon={<FiCode />}
@@ -174,15 +320,37 @@ export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
                       />
                     )}
                     <DrawerItem
+                      icon={<FiZap />}
+                      label="Enrich Track"
+                      onClick={() => { handleEnrich(); setDrawerOpen(false); }}
+                    />
+                    <DrawerItem
                       icon={<FiPlusSquare />}
                       label="Add to Queue"
                       onClick={() => { appendToQueue(track); setDrawerOpen(false); }}
                     />
-                    {canFetchAudio && (
+                    {drawerDivider}
+                    {hasStreamingLinks && (
                       <DrawerItem
                         icon={<FiDownload />}
                         label={fetchAudioLoading ? "Fetching Audio..." : "Fetch Audio"}
-                        onClick={handleFetchAudio}
+                        disabled={fetchAudioLoading || fetchAudioDisabled}
+                        onClick={() => { void fetchAudio(); setDrawerOpen(false); }}
+                      />
+                    )}
+                    <DrawerItem
+                      icon={<FiUpload />}
+                      label={uploadLoading ? "Uploading..." : "Upload Audio"}
+                      disabled={uploadLoading}
+                      onClick={() => { handleUploadClick(); setDrawerOpen(false); }}
+                    />
+                    {hasAudio && (
+                      <DrawerItem
+                        icon={<FiTrash2 />}
+                        label={removeAudioLoading ? "Removing..." : "Remove Audio"}
+                        color="red.500"
+                        disabled={removeAudioLoading}
+                        onClick={() => { setRemoveAudioConfirmOpen(true); setDrawerOpen(false); }}
                       />
                     )}
                     {drawerDivider}
@@ -224,7 +392,7 @@ export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
           </Menu.Trigger>
           <Menu.Positioner>
             <Menu.Content>
-              {track.local_audio_url && (
+              {hasAudio && (
                 <Menu.Item onSelect={() => replacePlaylist([track], { autoplay: true, startIndex: 0 })} value="play">
                   <FiPlay /> Play
                 </Menu.Item>
@@ -232,23 +400,48 @@ export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
               <Menu.Item onSelect={() => openForTrack(track)} value="add">
                 <FiPlus /> Add to Playlist
               </Menu.Item>
-              <Menu.Item value="edit" asChild>
-                <NextLink href={editHref}>
-                  <FiEdit /> Edit Track
-                </NextLink>
-              </Menu.Item>
+              {!hideEdit && (
+                <Menu.Item value="edit" asChild>
+                  <NextLink href={editHref}>
+                    <FiEdit /> Edit Track
+                  </NextLink>
+                </Menu.Item>
+              )}
               {onOpenTrackDebug && (
                 <Menu.Item onSelect={onOpenTrackDebug} value="track-debug">
                   <FiCode /> Track Debug
                 </Menu.Item>
               )}
+              <Menu.Item onSelect={handleEnrich} value="enrich">
+                <FiZap /> Enrich Track
+              </Menu.Item>
               <Menu.Item onSelect={() => appendToQueue(track)} value="queue">
                 <FiPlusSquare /> Add to Queue
               </Menu.Item>
-              {canFetchAudio && (
-                <Menu.Item onSelect={handleFetchAudio} value="fetch-audio" disabled={fetchAudioLoading}>
+              {menuDivider}
+              {hasStreamingLinks && (
+                <Menu.Item
+                  onSelect={() => { void fetchAudio(); }}
+                  value="fetch-audio"
+                  disabled={fetchAudioLoading || fetchAudioDisabled}
+                >
                   <FiDownload />
                   {fetchAudioLoading ? "Fetching Audio..." : "Fetch Audio"}
+                </Menu.Item>
+              )}
+              <Menu.Item onSelect={handleUploadClick} value="upload-audio" disabled={uploadLoading}>
+                <FiUpload />
+                {uploadLoading ? "Uploading..." : "Upload Audio"}
+              </Menu.Item>
+              {hasAudio && (
+                <Menu.Item
+                  onSelect={() => setRemoveAudioConfirmOpen(true)}
+                  value="remove-audio"
+                  color="red.500"
+                  disabled={removeAudioLoading}
+                >
+                  <FiTrash2 />
+                  {removeAudioLoading ? "Removing..." : "Remove Audio"}
                 </Menu.Item>
               )}
               {menuDivider}
@@ -286,6 +479,20 @@ export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
         </Menu.Root>
       </Box>
 
+      {/* Hidden file input for Upload Audio */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="audio/*"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void uploadFile(file);
+          e.target.value = "";
+        }}
+        disabled={uploadLoading}
+      />
+
       {playlistDialog}
       {nameDialog}
 
@@ -310,6 +517,36 @@ export default function TrackActionsMenu({ track, onOpenTrackDebug }: Props) {
                 </Button>
                 <Button colorPalette="red" onClick={handleDeleteConfirm} loading={deleteLoading}>
                   Delete
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
+
+      <Dialog.Root
+        open={removeAudioConfirmOpen}
+        onOpenChange={(e) => !removeAudioLoading && setRemoveAudioConfirmOpen(e.open)}
+        size="sm"
+      >
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Remove Audio</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Text>
+                  Are you sure you want to remove the local audio file? This action cannot be undone.
+                </Text>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Button variant="outline" onClick={() => setRemoveAudioConfirmOpen(false)} disabled={removeAudioLoading}>
+                  Cancel
+                </Button>
+                <Button colorPalette="red" onClick={handleRemoveAudioConfirm} loading={removeAudioLoading}>
+                  Remove
                 </Button>
               </Dialog.Footer>
             </Dialog.Content>

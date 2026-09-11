@@ -40,3 +40,16 @@ export const NoStreamingLinks: Story = {
   name: 'No streaming links (minimal)',
   args: { track: trackMinimal },
 };
+
+export const EditContext: Story = {
+  name: 'Edit context (hideEdit + form-aware audio actions)',
+  args: {
+    track: trackWithAudio,
+    hideEdit: true,
+    audioActions: {
+      onFetchAudio: () => {},
+      onUploadFile: () => {},
+      onRemoveAudio: () => {},
+    },
+  },
+};
