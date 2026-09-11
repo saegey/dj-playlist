@@ -60,22 +60,24 @@ export class TrackAudioMetadataService {
     const normalized = this.normalizeAudioFilename(filename);
     if (!normalized) return null;
 
-    const root = path.resolve(audioDir);
-    const primary = path.resolve(audioDir, normalized);
+    const root = path.resolve(/* turbopackIgnore: true */ audioDir);
+    const primary = path.resolve(/* turbopackIgnore: true */ audioDir, normalized);
+    // turbopackIgnore: these resolve within the runtime /app/audio volume
+    // (user data), not project files — don't trace them into the build.
     if (
       primary.startsWith(root) &&
-      fs.existsSync(primary) &&
-      fs.statSync(primary).isFile()
+      fs.existsSync(/* turbopackIgnore: true */ primary) &&
+      fs.statSync(/* turbopackIgnore: true */ primary).isFile()
     ) {
       return primary;
     }
 
     const base = path.basename(normalized);
-    const fallback = path.resolve(audioDir, base);
+    const fallback = path.resolve(/* turbopackIgnore: true */ audioDir, base);
     if (
       fallback.startsWith(root) &&
-      fs.existsSync(fallback) &&
-      fs.statSync(fallback).isFile()
+      fs.existsSync(/* turbopackIgnore: true */ fallback) &&
+      fs.statSync(/* turbopackIgnore: true */ fallback).isFile()
     ) {
       return fallback;
     }

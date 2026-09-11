@@ -1,27 +1,33 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { BackupStatus } from "@/types/backup";
 
+// Scope to a subfolder of the working dir (/app in the container) rather than an
+// import.meta.url-relative path, which resolves wrongly under Next standalone
+// (it points into .next/) and makes the build trace the whole project.
 const DUMPS_DIR = path.resolve(
-  process.env.BACKUP_STATUS_DIR ||
-    path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../dumps")
+  /* turbopackIgnore: true */ process.env.BACKUP_STATUS_DIR ||
+    path.resolve(process.cwd(), "dumps")
 );
-const STATUS_PATH = path.join(DUMPS_DIR, "backup-status.json");
+const STATUS_PATH = path.join(
+  /* turbopackIgnore: true */ DUMPS_DIR,
+  "backup-status.json"
+);
 
 function ensureDumpsDir(): void {
-  if (!fs.existsSync(DUMPS_DIR)) {
-    fs.mkdirSync(DUMPS_DIR, { recursive: true });
+  // turbopackIgnore: DUMPS_DIR is a runtime backups volume, not project files.
+  if (!fs.existsSync(/* turbopackIgnore: true */ DUMPS_DIR)) {
+    fs.mkdirSync(/* turbopackIgnore: true */ DUMPS_DIR, { recursive: true });
   }
 }
 
 export class BackupStatusService {
   getStatus(): BackupStatus | null {
-    if (!fs.existsSync(STATUS_PATH)) {
+    if (!fs.existsSync(/* turbopackIgnore: true */ STATUS_PATH)) {
       return null;
     }
 
-    const raw = fs.readFileSync(STATUS_PATH, "utf8");
+    const raw = fs.readFileSync(/* turbopackIgnore: true */ STATUS_PATH, "utf8");
     return JSON.parse(raw) as BackupStatus;
   }
 
@@ -33,7 +39,11 @@ export class BackupStatusService {
       stored_at: new Date().toISOString(),
     };
 
-    fs.writeFileSync(STATUS_PATH, `${JSON.stringify(nextStatus, null, 2)}\n`, "utf8");
+    fs.writeFileSync(
+      /* turbopackIgnore: true */ STATUS_PATH,
+      `${JSON.stringify(nextStatus, null, 2)}\n`,
+      "utf8"
+    );
     return nextStatus;
   }
 }
