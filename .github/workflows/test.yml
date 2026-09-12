@@ -80,3 +80,42 @@ jobs:
           echo '```text' >> "$GITHUB_STEP_SUMMARY"
           cat coverage/coverage-summary.json >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  migrate-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: my-collection-search
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: djplaylist
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: djplaylist
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U djplaylist -d djplaylist"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: my-collection-search/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migration test (up + down + up)
+        run: bash ./scripts/migrate-test.sh
+        env:
+          DATABASE_URL: postgres://djplaylist:test@localhost:5432/djplaylist

@@ -72,6 +72,14 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # ESLint 10 removed context.getFilename(); the eslint-plugin-react
+      # bundled by eslint-config-next still calls it, so lint crashes.
+      # Hold the major until eslint-config-next ships an ESLint 10-compatible
+      # eslint-plugin-react. See PR #184.
+      - dependency-name: eslint
+        update-types:
+          - version-update:semver-major
     labels:
       - dependencies
       - javascript

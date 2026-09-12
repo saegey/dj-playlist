@@ -108,4 +108,5 @@ export function down(pgm) {
   pgm.dropTable("playlists");
   pgm.dropSequence("tracks_id_seq");
   pgm.dropSequence("playlists_id_seq");
+  pgm.dropSequence("id_seq");
 }
