@@ -51,12 +51,12 @@ function makeArgs(overrides: Partial<Parameters<typeof usePlaybackPersistence>[0
 }
 
 beforeEach(() => {
-  localStorage.clear();
+  window.localStorage.clear();
   vi.clearAllMocks();
 });
 
 afterEach(() => {
-  localStorage.clear();
+  window.localStorage.clear();
 });
 
 // ─── restore from localStorage on mount ──────────────────────────────────────
@@ -64,7 +64,7 @@ afterEach(() => {
 describe("restore on mount", () => {
   it("restores playlist when localStorage contains a valid playlist array", () => {
     const saved = [makeTrack("a"), makeTrack("b")];
-    localStorage.setItem(KEY, JSON.stringify({ playlist: saved }));
+    window.localStorage.setItem(KEY, JSON.stringify({ playlist: saved }));
 
     const args = makeArgs();
     renderHook(() => usePlaybackPersistence(args));
@@ -75,7 +75,7 @@ describe("restore on mount", () => {
   });
 
   it("restores currentTrackIndex when present as a number", () => {
-    localStorage.setItem(KEY, JSON.stringify({ currentTrackIndex: 2 }));
+    window.localStorage.setItem(KEY, JSON.stringify({ currentTrackIndex: 2 }));
 
     const args = makeArgs();
     renderHook(() => usePlaybackPersistence(args));
@@ -84,7 +84,7 @@ describe("restore on mount", () => {
   });
 
   it("restores currentTrackIndex when present as null", () => {
-    localStorage.setItem(KEY, JSON.stringify({ currentTrackIndex: null }));
+    window.localStorage.setItem(KEY, JSON.stringify({ currentTrackIndex: null }));
 
     const args = makeArgs();
     renderHook(() => usePlaybackPersistence(args));
@@ -93,7 +93,7 @@ describe("restore on mount", () => {
   });
 
   it("restores isPlaying when present as a boolean", () => {
-    localStorage.setItem(KEY, JSON.stringify({ isPlaying: true }));
+    window.localStorage.setItem(KEY, JSON.stringify({ isPlaying: true }));
 
     const args = makeArgs();
     renderHook(() => usePlaybackPersistence(args));
@@ -102,7 +102,7 @@ describe("restore on mount", () => {
   });
 
   it("restores volume clamped to [0, 1]", () => {
-    localStorage.setItem(KEY, JSON.stringify({ volume: 1.5 }));
+    window.localStorage.setItem(KEY, JSON.stringify({ volume: 1.5 }));
 
     const args = makeArgs();
     renderHook(() => usePlaybackPersistence(args));
@@ -111,7 +111,7 @@ describe("restore on mount", () => {
   });
 
   it("clamps volume below 0 to 0", () => {
-    localStorage.setItem(KEY, JSON.stringify({ volume: -0.5 }));
+    window.localStorage.setItem(KEY, JSON.stringify({ volume: -0.5 }));
 
     const args = makeArgs();
     renderHook(() => usePlaybackPersistence(args));
@@ -121,7 +121,7 @@ describe("restore on mount", () => {
 
   it("sets audio element volume when audioRef.current exists", () => {
     const audio = { volume: 0 } as HTMLAudioElement;
-    localStorage.setItem(KEY, JSON.stringify({ volume: 0.6 }));
+    window.localStorage.setItem(KEY, JSON.stringify({ volume: 0.6 }));
 
     const args = makeArgs({ audioRef: { current: audio } });
     renderHook(() => usePlaybackPersistence(args));
@@ -130,7 +130,7 @@ describe("restore on mount", () => {
   });
 
   it("sets pendingSeekRef when currentTime is a number", () => {
-    localStorage.setItem(KEY, JSON.stringify({ currentTime: 42 }));
+    window.localStorage.setItem(KEY, JSON.stringify({ currentTime: 42 }));
 
     const args = makeArgs();
     renderHook(() => usePlaybackPersistence(args));
@@ -147,14 +147,14 @@ describe("restore on mount", () => {
   });
 
   it("ignores corrupt JSON without throwing", () => {
-    localStorage.setItem(KEY, "not-valid-json{{{");
+    window.localStorage.setItem(KEY, "not-valid-json{{{");
 
     const args = makeArgs();
     expect(() => renderHook(() => usePlaybackPersistence(args))).not.toThrow();
   });
 
   it("ignores playlist when it is not an array", () => {
-    localStorage.setItem(KEY, JSON.stringify({ playlist: "oops" }));
+    window.localStorage.setItem(KEY, JSON.stringify({ playlist: "oops" }));
 
     const args = makeArgs();
     renderHook(() => usePlaybackPersistence(args));
@@ -178,7 +178,7 @@ describe("persist on state change", () => {
 
     renderHook(() => usePlaybackPersistence(args));
 
-    const saved = JSON.parse(localStorage.getItem(KEY)!);
+    const saved = JSON.parse(window.localStorage.getItem(KEY)!);
     expect(saved.playlist).toEqual(playlist);
     expect(saved.currentTrackIndex).toBe(0);
     expect(saved.isPlaying).toBe(true);
@@ -190,7 +190,7 @@ describe("persist on state change", () => {
     const args = makeArgs({ currentTime: 5 });
     renderHook(() => usePlaybackPersistence(args));
 
-    const saved = JSON.parse(localStorage.getItem(KEY)!);
+    const saved = JSON.parse(window.localStorage.getItem(KEY)!);
     expect(saved.currentTime).toBe(5);
   });
 });
