@@ -108,7 +108,7 @@ export const playlistGeneticResponseSchema = z
   .object({
     result: z.union([
       z.array(z.object({ track_id: z.string().min(1) }).passthrough()),
-      z.record(z.object({ track_id: z.string().min(1) }).passthrough()),
+      z.record(z.string(), z.object({ track_id: z.string().min(1) }).passthrough()),
     ]),
   })
   .passthrough();
