@@ -20,7 +20,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-op inject -i "${TEMPLATE_PATH}" -o "${tmp_raw}"
+# --force: tmp_raw already exists (mktemp created it), so op would otherwise
+# prompt to overwrite and fail in non-interactive contexts (CI, Ansible).
+op inject --force -i "${TEMPLATE_PATH}" -o "${tmp_raw}"
 
 awk '
   BEGIN {
