@@ -1,6 +1,123 @@
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # GitHub Actions used by the workflows in .github/workflows/
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
+    labels:
+      - dependencies
+      - github-actions
+
+  # Docker base images — one entry per service Dockerfile.
+  - package-ecosystem: docker
+    directory: /my-collection-search
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
+
+  - package-ecosystem: docker
+    directory: /essentia-api
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
+
+  - package-ecosystem: docker
+    directory: /ga-service
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
+
+  - package-ecosystem: docker
+    directory: /download-worker
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
+
+  # npm — root workspaces (packages/*, mcp-server) share the root lockfile;
+  # my-collection-search is installed separately with its own lockfile.
+  # cooldown mirrors the 14-day window used by `just deps-*`; minor/patch are
+  # grouped into a single PR, majors open individually.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      npm-workspaces-minor-patch:
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependencies
+      - javascript
+
+  - package-ecosystem: npm
+    directory: /my-collection-search
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      web-npm-minor-patch:
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependencies
+      - javascript
+
+  # Python (uv) — one entry per service.
+  - package-ecosystem: uv
+    directory: /ga-service
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      ga-service-python-minor-patch:
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependencies
+      - python
+
+  - package-ecosystem: uv
+    directory: /essentia-api
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      essentia-python-minor-patch:
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependencies
+      - python
+
+  - package-ecosystem: uv
+    directory: /download-worker
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      download-worker-python-minor-patch:
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependencies
+      - python
