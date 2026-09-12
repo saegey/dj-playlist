@@ -1,6 +1,6 @@
 {
   "name": "@groovenet/client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Typed API client for the Groovenet DJ collection system",
   "type": "module",
   "main": "build/index.js",
@@ -21,6 +21,13 @@
   "publishConfig": { "access": "public" },
   "keywords": ["groovenet", "dj", "music", "playlist"],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Public-Vinyl-Radio/groovenet.git",
+    "directory": "packages/groovenet-client"
+  },
+  "homepage": "https://github.com/Public-Vinyl-Radio/groovenet/tree/main/packages/groovenet-client#readme",
+  "bugs": "https://github.com/Public-Vinyl-Radio/groovenet/issues",
   "dependencies": {
     "axios": "^1.20.0",
     "zod": "^4.5.4"
