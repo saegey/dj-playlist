@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
   Box,
@@ -17,9 +17,7 @@ import {
 import PageContainer from "@/components/layout/PageContainer";
 import LabeledInput from "@/components/form/LabeledInput";
 import LabeledTextarea from "@/components/form/LabeledTextarea";
-import TrackEditActions from "@/components/TrackEditActions";
-import TrackEditFormDialogs from "@/components/track-edit/TrackEditFormDialogs";
-import { useTrackEditSearchIntegrations } from "@/components/track-edit/useTrackEditSearchIntegrations";
+import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { useTrackEditAudioActions } from "@/components/track-edit/useTrackEditAudioActions";
 import { toTrackEditFormState, type TrackEditFormProps } from "@/components/track-edit/types";
 import { useTrackByIdQuery } from "@/hooks/useTrackByIdQuery";
@@ -51,7 +49,6 @@ export default function TrackEditPage() {
   const track = trackQuery.data ?? null;
   const trackAsFormProps = track as unknown as TrackEditFormProps | null;
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [form, setForm] = useState(() => toTrackEditFormState(trackAsFormProps));
   const [saving, setSaving] = useState(false);
 
@@ -68,19 +65,9 @@ export default function TrackEditPage() {
   };
 
   const {
-    aiLoading, fetchFromChatGPT,
-    applePicker, searchAppleMusic,
-    youtubeLoading, searchYouTube, youtubeResults, showYoutubeModal, setShowYoutubeModal,
-    handleYouTubeSearch, handleYoutubeSelect,
-    discogsLoading, searchDiscogs, discogsVideos, showDiscogsModal, setShowDiscogsModal,
-    handleDiscogsVideoSelect,
-  } = useTrackEditSearchIntegrations({ track: trackAsFormProps, form, setForm });
-
-  const {
-    analyzeLoading, uploadLoading, handleAnalyzeAudio, onFileSelected,
-    showRemoveAudioConfirm, setShowRemoveAudioConfirm, closeRemoveAudioConfirm,
-    handleRemoveAudioClick, handleRemoveAudioConfirm, removeAudioLoading,
-  } = useTrackEditAudioActions({ form, setForm, onSave: handleSave, fileInputRef });
+    analyzeLoading, analyzeDisabled, uploadLoading, handleAnalyzeAudio, handleFileUpload,
+    handleRemoveAudio, removeAudioLoading,
+  } = useTrackEditAudioActions({ form, setForm, onSave: handleSave });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -128,26 +115,18 @@ export default function TrackEditPage() {
           )}
         </Stack>
         {track && (
-          <TrackEditActions
-            aiLoading={aiLoading}
-            onFetchAI={fetchFromChatGPT}
-            appleLoading={applePicker.loading}
-            onSearchApple={searchAppleMusic}
-            youtubeLoading={youtubeLoading}
-            onSearchYouTube={searchYouTube}
-            discogsLoading={discogsLoading}
-            onSearchDiscogs={searchDiscogs}
-            analyzeLoading={analyzeLoading}
-            analyzeDisabled={
-              analyzeLoading ||
-              (!form.apple_music_url && !form.youtube_url && !form.soundcloud_url)
-            }
-            onAnalyzeAudio={handleAnalyzeAudio}
-            uploadLoading={uploadLoading}
-            onFileSelected={onFileSelected}
-            hasAudio={!!track.local_audio_url}
-            onRemoveAudio={handleRemoveAudioClick}
-            removeAudioLoading={removeAudioLoading}
+          <TrackActionsMenu
+            track={track}
+            hideEdit
+            audioActions={{
+              onFetchAudio: handleAnalyzeAudio,
+              fetchAudioLoading: analyzeLoading,
+              fetchAudioDisabled: analyzeDisabled,
+              onUploadFile: handleFileUpload,
+              uploadLoading,
+              onRemoveAudio: handleRemoveAudio,
+              removeAudioLoading,
+            }}
           />
         )}
       </Flex>
@@ -353,35 +332,6 @@ export default function TrackEditPage() {
             </Flex>
           </Box>
         </Box>
-      )}
-
-      {/* Sub-dialogs (Apple picker, YouTube, Discogs, remove audio confirm) */}
-      {track && (
-        <TrackEditFormDialogs
-          track={trackAsFormProps!}
-          title={form.title}
-          artist={form.artist}
-          album={form.album}
-          youtubeOpen={showYoutubeModal}
-          youtubeLoading={youtubeLoading}
-          youtubeResults={youtubeResults}
-          onYouTubeOpenChange={setShowYoutubeModal}
-          onYouTubeSelect={handleYoutubeSelect}
-          onYouTubeSearch={handleYouTubeSearch}
-          appleOpen={applePicker.isOpen}
-          onAppleOpenChange={(open) => open ? applePicker.open() : applePicker.close()}
-          onAppleSelect={(song) => applePicker.select(song)}
-          discogsOpen={showDiscogsModal}
-          onDiscogsClose={() => setShowDiscogsModal(false)}
-          discogsVideos={discogsVideos}
-          discogsLoading={discogsLoading}
-          onDiscogsVideoSelect={handleDiscogsVideoSelect}
-          removeAudioOpen={showRemoveAudioConfirm}
-          onRemoveAudioOpenChange={setShowRemoveAudioConfirm}
-          onRemoveAudioCancel={closeRemoveAudioConfirm}
-          onRemoveAudioConfirm={handleRemoveAudioConfirm}
-          removeAudioLoading={removeAudioLoading}
-        />
       )}
     </PageContainer>
   );

@@ -34,14 +34,25 @@ function resolveAudioPath(audioDir: string, input: string): string | null {
 
   const primary = path.resolve(audioDir, normalized);
   const audioRoot = path.resolve(audioDir);
-  if (primary.startsWith(audioRoot) && fs.existsSync(primary) && fs.statSync(primary).isFile()) {
+  // turbopackIgnore comments: these paths point at the runtime /app/audio
+  // volume (user data), not project files — opt out of build-time tracing so
+  // Next doesn't include the whole project in the standalone output.
+  if (
+    primary.startsWith(audioRoot) &&
+    fs.existsSync(/* turbopackIgnore: true */ primary) &&
+    fs.statSync(/* turbopackIgnore: true */ primary).isFile()
+  ) {
     return primary;
   }
 
   // Backward compatibility: if input contains stale prefixes/paths, try basename.
   const base = path.basename(normalized);
   const fallback = path.resolve(audioDir, base);
-  if (fallback.startsWith(audioRoot) && fs.existsSync(fallback) && fs.statSync(fallback).isFile()) {
+  if (
+    fallback.startsWith(audioRoot) &&
+    fs.existsSync(/* turbopackIgnore: true */ fallback) &&
+    fs.statSync(/* turbopackIgnore: true */ fallback).isFile()
+  ) {
     return fallback;
   }
 
@@ -62,7 +73,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
-  const stat = fs.statSync(filePath);
+  const stat = fs.statSync(/* turbopackIgnore: true */ filePath);
   const totalSize = stat.size;
   const ext = path.extname(filePath).toLowerCase();
   let contentType = "audio/mpeg";
@@ -71,7 +82,7 @@ export async function GET(request: Request) {
 
   // If no Range header, just stream the whole file
   if (!range) {
-    const nodeStream = fs.createReadStream(filePath);
+    const nodeStream = fs.createReadStream(/* turbopackIgnore: true */ filePath);
     const readableStream = new ReadableStream({
       start(ctrl) {
         function cleanup() {
@@ -134,7 +145,10 @@ export async function GET(request: Request) {
   const chunkSize = end - start + 1;
 
   // Create a stream for just the requested range
-  const nodeStream = fs.createReadStream(filePath, { start, end });
+  const nodeStream = fs.createReadStream(/* turbopackIgnore: true */ filePath, {
+    start,
+    end,
+  });
   const readableStream = new ReadableStream({
     start(ctrl) {
       function cleanup() {

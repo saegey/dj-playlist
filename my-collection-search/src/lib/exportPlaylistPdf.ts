@@ -124,11 +124,11 @@ export async function exportPlaylistToPDF({
 
   const columns = [
     { key: "#", label: "#", width: 6 },
+    { key: "id", label: "ID", width: 20 },
     { key: "pos", label: "Pos", width: 8 },
     { key: "artist", label: "Artist", width: 50 },
     { key: "title", label: "Title", width: 60 },
     { key: "album", label: "Album", width: 60 },
-    { key: "id", label: "ID", width: 20 },
     { key: "bpm", label: "BPM", width: 10 },
     { key: "key", label: "Key", width: 16 },
     { key: "dur", label: "Dur", width: 10 },
@@ -212,11 +212,11 @@ export async function exportPlaylistToPDF({
 
     const rowValues = [
       indexStr,
+      id,
       position,
       artist,
       title,
       album,
-      id,
       bpm,
       key,
       dur,

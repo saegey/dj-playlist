@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   Box,
   Button,
@@ -9,13 +9,12 @@ import {
   Dialog,
   CloseButton,
 } from "@chakra-ui/react";
+import type { Track } from "@/types/track";
 import { cleanSoundcloudUrl } from "@/lib/url";
 import TrackEditFormSkeleton from "@/components/TrackEditFormSkeleton";
-import TrackEditActions from "@/components/TrackEditActions";
-import { useTrackEditSearchIntegrations } from "@/components/track-edit/useTrackEditSearchIntegrations";
+import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { useTrackEditAudioActions } from "@/components/track-edit/useTrackEditAudioActions";
 import TrackEditFormFields from "@/components/track-edit/TrackEditFormFields";
-import TrackEditFormDialogs from "@/components/track-edit/TrackEditFormDialogs";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { getMobileBottomOverlayOffset } from "@/lib/mobileLayout";
 import {
@@ -27,20 +26,19 @@ export type { TrackEditFormProps } from "@/components/track-edit/types";
 
 export default function TrackEditForm({
   track,
+  menuTrack,
   onSave,
   dialogOpen,
   setDialogOpen,
   initialFocusRef,
 }: {
   track: TrackEditFormProps | null;
+  menuTrack?: Track | null;
   onSave: (data: TrackEditFormProps) => void;
   dialogOpen: boolean;
   setDialogOpen: (open: boolean) => void;
   initialFocusRef: React.RefObject<HTMLButtonElement | null>;
 }) {
-  // File upload logic
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   const [form, setForm] = useState(() => toTrackEditFormState(track));
 
   React.useEffect(() => {
@@ -51,36 +49,14 @@ export default function TrackEditForm({
   const { playlistLength } = usePlaylistPlayer();
   const mobileBottomOverlayOffset = getMobileBottomOverlayOffset(playlistLength);
   const {
-    aiLoading,
-    fetchFromChatGPT,
-    applePicker,
-    searchAppleMusic,
-    youtubeLoading,
-    searchYouTube,
-    youtubeResults,
-    showYoutubeModal,
-    setShowYoutubeModal,
-    handleYouTubeSearch,
-    handleYoutubeSelect,
-    discogsLoading,
-    searchDiscogs,
-    discogsVideos,
-    showDiscogsModal,
-    setShowDiscogsModal,
-    handleDiscogsVideoSelect,
-  } = useTrackEditSearchIntegrations({ track, form, setForm });
-  const {
     analyzeLoading,
+    analyzeDisabled,
     uploadLoading,
     handleAnalyzeAudio,
-    onFileSelected,
-    showRemoveAudioConfirm,
-    setShowRemoveAudioConfirm,
-    closeRemoveAudioConfirm,
-    handleRemoveAudioClick,
-    handleRemoveAudioConfirm,
+    handleFileUpload,
+    handleRemoveAudio,
     removeAudioLoading,
-  } = useTrackEditAudioActions({ form, setForm, onSave, fileInputRef });
+  } = useTrackEditAudioActions({ form, setForm, onSave });
 
   const handleStarRating = (rating: number) => {
     setForm((prev) => ({ ...prev, star_rating: rating }));
@@ -131,29 +107,19 @@ export default function TrackEditForm({
               <Flex justify="space-between" align="center" width="100%">
                 <Flex align="center" gap={3}>
                   <Dialog.Title>Edit Track</Dialog.Title>
-                  {track && (
-                    <TrackEditActions
-                      aiLoading={aiLoading}
-                      onFetchAI={fetchFromChatGPT}
-                      appleLoading={applePicker.loading}
-                      onSearchApple={searchAppleMusic}
-                      youtubeLoading={youtubeLoading}
-                      onSearchYouTube={searchYouTube}
-                      discogsLoading={discogsLoading}
-                      onSearchDiscogs={searchDiscogs}
-                      analyzeLoading={analyzeLoading}
-                      analyzeDisabled={
-                        analyzeLoading ||
-                        (!form.apple_music_url &&
-                          !form.youtube_url &&
-                          !form.soundcloud_url)
-                      }
-                      onAnalyzeAudio={handleAnalyzeAudio}
-                      uploadLoading={uploadLoading}
-                      onFileSelected={onFileSelected}
-                      hasAudio={!!track.local_audio_url}
-                      onRemoveAudio={handleRemoveAudioClick}
-                      removeAudioLoading={removeAudioLoading}
+                  {track && menuTrack && (
+                    <TrackActionsMenu
+                      track={menuTrack}
+                      hideEdit
+                      audioActions={{
+                        onFetchAudio: handleAnalyzeAudio,
+                        fetchAudioLoading: analyzeLoading,
+                        fetchAudioDisabled: analyzeDisabled,
+                        onUploadFile: handleFileUpload,
+                        uploadLoading,
+                        onRemoveAudio: handleRemoveAudio,
+                        removeAudioLoading,
+                      }}
                     />
                   )}
                 </Flex>
@@ -226,34 +192,6 @@ export default function TrackEditForm({
                       </Button>
                     </Flex>
                   </Box>
-
-                  <TrackEditFormDialogs
-                    track={track}
-                    title={form.title}
-                    artist={form.artist}
-                    album={form.album}
-                    youtubeOpen={showYoutubeModal}
-                    youtubeLoading={youtubeLoading}
-                    youtubeResults={youtubeResults}
-                    onYouTubeOpenChange={setShowYoutubeModal}
-                    onYouTubeSelect={handleYoutubeSelect}
-                    onYouTubeSearch={handleYouTubeSearch}
-                    appleOpen={applePicker.isOpen}
-                    onAppleOpenChange={(open) =>
-                      open ? applePicker.open() : applePicker.close()
-                    }
-                    onAppleSelect={(song) => applePicker.select(song)}
-                    discogsOpen={showDiscogsModal}
-                    onDiscogsClose={() => setShowDiscogsModal(false)}
-                    discogsVideos={discogsVideos}
-                    discogsLoading={discogsLoading}
-                    onDiscogsVideoSelect={handleDiscogsVideoSelect}
-                    removeAudioOpen={showRemoveAudioConfirm}
-                    onRemoveAudioOpenChange={setShowRemoveAudioConfirm}
-                    onRemoveAudioCancel={closeRemoveAudioConfirm}
-                    onRemoveAudioConfirm={handleRemoveAudioConfirm}
-                    removeAudioLoading={removeAudioLoading}
-                  />
                 </Box>
               )}
             </Dialog.Body>
