@@ -15,6 +15,18 @@
           "jsonpath": "$.version"
         }
       ]
+    },
+    "packages/groovenet-client": {
+      "package-name": "@groovenet/client",
+      "component": "groovenet-client",
+      "include-component-in-tag": true,
+      "changelog-path": "CHANGELOG.md"
+    },
+    "packages/groovenet-cli": {
+      "package-name": "@groovenet/cli",
+      "component": "groovenet-cli",
+      "include-component-in-tag": true,
+      "changelog-path": "CHANGELOG.md"
     }
   }
 }
