@@ -4,9 +4,9 @@ version = "1.0.0"
 requires-python = ">=3.12"
 dependencies = [
     "redis==8.1.0",
-    "yt-dlp==2026.7.4",
-    "gamdl==3.8.1",
-    "requests==2.33.0",
+    "yt-dlp==2026.8.19",
+    "gamdl==3.8.5",
+    "requests==2.34.2",
     "psycopg2-binary>=2.9.9,<2.10",
     "groovenet-python-client",
 ]
@@ -15,7 +15,7 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-mock>=3.14",
-    "fakeredis>=2.20",
+    "fakeredis>=2.37.1",
 ]
 
 [tool.uv.sources]
