@@ -79,6 +79,7 @@ export class AlbumApiService {
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
     const sortMap: Record<string, string> = {
+      "created_at:desc": "created_at DESC, release_id DESC, friend_id DESC",
       "date_added:desc": "date_added DESC NULLS LAST, release_id DESC, friend_id DESC",
       "date_added:asc": "date_added ASC NULLS LAST, release_id ASC, friend_id ASC",
       "year:desc": "year DESC NULLS LAST, release_id DESC, friend_id DESC",
@@ -104,7 +105,7 @@ export class AlbumApiService {
         `
         : "";
 
-    const sortSql = sortMap[params.sort] ?? sortMap["date_added:desc"];
+    const sortSql = sortMap[params.sort] ?? sortMap["created_at:desc"];
 
     sqlParams.push(params.limit);
     const limitRef = `$${sqlParams.length}`;

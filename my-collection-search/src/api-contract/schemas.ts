@@ -1086,7 +1086,7 @@ export const albumUpsertWithTracksResponseSchema = z.object({
 
 export const albumSearchQuerySchema = z.object({
   q: z.string().optional().default(""),
-  sort: z.string().optional().default("date_added:desc"),
+  sort: z.string().optional().default("created_at:desc"),
   friend_id: intFromInputSchema.optional(),
   limit: nonNegativeIntFromInputSchema.optional().default(20),
   offset: nonNegativeIntFromInputSchema.optional().default(0),

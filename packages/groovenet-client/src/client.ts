@@ -162,7 +162,7 @@ export class GroovenetClient {
       q: query.q ?? "",
       limit: query.limit ?? 20,
       offset: query.offset ?? 0,
-      sort: query.sort ?? "date_added:desc",
+      sort: query.sort ?? "created_at:desc",
     };
     if (query.friend_id != null) params.friend_id = query.friend_id;
     return this.request<AlbumSearchResponse>("GET", "/albums", undefined, params);

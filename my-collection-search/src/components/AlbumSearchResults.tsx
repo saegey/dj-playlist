@@ -17,7 +17,7 @@ export default function AlbumSearchResults({
   const observerTarget = useRef<HTMLDivElement>(null);
 
   const query = searchParams.get("q") || "";
-  const sort = searchParams.get("sort") || "date_added:desc";
+  const sort = searchParams.get("sort") || "created_at:desc";
   const missingLibraryIdentifier = searchParams.get("missing_library_identifier") === "1";
   const missingLocalCoverArtUrl = searchParams.get("missing_local_cover_art_url") === "1";
   const missingAudio = searchParams.get("missing_audio") === "1";

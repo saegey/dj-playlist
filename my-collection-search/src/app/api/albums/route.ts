@@ -1,6 +1,6 @@
 // API endpoint for searching and listing albums using PostgreSQL
-// Supports sorting by date_added, year, title, album_rating
-// Example: /api/albums?q=jazz&sort=date_added:desc&friend_id=1&limit=20&offset=0
+// Supports sorting by created_at, date_added, year, title, album_rating
+// Example: /api/albums?q=jazz&sort=created_at:desc&friend_id=1&limit=20&offset=0
 import { NextRequest, NextResponse } from "next/server";
 import { albumApiService } from "@/server/services/albumApiService";
 import { withDbTransaction } from "@/lib/serverDb";
@@ -25,13 +25,13 @@ export async function GET(request: NextRequest) {
     const friendId = searchParams.get("friend_id");
 
     // Support multiple sort options:
-    // - date_added:desc (recently added, default)
-    // - date_added:asc (oldest first)
+    // - created_at:desc (recently added to Groovenet, default)
+    // - date_added:desc / date_added:asc (Discogs collection date)
     // - year:desc (newest releases)
     // - year:asc (oldest releases)
     // - title:asc (alphabetical)
     // - album_rating:desc (highest rated)
-    const sort = searchParams.get("sort") || "date_added:desc";
+    const sort = searchParams.get("sort") || "created_at:desc";
     const missingLibraryIdentifier = searchParams.get("missing_library_identifier") === "1";
     const missingLocalCoverArtUrl =
       searchParams.get("missing_local_cover_art_url") === "1";

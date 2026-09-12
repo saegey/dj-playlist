@@ -78,14 +78,14 @@ const tools = [
   },
   {
     name: "search_albums",
-    description: "Search or list albums in the collection. Supports sorting by date_added, year, title, or album_rating.",
+    description: "Search or list albums in the collection. Supports sorting by when added to Groovenet, Discogs date, year, title, or album_rating.",
     inputSchema: {
       type: "object",
       properties: {
         query: { type: "string", description: "Search query (title, artist, genre)" },
         sort: {
           type: "string",
-          description: "Sort order: date_added:desc (default), date_added:asc, year:desc, year:asc, title:asc, album_rating:desc",
+          description: "Sort order: created_at:desc (default), date_added:desc, date_added:asc, year:desc, year:asc, title:asc, album_rating:desc",
         },
         limit: { type: "number", description: "Number of results to return", default: 20 },
         friend_id: { type: "number", description: "Filter by friend ID" },

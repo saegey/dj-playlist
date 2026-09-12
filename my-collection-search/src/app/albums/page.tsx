@@ -23,7 +23,7 @@ function AlbumsPageContent() {
 
   const [query, setQuery] = React.useState(searchParams.get("q") || "");
   const [sort, setSort] = React.useState(
-    searchParams.get("sort") || "date_added:desc"
+    searchParams.get("sort") || "created_at:desc"
   );
   const [viewMode, setViewMode] = React.useState<"card" | "table">("card");
 
@@ -41,7 +41,7 @@ function AlbumsPageContent() {
     const effectiveQuery = overrides.q !== undefined ? overrides.q : query;
     const effectiveSort = overrides.sort !== undefined ? overrides.sort : sort;
     if (effectiveQuery) params.set("q", effectiveQuery);
-    if (effectiveSort && effectiveSort !== "date_added:desc") params.set("sort", effectiveSort);
+    if (effectiveSort && effectiveSort !== "created_at:desc") params.set("sort", effectiveSort);
     if (missingLibraryIdentifier) params.set("missing_library_identifier", "1");
     if (missingLocalCoverArtUrl) params.set("missing_local_cover_art_url", "1");
     if (missingAudio) params.set("missing_audio", "1");
@@ -108,8 +108,9 @@ function AlbumsPageContent() {
                 <Menu.Positioner>
                   <Menu.Content>
                     {[
-                      { value: "date_added:desc", label: "Recently Added" },
-                      { value: "date_added:asc", label: "Oldest First" },
+                      { value: "created_at:desc", label: "Recently Added" },
+                      { value: "date_added:desc", label: "Newest in Discogs" },
+                      { value: "date_added:asc", label: "Oldest in Discogs" },
                       { value: "year:desc", label: "Newest Releases" },
                       { value: "year:asc", label: "Oldest Releases" },
                       { value: "title:asc", label: "Title (A-Z)" },
@@ -143,8 +144,9 @@ function AlbumsPageContent() {
                 <Menu.Positioner>
                   <Menu.Content>
                     {[
-                      { value: "date_added:desc", label: "Recently Added" },
-                      { value: "date_added:asc", label: "Oldest First" },
+                      { value: "created_at:desc", label: "Recently Added" },
+                      { value: "date_added:desc", label: "Newest in Discogs" },
+                      { value: "date_added:asc", label: "Oldest in Discogs" },
                       { value: "year:desc", label: "Newest Releases" },
                       { value: "year:asc", label: "Oldest Releases" },
                       { value: "title:asc", label: "Title (A-Z)" },

@@ -3034,7 +3034,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
     openapi: {
       parameters: [
         { name: "q", in: "query", required: false, schema: { type: "string" } },
-        { name: "sort", in: "query", required: false, schema: { type: "string", default: "date_added:desc" } },
+        { name: "sort", in: "query", required: false, schema: { type: "string", default: "created_at:desc" } },
         { name: "friend_id", in: "query", required: false, schema: { type: "integer" } },
         { name: "limit", in: "query", required: false, schema: { type: "integer", default: 20 } },
         { name: "offset", in: "query", required: false, schema: { type: "integer", default: 0 } },
