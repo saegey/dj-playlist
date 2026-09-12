@@ -16,6 +16,13 @@
   "publishConfig": { "access": "public" },
   "keywords": ["groovenet", "dj", "music", "playlist", "cli"],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Public-Vinyl-Radio/groovenet.git",
+    "directory": "packages/groovenet-cli"
+  },
+  "homepage": "https://github.com/Public-Vinyl-Radio/groovenet/tree/main/packages/groovenet-cli#readme",
+  "bugs": "https://github.com/Public-Vinyl-Radio/groovenet/issues",
   "dependencies": {
     "@groovenet/client": "^1.0.0",
     "chalk": "^6",
