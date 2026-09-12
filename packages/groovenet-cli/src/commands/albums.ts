@@ -55,7 +55,7 @@ export function addAlbumsCommands(program: Command): void {
     .command("list")
     .description("Search/list albums")
     .argument("[query]", "Search query", "")
-    .option("--sort <s>", "Sort (date_added:desc, year:desc, title:asc, album_rating:desc)", "date_added:desc")
+    .option("--sort <s>", "Sort (created_at:desc, date_added:desc, year:desc, title:asc, album_rating:desc)", "created_at:desc")
     .option("--limit <n>", "Number of results", parseInt, 20)
     .option("--offset <n>", "Offset", parseInt, 0)
     .option("--friend-id <n>", "Friend ID", parseInt)
