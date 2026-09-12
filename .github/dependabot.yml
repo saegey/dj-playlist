@@ -1,6 +1,45 @@
 version: 2
 updates:
-  - package-ecosystem: "" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  # GitHub Actions used by the workflows in .github/workflows/
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
+    labels:
+      - dependencies
+      - github-actions
+
+  # Docker base images — one entry per service Dockerfile.
+  # npm and Python (uv) deps are managed manually via the justfile
+  # (deps-check-app / deps-update-python, etc.) with cooldown windows.
+  - package-ecosystem: docker
+    directory: /my-collection-search
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
+
+  - package-ecosystem: docker
+    directory: /essentia-api
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
+
+  - package-ecosystem: docker
+    directory: /ga-service
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
+
+  - package-ecosystem: docker
+    directory: /download-worker
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
