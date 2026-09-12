@@ -41,6 +41,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    # Node 26's experimental server-side Web Storage shadows jsdom's
+    # localStorage, which browser-component tests rely on.
+    env:
+      NODE_OPTIONS: --no-experimental-webstorage
     defaults:
       run:
         working-directory: my-collection-search
