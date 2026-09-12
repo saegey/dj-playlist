@@ -37,8 +37,8 @@ bootstrap-tools:
   mise install
 
 bootstrap-node:
-  {{mise_exec}} npm install --workspaces --no-fund --no-audit --loglevel=error
-  {{mise_exec}} npm install --prefix my-collection-search --no-fund --no-audit --loglevel=error
+  {{mise_exec}} npm ci --no-fund --no-audit --loglevel=error
+  {{mise_exec}} npm ci --prefix my-collection-search --no-fund --no-audit --loglevel=error
 
 bootstrap-python:
   cd ga-service && {{mise_exec}} uv sync --frozen
