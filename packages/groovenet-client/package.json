@@ -1,6 +1,6 @@
 {
   "name": "@groovenet/client",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Typed API client for the Groovenet DJ collection system",
   "type": "module",
   "main": "build/index.js",
@@ -17,9 +17,18 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "files": ["build/"],
-  "publishConfig": { "access": "public" },
-  "keywords": ["groovenet", "dj", "music", "playlist"],
+  "files": [
+    "build/"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "groovenet",
+    "dj",
+    "music",
+    "playlist"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
