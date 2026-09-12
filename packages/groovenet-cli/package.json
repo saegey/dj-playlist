@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "CLI for managing your Groovenet DJ collection",
   "type": "module",
+  "engines": { "node": ">=22.12.0" },
   "bin": {
     "groovenet": "build/bin/groovenet.js"
   },
@@ -19,7 +20,7 @@
     "@groovenet/client": "^1.0.0",
     "chalk": "^5",
     "cli-table3": "^0.6",
-    "commander": "^12"
+    "commander": "^15"
   },
   "devDependencies": {
     "@types/node": "^26",
