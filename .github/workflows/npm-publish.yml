@@ -1,0 +1,63 @@
+name: Publish npm packages
+
+# Publishes @groovenet/client and @groovenet/cli to npm when a release is
+# created (release-please), or on manual dispatch. Each package is only
+# published if its package.json version isn't already on npm, so package
+# versions stay independent of the app release version — bump a package's
+# version in its package.json and it goes out on the next release.
+#
+# Auth is via npm Trusted Publishing (OIDC) — no NPM_TOKEN. One-time setup per
+# package on npmjs.com: Settings → Trusted Publisher → GitHub Actions →
+# repo Public-Vinyl-Radio/groovenet, workflow npm-publish.yml.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for OIDC trusted publishing + provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      # Trusted Publishing (OIDC) requires npm >= 11.5.1.
+      - name: Ensure npm supports OIDC
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Build in dependency order: client → cli.
+      - name: Build packages
+        run: |
+          npm run build --workspace=packages/groovenet-client
+          npm run build --workspace=packages/groovenet-cli
+
+      - name: Publish @groovenet/client
+        run: |
+          version=$(node -p "require('./packages/groovenet-client/package.json').version")
+          if [ -n "$(npm view @groovenet/client@"$version" version 2>/dev/null)" ]; then
+            echo "@groovenet/client@$version already published — skipping"
+          else
+            npm publish --workspace=packages/groovenet-client --provenance
+          fi
+
+      - name: Publish @groovenet/cli
+        run: |
+          version=$(node -p "require('./packages/groovenet-cli/package.json').version")
+          if [ -n "$(npm view @groovenet/cli@"$version" version 2>/dev/null)" ]; then
+            echo "@groovenet/cli@$version already published — skipping"
+          else
+            npm publish --workspace=packages/groovenet-cli --provenance
+          fi
