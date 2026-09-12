@@ -13,7 +13,7 @@ import {
   Icon,
   Text,
 } from "@chakra-ui/react";
-import { FiDownload, FiEdit, FiFileText, FiMoreVertical, FiPlay } from "react-icons/fi";
+import { FiDownload, FiEdit, FiFileText, FiMoreVertical, FiPlay, FiZap } from "react-icons/fi";
 import { SiDiscogs } from "react-icons/si";
 import NextLink from "next/link";
 import { menuDivider, drawerDivider, DrawerItem } from "@/components/ui/action-menu-primitives";
@@ -24,6 +24,8 @@ export interface AlbumActionsMenuProps {
   onPlayAlbum?: () => void;
   onDownloadMissing?: () => void;
   isDownloading?: boolean;
+  onEnrichAlbum?: () => void;
+  isEnriching?: boolean;
   discogsUrl?: string;
   onViewRawDiscogs?: () => void;
   editAlbumHref?: string;
@@ -36,6 +38,8 @@ export default function AlbumActionsMenu({
   onPlayAlbum,
   onDownloadMissing,
   isDownloading,
+  onEnrichAlbum,
+  isEnriching,
   discogsUrl,
   onViewRawDiscogs,
   editAlbumHref,
@@ -43,7 +47,7 @@ export default function AlbumActionsMenu({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const close = () => setDrawerOpen(false);
 
-  const hasPlayback = !!onPlayAlbum || !!onDownloadMissing;
+  const hasAlbumActions = !!onPlayAlbum || !!onDownloadMissing || !!onEnrichAlbum;
   const hasDiscogs = !!discogsUrl || !!onViewRawDiscogs;
   const hasEdit = !!editAlbumHref;
 
@@ -72,7 +76,7 @@ export default function AlbumActionsMenu({
                 </Drawer.Header>
                 <Drawer.Body p={0} overflowY="auto">
                   <Stack gap={0}>
-                    {hasPlayback && (
+                    {hasAlbumActions && (
                       <>
                         {onPlayAlbum && (
                           <DrawerItem icon={<FiPlay />} label="Play Album" onClick={() => { onPlayAlbum(); close(); }} />
@@ -83,6 +87,14 @@ export default function AlbumActionsMenu({
                             label={isDownloading ? "Downloading..." : "Download Missing"}
                             disabled={isDownloading}
                             onClick={() => { onDownloadMissing(); close(); }}
+                          />
+                        )}
+                        {onEnrichAlbum && (
+                          <DrawerItem
+                            icon={<FiZap />}
+                            label={isEnriching ? "Opening Enrichment..." : "Enrich Album"}
+                            disabled={isEnriching}
+                            onClick={() => { onEnrichAlbum(); close(); }}
                           />
                         )}
                         {(hasDiscogs || hasEdit) && drawerDivider}
@@ -130,7 +142,12 @@ export default function AlbumActionsMenu({
                   <FiDownload /> {isDownloading ? "Downloading..." : "Download Missing"}
                 </Menu.Item>
               )}
-              {hasPlayback && (hasDiscogs || hasEdit) && menuDivider}
+              {onEnrichAlbum && (
+                <Menu.Item value="enrich-album" onSelect={onEnrichAlbum} disabled={isEnriching}>
+                  <FiZap /> {isEnriching ? "Opening Enrichment..." : "Enrich Album"}
+                </Menu.Item>
+              )}
+              {hasAlbumActions && (hasDiscogs || hasEdit) && menuDivider}
               {discogsUrl && (
                 <Menu.Item value="discogs" asChild>
                   <Link href={discogsUrl} target="_blank" rel="noopener noreferrer">

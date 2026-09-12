@@ -18,6 +18,10 @@ import { Album } from "@/types/track";
 import { useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
 import { useAlbum } from "@/hooks/useAlbum";
 import AlbumActionsMenu from "@/components/AlbumActionsMenu";
+import { useEnrichmentStore } from "@/stores/enrichmentStore";
+import { getAlbumWithTracks } from "@/services/internalApi/albums";
+import { useRouter } from "next/navigation";
+import { toaster } from "@/components/ui/toaster";
 
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
@@ -54,6 +58,9 @@ export default function AlbumResult({
   const subtleText = useColorModeValue("gray.500", "gray.400");
 
   const updateMutation = useUpdateAlbumMutation();
+  const setEnrichmentQueue = useEnrichmentStore((s) => s.setQueue);
+  const router = useRouter();
+  const [isEnriching, setIsEnriching] = useState(false);
   const displayYear =
     resolvedAlbum?.year && resolvedAlbum.year !== "0" ? resolvedAlbum.year : "";
 
@@ -63,6 +70,39 @@ export default function AlbumResult({
   }, [resolvedAlbum, resolvedAlbum?.album_rating]);
 
   if (!resolvedAlbum) return null;
+
+  const handleEnrichAlbum = async () => {
+    setIsEnriching(true);
+    try {
+      const { tracks } = await getAlbumWithTracks(
+        resolvedAlbum.release_id,
+        resolvedAlbum.friend_id
+      );
+      if (tracks.length === 0) {
+        toaster.create({
+          title: "No tracks to enrich",
+          description: "This album has no tracks.",
+          type: "info",
+        });
+        return;
+      }
+      setEnrichmentQueue(
+        tracks.map((track) => ({
+          trackId: track.track_id,
+          friendId: track.friend_id,
+        }))
+      );
+      router.push("/enrich");
+    } catch (error) {
+      toaster.create({
+        title: "Failed to open enrichment",
+        description: error instanceof Error ? error.message : String(error),
+        type: "error",
+      });
+    } finally {
+      setIsEnriching(false);
+    }
+  };
 
   if (compact) {
     return (
@@ -280,6 +320,8 @@ export default function AlbumResult({
             albumArtist={resolvedAlbum.artist}
             discogsUrl={resolvedAlbum.discogs_url}
             editAlbumHref={showEditFields ? `/albums/${resolvedAlbum.release_id}/edit?friend_id=${resolvedAlbum.friend_id}` : undefined}
+            onEnrichAlbum={handleEnrichAlbum}
+            isEnriching={isEnriching}
           />
         </Flex>
       </Flex>
