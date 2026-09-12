@@ -35,8 +35,12 @@ jobs:
       - name: Ensure npm supports OIDC
         run: npm install -g npm@latest
 
+      # npm install (not ci): release-please bumps a package's package.json
+      # version without updating the shared root lockfile, so `npm ci` would
+      # fail the version check. install tolerates that drift (lockfile changes
+      # here aren't committed).
       - name: Install dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       # Build in dependency order: client → cli.
       - name: Build packages
