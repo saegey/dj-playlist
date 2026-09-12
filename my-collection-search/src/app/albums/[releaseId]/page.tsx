@@ -2,7 +2,7 @@
 
 import React, { Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
   Button,
@@ -47,6 +47,7 @@ import {
 } from "@/services/internalApi/albums";
 import { fetchPlaylistCounts } from "@/services/internalApi/tracks";
 import { queryKeys } from "@/lib/queryKeys";
+import { useEnrichmentStore } from "@/stores/enrichmentStore";
 
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
@@ -57,6 +58,7 @@ function formatDate(dateString?: string): string {
 function AlbumDetailContent() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const releaseId = params.releaseId as string;
   const friendId = parseInt(searchParams.get("friend_id") || "0");
@@ -73,6 +75,7 @@ function AlbumDetailContent() {
   });
   const updateMutation = useUpdateAlbumMutation();
   const { replacePlaylist } = usePlaylistPlayer();
+  const setEnrichmentQueue = useEnrichmentStore((s) => s.setQueue);
 
   const [rating, setRating] = React.useState(0);
   const [isDownloading, setIsDownloading] = React.useState(false);
@@ -145,6 +148,24 @@ function AlbumDetailContent() {
       description: `Playing ${album.title} by ${album.artist}`,
       type: "success",
     });
+  };
+
+  const handleEnrichAlbum = () => {
+    if (tracks.length === 0) {
+      toaster.create({
+        title: "No tracks to enrich",
+        description: "This album has no tracks.",
+        type: "info",
+      });
+      return;
+    }
+    setEnrichmentQueue(
+      tracks.map((track) => ({
+        trackId: track.track_id,
+        friendId: track.friend_id,
+      }))
+    );
+    router.push("/enrich");
   };
 
   const handleDownloadAlbum = async () => {
@@ -364,6 +385,7 @@ function AlbumDetailContent() {
             onPlayAlbum={tracks.length > 0 ? handleEnqueueAlbum : undefined}
             onDownloadMissing={tracks.length > 0 ? handleDownloadAlbum : undefined}
             isDownloading={isDownloading}
+            onEnrichAlbum={tracks.length > 0 ? handleEnrichAlbum : undefined}
             discogsUrl={album.discogs_url}
             onViewRawDiscogs={() => setDiscogsRawModalOpen(true)}
             editAlbumHref={`/albums/${releaseId}/edit?friend_id=${friendId}`}
