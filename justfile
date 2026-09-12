@@ -342,6 +342,23 @@ migrate-test:
   DATABASE_URL="postgres://djplaylist:test@localhost:$port/djplaylist" \
     {{mise_exec}} bash ./{{app_dir}}/scripts/migrate-test.sh
 
+# Run the Redis integration tests against a throwaway redis container.
+redis-test:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  name="groovenet-redistest-$$"
+  port="${REDIS_TEST_PORT:-63799}"
+  cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; }
+  trap cleanup EXIT
+  echo "→ starting throwaway redis ($name) on :$port"
+  docker run -d --name "$name" -p "$port:6379" redis:7-alpine >/dev/null
+  for i in $(seq 1 30); do
+    docker exec "$name" redis-cli ping >/dev/null 2>&1 && break
+    sleep 1
+  done
+  REDIS_URL="redis://localhost:$port" \
+    {{mise_exec}} npm run test:redis --prefix {{app_dir}}
+
 storybook:
   cd {{app_dir}} && npm run storybook
 

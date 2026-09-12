@@ -119,3 +119,38 @@ jobs:
         run: bash ./scripts/migrate-test.sh
         env:
           DATABASE_URL: postgres://djplaylist:test@localhost:5432/djplaylist
+
+  redis-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: my-collection-search
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: my-collection-search/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Redis integration tests
+        run: npm run test:redis
+        env:
+          REDIS_URL: redis://localhost:6379
