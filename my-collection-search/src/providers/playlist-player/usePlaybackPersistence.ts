@@ -44,7 +44,7 @@ export function usePlaybackPersistence({
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(storageKey);
+      const raw = window.localStorage.getItem(storageKey);
       if (!raw) return;
       const data = JSON.parse(raw) as {
         playlist?: Track[];
@@ -101,7 +101,7 @@ export function usePlaybackPersistence({
           volume,
           currentTime: override?.currentTime ?? currentTime,
         };
-        localStorage.setItem(storageKey, JSON.stringify(payload));
+        window.localStorage.setItem(storageKey, JSON.stringify(payload));
       } catch {
         // ignore storage errors
       }
