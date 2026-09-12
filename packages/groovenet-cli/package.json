@@ -18,7 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "@groovenet/client": "^1.0.0",
-    "chalk": "^5",
+    "chalk": "^6",
     "cli-table3": "^0.6",
     "commander": "^15"
   },
