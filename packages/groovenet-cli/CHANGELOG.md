@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-cli-v1.0.1...groovenet-cli-v1.0.2) (2026-09-13)
+
+
+### Bug Fixes
+
+* **cli:** publish from app releases only ([#205](https://github.com/Public-Vinyl-Radio/groovenet/issues/205)) ([db3225d](https://github.com/Public-Vinyl-Radio/groovenet/commit/db3225d4d7d1c24829428c59a19a641d6a3606f8))
+
 ## [1.0.1](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-cli-v1.0.0...groovenet-cli-v1.0.1) (2026-09-12)
 
 

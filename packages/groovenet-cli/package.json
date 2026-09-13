@@ -1,6 +1,6 @@
 {
   "name": "@groovenet/cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "CLI for managing your Groovenet DJ collection",
   "type": "module",
   "engines": {
