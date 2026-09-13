@@ -79,15 +79,27 @@ export class GroovenetClient {
   // ── Tracks ─────────────────────────────────────────────────────────────────
 
   async searchTracks(query: TrackSearchQuery): Promise<TrackSearchResponse> {
-    return this.request<TrackSearchResponse>("POST", "/tracks/search", {
-      query: query.query ?? "",
+    const params: Record<string, string | number | undefined> = {
+      q: query.query ?? "",
       limit: query.limit ?? 10,
       offset: query.offset ?? 0,
-      filters:
-        query.filters && Object.keys(query.filters).length > 0
-          ? query.filters
-          : undefined,
-    });
+      friend_id: query.filters?.friend_id,
+    };
+    const result = await this.request<{
+      hits: Track[];
+      estimatedTotalHits: number;
+      offset: number;
+      limit: number;
+      processingTimeMs: number;
+    }>("GET", "/tracks/search", undefined, params);
+
+    return {
+      tracks: result.hits,
+      estimatedTotalHits: result.estimatedTotalHits,
+      offset: result.offset,
+      limit: result.limit,
+      processingTimeMs: result.processingTimeMs,
+    };
   }
 
   async getTrack(trackId: string, friendId: number): Promise<Track> {
