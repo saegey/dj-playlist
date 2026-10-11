@@ -26,10 +26,10 @@ const TRACK: TrackEditFormProps = {
   track_genres: [CUMBIA],
 };
 
-function renderForm(onSave = vi.fn()) {
+function renderForm(onSave = vi.fn(), track: TrackEditFormProps = TRACK) {
   const result = renderWithProviders(
     <TrackEditForm
-      track={TRACK}
+      track={track}
       onSave={onSave}
       dialogOpen
       setDialogOpen={vi.fn()}
@@ -62,5 +62,30 @@ describe("TrackEditForm genres", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
     expect(onSave.mock.calls[0][0]).toMatchObject({ track_id: "t1", genres: [], track_genres: [] });
+  });
+});
+
+describe("TrackEditForm key confidence (#524)", () => {
+  beforeEach(() => {
+    fetchGenreTree.mockReset();
+    fetchGenreTree.mockResolvedValue([]);
+  });
+
+  it("flags a low-confidence key as uncertain", () => {
+    renderForm(vi.fn(), { ...TRACK, key: "F major", key_confidence: 0.42 });
+
+    expect(screen.getByText("Uncertain key")).toBeTruthy();
+  });
+
+  it("does not flag a confident key", () => {
+    renderForm(vi.fn(), { ...TRACK, key: "F major", key_confidence: 0.9 });
+
+    expect(screen.queryByText("Uncertain key")).toBeNull();
+  });
+
+  it("does not flag a key with no confidence on record", () => {
+    renderForm(vi.fn(), { ...TRACK, key: "F major" });
+
+    expect(screen.queryByText("Uncertain key")).toBeNull();
   });
 });

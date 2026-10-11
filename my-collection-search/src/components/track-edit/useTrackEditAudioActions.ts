@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type React from "react";
 import { cleanSoundcloudUrl } from "@/lib/url";
+import { extractKeyAnalysis } from "@/lib/essentiaKey";
 import { toaster } from "@/components/ui/toaster";
 import { useAsyncAnalyzeTrackMutation } from "@/hooks/useAsyncAnalyzeTrackMutation";
 import { useUploadTrackAudioMutation } from "@/hooks/useUploadTrackAudioMutation";
@@ -37,16 +38,15 @@ export function useTrackEditAudioActions({
         file: selectedFile,
         track_id: form.track_id,
       });
+      const { key, key_confidence } = extractKeyAnalysis(data.tonal);
       setForm((prev) => ({
         ...prev,
         bpm:
           typeof data.rhythm?.bpm === "number"
             ? String(Math.round(data.rhythm.bpm))
             : prev.bpm,
-        key:
-          data.tonal?.key_edma?.key && data.tonal?.key_edma?.scale
-            ? `${data.tonal.key_edma.key} ${data.tonal.key_edma.scale}`
-            : prev.key,
+        key: key ?? prev.key,
+        key_confidence: key_confidence ?? prev.key_confidence,
         danceability:
           typeof data.rhythm?.danceability === "number"
             ? data.rhythm.danceability.toFixed(3)

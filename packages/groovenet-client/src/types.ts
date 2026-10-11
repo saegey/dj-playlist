@@ -31,6 +31,8 @@ export type Track = {
   composer?: string | undefined | null;
   bpm?: string | undefined | null;
   key?: string | undefined | null;
+  /** Confidence (0-1) of the EDMA key estimate stored in `key` (#524). */
+  key_confidence?: number | null;
   danceability?: string | null;
   mood_happy?: number | null;
   mood_sad?: number | null;

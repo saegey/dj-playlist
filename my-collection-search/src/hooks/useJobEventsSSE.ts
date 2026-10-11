@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTrackStore } from "@/stores/trackStore";
 import type { Track } from "@/types/track";
+import { extractKeyAnalysis, logKeyProfileDisagreement, type EssentiaTonal } from "@/lib/essentiaKey";
 
 interface JobCompletedEvent {
   type: "job_completed";
@@ -15,7 +16,7 @@ interface JobCompletedEvent {
     duration_seconds?: number;
     analysis?: {
       rhythm?: { bpm?: number; danceability?: number };
-      tonal?: { key_edma?: { key?: string; scale?: string } };
+      tonal?: EssentiaTonal;
       metadata?: { audio_properties?: { length?: number } };
       highlevel?: Record<string, { all?: Record<string, number> } | undefined>;
     };
@@ -85,8 +86,14 @@ export function useJobEventsSSE(enabled: boolean = true) {
           if (analysis?.rhythm?.danceability && typeof analysis.rhythm.danceability === "number") {
             updates.danceability = analysis.rhythm.danceability.toFixed(3);
           }
-          if (analysis?.tonal?.key_edma?.key && analysis?.tonal?.key_edma?.scale) {
-            updates.key = `${analysis.tonal.key_edma.key} ${analysis.tonal.key_edma.scale}`;
+          if (analysis?.tonal) {
+            const { key, key_confidence } = extractKeyAnalysis(analysis.tonal);
+            if (key) updates.key = key;
+            if (key_confidence !== null) updates.key_confidence = key_confidence;
+            logKeyProfileDisagreement(analysis.tonal, {
+              track_id: jobEvent.track_id,
+              friend_id: jobEvent.friend_id,
+            });
           }
           // Same extraction as download-worker's PATCH /api/tracks body.
           const moods = [

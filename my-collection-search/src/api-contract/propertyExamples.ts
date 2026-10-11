@@ -68,6 +68,7 @@ const BY_NAME: Record<string, Candidates> = {
   // Audio analysis.
   bpm: 122,
   key: "8A",
+  key_confidence: 0.82,
   camelot: "8A",
   danceability: 0.62,
   energy: 0.48,

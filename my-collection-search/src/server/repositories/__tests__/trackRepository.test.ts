@@ -451,6 +451,23 @@ describe("updateTrackFields()", () => {
     expect(sql).toContain("star_rating");
   });
 
+  it("includes key_confidence as an updatable field", async () => {
+    dbQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [makeTrack()] });
+
+    await makeRepo().updateTrackFields({
+      track_id: "t1",
+      friend_id: 1,
+      key: "F major",
+      key_confidence: 0.42,
+    });
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(sql).toContain("key_confidence");
+    expect(params).toContain(0.42);
+  });
+
   it("casts bpm and duration_seconds to integer in the SET clause", async () => {
     dbQuery
       .mockResolvedValueOnce({ rows: [] })
@@ -510,6 +527,26 @@ describe("updateTrackAnalysisByTrackId()", () => {
     expect(params).toContain(null);
   });
 
+  it("sets key_confidence when provided as a number", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().updateTrackAnalysisByTrackId("t1", { key_confidence: 0.618 });
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(sql).toContain("key_confidence");
+    expect(params).toContain(0.618);
+  });
+
+  it("sets key_confidence = null when explicitly null", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().updateTrackAnalysisByTrackId("t1", { key_confidence: null });
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(sql).toContain("key_confidence");
+    expect(params).toContain(null);
+  });
+
   it("sets danceability = null when danceability is explicitly null", async () => {
     dbQuery.mockResolvedValue({ rows: [] });
 
@@ -526,6 +563,7 @@ describe("updateTrackAnalysisByTrackId()", () => {
     await makeRepo().updateTrackAnalysisByTrackId("t1", {
       bpm: 130,
       key: "Gm",
+      key_confidence: 0.42,
       danceability: 0.85,
       duration_seconds: 360,
     });
@@ -533,10 +571,12 @@ describe("updateTrackAnalysisByTrackId()", () => {
     const [sql, params] = dbQuery.mock.calls[0];
     expect(sql).toContain("bpm");
     expect(sql).toContain("key");
+    expect(sql).toContain("key_confidence");
     expect(sql).toContain("danceability");
     expect(sql).toContain("duration_seconds");
     expect(params).toContain(130);
     expect(params).toContain("Gm");
+    expect(params).toContain(0.42);
     expect(params).toContain(0.85);
     expect(params).toContain(360);
     expect(params[params.length - 1]).toBe("t1");

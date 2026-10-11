@@ -264,6 +264,10 @@ const trackEntitySchemaObject: Record<string, unknown> = {
     styles: { type: "array", items: { type: "string" } },
     bpm: { type: ["number", "string", "null"] },
     key: { type: ["string", "null"] },
+    key_confidence: {
+      type: ["number", "null"],
+      description: "Confidence (0-1) of the EDMA key estimate stored in `key` (#524).",
+    },
     notes: { type: ["string", "null"] },
     local_tags: { type: ["string", "null"] },
     track_genres: {

@@ -15,7 +15,7 @@ class TestUpdateTrackAnalysis:
             7,
             {
                 "rhythm": {"bpm": 123.6, "danceability": 0.81234},
-                "tonal": {"key_edma": {"key": "C", "scale": "major"}},
+                "tonal": {"key_edma": {"key": "C", "scale": "major", "strength": 0.6177}},
                 "metadata": {"audio_properties": {"length": 245.2}},
                 "highlevel": {
                     "mood_happy": {"all": {"happy": 0.12345}},
@@ -30,6 +30,7 @@ class TestUpdateTrackAnalysis:
         body = mock_patch.call_args.args[0]
         assert body["bpm"] == 124
         assert body["key"] == "C major"
+        assert body["key_confidence"] == 0.618
         assert body["danceability"] == 0.812
         assert body["duration_seconds"] == 245
         assert body["mood_happy"] == 0.123
@@ -37,6 +38,29 @@ class TestUpdateTrackAnalysis:
         assert body["mood_relaxed"] == 0.346
         assert body["mood_aggressive"] == 0.457
         assert body["year"] == "1999"
+
+    @patch("groovenet_client.GroovenetClient.update_track")
+    def test_logs_key_profile_disagreement_instead_of_discarding_it(self, mock_patch, caplog):
+        """Regression: #524 — key_krumhansl/key_temperley were computed and discarded silently."""
+        from worker.track_api import update_track_analysis
+
+        mock_patch.return_value.ok = True
+
+        update_track_analysis(
+            "track-1",
+            7,
+            {
+                "tonal": {
+                    "key_edma": {"key": "F", "scale": "major", "strength": 0.62},
+                    "key_krumhansl": {"key": "C", "scale": "major", "strength": 0.58},
+                    "key_temperley": {"key": "C", "scale": "major", "strength": 0.55},
+                },
+            },
+        )
+
+        assert "stored edma=F major" in caplog.text
+        assert "krumhansl=C major" in caplog.text
+        assert "temperley=C major" in caplog.text
 
 
 class TestAnalyzeAudioFile:

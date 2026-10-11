@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
-import { Box, Button, Flex, Stack, Text, RatingGroup } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, Stack, Text, RatingGroup } from "@chakra-ui/react";
 import LabeledInput from "@/components/form/LabeledInput";
 import LabeledTextarea from "@/components/form/LabeledTextarea";
 import GenrePicker from "@/components/GenrePicker";
 import type { TrackEditFormState } from "@/components/track-edit/types";
 import type { TrackGenre } from "@/types/track";
+import { isKeyConfidenceLow } from "@/lib/essentiaKey";
 
 type TrackEditFormFieldsProps = {
   values: TrackEditFormState;
@@ -71,6 +72,11 @@ export default function TrackEditFormFields({
               value={values.key}
               onChange={onChange}
             />
+            {isKeyConfidenceLow(values.key_confidence) && (
+              <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
+                Uncertain key
+              </Badge>
+            )}
           </Box>
           <Box flex={{ base: "1 1 calc(50% - 4px)", md: "1" }}>
             <LabeledInput

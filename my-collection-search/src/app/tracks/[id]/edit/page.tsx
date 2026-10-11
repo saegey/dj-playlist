@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import {
+  Badge,
   Box,
   Button,
   Flex,
@@ -28,6 +29,7 @@ import GenrePicker from "@/components/GenrePicker";
 import { useTrackByIdQuery } from "@/hooks/useTrackByIdQuery";
 import { useTracksQuery } from "@/hooks/useTracksQuery";
 import { cleanSoundcloudUrl } from "@/lib/url";
+import { isKeyConfidenceLow } from "@/lib/essentiaKey";
 import { toaster } from "@/components/ui/toaster";
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -207,12 +209,19 @@ export default function TrackEditPage() {
                   onChange={handleChange}
                   type="number"
                 />
-                <LabeledInput
-                  label="Key"
-                  name="key"
-                  value={form.key}
-                  onChange={handleChange}
-                />
+                <Box>
+                  <LabeledInput
+                    label="Key"
+                    name="key"
+                    value={form.key}
+                    onChange={handleChange}
+                  />
+                  {isKeyConfidenceLow(form.key_confidence) && (
+                    <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
+                      Uncertain key
+                    </Badge>
+                  )}
+                </Box>
                 <LabeledInput
                   label="Danceability"
                   name="danceability"

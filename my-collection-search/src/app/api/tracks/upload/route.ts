@@ -4,6 +4,7 @@ import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { writeEssentiaAnalysis } from "@/lib/essentia-storage";
+import { extractKeyAnalysis, logKeyProfileDisagreement, type EssentiaTonal } from "@/lib/essentiaKey";
 import { trackRepository } from "@/server/repositories/trackRepository";
 import { embeddingQueueService } from "@/server/services/embeddingQueueService";
 
@@ -13,7 +14,7 @@ const execAsync = promisify(exec);
 
 type AnalysisResult = {
   rhythm?: { bpm?: number; danceability?: number };
-  tonal?: { key_edma?: { key?: string; scale?: string } };
+  tonal?: EssentiaTonal;
   metadata?: { audio_properties?: { length?: number } };
 };
 
@@ -21,14 +22,16 @@ type AnalysisResult = {
 async function processAudioFile(
   local_audio_url: string,
   track_id: string,
+  friend_id: number | null,
   analysisResult: AnalysisResult
 ) {
   const bpm = analysisResult?.rhythm?.bpm
     ? Math.round(analysisResult.rhythm.bpm)
     : null;
-  const key = analysisResult?.tonal?.key_edma
-    ? `${analysisResult.tonal.key_edma.key} ${analysisResult.tonal.key_edma.scale}`
-    : null;
+  const { key, key_confidence } = extractKeyAnalysis(analysisResult?.tonal);
+  if (friend_id !== null) {
+    logKeyProfileDisagreement(analysisResult?.tonal, { track_id, friend_id });
+  }
   const danceability =
     typeof analysisResult?.rhythm?.danceability === "number"
       ? analysisResult.rhythm.danceability
@@ -41,6 +44,7 @@ async function processAudioFile(
     local_audio_url,
     bpm,
     key,
+    key_confidence,
     danceability,
     duration_seconds,
   });
@@ -68,6 +72,9 @@ export async function POST(req: NextRequest) {
   const file = formData.get("file");
   const track_id = formData.get("track_id");
   const friend_id = formData.get("friend_id");
+  const friendIdNum =
+    typeof friend_id === "string" && friend_id.trim() !== "" ? Number(friend_id) : NaN;
+  const friendId = Number.isNaN(friendIdNum) ? null : friendIdNum;
 
   if (
     !file ||
@@ -125,14 +132,11 @@ export async function POST(req: NextRequest) {
       );
     }
     analysisResult = responseText;
-    if (typeof friend_id === "string" && friend_id.trim() !== "") {
-      const friendIdNum = Number(friend_id);
-      if (!Number.isNaN(friendIdNum)) {
-        try {
-          writeEssentiaAnalysis(track_id, friendIdNum, analysisResult);
-        } catch (saveErr) {
-          console.warn("Failed to persist Essentia analysis file:", saveErr);
-        }
+    if (friendId !== null) {
+      try {
+        writeEssentiaAnalysis(track_id, friendId, analysisResult);
+      } catch (saveErr) {
+        console.warn("Failed to persist Essentia analysis file:", saveErr);
       }
     }
   } catch (err) {
@@ -200,7 +204,7 @@ export async function POST(req: NextRequest) {
 
   // Update database
   try {
-    await processAudioFile(local_audio_url, track_id, analysisResult);
+    await processAudioFile(local_audio_url, track_id, friendId, analysisResult);
   } catch (err) {
     console.warn("Could not update track with local_audio_url:", err);
   }

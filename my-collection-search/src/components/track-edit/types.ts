@@ -23,6 +23,8 @@ export interface TrackEditFormProps {
   notes?: string | undefined | null;
   bpm?: number | null;
   key?: string | undefined | null;
+  /** Confidence (0-1) of the EDMA key estimate stored in `key` (#524). */
+  key_confidence?: number | null;
   danceability?: number | null;
   apple_music_url?: string;
   youtube_url?: string;
@@ -43,6 +45,7 @@ export type TrackEditFormState = {
   notes: string;
   bpm: string;
   key: string;
+  key_confidence?: number | null;
   danceability: string;
   apple_music_url: string;
   youtube_url: string;
@@ -69,6 +72,7 @@ export function toTrackEditFormState(
     notes: (track?.notes as string | undefined) || "",
     bpm: (track?.bpm as string | undefined) || "",
     key: (track?.key as string | undefined) || "",
+    key_confidence: track?.key_confidence ?? null,
     danceability: (track?.danceability as string | undefined) || "",
     apple_music_url: track?.apple_music_url || "",
     youtube_url: track?.youtube_url || "",

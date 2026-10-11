@@ -44,6 +44,7 @@ type UpdatableTrackFields = Partial<
     | "notes"
     | "bpm"
     | "key"
+    | "key_confidence"
     | "danceability"
     | "mood_happy"
     | "mood_sad"
@@ -84,6 +85,7 @@ export type TrackReindexRow = TrackWithLibraryIdentifierRow;
 export type TrackAnalysisBulkUpdate = Pick<Track, "local_audio_url"> & {
   bpm?: number | null;
   key?: string | null;
+  key_confidence?: number | null;
   danceability?: number | null;
   duration_seconds?: number | null;
 };
@@ -113,6 +115,7 @@ const UPDATABLE_COLUMNS = {
   notes: "notes",
   bpm: "bpm",
   key: "key",
+  key_confidence: "key_confidence",
   danceability: "danceability",
   mood_happy: "mood_happy",
   mood_sad: "mood_sad",
@@ -656,6 +659,13 @@ export class TrackRepository {
       vals.push(updates.key);
     } else if (updates.key === null) {
       sets.push(`key = $${i++}`);
+      vals.push(null);
+    }
+    if (typeof updates.key_confidence === "number") {
+      sets.push(`key_confidence = $${i++}`);
+      vals.push(updates.key_confidence);
+    } else if (updates.key_confidence === null) {
+      sets.push(`key_confidence = $${i++}`);
       vals.push(null);
     }
     if (typeof updates.danceability === "number") {
