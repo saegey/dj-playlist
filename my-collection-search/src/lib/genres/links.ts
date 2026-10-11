@@ -131,6 +131,30 @@ export function trackGenreBadges(
  * page's Genres panel distinguishes "Track" from "Album (Discogs)". */
 export type PrimaryGenreBadges = { items: GenreBadgeItem[]; kind: "track" | "discogs-style" };
 
+/** A tallied badge item: how many times its label showed up across the lists counted. */
+export type GenreBadgeCount = GenreBadgeItem & { count: number };
+
+/**
+ * Tallies labels across several badge-item lists (one per track, say) and
+ * returns the `limit` most common, each keeping the slug it first appeared
+ * with — a label always resolves to the same genre, however many times it's
+ * seen. Used for playlist-stats rows (#480), where a single badge stands in
+ * for every track that shares its genre or style.
+ */
+export function countGenreBadges(itemLists: GenreBadgeItem[][], limit: number): GenreBadgeCount[] {
+  const counts = new Map<string, GenreBadgeCount>();
+  for (const items of itemLists) {
+    for (const item of items) {
+      const existing = counts.get(item.label);
+      if (existing) existing.count += 1;
+      else counts.set(item.label, { ...item, count: 1 });
+    }
+  }
+  return Array.from(counts.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit);
+}
+
 export function primaryGenreBadges(
   track: {
     track_genres?: { name: string; slug: string }[];
