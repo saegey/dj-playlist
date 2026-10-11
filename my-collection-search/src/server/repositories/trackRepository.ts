@@ -7,6 +7,8 @@ export type TrackLocalAudioRow = Pick<
   "track_id" | "friend_id" | "local_audio_url"
 >;
 
+export type TrackKeyConfidenceBackfillRow = Pick<Track, "track_id" | "friend_id" | "key">;
+
 export type TrackEssentiaBackfillRow = TrackLocalAudioRow &
   Pick<
     Track,
@@ -520,6 +522,34 @@ export class TrackRepository {
       ORDER BY p.name ASC, pt.position ASC
       `,
       [trackId, friendId]
+    );
+    return rows;
+  }
+
+  /** Tracks analyzed before key_confidence existed: a key on record, nothing to say how sure (#524). */
+  async findTracksMissingKeyConfidence(
+    friendId: number | null,
+    limit?: number
+  ): Promise<TrackKeyConfidenceBackfillRow[]> {
+    const query = `
+      SELECT track_id, friend_id, key
+      FROM tracks
+      WHERE key IS NOT NULL
+        AND key_confidence IS NULL
+        ${friendId !== null ? "AND friend_id = $1" : ""}
+      ORDER BY friend_id, track_id
+      ${limit ? `LIMIT $${friendId !== null ? 2 : 1}` : ""}
+    `;
+
+    const { rows } = await dbQuery<TrackKeyConfidenceBackfillRow>(
+      query,
+      friendId !== null
+        ? limit
+          ? [friendId, limit]
+          : [friendId]
+        : limit
+        ? [limit]
+        : []
     );
     return rows;
   }
