@@ -1,18 +1,28 @@
 // @vitest-environment jsdom
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
-import { screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { sampleTrack } from "@/stories/fixtures/track";
 import type { Track } from "@/types/track";
 
-vi.mock("@/providers/PlaylistPlayerProvider", () => ({
-  usePlaylistPlayer: () => ({ replacePlaylist: vi.fn(), appendToQueue: vi.fn() }),
+const mocks = vi.hoisted(() => ({
+  replacePlaylist: vi.fn(),
+  appendToQueue: vi.fn(),
+  saveTrack: vi.fn(),
 }));
-vi.mock("@/hooks/useTracksQuery", () => ({ useTracksQuery: () => ({ saveTrack: vi.fn() }) }));
-vi.mock("./TrackPlaylistUsage", () => ({ default: () => null }));
+
+vi.mock("@/providers/PlaylistPlayerProvider", () => ({
+  usePlaylistPlayer: () => ({ replacePlaylist: mocks.replacePlaylist, appendToQueue: mocks.appendToQueue }),
+}));
+vi.mock("@/hooks/useTracksQuery", () => ({ useTracksQuery: () => ({ saveTrack: mocks.saveTrack }) }));
+vi.mock("./TrackPlaylistUsage", () => ({
+  default: ({ count }: { count: number }) => <span>{count} playlists</span>,
+}));
 
 import TrackResult from "./TrackResult";
+
+afterEach(() => vi.clearAllMocks());
 
 const track = {
   ...sampleTrack,
@@ -145,4 +155,100 @@ describe("TrackResult layout", () => {
 
     expect(screen.getByText(/#3 was #1/)).toBeTruthy();
   });
+
+  it("formats a duration over an hour as h:mm:ss", () => {
+    renderWithProviders(<TrackResult track={{ ...track, duration_seconds: 3665 }} layout="row" />);
+
+    expect(screen.getByText("1:01:05")).toBeTruthy();
+  });
+
+  it("shows an em dash for a track with no key", () => {
+    renderWithProviders(<TrackResult track={{ ...track, key: null }} />);
+
+    expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  it("shows a static image with no Play button when the track has no local audio", () => {
+    renderWithProviders(<TrackResult track={{ ...track, local_audio_url: undefined }} />);
+
+    expect(screen.queryByRole("button", { name: "Play" })).toBeNull();
+  });
+
+  it("falls back to the placeholder image when artwork fails to load, with or without audio", () => {
+    // The artwork is a decorative alt="" image, so it isn't exposed via role="img".
+    const { container, rerender } = renderWithProviders(
+      <TrackResult track={{ ...track, local_audio_url: undefined }} />
+    );
+    const image = () => container.querySelector("img") as HTMLImageElement;
+    fireEvent.error(image());
+    expect(image().src).toContain("data:image/svg+xml");
+
+    rerender(<TrackResult track={track} />);
+    fireEvent.error(image());
+    expect(image().src).toContain("data:image/svg+xml");
+  });
+
+  it("plays the track when the artwork is clicked", async () => {
+    const { user } = renderWithProviders(<TrackResult track={track} />);
+
+    await user.click(screen.getByRole("button", { name: "Play" }));
+
+    expect(mocks.replacePlaylist).toHaveBeenCalledWith([track], { autoplay: true, startIndex: 0 });
+  });
+
+  it("adds the track to the crate when the quick-add button is clicked", async () => {
+    const { user } = renderWithProviders(<TrackResult track={track} />);
+
+    await user.click(screen.getByRole("button", { name: "Add to crate" }));
+
+    expect(mocks.appendToQueue).toHaveBeenCalledWith(track);
+  });
+
+  it("opens the notes popover when the notes icon is clicked", async () => {
+    const { user } = renderWithProviders(
+      <TrackResult track={{ ...track, notes: "Great transition into this one" }} />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Has notes" }));
+
+    expect(await screen.findByText("Great transition into this one")).toBeTruthy();
+  });
+
+  it("saves a new rating when a star is clicked", async () => {
+    const { user } = renderWithProviders(<TrackResult track={{ ...track, star_rating: 0 }} />);
+
+    await user.click(screen.getByRole("radio", { name: "3 stars" }));
+
+    expect(mocks.saveTrack).toHaveBeenCalledWith({
+      track_id: track.track_id,
+      friend_id: track.friend_id,
+      star_rating: 3,
+    });
+  });
+
+  it("shows the library identifier badge", () => {
+    renderWithProviders(<TrackResult track={{ ...track, library_identifier: "LP-099" }} />);
+
+    expect(screen.getByText("LP-099")).toBeTruthy();
+  });
+
+  it("shows the playlist count badge when there is one", () => {
+    renderWithProviders(<TrackResult track={track} playlistCount={3} />);
+
+    expect(screen.getByText("3 playlists")).toBeTruthy();
+  });
+
+  it.each(["row", "card"] as const)(
+    "shows a checkbox and reports selection in %s layout",
+    async (layout) => {
+      const onToggleSelect = vi.fn();
+      const { user } = renderWithProviders(
+        <TrackResult track={track} layout={layout} isSelected={false} onToggleSelect={onToggleSelect} />
+      );
+
+      await user.click(screen.getByRole("checkbox"));
+
+      expect(onToggleSelect).toHaveBeenCalledTimes(1);
+    }
+  );
 });

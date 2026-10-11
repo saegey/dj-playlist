@@ -2,10 +2,12 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
-import { renderWithProviders } from "@/test/renderWithProviders";
+import { renderWithProviders, setViewportWidth } from "@/test/renderWithProviders";
+import type { Track } from "@/types/track";
 
 const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
+  push: vi.fn(),
   searchParams: new URLSearchParams(),
   useSearchResults: vi.fn(),
   onQueryChange: vi.fn(),
@@ -14,10 +16,14 @@ const mocks = vi.hoisted(() => ({
   query: "",
   useTrackGenreFacets: vi.fn(),
   fetchGenreTree: vi.fn(),
+  useTrack: vi.fn(),
+  analyzeTrackAsync: vi.fn(),
+  toastCreate: vi.fn(),
+  loadMore: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: mocks.replace, push: vi.fn() }),
+  useRouter: () => ({ replace: mocks.replace, push: mocks.push }),
   usePathname: () => "/",
   useSearchParams: () => mocks.searchParams,
 }));
@@ -28,12 +34,101 @@ vi.mock("@/hooks/useSearchResults", () => ({ useSearchResults: mocks.useSearchRe
 vi.mock("@/lib/analytics/client", () => ({ analytics: { track: mocks.track } }));
 vi.mock("@/hooks/useTrackGenreFacets", () => ({ useTrackGenreFacets: mocks.useTrackGenreFacets }));
 vi.mock("@/services/internalApi/genres", () => ({ fetchGenreTree: mocks.fetchGenreTree }));
-// The result list and its rows have their own tests; here only the controls matter.
-vi.mock("@/components/TrackResultStore", () => ({ default: () => null }));
+vi.mock("@/hooks/useTrack", () => ({ useTrack: mocks.useTrack }));
+vi.mock("@/services/internalApi/tracks", () => ({ analyzeTrackAsync: mocks.analyzeTrackAsync }));
+vi.mock("@/components/ui/toaster", () => ({ toaster: { create: mocks.toastCreate } }));
 vi.mock("@/components/TrackActionsMenu", () => ({ default: () => null }));
-vi.mock("@/components/TrackSelectionBar", () => ({ default: () => null }));
+// Each row/card renders enough to assert on layout + selection; the actual
+// track-card markup has its own tests in TrackResult.test.tsx.
+vi.mock("@/components/TrackResultStore", () => ({
+  default: ({
+    trackId,
+    layout,
+    isSelected,
+    onToggleSelect,
+  }: {
+    trackId: string;
+    layout?: string;
+    isSelected?: boolean;
+    onToggleSelect?: () => void;
+  }) => (
+    <div data-testid={`track-${trackId}`} data-layout={layout} data-selected={String(!!isSelected)}>
+      {trackId}
+      {onToggleSelect && (
+        <button aria-label={`Select ${trackId}`} onClick={onToggleSelect}>
+          select
+        </button>
+      )}
+    </div>
+  ),
+}));
+vi.mock("@/components/TrackSelectionBar", () => ({
+  default: ({
+    selectedCount,
+    onSelectAll,
+    onClear,
+    onEnrich,
+    onDownloadAudio,
+  }: {
+    selectedCount: number;
+    onSelectAll: () => void;
+    onClear: () => void;
+    onEnrich: () => void;
+    onDownloadAudio: () => void;
+  }) =>
+    selectedCount === 0 ? null : (
+      <div>
+        <span>{selectedCount} selected</span>
+        <button onClick={onSelectAll}>Select all</button>
+        <button onClick={onClear}>Clear selection</button>
+        <button onClick={onEnrich}>Enrich</button>
+        <button onClick={onDownloadAudio}>Download audio</button>
+      </div>
+    ),
+}));
 
 import SearchResults from "./SearchResults";
+import { useTrackStore } from "@/stores/trackStore";
+
+let nextTrackId = 1;
+const trackFixture = (trackId: string, overrides: Partial<Track> = {}): Track => ({
+  id: nextTrackId++,
+  track_id: trackId,
+  friend_id: 1,
+  title: trackId,
+  artist: "A",
+  album: "B",
+  year: "2020",
+  duration: "3:00",
+  position: "A1",
+  discogs_url: "",
+  apple_music_url: "",
+  ...overrides,
+});
+
+/** Populates both lookup paths a result relies on: the row/card mock's `useTrack`
+ * and the real zustand store `handleDownloadAudio` reads from. */
+function seedTracks(tracks: Track[]) {
+  mocks.useTrack.mockImplementation((trackId: string, friendId: number) =>
+    tracks.find((t) => t.track_id === trackId && t.friend_id === friendId)
+  );
+  tracks.forEach((t) => useTrackStore.getState().setTrack(t));
+}
+
+class CapturingIntersectionObserver {
+  static instances: CapturingIntersectionObserver[] = [];
+  callback: IntersectionObserverCallback;
+  constructor(callback: IntersectionObserverCallback) {
+    this.callback = callback;
+    CapturingIntersectionObserver.instances.push(this);
+  }
+  observe() {}
+  disconnect() {}
+}
+
+/** The "Select tracks" toggle is duplicated for mobile/desktop with the same label. */
+const selectTracksButton = () =>
+  screen.getAllByRole("button", { name: "Select tracks", hidden: true })[0];
 
 /** The desktop input: jsdom renders both layouts and only the mobile one is accessible. */
 const searchInput = () => screen.getAllByRole("textbox", { hidden: true })[0] as HTMLInputElement;
@@ -62,6 +157,12 @@ const genreNode = (id: string, name: string, parent_id: string | null = null) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  setViewportWidth(1280);
+  localStorage.clear();
+  useTrackStore.getState().clearTracks();
+  CapturingIntersectionObserver.instances = [];
+  vi.stubGlobal("IntersectionObserver", CapturingIntersectionObserver);
+  mocks.useTrack.mockReturnValue(undefined);
   mocks.searchParams = new URLSearchParams();
   mocks.query = "";
   mocks.useTrackGenreFacets.mockReturnValue({ counts: new Map([["salsa", 3]]) });
@@ -76,7 +177,7 @@ beforeEach(() => {
     trackInfo: [],
     playlistCounts: {},
     hasMore: false,
-    loadMore: vi.fn(),
+    loadMore: mocks.loadMore,
     initialLoading: false,
     loadingMore: false,
     addedGenres: [],
@@ -388,5 +489,197 @@ describe("SearchResults following a navigation (#376)", () => {
     await waitFor(() => expect(mocks.replace).toHaveBeenLastCalledWith("/?missingAudio=1&star_rating=4"));
     expect(lastAttributes()).toEqual({ star_rating: 4 });
     expect(mocks.setQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe("SearchResults loading states", () => {
+  it("shows a skeleton while results are loading initially", () => {
+    mocks.useSearchResults.mockImplementation(() => ({
+      query: "", onQueryChange: mocks.onQueryChange, setQuery: mocks.setQuery,
+      estimatedResults: 0, trackInfo: [], playlistCounts: {}, hasMore: false,
+      loadMore: mocks.loadMore, initialLoading: true, loadingMore: false, addedGenres: [],
+    }));
+    renderWithProviders(<SearchResults />);
+
+    expect(screen.queryByText(/results found/)).toBeNull();
+  });
+
+  it("shows a spinner while loading more", () => {
+    mocks.useSearchResults.mockImplementation(() => ({
+      query: "", onQueryChange: mocks.onQueryChange, setQuery: mocks.setQuery,
+      estimatedResults: 1, trackInfo: [{ trackId: "t1", friendId: 1 }], playlistCounts: {}, hasMore: true,
+      loadMore: mocks.loadMore, initialLoading: false, loadingMore: true, addedGenres: [],
+    }));
+    renderWithProviders(<SearchResults />);
+
+    expect(document.querySelector(".chakra-spinner")).toBeTruthy();
+  });
+
+  it("loads more once the bottom sentinel intersects", () => {
+    mocks.useSearchResults.mockImplementation(() => ({
+      query: "", onQueryChange: mocks.onQueryChange, setQuery: mocks.setQuery,
+      estimatedResults: 1, trackInfo: [{ trackId: "t1", friendId: 1 }], playlistCounts: {}, hasMore: true,
+      loadMore: mocks.loadMore, initialLoading: false, loadingMore: false, addedGenres: [],
+    }));
+    renderWithProviders(<SearchResults />);
+
+    const observer = CapturingIntersectionObserver.instances.at(-1);
+    observer?.callback([{ isIntersecting: true } as IntersectionObserverEntry], observer as unknown as IntersectionObserver);
+
+    expect(mocks.loadMore).toHaveBeenCalledOnce();
+  });
+});
+
+describe("SearchResults rows/cards view", () => {
+  function withResults() {
+    seedTracks([trackFixture("t1"), trackFixture("t2")]);
+    mocks.useSearchResults.mockImplementation(() => ({
+      query: "", onQueryChange: mocks.onQueryChange, setQuery: mocks.setQuery,
+      estimatedResults: 2,
+      trackInfo: [{ trackId: "t1", friendId: 1 }, { trackId: "t2", friendId: 1 }],
+      playlistCounts: {}, hasMore: false, loadMore: mocks.loadMore,
+      initialLoading: false, loadingMore: false, addedGenres: [],
+    }));
+  }
+
+  it("renders rows by default, with the column header", () => {
+    withResults();
+    renderWithProviders(<SearchResults />);
+
+    expect(screen.getByText("Track")).toBeTruthy();
+    expect(screen.getByTestId("track-t1").dataset.layout).toBe("row");
+    expect(screen.getByTestId("track-t2").dataset.layout).toBe("row");
+  });
+
+  it("switches to cards from the toggle and remembers it on reload", async () => {
+    withResults();
+    const { user, unmount } = renderWithProviders(<SearchResults />);
+
+    await user.click(screen.getByRole("button", { name: "Cards view", hidden: true }));
+    expect(screen.getByTestId("track-t1").dataset.layout).toBe("card");
+    expect(localStorage.getItem("searchViewMode")).toBe("card");
+
+    unmount();
+    renderWithProviders(<SearchResults />);
+    expect(screen.getByTestId("track-t1").dataset.layout).toBe("card");
+  });
+
+  it("switches back to rows from the toggle", async () => {
+    withResults();
+    localStorage.setItem("searchViewMode", "card");
+    const { user } = renderWithProviders(<SearchResults />);
+    expect(screen.getByTestId("track-t1").dataset.layout).toBe("card");
+
+    await user.click(screen.getByRole("button", { name: "Rows view", hidden: true }));
+
+    expect(screen.getByTestId("track-t1").dataset.layout).toBe("row");
+    expect(localStorage.getItem("searchViewMode")).toBe("row");
+  });
+
+  it("always renders cards on phones, even with rows saved", () => {
+    localStorage.setItem("searchViewMode", "row");
+    setViewportWidth(375);
+    withResults();
+    renderWithProviders(<SearchResults />);
+
+    expect(screen.getByTestId("track-t1").dataset.layout).toBe("card");
+  });
+});
+
+describe("SearchResults selection and bulk actions", () => {
+  function withSelectableResults() {
+    seedTracks([
+      trackFixture("t1", { apple_music_url: "https://music.apple.com/x" }),
+      trackFixture("t2", { local_audio_url: "t2.m4a" }),
+    ]);
+    mocks.useSearchResults.mockImplementation(() => ({
+      query: "", onQueryChange: mocks.onQueryChange, setQuery: mocks.setQuery,
+      estimatedResults: 2,
+      trackInfo: [{ trackId: "t1", friendId: 1 }, { trackId: "t2", friendId: 1 }],
+      playlistCounts: {}, hasMore: false, loadMore: mocks.loadMore,
+      initialLoading: false, loadingMore: false, addedGenres: [],
+    }));
+  }
+
+  it("selects a track, then selects all and clears", async () => {
+    withSelectableResults();
+    const { user } = renderWithProviders(<SearchResults />);
+
+    await user.click(selectTracksButton());
+    await user.click(screen.getByRole("button", { name: "Select t1" }));
+    expect(screen.getByText("1 selected")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Select all" }));
+    expect(screen.getByText("2 selected")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Clear selection" }));
+    expect(screen.queryByText(/selected/)).toBeNull();
+  });
+
+  it("selects a track from its checkbox in cards view too", async () => {
+    withSelectableResults();
+    const { user } = renderWithProviders(<SearchResults />);
+
+    await user.click(screen.getByRole("button", { name: "Cards view", hidden: true }));
+    await user.click(selectTracksButton());
+    await user.click(screen.getByRole("button", { name: "Select t1" }));
+
+    expect(screen.getByTestId("track-t1").dataset.selected).toBe("true");
+  });
+
+  it("queues selected tracks for enrichment and navigates to /enrich", async () => {
+    withSelectableResults();
+    const { user } = renderWithProviders(<SearchResults />);
+
+    await user.click(selectTracksButton());
+    await user.click(screen.getByRole("button", { name: "Select t1" }));
+    await user.click(screen.getByRole("button", { name: "Enrich" }));
+
+    expect(mocks.push).toHaveBeenCalledWith("/enrich");
+  });
+
+  it("downloads audio only for selected tracks that have a streaming link but no local audio", async () => {
+    mocks.analyzeTrackAsync.mockResolvedValue({ jobId: "job1" });
+    withSelectableResults();
+    const { user } = renderWithProviders(<SearchResults />);
+
+    await user.click(selectTracksButton());
+    await user.click(screen.getByRole("button", { name: "Select t1" }));
+    await user.click(screen.getByRole("button", { name: "Select t2" }));
+    await user.click(screen.getByRole("button", { name: "Download audio" }));
+
+    await waitFor(() => expect(mocks.analyzeTrackAsync).toHaveBeenCalledTimes(1));
+    expect(mocks.analyzeTrackAsync).toHaveBeenCalledWith(expect.objectContaining({ track_id: "t1" }));
+    expect(mocks.toastCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "1 track queued for download" })
+    );
+    await waitFor(() => expect(screen.queryByText(/selected/)).toBeNull());
+  });
+
+  it("reports a failed download but still queues the rest", async () => {
+    mocks.analyzeTrackAsync.mockRejectedValueOnce(new Error("nope"));
+    seedTracks([
+      trackFixture("t1", { apple_music_url: "https://music.apple.com/x" }),
+      trackFixture("t3", { apple_music_url: "https://music.apple.com/y" }),
+    ]);
+    mocks.useSearchResults.mockImplementation(() => ({
+      query: "", onQueryChange: mocks.onQueryChange, setQuery: mocks.setQuery,
+      estimatedResults: 2,
+      trackInfo: [{ trackId: "t1", friendId: 1 }, { trackId: "t3", friendId: 1 }],
+      playlistCounts: {}, hasMore: false, loadMore: mocks.loadMore,
+      initialLoading: false, loadingMore: false, addedGenres: [],
+    }));
+    const { user } = renderWithProviders(<SearchResults />);
+
+    await user.click(selectTracksButton());
+    await user.click(screen.getByRole("button", { name: "Select t1" }));
+    await user.click(screen.getByRole("button", { name: "Select t3" }));
+    await user.click(screen.getByRole("button", { name: "Download audio" }));
+
+    await waitFor(() =>
+      expect(mocks.toastCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "1 track queued for download" })
+      )
+    );
   });
 });
