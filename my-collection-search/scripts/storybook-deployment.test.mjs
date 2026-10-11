@@ -1,10 +1,21 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const composeAvailable = spawnSync('docker', ['compose', 'version']).status === 0;
+const fixture = mkdtempSync(join(tmpdir(), 'groovenet-storybook-compose-'));
+after(() => rmSync(fixture, { recursive: true, force: true }));
+for (const file of ['docker-compose.yml', 'docker-compose.prod.yml', 'docker-compose.local.yml', 'docker-compose.dev.yml', 'docker-compose.worktree.yml', 'docker-compose.mac.yml']) {
+  copyFileSync(join(root, file), join(fixture, file));
+}
+// Compose 2.x still checks service env_file existence with --no-env-resolution.
+// Provide an empty fixture instead of requiring or reading the checkout's .env.
+writeFileSync(join(fixture, '.env'), '');
 
 function compose(overrides, environment = {}) {
   return JSON.parse(execFileSync('docker', [
@@ -12,11 +23,11 @@ function compose(overrides, environment = {}) {
     ...overrides.flatMap((file) => ['-f', file]),
     'config', '--no-env-resolution', '--format', 'json',
   ], {
-    cwd: root,
+    cwd: fixture,
     // Use fixture configuration, never the caller's credentials or .env.
     env: { PATH: process.env.PATH, POSTGRES_PASSWORD: 'storybook-test', ...environment },
     encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'ignore'],
+    stdio: ['ignore', 'pipe', 'pipe'],
   })).services.app;
 }
 
