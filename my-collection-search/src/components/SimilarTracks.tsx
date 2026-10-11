@@ -129,7 +129,6 @@ export default function SimilarTracks({
             <Box key={`${similarTrack.track_id}-${similarTrack.friend_id}`} mb={2}>
               <TrackResult
                 track={trackWithArtwork}
-                playlistMode={true}
                 showUsername={true}
                 showRating={true}
                 buttons={<TrackActionsMenu track={trackWithArtwork} />}

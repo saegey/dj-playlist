@@ -13,7 +13,8 @@ interface TrackResultStoreProps extends Omit<TrackResultProps, 'track'> {
   compact?: boolean;
   compactVariant?: "card" | "row";
   onRowClick?: () => void;
-  playlistMode?: boolean;
+  /** TrackResultCompact-only: hidden on TrackResult (`compact` false/undefined). */
+  showLinks?: boolean;
   fetchIfMissing?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;

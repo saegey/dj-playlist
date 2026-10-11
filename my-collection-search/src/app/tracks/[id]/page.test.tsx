@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/test/renderWithProviders";
 
 const modalProps = vi.hoisted(() => vi.fn());
+const currentLibraryFriend = vi.hoisted(() => ({ id: 6, username: "dj" }));
 const queries = vi.hoisted(() => ({
   trackQuery: {
     isLoading: false,
@@ -24,9 +25,16 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "t1" }),
   useSearchParams: () => new URLSearchParams("friend_id=6"),
 }));
+vi.mock("@/providers/UsernameProvider", () => ({
+  useUsername: () => ({ friend: currentLibraryFriend }),
+}));
 vi.mock("@/hooks/useTrackDetailQueries", () => ({ useTrackDetailQueries: () => queries }));
 vi.mock("@/components/TrackResultStore", () => ({
-  default: (props: { buttons?: React.ReactNode }) => <>{props.buttons}</>,
+  default: (props: { buttons?: React.ReactNode; showUsername?: boolean }) => (
+    <div data-testid="track-result" data-show-username={String(props.showUsername)}>
+      {props.buttons}
+    </div>
+  ),
 }));
 vi.mock("@/components/TrackActionsMenu", () => ({
   default: (props: { onChangeArtwork?: () => void }) =>
@@ -53,6 +61,10 @@ vi.mock("@/components/track-detail", () => ({
 
 import TrackPage from "./page";
 
+beforeEach(() => {
+  currentLibraryFriend.id = 6;
+});
+
 describe("TrackPage", () => {
   it("hands the debug modal the context embedding preview", () => {
     renderWithProviders(<TrackPage />);
@@ -63,6 +75,21 @@ describe("TrackPage", () => {
         audioVibeEmbeddingPreviewQuery: { id: "vibe" },
       })
     );
+  });
+});
+
+describe("TrackPage username attribution", () => {
+  // The URL's friend_id is fixed at 6 by the next/navigation mock above.
+  it("hides the username when the track is in the library already being browsed", () => {
+    currentLibraryFriend.id = 6;
+    renderWithProviders(<TrackPage />);
+    expect(screen.getByTestId("track-result").dataset.showUsername).toBe("false");
+  });
+
+  it("shows the username when the track belongs to a different library", () => {
+    currentLibraryFriend.id = 99;
+    renderWithProviders(<TrackPage />);
+    expect(screen.getByTestId("track-result").dataset.showUsername).toBe("true");
   });
 });
 

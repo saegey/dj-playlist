@@ -17,7 +17,7 @@ const meta: Meta<typeof TrackResult> = {
   },
   decorators: [
     (Story) => (
-      <Box maxW="800px" mx="auto">
+      <Box maxW="1360px" mx="auto">
         <Story />
       </Box>
     ),
@@ -30,7 +30,7 @@ const meta: Meta<typeof TrackResult> = {
     showGenres: true,
     showNotes: true,
     showPlaylistCount: true,
-    playlistMode: false,
+    layout: 'card',
   },
 };
 
@@ -38,7 +38,7 @@ export default meta;
 type Story = StoryObj<typeof TrackResult>;
 
 export const Default: Story = {
-  name: 'Default (full view)',
+  name: 'Default (card layout)',
 };
 
 export const WithAudio: Story = {
@@ -48,24 +48,37 @@ export const WithAudio: Story = {
   },
 };
 
-export const PlaylistMode: Story = {
-  name: 'Playlist mode',
+export const RowLayout: Story = {
+  name: 'Row layout (desktop search results)',
   args: {
-    track: sampleTrack,
-    playlistMode: true,
+    layout: 'row',
   },
+  decorators: [
+    (Story) => (
+      <Box maxW="1360px" mx="auto">
+        <Story />
+      </Box>
+    ),
+  ],
 };
 
-export const PlaylistModeWithIssues: Story = {
-  name: 'Playlist mode — missing BPM + embedding',
+export const RowLayoutWithIssues: Story = {
+  name: 'Row layout — missing BPM + embedding',
   args: {
     track: trackNoEmbeddingNoBpm,
-    playlistMode: true,
+    layout: 'row',
   },
+  decorators: [
+    (Story) => (
+      <Box maxW="1360px" mx="auto">
+        <Story />
+      </Box>
+    ),
+  ],
 };
 
-export const PlaylistModeWithTrackGenres: Story = {
-  name: 'Playlist mode — track genres (#470)',
+export const WithTrackGenres: Story = {
+  name: 'Track genres (#470)',
   args: {
     track: {
       ...sampleTrack,
@@ -74,23 +87,20 @@ export const PlaylistModeWithTrackGenres: Story = {
         { id: 'chicha', name: 'Chicha', slug: 'chicha', parent_id: 'cumbia', parent_name: 'Cumbia' },
       ],
     },
-    playlistMode: true,
   },
 };
 
-export const PlaylistModeWithDiscogsFallback: Story = {
-  name: 'Playlist mode — Discogs style fallback, unreconciled track (#470)',
+export const WithDiscogsFallback: Story = {
+  name: 'Discogs style fallback, unreconciled track (#470)',
   args: {
     track: { ...sampleTrack, track_genres: [], local_tags: '', styles: ['Bossa Nova', 'Latin Jazz'] },
-    playlistMode: true,
   },
 };
 
-export const PlaylistModeWithNoGenres: Story = {
-  name: 'Playlist mode — no genres at all (#470)',
+export const WithNoGenres: Story = {
+  name: 'No genres at all (#470)',
   args: {
     track: { ...sampleTrack, track_genres: [], local_tags: '', styles: [] },
-    playlistMode: true,
   },
 };
 
@@ -131,25 +141,32 @@ export const SemanticScore: Story = {
 };
 
 export const MultipleInList: Story = {
-  name: 'Multiple tracks (list view)',
-  render: (args) => (
-    <Box>
-      <TrackResult {...args} track={sampleTrack} />
-      <TrackResult {...args} track={trackWithAudio} />
-      <TrackResult {...args} track={trackInPlaylist} />
-      <TrackResult {...args} track={trackMinimal} />
-    </Box>
-  ),
-};
-
-export const MultiplePlaylistMode: Story = {
-  name: 'Multiple tracks (playlist mode)',
-  args: { playlistMode: true },
+  name: 'Multiple tracks (card layout)',
   render: (args) => (
     <Box>
       <TrackResult {...args} track={sampleTrack} />
       <TrackResult {...args} track={trackWithAudio} />
       <TrackResult {...args} track={trackInPlaylist} sortPositionChange={{ currentPosition: 3, previousPosition: 1 }} />
+      <TrackResult {...args} track={trackNoEmbeddingNoBpm} />
+    </Box>
+  ),
+};
+
+export const MultipleRows: Story = {
+  name: 'Multiple tracks (row layout)',
+  args: { layout: 'row' },
+  decorators: [
+    (Story) => (
+      <Box maxW="1360px" mx="auto">
+        <Story />
+      </Box>
+    ),
+  ],
+  render: (args) => (
+    <Box borderWidth="1px" borderRadius="md" overflow="hidden">
+      <TrackResult {...args} track={sampleTrack} />
+      <TrackResult {...args} track={trackWithAudio} />
+      <TrackResult {...args} track={trackInPlaylist} />
       <TrackResult {...args} track={trackNoEmbeddingNoBpm} />
     </Box>
   ),

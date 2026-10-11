@@ -30,7 +30,6 @@ vi.mock("@/hooks/useTrackGenreFacets", () => ({ useTrackGenreFacets: mocks.useTr
 vi.mock("@/services/internalApi/genres", () => ({ fetchGenreTree: mocks.fetchGenreTree }));
 // The result list and its rows have their own tests; here only the controls matter.
 vi.mock("@/components/TrackResultStore", () => ({ default: () => null }));
-vi.mock("@/components/TrackTableViewWithLoader", () => ({ default: () => null }));
 vi.mock("@/components/TrackActionsMenu", () => ({ default: () => null }));
 vi.mock("@/components/TrackSelectionBar", () => ({ default: () => null }));
 

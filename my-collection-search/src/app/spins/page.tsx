@@ -180,7 +180,6 @@ function SpinsPageContent() {
                     trackId={track.track_id}
                     friendId={track.friend_id}
                     fallbackTrack={buildTopTrackFallback(track)}
-                    playlistMode={true}
                     showUsername={false}
                     buttons={<TrackActionsMenu track={buildTopTrackFallback(track)} />}
                     footer={

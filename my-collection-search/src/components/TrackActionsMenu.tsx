@@ -423,97 +423,99 @@ export default function TrackActionsMenu({
               <FiMoreVertical />
             </Button>
           </Menu.Trigger>
-          <Menu.Positioner>
-            <Menu.Content>
-              {hasAudio && (
-                <Menu.Item onSelect={playTrack} value="play">
-                  <FiPlay /> Play
+          <Portal>
+            <Menu.Positioner>
+              <Menu.Content>
+                {hasAudio && (
+                  <Menu.Item onSelect={playTrack} value="play">
+                    <FiPlay /> Play
+                  </Menu.Item>
+                )}
+                <Menu.Item onSelect={() => openForTrack(track)} value="add">
+                  <FiPlus /> Add to Playlist
                 </Menu.Item>
-              )}
-              <Menu.Item onSelect={() => openForTrack(track)} value="add">
-                <FiPlus /> Add to Playlist
-              </Menu.Item>
-              {!hideEdit && (
-                <Menu.Item value="edit" asChild>
-                  <NextLink href={editHref}>
-                    <FiEdit /> Edit Track
-                  </NextLink>
+                {!hideEdit && (
+                  <Menu.Item value="edit" asChild>
+                    <NextLink href={editHref}>
+                      <FiEdit /> Edit Track
+                    </NextLink>
+                  </Menu.Item>
+                )}
+                {onChangeArtwork && (
+                  <Menu.Item onSelect={onChangeArtwork} value="cover-art">
+                    <FiImage /> Cover Art...
+                  </Menu.Item>
+                )}
+                {onOpenTrackDebug && (
+                  <Menu.Item onSelect={onOpenTrackDebug} value="track-debug">
+                    <FiCode /> Track Debug
+                  </Menu.Item>
+                )}
+                <Menu.Item onSelect={handleEnrich} value="enrich">
+                  <FiZap /> Enrich Track
                 </Menu.Item>
-              )}
-              {onChangeArtwork && (
-                <Menu.Item onSelect={onChangeArtwork} value="cover-art">
-                  <FiImage /> Cover Art...
+                <Menu.Item onSelect={queueTrack} value="queue">
+                  <FiPlusSquare /> Add to Queue
                 </Menu.Item>
-              )}
-              {onOpenTrackDebug && (
-                <Menu.Item onSelect={onOpenTrackDebug} value="track-debug">
-                  <FiCode /> Track Debug
+                {menuDivider}
+                {hasStreamingLinks && (
+                  <Menu.Item
+                    onSelect={() => { void fetchAudio(); }}
+                    value="fetch-audio"
+                    disabled={fetchAudioLoading || fetchAudioDisabled}
+                  >
+                    <FiDownload />
+                    {fetchAudioLoading ? "Fetching Audio..." : "Fetch Audio"}
+                  </Menu.Item>
+                )}
+                <Menu.Item onSelect={handleUploadClick} value="upload-audio" disabled={uploadLoading}>
+                  <FiUpload />
+                  {uploadLoading ? "Uploading..." : "Upload Audio"}
                 </Menu.Item>
-              )}
-              <Menu.Item onSelect={handleEnrich} value="enrich">
-                <FiZap /> Enrich Track
-              </Menu.Item>
-              <Menu.Item onSelect={queueTrack} value="queue">
-                <FiPlusSquare /> Add to Queue
-              </Menu.Item>
-              {menuDivider}
-              {hasStreamingLinks && (
-                <Menu.Item
-                  onSelect={() => { void fetchAudio(); }}
-                  value="fetch-audio"
-                  disabled={fetchAudioLoading || fetchAudioDisabled}
-                >
-                  <FiDownload />
-                  {fetchAudioLoading ? "Fetching Audio..." : "Fetch Audio"}
+                {hasAudio && (
+                  <Menu.Item
+                    onSelect={() => setRemoveAudioConfirmOpen(true)}
+                    value="remove-audio"
+                    color="red.500"
+                    disabled={removeAudioLoading}
+                  >
+                    <FiTrash2 />
+                    {removeAudioLoading ? "Removing..." : "Remove Audio"}
+                  </Menu.Item>
+                )}
+                {menuDivider}
+                <Menu.Item onSelect={() => setDeleteConfirmOpen(true)} value="delete" color="red.500">
+                  <FiTrash2 /> Delete Track
                 </Menu.Item>
-              )}
-              <Menu.Item onSelect={handleUploadClick} value="upload-audio" disabled={uploadLoading}>
-                <FiUpload />
-                {uploadLoading ? "Uploading..." : "Upload Audio"}
-              </Menu.Item>
-              {hasAudio && (
-                <Menu.Item
-                  onSelect={() => setRemoveAudioConfirmOpen(true)}
-                  value="remove-audio"
-                  color="red.500"
-                  disabled={removeAudioLoading}
-                >
-                  <FiTrash2 />
-                  {removeAudioLoading ? "Removing..." : "Remove Audio"}
-                </Menu.Item>
-              )}
-              {menuDivider}
-              <Menu.Item onSelect={() => setDeleteConfirmOpen(true)} value="delete" color="red.500">
-                <FiTrash2 /> Delete Track
-              </Menu.Item>
-              {hasStreamingLinks && (
-                <>
-                  {menuDivider}
-                  {track.apple_music_url && (
-                    <Menu.Item value="apple" asChild>
-                      <Link href={track.apple_music_url} target="_blank" rel="noopener noreferrer">
-                        <Icon as={SiApplemusic} /> Apple Music
-                      </Link>
-                    </Menu.Item>
-                  )}
-                  {track.youtube_url && (
-                    <Menu.Item value="youtube" asChild>
-                      <Link href={track.youtube_url} target="_blank" rel="noopener noreferrer">
-                        <Icon as={SiYoutube} /> YouTube
-                      </Link>
-                    </Menu.Item>
-                  )}
-                  {track.soundcloud_url && (
-                    <Menu.Item value="soundcloud" asChild>
-                      <Link href={track.soundcloud_url} target="_blank" rel="noopener noreferrer">
-                        <Icon as={SiSoundcloud} /> SoundCloud
-                      </Link>
-                    </Menu.Item>
-                  )}
-                </>
-              )}
-            </Menu.Content>
-          </Menu.Positioner>
+                {hasStreamingLinks && (
+                  <>
+                    {menuDivider}
+                    {track.apple_music_url && (
+                      <Menu.Item value="apple" asChild>
+                        <Link href={track.apple_music_url} target="_blank" rel="noopener noreferrer">
+                          <Icon as={SiApplemusic} /> Apple Music
+                        </Link>
+                      </Menu.Item>
+                    )}
+                    {track.youtube_url && (
+                      <Menu.Item value="youtube" asChild>
+                        <Link href={track.youtube_url} target="_blank" rel="noopener noreferrer">
+                          <Icon as={SiYoutube} /> YouTube
+                        </Link>
+                      </Menu.Item>
+                    )}
+                    {track.soundcloud_url && (
+                      <Menu.Item value="soundcloud" asChild>
+                        <Link href={track.soundcloud_url} target="_blank" rel="noopener noreferrer">
+                          <Icon as={SiSoundcloud} /> SoundCloud
+                        </Link>
+                      </Menu.Item>
+                    )}
+                  </>
+                )}
+              </Menu.Content>
+            </Menu.Positioner>
+          </Portal>
         </Menu.Root>
       </Box>
 

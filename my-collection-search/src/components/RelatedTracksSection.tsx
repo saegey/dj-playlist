@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Box, Button, Flex, Heading, Spinner, Text, useBreakpointValue } from "@chakra-ui/react";
+import { Box, Button, Flex, Heading, Spinner, Text, useBreakpointValue } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import type { Track } from "@/types/track";
 import TrackResult from "@/components/TrackResult";
@@ -194,8 +194,9 @@ export default function RelatedTracksSection({ track }: Props) {
             <TrackResult
               key={`${item.track_id}-${item.friend_id}`}
               track={item}
-              playlistMode={true}
-              showUsername={true}
+              // Only meaningful cross-library ("All libraries"): every row is the
+              // browsed library's own otherwise, so the badge is just repeated noise.
+              showUsername={scope === "all"}
               showRating={true}
               buttons={
                 <TrackActionsMenu
@@ -209,19 +210,6 @@ export default function RelatedTracksSection({ track }: Props) {
                     })
                   }
                 />
-              }
-              footer={
-                <Flex gap={1} align="center">
-                  {item._sources.includes("ai") && (
-                    <Badge colorPalette="purple" size="sm">AI</Badge>
-                  )}
-                  {item._sources.includes("similar") && (
-                    <Badge colorPalette="blue" size="sm">Similar</Badge>
-                  )}
-                  {item._sources.includes("vibe") && (
-                    <Badge colorPalette="cyan" size="sm">Vibe</Badge>
-                  )}
-                </Flex>
               }
             />
           ))}

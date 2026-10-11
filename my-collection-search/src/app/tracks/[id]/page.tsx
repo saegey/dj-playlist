@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Box, Skeleton, Text, VStack } from "@chakra-ui/react";
 import { toaster } from "@/components/ui/toaster";
+import { useUsername } from "@/providers/UsernameProvider";
 import { useTrackStore } from "@/stores/trackStore";
 import { useAlbumStore } from "@/stores/albumStore";
 import TrackResultStore from "@/components/TrackResultStore";
@@ -26,6 +27,9 @@ export default function TrackPage() {
   const friendIdRaw = searchParams?.get("friend_id") ?? "";
   const friendId = Number(friendIdRaw);
   const hasValidFriendId = Number.isFinite(friendId) && friendId > 0;
+  // Attribution is only useful when this track isn't in the library already being browsed.
+  const { friend: currentUserFriend } = useUsername();
+  const showUsername = friendId !== currentUserFriend?.id;
   const [debugOpen, setDebugOpen] = useState(false);
   const [artworkOpen, setArtworkOpen] = useState(false);
 
@@ -77,7 +81,7 @@ export default function TrackPage() {
                 trackId={trackId}
                 friendId={friendId}
                 fallbackTrack={trackQuery.data}
-                playlistMode={true}
+                showUsername={showUsername}
                 buttons={[
                   <TrackActionsMenu
                     key="menu"

@@ -24,6 +24,8 @@ export type GenreBadgeProps = {
   scope: GenreSearchScope;
   size?: BadgeProps["size"];
   colorPalette?: BadgeProps["colorPalette"];
+  /** Overrides the kind-derived variant, e.g. a uniform "subtle" treatment. */
+  variant?: BadgeProps["variant"];
 };
 
 /**
@@ -31,13 +33,13 @@ export type GenreBadgeProps = {
  * taxonomy doesn't know — an unreconciled `local_tags` entry — stays plain
  * text, and an unreconciled track genre is drawn subtle so it reads as such.
  */
-export default function GenreBadge({ item, kind, scope, size = "sm", colorPalette }: GenreBadgeProps) {
+export default function GenreBadge({ item, kind, scope, size = "sm", colorPalette, variant }: GenreBadgeProps) {
   if (!item.slug) {
     return (
       <Badge
         size={size}
         colorPalette={colorPalette}
-        variant={kind === "track" ? "subtle" : VARIANTS[kind]}
+        variant={variant ?? (kind === "track" ? "subtle" : VARIANTS[kind])}
         title={kind === "track" ? "Not in the genre taxonomy yet" : undefined}
       >
         {item.label}
@@ -50,7 +52,7 @@ export default function GenreBadge({ item, kind, scope, size = "sm", colorPalett
       asChild
       size={size}
       colorPalette={colorPalette}
-      variant={VARIANTS[kind]}
+      variant={variant ?? VARIANTS[kind]}
       cursor="pointer"
       focusVisibleRing="outside"
       _hover={{ textDecoration: "underline" }}

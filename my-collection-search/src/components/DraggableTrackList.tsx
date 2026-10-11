@@ -35,7 +35,6 @@ interface DraggableTrackListProps {
     compactVariant?: "card" | "row";
     onRowClick?: (track: Track | undefined, index: number) => void;
     playlistCount?: Record<string, number>;
-    playlistMode?: boolean;
   };
   /** Current playing track index (for highlighting) */
   currentTrackIndex?: number | null;
@@ -121,7 +120,6 @@ export default function DraggableTrackList({
                             `${trackPlay.track_id}:${trackPlay.friend_id}`
                           ]
                         }
-                        playlistMode={trackResultProps?.playlistMode}
                         sortPositionChange={sortPositionChange}
                       />
                     </Box>
