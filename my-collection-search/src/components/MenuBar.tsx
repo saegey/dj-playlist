@@ -47,7 +47,7 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
       bg="bg"
       // backdropFilter="saturate(180%) blur(12px)"
       borderBottomWidth="1px"
-      borderColor="brand.0"
+      borderColor="border"
     >
       <Container maxW={"full"}>
         <Flex h={14} align="center" justify="space-between" gap={3}>
@@ -96,7 +96,7 @@ export default function TopMenuBar({ current }: TopMenuBarProps) {
               boxShadow="none"
               borderRightStyle="solid"
               borderRightWidth={"1px"}
-              borderRightColor={"brand.0"}
+              borderRightColor="border"
               // borderBottomStyle="solid"
               // borderBottomWidth={[0, "1px"]}
               // borderBottomColor={"brand.0"}
