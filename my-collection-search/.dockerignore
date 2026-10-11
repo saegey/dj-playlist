@@ -13,3 +13,6 @@ coverage
 *.local
 .git
 .DS_Store
+# Always build fresh Storybook assets from the image's source revision.
+public/storybook
+storybook-static

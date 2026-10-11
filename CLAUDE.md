@@ -191,6 +191,11 @@ Version source of truth is the root `package.json`, mirrored into
 
 - **Don't run `next dev` or `next build` on the host.** It corrupts the `.next`
   directory shared with the dev container.
+- **Storybook:** `just storybook` runs the separate component dev server (6006);
+  set runtime `STORYBOOK_URL=http://localhost:6006` for the hot-reload app's link.
+  App images build/verify `public/storybook` automatically and serve it at
+  `/storybook/index.html`; production must not mount over it. The old
+  `STORYBOOK_STATIC_DIR` override is retired. See README's Storybook workflow.
 - **Python app requests use `GroovenetClient`** in `packages/groovenet-python`.
   Add only consumed endpoints, with exact-request tests and an OpenAPI path/verb
   check. See its guide; `just generate-spec` generates the contract, not code.

@@ -6,6 +6,8 @@ services:
     environment:
       NODE_ENV: development
       NPM_CONFIG_CACHE: /tmp/.npm
+      # Run `just storybook` separately; see README's Storybook workflow.
+      STORYBOOK_URL: ${STORYBOOK_URL-http://localhost:6006}
       # Make file watching reliable in Docker on macOS/Windows
       WATCHPACK_POLLING: "true"
       WATCHPACK_POLLING_INTERVAL: "700"
@@ -21,9 +23,6 @@ services:
       - essentia_data:/app/essentia-data
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
-      # Serve the static Storybook build same-origin at /storybook/ in dev too.
-      # Run `just build-storybook` first so the dir exists, then recreate.
-      - ./my-collection-search/storybook-static:/app/public/storybook:ro
     command: sh -c "npm ci && npm run dev -- -H 0.0.0.0 -p 3000"
 
   essentia:

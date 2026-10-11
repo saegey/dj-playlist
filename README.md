@@ -153,6 +153,48 @@ just lint-all      # every pre-commit hook, over the whole repo
 
 Worktree setup, deployment, releases, and operator-specific overrides are maintainer workflows; see [`AGENTS.md`](AGENTS.md), [`RELEASING.md`](RELEASING.md), and the package-level READMEs when you need them.
 
+### Storybook
+
+Every app image builds and verifies a fresh static Storybook bundle from its
+checkout before building Next.js, then packages it in `public/storybook`.
+With `ENABLE_DEVELOPER_TOOLS=true`, the Developer Tools card opens
+`/storybook/index.html` on the running app. CI candidates, promoted releases,
+self-hosted builds and local deployment builds use the same Dockerfile; none
+needs a separate host build. This adds a Storybook build and about 10 MB of
+static assets to app images; the migrator target does not build Storybook.
+
+For component development, run `just storybook` in a separate terminal. It uses
+the pinned toolchain, serves at `http://localhost:6006`, and needs no Compose
+services. To use the Developer Tools link in a hot-reload app, set
+`ENABLE_DEVELOPER_TOOLS=true` and `STORYBOOK_URL=http://localhost:6006` in `.env`.
+When using the 1Password template, export `STORYBOOK_URL=http://localhost:6006`
+before `just compose-dev` or `just worktree-up`. Restart the app after changing
+its environment. Multiple worktrees can run their own server with
+`mise exec -- npm run storybook --prefix my-collection-search -- --port 6007`
+and a matching URL. For remote browsers or HTTPS apps, use an accessible URL
+and matching scheme instead of the browser's localhost.
+
+`STORYBOOK_URL` remains a server-side runtime setting: root-relative paths and
+HTTP(S) URLs are supported without rebuilding the image. An empty value hides
+the card (the bundle remains available); `ENABLE_DEVELOPER_TOOLS` gates the
+Developer Tools page/navigation, not static assets. Same-origin Storybook goes
+through the app's existing reverse proxy and its access controls; an external
+URL uses that server's access controls.
+
+`STORYBOOK_STATIC_DIR` is retired and ignored by production Compose. Remove it
+from existing deployment environments. The image's bundle is authoritative;
+mounting a host directory over `/app/public/storybook` would hide it. To serve
+an independently managed catalogue, host it separately and set `STORYBOOK_URL`
+to its URL. Recreate the app with the updated Compose files to remove the old
+mount; pulling an image alone does not change an existing container's mounts.
+
+`just build-storybook` optionally builds and verifies
+`my-collection-search/public/storybook` for local static inspection. This output
+is ignored by Git and Docker so it cannot contaminate a release build. Run
+`mise exec -- npm run test:storybook --prefix my-collection-search` for bundle
+validator coverage and merged Compose regression checks (Docker Compose is
+required for those checks).
+
 ### Python API client
 
 `packages/groovenet-python` is a small hand-written `groovenet_client` package

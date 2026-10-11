@@ -79,6 +79,14 @@ jobs:
       - name: Run coverage
         run: npm run test:coverage
 
+      # Run after Vitest, which clears coverage/ before generating its reports.
+      - name: Test Storybook bundle validation with coverage
+        run: |
+          docker compose version
+          npm run test:storybook
+          # Node reports paths relative to this job's app working directory.
+          sed -i 's#^SF:scripts/#SF:my-collection-search/scripts/#' coverage/storybook.lcov
+
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v7
         with:
@@ -92,7 +100,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          files: my-collection-search/coverage/lcov.info
+          files: my-collection-search/coverage/lcov.info,my-collection-search/coverage/storybook.lcov
           flags: webapp
           disable_search: true
           fail_ci_if_error: false

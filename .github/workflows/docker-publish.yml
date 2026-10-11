@@ -194,6 +194,8 @@ jobs:
           # Without this, buildx builds the last stage in the Dockerfile
           # (migrator), producing an image that exits 0 and restart-loops.
           target: runner
+          # runner builds and verifies Storybook before packaging public assets;
+          # release tags promote this same candidate bundle without a host build.
           push: ${{ env.SHOULD_PUSH == 'true' }}
           platforms: ${{ env.PLATFORMS }}
           tags: ${{ steps.tags.outputs.tags }}

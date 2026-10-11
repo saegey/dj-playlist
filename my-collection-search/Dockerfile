@@ -18,6 +18,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# Build from this checkout before Next.js inventories public files. Releases,
+# CI candidates and local image builds all package the same verified bundle.
+ENV STORYBOOK_DISABLE_TELEMETRY=1
+RUN npm run build-storybook
 RUN --mount=type=cache,target=/app/.next/cache \
     npm run build
 
