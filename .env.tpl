@@ -28,9 +28,10 @@ FINGERPRINT_VERSION=1
 AUDIO_INGEST_STALL_MINUTES=10
 BACKUP_HEALTH_MAX_AGE_HOURS=30
 ENABLE_DEVELOPER_TOOLS=true
-# Static Storybook served same-origin by the app (see docker-compose.prod.yml).
-# Build it with `just build-storybook` before deploying.
-STORYBOOK_URL=/storybook/index.html
+# Static Storybook is built and packaged in every app image; no host build.
+# Export STORYBOOK_URL=http://localhost:6006 for `just compose-dev`/worktree-up
+# and run `just storybook` separately. The URL remains runtime-configurable.
+STORYBOOK_URL=${STORYBOOK_URL:-/storybook/index.html}
 
 # Secrets from 1Password. Export GROOVENET_OP_* overrides before invoking op;
 # leave them unset (not empty) to use defaults. See .env.example for item fields.

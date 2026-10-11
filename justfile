@@ -653,14 +653,14 @@ redis-test:
   REDIS_URL="redis://localhost:$port" \
     {{mise_exec}} npm run test:redis --prefix {{app_dir}}
 
+# Standalone hot-reload UI catalogue; does not start the Compose app/services.
 storybook:
-  cd {{app_dir}} && npm run storybook
+  {{mise_exec}} npm run storybook --prefix {{app_dir}}
 
-# Build the static Storybook bundle into my-collection-search/storybook-static,
-# which is mounted into the app at /app/public/storybook and served same-origin
-# at /storybook/ (dev via docker-compose.dev.yml, prod via docker-compose.prod.yml).
+# Build and verify my-collection-search/public/storybook for local inspection.
+# Images run this automatically; production never uses a host Storybook mount.
 build-storybook:
-  cd {{app_dir}} && npm run build-storybook
+  {{mise_exec}} npm run build-storybook --prefix {{app_dir}}
 
 sync-album-covers:
   ./{{app_dir}}/scripts/sync-album-covers.sh \

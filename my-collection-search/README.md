@@ -37,6 +37,8 @@ That deployment path creates a stable default network named
 
 ## Useful npm scripts
 
+Run Next.js dev/build through Docker, as required by the repository guide.
+
 - `npm run dev`: start Next.js dev server
 - `npm run build`: build production app
 - `npm run start`: run production app
@@ -44,6 +46,15 @@ That deployment path creates a stable default network named
 - `npm run test`: run tests
 - `npm run lint`: run eslint
 - `npm run typecheck`: run TypeScript checks
+- `just storybook` (from repo root): separate component dev server on port 6006
+- `just build-storybook`: build and verify `public/storybook` for local inspection
+
+App images automatically build, verify and package Storybook, served at
+`/storybook/index.html`. Production Compose uses the image bundle without a host
+mount; the old `STORYBOOK_STATIC_DIR` override is retired. Set `STORYBOOK_URL`
+at runtime for another server. For the hot-reload app, point it at
+`http://localhost:6006` and run `just storybook` separately. See the root README's
+[Storybook workflow](../README.md#storybook) for configuration and compatibility.
 
 ## Key environment variables
 

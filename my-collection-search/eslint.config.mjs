@@ -44,6 +44,7 @@ const eslintConfig = [...nextVitals, ...nextTs, {
     "dist/**",
     "build/**",
     "coverage/**",
+    "public/storybook/**",
     "tmp/**",
     "*.min.js",
   ],

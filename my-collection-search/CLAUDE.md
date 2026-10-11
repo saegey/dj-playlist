@@ -73,6 +73,14 @@
 - Playlist views use playlistTrackIds + playlistTracks.
 
 ## UI conventions
+
+Storybook: run `just storybook` separately from the repo root for component dev
+on port 6006; set runtime `STORYBOOK_URL=http://localhost:6006` in the dev app.
+App images build and verify `public/storybook` automatically before Next.js,
+then serve it at `/storybook/index.html`. Never mount a host Storybook directory
+over that image path. `just build-storybook` is for optional local inspection;
+generated output must stay untracked. See the root README's Storybook workflow.
+
 Chakra UI v3 with its default theme; `src/app/chakraTheme.ts` adds only
 `accent.solid`. Reference only tokens that exist: an undefined one (`brand.0`
 was) compiles to an invalid value the browser drops, so it fails silently.
