@@ -37,6 +37,7 @@ bootstrap-tools:
   mise install
 
 bootstrap-node:
+  {{mise_exec}} node scripts/check-npm-toolchain.mjs
   {{mise_exec}} npm ci --no-fund --no-audit --loglevel=error
   {{mise_exec}} npm ci --prefix my-collection-search --no-fund --no-audit --loglevel=error
 
@@ -65,7 +66,9 @@ test-web:
   {{mise_exec}} npm test --prefix my-collection-search
 
 test-packages:
-  {{mise_exec}} npm install --workspace=@groovenet/client --workspace=@groovenet/cli
+  {{mise_exec}} node scripts/check-npm-toolchain.mjs
+  {{mise_exec}} npm ci --no-fund --no-audit
+  {{mise_exec}} node --test scripts/npm-toolchain.test.mjs
   {{mise_exec}} npm run test --workspace=packages/groovenet-client
   # The CLI imports @groovenet/client by its build output, so build it first.
   {{mise_exec}} npm run build --workspace=packages/groovenet-client
@@ -215,9 +218,9 @@ rebuild-up-containers services="app essentia ga-service download-worker fingerpr
 build-all: build-app build-essentia build-ga-service build-download-worker build-fingerprint-service
 
 build-packages:
-  npm run build --workspace=packages/groovenet-client
-  npm run build --workspace=packages/groovenet-cli
-  npm run build --workspace=mcp-server
+  {{mise_exec}} npm run build --workspace=packages/groovenet-client
+  {{mise_exec}} npm run build --workspace=packages/groovenet-cli
+  {{mise_exec}} npm run build --workspace=mcp-server
 
 deps-check-app cooldown="14" target="minor":
   cooldown_value="{{cooldown}}"

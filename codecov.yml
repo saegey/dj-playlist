@@ -8,6 +8,9 @@ flags:
   groovenet-cli:
     paths:
       - packages/groovenet-cli/
+  npm-toolchain:
+    paths:
+      - scripts/check-npm-toolchain.mjs
   download-worker:
     paths:
       - download-worker/

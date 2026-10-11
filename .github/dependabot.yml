@@ -44,6 +44,8 @@ updates:
 
   # npm — root workspaces (packages/*, mcp-server) share the root lockfile;
   # my-collection-search is installed separately with its own lockfile.
+  # These entries do not select Dependabot's npm version. CI validates its
+  # lockfile changes using the pinned .github/actions/setup-npm toolchain.
   # cooldown mirrors the 14-day window used by `just deps-*`; minor/patch are
   # grouped into a single PR, majors open individually.
   - package-ecosystem: npm

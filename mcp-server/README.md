@@ -48,7 +48,7 @@ Uses the shared [`@groovenet/client`](../packages/groovenet-client) typed API cl
 From the repo root, install all workspace dependencies and build:
 
 ```bash
-npm install
+just bootstrap
 just build-packages
 ```
 

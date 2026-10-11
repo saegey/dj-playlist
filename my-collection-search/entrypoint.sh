@@ -2,7 +2,7 @@
 set -e
 
 # In dev, the host checkout is bind-mounted over /app. On Linux it keeps the
-# host user's uid, which nextjs (1001) cannot write to, so `npm install` dies on
+# host user's uid, which nextjs (1001) cannot write to, so `npm ci` dies on
 # package-lock.json. Adopt the checkout owner's uid/gid instead. A no-op in the
 # production image, where /app is already owned by nextjs.
 app_uid=$(stat -c %u /app)

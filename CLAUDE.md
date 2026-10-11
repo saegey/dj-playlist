@@ -193,5 +193,7 @@ Version source of truth is the root `package.json`, mirrored into
   directory shared with the dev container.
 - **`packages/groovenet-python` is generated** by `just generate-python-client`.
   Hand edits are lost on the next regeneration, and it is excluded from linting.
-- **`just bootstrap-js` rewrites `my-collection-search/package-lock.json`.**
-  That diff is churn; don't commit it unless you actually changed dependencies.
+- **`just bootstrap-js` uses strict `npm ci` under the pinned npm toolchain.**
+  It must leave lockfiles unchanged and fails on an inconsistent lockfile;
+  diagnose that failure instead of falling back to `npm install`. See the
+  README's toolchain notes for pin updates and drift checks.

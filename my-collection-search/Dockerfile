@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1.7
 
 FROM node:26-bookworm-slim AS base
-RUN npm install -g npm@11.18.0
+# All stages inherit the app's exact npm pin, checked against mise in CI.
+COPY package.json /tmp/npm-toolchain.json
+RUN npm install -g "npm@$(node -p "require('/tmp/npm-toolchain.json').engines.npm")" && \
+    test "$(npm --version)" = "$(node -p "require('/tmp/npm-toolchain.json').engines.npm")"
 
 FROM base AS deps
 WORKDIR /app

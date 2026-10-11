@@ -111,6 +111,31 @@ just compose-dev
 just migrate-up
 ```
 
+Node 26 and npm 12.0.0 are selected by `.mise.toml`. The exact `engines.npm`
+pins in the root and app manifests must match it: the shared
+`.github/actions/setup-npm` action installs the root pin for every JavaScript
+dependency job, including publishing, and the Docker base installs the app pin
+for all stages (deps, builder, runner and migrator). New CI install jobs should
+use that action. Docker publishing calls the same test workflow before building.
+
+`engines.npm` is advisory under npm's default configuration; it does not install
+or enforce npm by itself. Bootstrap and CI run
+`node scripts/check-npm-toolchain.mjs` before dependency installs to fail on
+manifest/mise/runtime drift, and Docker asserts its installed version. There is
+no Corepack/packageManager convention here; mise selects the local executable.
+When updating npm, change all three pins together and the npm entry in
+`mise.lock` via mise, then verify clean root and app installs plus Docker's
+`deps` and `migrator` targets. Run the drift-check tests with
+`mise exec -- node --test --experimental-test-coverage --test-coverage-include=scripts/check-npm-toolchain.mjs scripts/npm-toolchain.test.mjs`.
+
+Bootstrap, package tests and dev-container startup use strict `npm ci`, which
+must leave tracked lockfiles unchanged. The root lockfile owns `packages/*`
+and `mcp-server`; the app has its own lockfile. The legacy
+`mcp-server/package-lock.json` is not used by workspace installs. Dependabot's
+configuration does not force its npm version: its PRs must pass actual installs
+under our pin. Pinning cannot repair dependency/lockfile inconsistencies; fix
+those separately under the pinned npm without unrelated dependency updates.
+
 `just bootstrap` installs a git pre-commit hook that runs file hygiene checks,
 [ruff](https://docs.astral.sh/ruff/) over the Python services, and ESLint over
 the staged web files. The same hooks run in CI, so the hook only moves the

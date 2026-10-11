@@ -4,9 +4,9 @@ Next.js app for browsing, searching, and managing a personal DJ track collection
 
 ## Quick start
 
-1. Install dependencies:
+1. From the repository root, install the pinned toolchain and dependencies:
 ```bash
-npm install
+just bootstrap
 ```
 2. Start local services + app (dev):
 ```bash
