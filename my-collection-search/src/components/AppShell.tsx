@@ -155,7 +155,7 @@ export default function AppShell({
         w={isExpanded ? "220px" : "64px"}
         transition="width 0.18s ease"
         borderRightWidth="1px"
-        borderColor="brand.0"
+        borderColor="border"
         bg="bg"
       >
         <Flex direction="column" h="100%" py={3} gap={2}>

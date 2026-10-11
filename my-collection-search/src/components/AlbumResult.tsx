@@ -166,8 +166,8 @@ export default function AlbumResult({
     );
   }
 
-  const displayGenres = discogsGenreBadges(resolvedAlbum.genres, genreLookup);
-  const displayStyles = discogsGenreBadges(resolvedAlbum.styles, genreLookup);
+  const displayGenres = discogsGenreBadges(resolvedAlbum.effective_genres ?? resolvedAlbum.genres, genreLookup);
+  const displayStyles = discogsGenreBadges(resolvedAlbum.effective_styles ?? resolvedAlbum.styles, genreLookup);
 
   return (
     <Box

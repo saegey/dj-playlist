@@ -4412,6 +4412,29 @@ const albumArtworkContracts: ApiContractRoute[] = [
   },
 ];
 
+const albumOverrideIdSchemaObject = {
+  type: ["array", "null"], items: { type: "string", format: "uuid" }, maxItems: 100,
+  description: "Omitted: unchanged; null: reset to latest Discogs; []: deliberately empty replacement.",
+};
+const albumTaxonomySchemaProperties = {
+  genres: { type: ["array", "null"], items: { type: "string" }, description: "Imported Discogs source genres." },
+  styles: { type: ["array", "null"], items: { type: "string" }, description: "Imported Discogs source styles." },
+  effective_genres: { type: "array", items: { type: "string" } },
+  effective_styles: { type: "array", items: { type: "string" } },
+  genre_override_ids: albumOverrideIdSchemaObject,
+  style_override_ids: albumOverrideIdSchemaObject,
+};
+const albumWithTaxonomySchemaObject = {
+  type: "object",
+  properties: {
+    release_id: { type: "string" }, friend_id: { type: "integer" },
+    title: { type: "string" }, artist: { type: "string" },
+    ...albumTaxonomySchemaProperties,
+  },
+  required: ["release_id", "friend_id", "title", "artist"],
+  additionalProperties: true,
+};
+
 export const apiContractRoutes: ApiContractRoute[] = [
   ...genreMutationContracts,
   ...genreReconciliationContracts,
@@ -7017,7 +7040,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
               schema: {
                 type: "object",
                 properties: {
-                  hits: { type: "array", items: { type: "object", additionalProperties: true } },
+                  hits: { type: "array", items: albumWithTaxonomySchemaObject },
                   estimatedTotalHits: { type: "integer" },
                   offset: { type: "integer" },
                   limit: { type: "integer" },
@@ -7076,7 +7099,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
               schema: {
                 type: "object",
                 properties: {
-                  album: { type: "object", additionalProperties: true },
+                  album: albumWithTaxonomySchemaObject,
                   sides: {
                     type: "array",
                     items: {
@@ -7160,7 +7183,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
               schema: {
                 type: "object",
                 properties: {
-                  album: { type: "object", additionalProperties: true },
+                  album: albumWithTaxonomySchemaObject,
                   tracks: {
                     type: "array",
                     items: {
@@ -7232,6 +7255,8 @@ export const apiContractRoutes: ApiContractRoute[] = [
               properties: {
                 release_id: { type: "string" },
                 friend_id: { type: "integer" },
+                genre_override_ids: albumOverrideIdSchemaObject,
+                style_override_ids: albumOverrideIdSchemaObject,
                 album_rating: { type: "number" },
                 album_notes: { type: "string" },
                 purchase_price: { type: "number" },
@@ -7253,7 +7278,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
                 type: "object",
                 properties: {
                   success: { type: "boolean" },
-                  album: { type: "object", additionalProperties: true },
+                  album: albumWithTaxonomySchemaObject,
                   tracksUpdated: { type: "integer" },
                 },
                 required: ["success", "album"],
@@ -7404,7 +7429,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
               type: "object",
               properties: {
                 release_id: { type: "string" },
-                album: { type: "string", description: "JSON stringified album payload" },
+                album: { type: "string", description: "JSON album payload. genre_override_ids/style_override_ids accept taxonomy UUID arrays, null resets, omitted preserves. Legacy genres/styles names are replacements; imported source values are preserved." },
                 tracks: { type: "string", description: "JSON stringified tracks payload" },
                 friend_id: { type: "string" },
                 cover_art: { type: "string", format: "binary" },
@@ -7422,7 +7447,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
               schema: {
                 type: "object",
                 properties: {
-                  album: { type: "object", additionalProperties: true },
+                  album: albumWithTaxonomySchemaObject,
                   tracks: {
                     type: "array",
                     items: { type: "object", additionalProperties: true },

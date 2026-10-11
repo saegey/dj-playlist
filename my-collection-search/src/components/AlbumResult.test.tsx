@@ -47,3 +47,13 @@ describe("AlbumResult care action", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Log care" })).toBeNull());
   });
 });
+
+it("badges effective album genres/styles, including intentionally empty replacements", async () => {
+  const { rerender } = renderWithProviders(<AlbumResult album={{ ...album, genres: ["Source"], styles: ["Source Style"], effective_genres: ["Jazz"], effective_styles: ["Fusion"] }} />);
+  expect(screen.getAllByText("Jazz").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Fusion").length).toBeGreaterThan(0);
+  expect(screen.queryByText("Source")).toBeNull();
+  rerender(<AlbumResult album={{ ...album, genres: ["Source"], styles: ["Source Style"], effective_genres: [], effective_styles: [] }} />);
+  expect(screen.queryByText("Source Style")).toBeNull();
+  expect(screen.queryByText("Fusion")).toBeNull();
+});

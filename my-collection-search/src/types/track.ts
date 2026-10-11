@@ -10,6 +10,8 @@ export type Track = {
   year: string | number;
   styles?: string[];
   genres?: string[];
+  album_genres?: string[];
+  album_styles?: string[];
   duration: string;
   duration_seconds?: number;
   position: string | number;
@@ -172,6 +174,12 @@ export interface Album {
   year?: string | null;
   genres?: string[] | null;
   styles?: string[] | null;
+  /** Display/search values after the per-friend replacement layer. */
+  effective_genres?: string[];
+  effective_styles?: string[];
+  /** null means Discogs; [] means an intentionally empty replacement. */
+  genre_override_ids?: string[] | null;
+  style_override_ids?: string[] | null;
   album_thumbnail?: string | null;
   audio_file_album_art_url?: string;
   discogs_url?: string;

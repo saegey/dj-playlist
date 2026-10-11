@@ -1,0 +1,29 @@
+name: Set up repository npm toolchain
+description: Install the exact npm pin and reject drift before installing dependencies.
+inputs:
+  cache-dependency-path:
+    description: Lockfile used for the npm cache
+    default: package-lock.json
+  registry-url:
+    description: Optional registry for publishing authentication
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 26
+        cache: npm
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+        registry-url: ${{ inputs.registry-url }}
+
+    # Also supports OIDC trusted publishing; never float to npm@latest.
+    - name: Install pinned npm
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: npm install -g "npm@$(node -p "require('./package.json').engines.npm")"
+
+    - name: Verify npm toolchain
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: node scripts/check-npm-toolchain.mjs

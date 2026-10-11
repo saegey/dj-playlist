@@ -45,7 +45,7 @@ describe("trackGenreIdsSelectSql", () => {
 
   it("resolves the alias's styles through genre_normalize, not raw strings", () => {
     const sql = trackGenreIdsSelectSql("tr");
-    expect(sql).toContain("unnest(COALESCE(tr.styles, '{}'::text[]))");
+    expect(sql).toContain("unnest(effective_album_taxonomy_values(tr.release_id::text, tr.friend_id, 'styles', tr.styles))");
     expect(sql).toContain("genre_normalize(d.name)");
   });
 

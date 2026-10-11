@@ -597,8 +597,7 @@ export class TrackRepository {
         t.*,
         a.country AS album_country,
         a.label AS album_label,
-        a.genres AS album_genres,
-        a.styles AS album_styles
+        ${trackGenresSelectSql("t")}
       FROM tracks t
       LEFT JOIN albums a ON t.release_id = a.release_id AND t.friend_id = a.friend_id
       WHERE t.track_id = $1 AND t.friend_id = $2

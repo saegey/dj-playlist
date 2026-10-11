@@ -39,7 +39,7 @@ const ProgressSlider: React.FC<Props> = React.memo(({ seek }) => {
           step={0.1}
         >
           <Slider.Control>
-            <Slider.Track bg="brand.0" height="8px" borderRadius="full">
+            <Slider.Track bg="bg.emphasized" height="8px" borderRadius="full">
               <Slider.Range bg="accent.solid" />
             </Slider.Track>
             <Slider.Thumbs rounded="full" />

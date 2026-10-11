@@ -72,6 +72,39 @@
 - SearchResults uses useSearchResults (infinite/page) and intersection observer for loadMore.
 - Playlist views use playlistTrackIds + playlistTracks.
 
+## UI conventions
+Chakra UI v3 with its default theme; `src/app/chakraTheme.ts` adds only
+`accent.solid`. Reference only tokens that exist: an undefined one (`brand.0`
+was) compiles to an invalid value the browser drops, so it fails silently.
+- **Colour:** semantic tokens over raw scales — `bg`, `bg.subtle` (toolbars,
+  active nav), `bg.muted` (row hover), `bg.panel` (inputs, popovers, dialogs),
+  `fg`, `fg.muted` (secondary text), `border`. `fg.subtle` misses 4.5:1
+  contrast; only for non-essential labels such as side positions.
+- **One accent, blue:** `accent.solid` or `colorPalette="blue"` for the
+  primary action, active filters, selection and playback progress. Never two
+  solid blue buttons side by side; `colorPalette="red"` only for destructive
+  actions.
+- **Buttons:** `size="sm"` by default, `xs` inside cards and dense rows;
+  `variant="outline"` is the default, `ghost` for low-weight actions
+  (`color="fg.muted"` for tertiary), `solid` for the one primary action.
+  Icon-only buttons need an `aria-label`.
+- **Badges** (`size="sm"`, `subtle`) have fixed meanings: `red` missing data
+  the pipeline needs (No embedding), `orange` missing analysis (No BPM),
+  `purple` genre/AI-derived, bold `blue` library ID, `green`/`yellow`/`red`
+  similarity score. Always text, never colour alone. Genre badges go through
+  `GenreBadge`.
+- **Shape:** `borderRadius="md"` for buttons, inputs, cards and artwork;
+  `full` only for filter chips, player transport buttons and slider tracks;
+  `xl` for the search toolbar, `2xl` for dialogs and drawers. Separate with
+  1px `border`, not shadows; hover is a background step, never a lift.
+- **Type:** the system UI stack (no webfont); `fontFamily="mono"` only for
+  IDs and paths. Inputs use 16px text so iOS doesn't zoom.
+- **Copy:** terse sentence case, DJ vocabulary ("112 BPM", "D major (10B)",
+  "B2", "LP-342"), no emoji in the UI.
+- **Layout:** pages sit in `PageContainer` (`wide` for lists, `narrow` for
+  settings and forms); phones fold filters into `FilterSheet` and navigation
+  into the bottom drawer.
+
 ## How to extend safely
 - Always use queryKeys helpers (don’t build keys by hand).
 - When you change Track fields shown across lists, update useTracksCacheUpdater to patch all relevant caches.
@@ -205,7 +238,7 @@ score = w_taxonomy * taxonomy_base + w_cooccur * max(npmi, 0)
   enrichment tags an album's tracks with 4–6 genres each (#448), so a per-track
   count over-links, and a heavily-tagged album should count once per genre,
   not once per track. An album's genre set is its tracks' `track_genres` links
-  plus its own Discogs genres/styles mapped onto the taxonomy by name or alias.
+  plus its effective album genres/styles mapped onto the taxonomy by name or alias.
 - **Ancestor/descendant pairs never get the co-occurrence signal** (e.g.
   Cumbia ↔ Latin) — they always co-occur because of the hierarchy itself, so
   it says nothing new. A direct parent/child pair still gets the taxonomy
@@ -229,6 +262,36 @@ score = w_taxonomy * taxonomy_base + w_cooccur * max(npmi, 0)
 
 `just genres-test` includes its gated integration test (recompute against real
 Postgres, including the ancestor-exclusion and minimum-support end-to-end).
+
+## Album taxonomy overrides
+
+Album `genres` and `styles` remain imported source arrays. Imports refresh
+those columns; manual album upserts preserve them on conflict. Full replacements
+are stored per `(release_id, friend_id, kind)` in `album_taxonomy_overrides`,
+with taxonomy foreign-key links in `album_taxonomy_override_genres`. A header
+without links is deliberately empty; no header follows Discogs. Genre merges
+move these links to the survivor before deleting the source genre.
+
+`effective_album_taxonomy_values` is the shared SQL resolver for read projections,
+filters, facets, embedding inputs and genre similarity. Album responses carry
+`effective_genres`/`effective_styles` alongside the raw source and nullable
+`genre_override_ids`/`style_override_ids`. Track reads carry `album_genres` and
+`album_styles`; their own taxonomy links and descriptors retain their meanings.
+Track filters still prefer own links; album filters still apply the one-third
+share rule to tagged tracks. Similarity still includes live track links.
+
+`PATCH /api/albums` and the album edit upsert accept replacement taxonomy UUID
+arrays: omission preserves, `null` resets that category, and `[]` clears it.
+Legacy upsert `genres`/`styles` names resolve as replacements; they never overwrite
+an existing album's source. The editor shows source values separately and stages
+reset until Save Changes. Both mutation paths refresh genre similarity and queue
+identity/context embeddings after commit. Collection writes retain their existing
+API access rules and scope every override by album and friend.
+
+`just genres-test` covers persistence through Discogs re-sync, reset, empty lists,
+metadata saves, friend isolation, effective consumers and taxonomy merges against
+Postgres. `scripts/test-generated-album-overrides.py` round-trips the generated
+Python contracts using the bootstrapped download-worker environment.
 
 ## Background work
 

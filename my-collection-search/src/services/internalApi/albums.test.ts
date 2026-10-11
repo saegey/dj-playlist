@@ -41,3 +41,12 @@ describe("searchAlbums", () => {
     expect(params.has("similar_exclude")).toBe(false);
   });
 });
+
+it("transports empty selections and reset without converting them to omissions", async () => {
+  const { updateAlbum, upsertAlbumWithTracks } = await import("./albums");
+  await updateAlbum({ release_id: "r", friend_id: 7, genre_override_ids: [], style_override_ids: null });
+  expect(JSON.parse(httpMock.mock.calls.at(-1)![1].body)).toMatchObject({ genre_override_ids: [], style_override_ids: null });
+  await upsertAlbumWithTracks({ release_id: "r", friend_id: 7, album: { title: "Album", artist: "Artist", genre_override_ids: null, style_override_ids: [] }, tracks: [] });
+  const form = httpMock.mock.calls.at(-1)![1].body as FormData;
+  expect(JSON.parse(form.get("album") as string)).toMatchObject({ genre_override_ids: null, style_override_ids: [] });
+});

@@ -102,7 +102,7 @@ describe("genre filter clauses (#375)", () => {
     expect(sql).toContain("tg.genre_id = ANY($1::uuid[])");
     // The Discogs fallback applies only to a track with no genre links at all.
     expect(sql).toMatch(/OR \(\s*NOT EXISTS \(SELECT 1 FROM track_genres tg/);
-    expect(sql).toContain("unnest(COALESCE(t.genres, '{}') || COALESCE(t.styles, '{}'))");
+    expect(sql).toContain("unnest(effective_album_taxonomy_values(t.release_id::text, t.friend_id, 'genres', t.genres) || effective_album_taxonomy_values(t.release_id::text, t.friend_id, 'styles', t.styles))");
     expect(sql).toContain("genre_normalize(discogs_genre.name) = ANY($2::text[])");
   });
 
@@ -110,7 +110,7 @@ describe("genre filter clauses (#375)", () => {
     const { values, bind } = binder();
     const sql = albumGenreFilterClause(filter, bind, "a");
     expect(values).toEqual([filter.keys, filter.ids]);
-    expect(sql).toContain("unnest(COALESCE(a.genres, '{}') || COALESCE(a.styles, '{}'))");
+    expect(sql).toContain("unnest(effective_album_taxonomy_values(a.release_id::text, a.friend_id, 'genres', a.genres) || effective_album_taxonomy_values(a.release_id::text, a.friend_id, 'styles', a.styles))");
     expect(sql).toContain("genre_normalize(discogs_genre.name) = ANY($1::text[])");
     expect(sql).toContain("gt.release_id = a.release_id");
     expect(sql).toContain("gt.deleted_at IS NULL");

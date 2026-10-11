@@ -1,3 +1,4 @@
+import { effectiveAlbumTaxonomySql } from "@/lib/genres/albumTaxonomySql";
 import { dbQuery, withDbTransaction } from "@/lib/serverDb";
 import type { GenreSimilarityEntry, GenreSimilaritySignals } from "@/lib/genres/genreSimilarity";
 
@@ -14,7 +15,7 @@ export type GenreSimilarityRow = { related_genre_id: string; score: number; sign
 
 /**
  * Every album's genre set (#377): the taxonomy genres linked to any of its
- * live tracks, plus its own Discogs genres/styles mapped onto the taxonomy
+ * live tracks, plus its effective album genres/styles mapped onto the taxonomy
  * by name or alias. One row per (album, genre) — a heavily-tagged album
  * still counts once per genre, never once per track (#448).
  */
@@ -32,7 +33,7 @@ const ALBUM_GENRE_CTE = `
     UNION
     SELECT DISTINCT a.release_id, a.friend_id, k.genre_id
     FROM albums a
-    CROSS JOIN LATERAL unnest(COALESCE(a.genres, '{}') || COALESCE(a.styles, '{}')) AS d(name)
+    CROSS JOIN LATERAL unnest(${effectiveAlbumTaxonomySql("a")}) AS d(name)
     JOIN genre_keys k ON k.key = genre_normalize(d.name)
   )
 `;

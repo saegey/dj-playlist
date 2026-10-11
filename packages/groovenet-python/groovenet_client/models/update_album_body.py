@@ -10,6 +10,7 @@ from ..types import UNSET, Unset
 
 from ..types import UNSET, Unset
 from typing import cast
+from uuid import UUID
 
 
 
@@ -26,6 +27,10 @@ class UpdateAlbumBody:
         Attributes:
             release_id (str):
             friend_id (int):
+            genre_override_ids (list[UUID] | None | Unset): Omitted: unchanged; null: reset to latest Discogs; []:
+                deliberately empty replacement.
+            style_override_ids (list[UUID] | None | Unset): Omitted: unchanged; null: reset to latest Discogs; []:
+                deliberately empty replacement.
             album_rating (float | Unset):
             album_notes (str | Unset):
             purchase_price (float | Unset):
@@ -35,6 +40,8 @@ class UpdateAlbumBody:
 
     release_id: str
     friend_id: int
+    genre_override_ids: list[UUID] | None | Unset = UNSET
+    style_override_ids: list[UUID] | None | Unset = UNSET
     album_rating: float | Unset = UNSET
     album_notes: str | Unset = UNSET
     purchase_price: float | Unset = UNSET
@@ -49,6 +56,32 @@ class UpdateAlbumBody:
         release_id = self.release_id
 
         friend_id = self.friend_id
+
+        genre_override_ids: list[str] | None | Unset
+        if isinstance(self.genre_override_ids, Unset):
+            genre_override_ids = UNSET
+        elif isinstance(self.genre_override_ids, list):
+            genre_override_ids = []
+            for genre_override_ids_type_0_item_data in self.genre_override_ids:
+                genre_override_ids_type_0_item = str(genre_override_ids_type_0_item_data)
+                genre_override_ids.append(genre_override_ids_type_0_item)
+
+
+        else:
+            genre_override_ids = self.genre_override_ids
+
+        style_override_ids: list[str] | None | Unset
+        if isinstance(self.style_override_ids, Unset):
+            style_override_ids = UNSET
+        elif isinstance(self.style_override_ids, list):
+            style_override_ids = []
+            for style_override_ids_type_0_item_data in self.style_override_ids:
+                style_override_ids_type_0_item = str(style_override_ids_type_0_item_data)
+                style_override_ids.append(style_override_ids_type_0_item)
+
+
+        else:
+            style_override_ids = self.style_override_ids
 
         album_rating = self.album_rating
 
@@ -71,6 +104,10 @@ class UpdateAlbumBody:
             "release_id": release_id,
             "friend_id": friend_id,
         })
+        if genre_override_ids is not UNSET:
+            field_dict["genre_override_ids"] = genre_override_ids
+        if style_override_ids is not UNSET:
+            field_dict["style_override_ids"] = style_override_ids
         if album_rating is not UNSET:
             field_dict["album_rating"] = album_rating
         if album_notes is not UNSET:
@@ -93,6 +130,56 @@ class UpdateAlbumBody:
 
         friend_id = d.pop("friend_id")
 
+        def _parse_genre_override_ids(data: object) -> list[UUID] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                genre_override_ids_type_0 = []
+                _genre_override_ids_type_0 = data
+                for genre_override_ids_type_0_item_data in (_genre_override_ids_type_0):
+                    genre_override_ids_type_0_item = UUID(genre_override_ids_type_0_item_data)
+
+
+
+                    genre_override_ids_type_0.append(genre_override_ids_type_0_item)
+
+                return genre_override_ids_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[UUID] | None | Unset, data)
+
+        genre_override_ids = _parse_genre_override_ids(d.pop("genre_override_ids", UNSET))
+
+
+        def _parse_style_override_ids(data: object) -> list[UUID] | None | Unset:
+            if data is None:
+                return data
+            if isinstance(data, Unset):
+                return data
+            try:
+                if not isinstance(data, list):
+                    raise TypeError()
+                style_override_ids_type_0 = []
+                _style_override_ids_type_0 = data
+                for style_override_ids_type_0_item_data in (_style_override_ids_type_0):
+                    style_override_ids_type_0_item = UUID(style_override_ids_type_0_item_data)
+
+
+
+                    style_override_ids_type_0.append(style_override_ids_type_0_item)
+
+                return style_override_ids_type_0
+            except (TypeError, ValueError, AttributeError, KeyError):
+                pass
+            return cast(list[UUID] | None | Unset, data)
+
+        style_override_ids = _parse_style_override_ids(d.pop("style_override_ids", UNSET))
+
+
         album_rating = d.pop("album_rating", UNSET)
 
         album_notes = d.pop("album_notes", UNSET)
@@ -114,6 +201,8 @@ class UpdateAlbumBody:
         update_album_body = cls(
             release_id=release_id,
             friend_id=friend_id,
+            genre_override_ids=genre_override_ids,
+            style_override_ids=style_override_ids,
             album_rating=album_rating,
             album_notes=album_notes,
             purchase_price=purchase_price,

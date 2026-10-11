@@ -1,3 +1,5 @@
+vi.mock("@/server/services/trackEmbeddingSyncService", () => ({ syncIdentityEmbeddings: vi.fn() }));
+vi.mock("@/server/services/genreSimilarityService", () => ({ triggerGenreSimilarityRefresh: vi.fn() }));
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -25,6 +27,7 @@ vi.mock("@/server/repositories/albumRepository", () => ({
   albumRepository: {
     updateAlbumFields: mockUpdateAlbumFields,
     getTracksForAlbumWithLibraryIdentifier: mockGetTracks,
+    getTracksByReleaseAndFriend: mockGetTracks,
   },
 }));
 
@@ -273,5 +276,30 @@ describe("GET /api/albums — include_similar", () => {
     const res = await GET(getReq("?genre=cumbia&include_similar=1"));
     const body = await res.json();
     expect(body.added_genres).toBeUndefined();
+  });
+});
+
+describe("PATCH album taxonomy replacements", () => {
+  it("accepts empty and reset replacements, scopes the write, and refreshes similarity", async () => {
+    const res = await PATCH(patchReq({ release_id: "same-release", friend_id: 7, genre_override_ids: [], style_override_ids: null }));
+    expect(res.status).toBe(200);
+    expect(mockUpdateAlbumFields).toHaveBeenCalledWith({}, expect.objectContaining({
+      release_id: "same-release", friend_id: 7, genre_override_ids: [], style_override_ids: null,
+    }));
+    const { triggerGenreSimilarityRefresh } = await import("@/server/services/genreSimilarityService");
+    expect(triggerGenreSimilarityRefresh).toHaveBeenCalledOnce();
+    expect(mockGetTracks).toHaveBeenCalledWith("same-release", 7);
+    const { syncIdentityEmbeddings } = await import("@/server/services/trackEmbeddingSyncService");
+    expect(syncIdentityEmbeddings).toHaveBeenCalledWith([]);
+  });
+  it("rejects malformed overrides before any write", async () => {
+    const res = await PATCH(patchReq({ release_id: "r1", friend_id: 7, style_override_ids: ["not-a-uuid"] }));
+    expect(res.status).toBe(400);
+    expect(mockUpdateAlbumFields).not.toHaveBeenCalled();
+  });
+  it("cannot attach overrides to a missing friend-scoped album", async () => {
+    mockUpdateAlbumFields.mockResolvedValueOnce(null);
+    const res = await PATCH(patchReq({ release_id: "r1", friend_id: 8, genre_override_ids: null }));
+    expect(res.status).toBe(404);
   });
 });

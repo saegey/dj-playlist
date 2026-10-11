@@ -132,6 +132,42 @@ in CI touches your homelab). The convenient path:
 just deploy v1.2.0        # pulls ghcr images for that tag, migrates, and restarts
 ```
 
+When using the 1Password-backed `.env.tpl`, export these optional overrides in
+the shell running the command. They also apply to `just compose-*`,
+`just worktree-up`, direct `op run --env-file=.env.tpl`, and
+`scripts/render-env.sh`:
+
+| Variable | Default | Selects |
+| --- | --- | --- |
+| `GROOVENET_OP_VAULT` | `Homelab` | Vault containing both items |
+| `GROOVENET_OP_ITEM` | `groovenet` | Application secrets item |
+| `GROOVENET_OP_MQTT_ITEM` | `MQTT` | MQTT broker item |
+
+Leave a variable unset to use its default; an explicitly empty value does not
+use the default. These variables must be exported or passed on the command
+line: putting them in `.env` does not configure `op` template resolution.
+
+For example, to use your own vault and items without editing the template:
+
+```bash
+export GROOVENET_OP_VAULT=Other
+export GROOVENET_OP_ITEM=GroovenetProd
+export GROOVENET_OP_MQTT_ITEM=Broker
+just deploy v1.2.0
+```
+
+Create both items in the selected vault with the following exact field names:
+
+- `GROOVENET_OP_ITEM`: `POSTGRES_PASSWORD`, `DATABASE_URL`, `OPENAI_API_KEY`, `APPLE_MUSIC_TEAM_ID`, `APPLE_MUSIC_KEY_ID`, `APPLE_MUSIC_PRIVATE_KEY`, `DISCOGS_USER_TOKEN`, `DISCOGS_USERNAME`, `YOUTUBE_API_KEY`, `NEXT_PUBLIC_POSTHOG_KEY`, `RESTIC_REPOSITORY`, `RESTIC_PASSWORD`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY`.
+- `GROOVENET_OP_MQTT_ITEM`: `host`, `username`, `password`.
+
+The application item's `NEXT_PUBLIC_POSTHOG_KEY` field supplies `POSTHOG_KEY`.
+The MQTT item's `host` field supplies `MQTT_URL` and must contain a full broker
+URL, such as `mqtt://broker.example.com:1883`. Remote deploy recipes resolve
+the template locally and copy the rendered `.env` to the server. On-server
+deploy scripts use an existing `.env` first and fall back to `.env.tpl` through
+`op run` when no `.env` exists.
+
 Or manually on the box:
 
 ```bash

@@ -1,15 +1,14 @@
 "use client";
+import { queryKeys } from "@/lib/queryKeys";
 import { useEffect } from "react";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient, InfiniteData } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getAlbumWithTracks,
   searchAlbums,
   updateAlbum,
   type AlbumSearchParams,
-  type AlbumSearchResponse,
   type AlbumUpdateParams,
 } from "@/services/internalApi/albums";
-import { Album } from "@/types/track";
 import { useTrackStore } from "@/stores/trackStore";
 import { useAlbumStore } from "@/stores/albumStore";
 
@@ -148,27 +147,16 @@ export function useUpdateAlbumMutation() {
         queryKey: ["album", data.album.release_id, data.album.friend_id]
       })
 
-      // Optionally update the specific album in cache
-      queryClient.setQueriesData<InfiniteData<AlbumSearchResponse> | undefined>(
-        { queryKey: ["albums"] },
-        (old) => {
-          if (!old) return old;
-
-          return {
-            ...old,
-            pages: old.pages.map((page: AlbumSearchResponse) => ({
-              ...page,
-              hits: page.hits.map((album: Album) =>
-                album.release_id === data.album.release_id &&
-                album.friend_id === data.album.friend_id
-                  ? data.album
-                  : album
-              ),
-            })),
-          };
-        }
-      );
       setAlbum(data.album);
+
+      if (variables.genre_override_ids !== undefined || variables.style_override_ids !== undefined) {
+        updateTracksByRelease(data.album.release_id, data.album.friend_id, {
+          album_genres: data.album.effective_genres,
+          album_styles: data.album.effective_styles,
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.tracksRoot() });
+        queryClient.invalidateQueries({ queryKey: queryKeys.genresRoot() });
+      }
 
       // If library_identifier was part of the update, sync tracks in store + cache
       if (variables?.library_identifier !== undefined) {

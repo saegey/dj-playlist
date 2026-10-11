@@ -1,4 +1,6 @@
 import type { Album, Track } from "@/types/track";
+import { albumTaxonomySelectSql } from "@/lib/genres/albumTaxonomySql";
+import type { AlbumTaxonomyOverrides } from "@/api-contract/schemas";
 import { dbQuery } from "@/lib/serverDb";
 import type { PoolClient } from "pg";
 import { hasVectorsSelectSql, trackGenresSelectSql } from "@/server/repositories/trackGenreRepository";
@@ -127,7 +129,7 @@ export class AlbumRepository {
     friendId: number
   ): Promise<Album | null> {
     const { rows } = await dbQuery<Album>(
-      "SELECT * FROM albums WHERE release_id = $1 AND friend_id = $2",
+      `SELECT a.*, ${albumTaxonomySelectSql("a")} FROM albums a WHERE release_id = $1 AND friend_id = $2`,
       [releaseId, friendId]
     );
     return rows[0] ?? null;
@@ -175,7 +177,7 @@ export class AlbumRepository {
   async upsertAlbumRecord(
     db: Queryable,
     album: AlbumUpsertInput,
-    options?: { preserveManualFields?: boolean }
+    options?: { preserveManualFields?: boolean; preserveSourceTaxonomy?: boolean }
   ): Promise<Album> {
     const preserveManualFields = options?.preserveManualFields ?? false;
     const manualUpdateSql = preserveManualFields
@@ -213,8 +215,8 @@ export class AlbumRepository {
         title = EXCLUDED.title,
         artist = EXCLUDED.artist,
         year = EXCLUDED.year,
-        genres = EXCLUDED.genres,
-        styles = EXCLUDED.styles,
+        genres = ${options?.preserveSourceTaxonomy ? "albums.genres" : "EXCLUDED.genres"},
+        styles = ${options?.preserveSourceTaxonomy ? "albums.styles" : "EXCLUDED.styles"},
         album_thumbnail = EXCLUDED.album_thumbnail,
         discogs_art_url = COALESCE(EXCLUDED.discogs_art_url, albums.discogs_art_url),
         discogs_url = EXCLUDED.discogs_url,
@@ -259,7 +261,7 @@ export class AlbumRepository {
 
   async updateAlbumFields(
     client: Queryable,
-    params: {
+    params: AlbumTaxonomyOverrides & {
       release_id: string;
       friend_id: number;
       album_rating?: number;
@@ -309,7 +311,8 @@ export class AlbumRepository {
       paramIndex += 1;
     }
 
-    if (updates.length === 0) return null;
+    const taxonomyChanged = params.genre_override_ids !== undefined || params.style_override_ids !== undefined;
+    if (updates.length === 0 && !taxonomyChanged) return null;
     updates.push("updated_at = current_timestamp");
 
     const query = `
@@ -319,7 +322,44 @@ export class AlbumRepository {
       RETURNING *
     `;
     const result = await client.query(query, values);
-    return (result.rows[0] as Album | undefined) ?? null;
+    if (!result.rows[0]) return null;
+    if (taxonomyChanged) await this.replaceTaxonomyOverrides(client, release_id, friend_id, params);
+    // Metadata-only saves must also carry the effective values: a rating edit
+    // must not seed the client store with the raw source in place of overrides.
+    return this.getAlbumWithTaxonomy(client, release_id, friend_id);
+  }
+
+  async getAlbumWithTaxonomy(client: Queryable, releaseId: string, friendId: number): Promise<Album | null> {
+    const { rows } = await client.query(
+      `SELECT a.*, ${albumTaxonomySelectSql("a")} FROM albums a WHERE release_id = $1 AND friend_id = $2`,
+      [releaseId, friendId]
+    );
+    return (rows[0] as Album | undefined) ?? null;
+  }
+
+  /** Caller holds the album row lock (UPDATE/upsert) in this transaction. */
+  async replaceTaxonomyOverrides(
+    client: Queryable, releaseId: string, friendId: number, overrides: AlbumTaxonomyOverrides
+  ): Promise<void> {
+    for (const [kind, field] of [["genres", "genre_override_ids"], ["styles", "style_override_ids"]] as const) {
+      const ids = overrides[field];
+      if (ids === undefined) continue;
+      await client.query(
+        "DELETE FROM album_taxonomy_overrides WHERE release_id = $1 AND friend_id = $2 AND kind = $3",
+        [releaseId, friendId, kind]
+      );
+      if (ids === null) continue;
+      await client.query(
+        "INSERT INTO album_taxonomy_overrides (release_id, friend_id, kind) VALUES ($1, $2, $3)",
+        [releaseId, friendId, kind]
+      );
+      if (ids.length === 0) continue;
+      await client.query(
+        `INSERT INTO album_taxonomy_override_genres (release_id, friend_id, kind, genre_id)
+         SELECT $1, $2, $3, id FROM unnest($4::uuid[]) AS id ON CONFLICT DO NOTHING`,
+        [releaseId, friendId, kind, ids]
+      );
+    }
   }
 
   async getTracksForAlbumWithLibraryIdentifier(

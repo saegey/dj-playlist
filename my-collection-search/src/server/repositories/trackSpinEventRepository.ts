@@ -1,3 +1,4 @@
+import { effectiveAlbumValuesSql } from "@/lib/genres/albumTaxonomySql";
 import { dbQuery } from "@/lib/serverDb";
 import type { Queryable } from "@/server/repositories/spinSessionRepository";
 import { hasVectorsSelectSql, trackGenresSelectSql } from "@/server/repositories/trackGenreRepository";
@@ -184,10 +185,10 @@ export class TrackSpinEventRepository {
         t.bpm,
         t.key,
         t.star_rating,
-        COALESCE(t.styles, '{}') AS styles,
+        ${effectiveAlbumValuesSql("aggregated", "styles", "t.styles")} AS styles,
         COALESCE(a.library_identifier, t.library_identifier) AS library_identifier,
         ${hasVectorsSelectSql("aggregated")},
-        ${trackGenresSelectSql("aggregated")}
+        ${trackGenresSelectSql("aggregated", "t")}
       FROM aggregated
       INNER JOIN LATERAL (
         SELECT

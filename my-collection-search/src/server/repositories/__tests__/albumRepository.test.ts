@@ -585,3 +585,50 @@ describe("listArtworkReview()", () => {
     expect(params).toEqual([10, 7]);
   });
 });
+
+// Full replacements are stored apart from the refreshed Discogs source.
+describe("album taxonomy overrides", () => {
+  it("writes each category, distinguishing missing, reset, empty and links", async () => {
+    const repo = makeRepo();
+    const client = makeClient();
+    client.query.mockResolvedValue({ rows: [] });
+    await repo.replaceTaxonomyOverrides(client, "r1", 7, {});
+    expect(client.query).not.toHaveBeenCalled();
+    await repo.replaceTaxonomyOverrides(client, "r1", 7, { genre_override_ids: null, style_override_ids: [] });
+    expect(client.query.mock.calls.map(([, params]) => params)).toEqual([
+      ["r1", 7, "genres"], ["r1", 7, "styles"], ["r1", 7, "styles"],
+    ]);
+    client.query.mockClear();
+    await repo.replaceTaxonomyOverrides(client, "r1", 7, { genre_override_ids: ["id"] });
+    expect(client.query.mock.calls[2][1]).toEqual(["r1", 7, "genres", ["id"]]);
+    expect(client.query.mock.calls[2][0]).toContain("ON CONFLICT DO NOTHING");
+  });
+  it("locks the friend-scoped album, writes and returns effective values for override-only updates", async () => {
+    const repo = makeRepo();
+    const client = makeClient();
+    const effective = makeAlbum({ effective_genres: [], genre_override_ids: [] });
+    client.query.mockResolvedValueOnce({ rows: [makeAlbum()] })
+      .mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [effective] });
+    expect(await repo.updateAlbumFields(client, { release_id: "r1", friend_id: 1, genre_override_ids: [] })).toEqual(effective);
+    expect(client.query.mock.calls[0][0]).toContain("WHERE release_id = $1 AND friend_id = $2");
+    expect(client.query.mock.calls[3][0]).toContain("effective_album_taxonomy_values");
+  });
+  it("does not create overrides for a missing album and handles an absent effective read", async () => {
+    const client = makeClient();
+    client.query.mockResolvedValue({ rows: [] });
+    const repo = makeRepo();
+    expect(await repo.updateAlbumFields(client, { release_id: "r1", friend_id: 2, style_override_ids: null })).toBeNull();
+    expect(client.query).toHaveBeenCalledTimes(1);
+    expect(await repo.getAlbumWithTaxonomy(client, "missing", 2)).toBeNull();
+  });
+  it("preserves source on manual upsert while import still refreshes source", async () => {
+    const client = makeClient();
+    client.query.mockResolvedValue({ rows: [makeAlbum()] });
+    await makeRepo().upsertAlbumRecord(client, makeAlbum(), { preserveSourceTaxonomy: true });
+    expect(client.query.mock.calls[0][0]).toContain("genres = albums.genres");
+    expect(client.query.mock.calls[0][0]).toContain("styles = albums.styles");
+    await makeRepo().upsertAlbumRecord(client, makeAlbum(), { preserveManualFields: true });
+    expect(client.query.mock.calls[1][0]).toContain("genres = EXCLUDED.genres");
+  });
+});

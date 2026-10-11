@@ -3,6 +3,7 @@ import type { GenreTreeNode } from "@/api-contract/schemas";
 import type { GenreOption } from "./options";
 import {
   buildGenreLookup,
+  countGenreBadges,
   discogsGenreBadges,
   genreSearchHref,
   matchGenresForPalette,
@@ -179,6 +180,48 @@ describe("trackGenreBadges", () => {
   });
 });
 
+describe("countGenreBadges (#480)", () => {
+  it("tallies how many lists a label appears in, most common first", () => {
+    expect(
+      countGenreBadges(
+        [
+          [{ label: "Latin", slug: "latin" }],
+          [{ label: "Latin", slug: "latin" }],
+          [{ label: "Post-Punk", slug: "post-punk" }],
+        ],
+        5
+      )
+    ).toEqual([
+      { label: "Latin", slug: "latin", count: 2 },
+      { label: "Post-Punk", slug: "post-punk", count: 1 },
+    ]);
+  });
+
+  it("keeps the slug a label first appeared with", () => {
+    expect(
+      countGenreBadges(
+        [
+          [{ label: "Unmapped", slug: null }],
+          [{ label: "Unmapped", slug: null }],
+        ],
+        5
+      )
+    ).toEqual([{ label: "Unmapped", slug: null, count: 2 }]);
+  });
+
+  it("limits to the top N", () => {
+    const result = countGenreBadges(
+      [[{ label: "A", slug: null }], [{ label: "B", slug: null }], [{ label: "C", slug: null }]],
+      2
+    );
+    expect(result).toHaveLength(2);
+  });
+
+  it("is empty for no lists", () => {
+    expect(countGenreBadges([], 5)).toEqual([]);
+  });
+});
+
 describe("primaryGenreBadges", () => {
   it("prefers the track's DJ genres, kind 'track'", () => {
     expect(
@@ -207,4 +250,10 @@ describe("primaryGenreBadges", () => {
       kind: "discogs-style",
     });
   });
+});
+
+it("uses effective styles for the primary fallback, including an empty override", () => {
+  const lookup = new Map([["fusion", "fusion"]]);
+  expect(primaryGenreBadges({ styles: ["Old"], album_styles: ["Fusion"] }, lookup)).toEqual({ items: [{ label: "Fusion", slug: "fusion" }], kind: "discogs-style" });
+  expect(primaryGenreBadges({ styles: ["Old"], album_styles: [] }, lookup).items).toEqual([]);
 });
