@@ -5,6 +5,7 @@ requires-python = ">=3.12"
 dependencies = [
     "redis==8.1.0",
     "requests==2.34.2",
+    "groovenet-python-client",
     # Ships the `chromaprint` ctypes module. The native libchromaprint it binds
     # to comes from the image (see Dockerfile); on macOS, `brew install
     # chromaprint` plus DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib.
@@ -21,6 +22,9 @@ dev = [
     "pytest-mock>=3.14",
     "fakeredis>=2.37.1",
 ]
+
+[tool.uv.sources]
+groovenet-python-client = { path = "../packages/groovenet-python", editable = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

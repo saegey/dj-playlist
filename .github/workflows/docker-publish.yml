@@ -96,7 +96,7 @@ jobs:
             esac
 
             case "$file" in
-              fingerprint-service/*)
+              fingerprint-service/*|packages/groovenet-python/*)
                 fingerprint_service=true
                 ;;
             esac
@@ -429,7 +429,7 @@ jobs:
       - name: Build and push fingerprint service
         uses: docker/build-push-action@v7
         with:
-          context: ./fingerprint-service
+          context: .
           file: ./fingerprint-service/Dockerfile
           push: ${{ env.SHOULD_PUSH == 'true' }}
           platforms: ${{ env.PLATFORMS }}

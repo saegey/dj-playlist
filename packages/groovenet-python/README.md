@@ -1,124 +1,43 @@
-# groovenet-python-client
-A client library for accessing DJ Playlist API
+# Groovenet Python client
 
-## Usage
-First, create a client:
-
-```python
-from groovenet_client import Client
-
-client = Client(base_url="https://api.example.com")
-```
-
-If the endpoints you're going to hit require authentication, use `AuthenticatedClient` instead:
+Small synchronous API client shared by download-worker and fingerprint-service.
+Import `GroovenetClient` and `GroovenetApiError` from `groovenet_client`; typed
+wire payloads live in `groovenet_client.types`. Requires Python 3.12+ and requests.
 
 ```python
-from groovenet_client import AuthenticatedClient
+from groovenet_client import GroovenetClient
 
-client = AuthenticatedClient(base_url="https://api.example.com", token="SuperSecretToken")
+with GroovenetClient("http://app:3000", timeout=30, client_name="worker") as client:
+    client.update_track({"track_id": "track-1", "friend_id": 7, "duration_seconds": 245})
+    client.report_job_outcome("job-1", timeout=10)
 ```
 
-Now call your endpoint and use your models:
+`base_url` defaults to `APP_URL`, then `http://app:3000`. Each client reuses one
+`requests.Session` (optionally injected); close it when finished. Both workers
+use the app's `worker` identity so callbacks count as pipeline analytics.
+No automatic retries: services decide which failures are fatal or best-effort.
+Transport failures remain `requests.RequestException`; non-2xx responses raise
+`GroovenetApiError(status, message)`, preferring JSON `error`, then `message`,
+then HTTP status. Redirects are refused. Status-only methods accept empty or
+non-JSON successful bodies; cover matching and fingerprint listing require JSON.
+`fetch_audio` returns a streaming response that the caller closes with `with`.
 
-```python
-from groovenet_client.models import MyDataModel
-from groovenet_client.api.my_tag import get_my_data_model
-from groovenet_client.types import Response
+See [CLAUDE.md](CLAUDE.md) for endpoint additions and testing. No code generation.
 
-with client as client:
-    my_data: MyDataModel = get_my_data_model.sync(client=client)
-    # or if you need more info (e.g. status_code)
-    response: Response[MyDataModel] = get_my_data_model.sync_detailed(client=client)
-```
+The current consumers and their policies are:
 
-Or do the same thing with an async version:
+| Method | App request | Service timeout | Failure policy |
+| --- | --- | --- | --- |
+| `update_track` | PATCH `/api/tracks` | 30s | Analysis/duration/art jobs fail; download URL write logs a warning and keeps the download |
+| `report_job_outcome` | POST `/api/jobs/{id}/outcome`, no body | 10s | Best-effort after terminal Redis status |
+| `extract_cover_art` | POST `/api/albums/{releaseId}/artwork/match`, `friend_id` query | 180s | Album cover job fails |
+| `fetch_audio` | GET `/api/audio`, `filename` query, streamed | 60s | Local-processing job fails |
+| `claim_ingest` / `claim_set_derivation` | POST ingest/set `/claim`, no body | Configured fingerprint timeout | Best-effort; work continues |
+| `report_ingest_result` / `report_set_result` | POST ingest/set `/result`, full result body | Configured fingerprint timeout | Wrapped as `ResultReportError`; logged, next job continues |
+| `upsert_fingerprint` | POST `/api/fingerprints`, full upsert body | Configured fingerprint timeout | Failed track counted; a later indexing run can retry |
+| `record_file_stats` | PATCH `/api/fingerprints`, hash/size/mtime body | Configured fingerprint timeout | Best-effort; existing fingerprint remains valid |
+| `list_fingerprints` | GET `/api/fingerprints`, engine/version/limit/offset query | Configured fingerprint timeout | Keep existing index and use the service's refresh retry schedule |
 
-```python
-from groovenet_client.models import MyDataModel
-from groovenet_client.api.my_tag import get_my_data_model
-from groovenet_client.types import Response
-
-async with client as client:
-    my_data: MyDataModel = await get_my_data_model.asyncio(client=client)
-    response: Response[MyDataModel] = await get_my_data_model.asyncio_detailed(client=client)
-```
-
-By default, when you're calling an HTTPS API it will attempt to verify that SSL is working correctly. Using certificate verification is highly recommended most of the time, but sometimes you may need to authenticate to a server (especially an internal server) using a custom certificate bundle.
-
-```python
-client = AuthenticatedClient(
-    base_url="https://internal_api.example.com", 
-    token="SuperSecretToken",
-    verify_ssl="/path/to/certificate_bundle.pem",
-)
-```
-
-You can also disable certificate validation altogether, but beware that **this is a security risk**.
-
-```python
-client = AuthenticatedClient(
-    base_url="https://internal_api.example.com", 
-    token="SuperSecretToken", 
-    verify_ssl=False
-)
-```
-
-Things to know:
-1. Every path/method combo becomes a Python module with four functions:
-    1. `sync`: Blocking request that returns parsed data (if successful) or `None`
-    1. `sync_detailed`: Blocking request that always returns a `Request`, optionally with `parsed` set if the request was successful.
-    1. `asyncio`: Like `sync` but async instead of blocking
-    1. `asyncio_detailed`: Like `sync_detailed` but async instead of blocking
-
-1. All path/query params, and bodies become method arguments.
-1. If your endpoint had any tags on it, the first tag will be used as a module name for the function (my_tag above)
-1. Any endpoint which did not have a tag will be in `groovenet_client.api.default`
-
-## Advanced customizations
-
-There are more settings on the generated `Client` class which let you control more runtime behavior, check out the docstring on that class for more info. You can also customize the underlying `httpx.Client` or `httpx.AsyncClient` (depending on your use-case):
-
-```python
-from groovenet_client import Client
-
-def log_request(request):
-    print(f"Request event hook: {request.method} {request.url} - Waiting for response")
-
-def log_response(response):
-    request = response.request
-    print(f"Response event hook: {request.method} {request.url} - Status {response.status_code}")
-
-client = Client(
-    base_url="https://api.example.com",
-    httpx_args={"event_hooks": {"request": [log_request], "response": [log_response]}},
-)
-
-# Or get the underlying httpx client to modify directly with client.get_httpx_client() or client.get_async_httpx_client()
-```
-
-You can even set the httpx client directly, but beware that this will override any existing settings (e.g., base_url):
-
-```python
-import httpx
-from groovenet_client import Client
-
-client = Client(
-    base_url="https://api.example.com",
-)
-# Note that base_url needs to be re-set, as would any shared cookies, headers, etc.
-client.set_httpx_client(httpx.Client(base_url="https://api.example.com", proxies="http://localhost:8030"))
-```
-
-## Building / publishing this package
-This project uses [Poetry](https://python-poetry.org/) to manage dependencies  and packaging.  Here are the basics:
-1. Update the metadata in pyproject.toml (e.g. authors, version)
-1. If you're using a private repository, configure it with Poetry
-    1. `poetry config repositories.<your-repository-name> <url-to-your-repository>`
-    1. `poetry config http-basic.<your-repository-name> <username> <password>`
-1. Publish the client with `poetry publish --build -r <your-repository-name>` or, if for public PyPI, just `poetry publish --build`
-
-If you want to install this client into another project without publishing it (e.g. for development) then:
-1. If that project **is using Poetry**, you can simply do `poetry add <path-to-this-client>` from that project
-1. If that project is not using Poetry:
-    1. Build a wheel with `poetry build -f wheel`
-    1. Install that wheel from the other project `pip install <path-to-wheel>`
+The fingerprint timeout is `FINGERPRINT_RESULT_TIMEOUT` (default 30s). The
+current album route replaces the older extract-cover-art-from-audio endpoint.
+Payloads, including explicit nulls and zero values, pass through unchanged.

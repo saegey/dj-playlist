@@ -1,4 +1,5 @@
 # syntax=docker/dockerfile:1.7
+# Build context: project root (shared Python client is a path dependency).
 FROM python:3.14-slim
 
 # ffmpeg decodes ingested chunks to PCM; libchromaprint fingerprints them.
@@ -17,13 +18,16 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-WORKDIR /app
-COPY pyproject.toml uv.lock ./
+COPY packages/groovenet-python/pyproject.toml packages/groovenet-python/README.md /app/packages/groovenet-python/
+COPY packages/groovenet-python/groovenet_client /app/packages/groovenet-python/groovenet_client
+
+WORKDIR /app/fingerprint-service
+COPY fingerprint-service/pyproject.toml fingerprint-service/uv.lock ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
 
-COPY . .
+COPY fingerprint-service/ ./
 
 RUN mkdir -p /app/audio-ingest
 

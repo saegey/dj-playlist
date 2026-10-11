@@ -46,6 +46,7 @@ bootstrap-python:
   cd download-worker && {{mise_exec}} uv sync --frozen
   cd essentia-api && {{mise_exec}} uv sync --frozen
   cd fingerprint-service && {{mise_exec}} uv sync --frozen
+  cd packages/groovenet-python && {{mise_exec}} uv sync --frozen
 
 # Install the git pre-commit hook (CI runs the same checks; this is just earlier feedback).
 bootstrap-hooks:
@@ -195,7 +196,7 @@ build-download-worker:
   {{buildkit_env}} docker buildx build -t {{registry}}/download-worker:{{tag}} -f download-worker/Dockerfile .
 
 build-fingerprint-service:
-  {{buildkit_env}} docker buildx build -t {{registry}}/fingerprint-service:{{tag}} -f fingerprint-service/Dockerfile fingerprint-service
+  {{buildkit_env}} docker buildx build -t {{registry}}/fingerprint-service:{{tag}} -f fingerprint-service/Dockerfile .
 
 rebuild-download-worker: check-compose
   {{op_env}} {{compose_cmd}} -f docker-compose.yml build --no-cache download-worker
@@ -269,22 +270,18 @@ deps-update-python cooldown_days="14":
     )
   done
 
+test-python-client: generate-spec
+  cd packages/groovenet-python && GROOVENET_REQUIRE_OPENAPI=1 {{mise_exec}} uv run --locked --group dev pytest --cov=groovenet_client --cov-branch --cov-report=term-missing
+
 generate-spec:
   {{mise_exec}} npm run openapi:generate-spec --prefix my-collection-search
-
-generate-python-client: generate-spec
-  openapi-python-client generate \
-    --path openapi-generated.json \
-    --output-path packages/groovenet-python \
-    --config openapi-python-client.yaml \
-    --overwrite
 
 push-images:
   {{buildkit_env}} docker buildx build --platform {{platform}} --target runner --push -t {{registry}}/webapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/essentia-api:{{tag}} -f essentia-api/Dockerfile essentia-api
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/ga-service:{{tag}} -f ga-service/Dockerfile ga-service
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/download-worker:{{tag}} -f download-worker/Dockerfile .
-  {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/fingerprint-service:{{tag}} -f fingerprint-service/Dockerfile fingerprint-service
+  {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/fingerprint-service:{{tag}} -f fingerprint-service/Dockerfile .
 
 deploy-prod-local:
   cd {{app_dir}} && ./scripts/deploy-prod.sh {{tag}}

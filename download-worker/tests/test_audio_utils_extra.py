@@ -330,11 +330,11 @@ class TestEnsureLocalAudioFile:
 
         requested = []
 
-        def get(url, **kw):
-            requested.append(url)
+        def get(self, filename, **kw):
+            requested.append((filename, kw))
             return Response()
 
-        monkeypatch.setattr("worker.audio_utils.requests.get", get)
+        monkeypatch.setattr("groovenet_client.GroovenetClient.fetch_audio", get)
         # The destination is hardcoded to /tmp; shadow `open` inside the module
         # so the bytes land in tmp_path instead of the real /tmp.
         monkeypatch.setattr(
@@ -348,27 +348,21 @@ class TestEnsureLocalAudioFile:
         )
 
         assert result == "/tmp/song.m4a"
-        assert requested == ["http://app.test:3000/api/audio?filename=song.m4a"]
+        assert requested == [("song.m4a", {"timeout": 60})]
         assert written.read_bytes() == b"audiodata"
         assert any("Fetching audio file" in line for line in log)
 
     def test_raises_when_the_fetch_is_rejected(self, monkeypatch):
         monkeypatch.setattr("worker.audio_utils.os.path.exists", lambda p: False)
 
-        class Response:
-            ok = False
-            status_code = 404
-            text = "not found"
+        from groovenet_client import GroovenetApiError
 
-            def __enter__(self):
-                return self
+        def refuse(*args, **kwargs):
+            raise GroovenetApiError(404, "not found")
 
-            def __exit__(self, *a):
-                return False
+        monkeypatch.setattr("groovenet_client.GroovenetClient.fetch_audio", refuse)
 
-        monkeypatch.setattr("worker.audio_utils.requests.get", lambda url, **kw: Response())
-
-        with pytest.raises(Exception, match="Failed to fetch audio: 404"):
+        with pytest.raises(Exception, match="HTTP 404"):
             ensure_local_audio_file(
                 {"track_id": "t1", "friend_id": 1, "local_audio_url": "/remote/song.m4a"}
             )

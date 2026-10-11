@@ -19,8 +19,9 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy the local groovenet client so uv can resolve the path dependency
-COPY packages/groovenet-python /app/packages/groovenet-python
+# Copy only the client build inputs, keeping tests/docs out of the image.
+COPY packages/groovenet-python/pyproject.toml packages/groovenet-python/README.md /app/packages/groovenet-python/
+COPY packages/groovenet-python/groovenet_client /app/packages/groovenet-python/groovenet_client
 
 # Copy worker project files and install deps
 COPY download-worker/pyproject.toml download-worker/uv.lock /app/download-worker/

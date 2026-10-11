@@ -329,41 +329,22 @@ class TestAnalyzeAudioFile:
 # ---------------------------------------------------------------------------
 
 class TestSmallPatchHelpers:
-    @patch("worker.track_api.patch_api_tracks.sync")
-    @patch("worker.track_api.get_groovenet_client")
-    def test_update_track_duration_sends_the_value(self, mock_client, mock_sync):
-        mock_sync.return_value = {"ok": True}
+    @pytest.mark.parametrize("helper,extra", [
+        (update_track_duration, {"duration_seconds": 213}),
+        (update_track_album_art_url, {"audio_file_album_art_url": "https://art.test/a.jpg"}),
+    ])
+    @patch("groovenet_client.GroovenetClient.update_track")
+    def test_sends_identity_and_value(self, mock_update, helper, extra):
+        helper("t1", 2, next(iter(extra.values())))
+        mock_update.assert_called_once_with({"track_id": "t1", "friend_id": 2, **extra})
 
-        update_track_duration("t1", 2, 213)
+    @pytest.mark.parametrize("helper,value", [
+        (update_track_duration, 213), (update_track_album_art_url, "https://art.test/a.jpg"),
+    ])
+    @pytest.mark.parametrize("status", [404, 500])
+    def test_failed_update_raises(self, helper, value, status):
+        from groovenet_client import GroovenetApiError
 
-        body = mock_sync.call_args.kwargs["body"]
-        assert body.track_id == "t1"
-        assert body.friend_id == 2
-        assert body["duration_seconds"] == 213
-
-    @patch("worker.track_api.patch_api_tracks.sync")
-    @patch("worker.track_api.get_groovenet_client")
-    def test_update_track_duration_raises_on_no_response(self, mock_client, mock_sync):
-        mock_sync.return_value = None
-
-        with pytest.raises(Exception, match="Failed to update duration for track t1"):
-            update_track_duration("t1", 2, 213)
-
-    @patch("worker.track_api.patch_api_tracks.sync")
-    @patch("worker.track_api.get_groovenet_client")
-    def test_update_track_album_art_url_sends_the_value(self, mock_client, mock_sync):
-        mock_sync.return_value = {"ok": True}
-
-        update_track_album_art_url("t1", 2, "https://art.test/a.jpg")
-
-        body = mock_sync.call_args.kwargs["body"]
-        assert body.track_id == "t1"
-        assert body["audio_file_album_art_url"] == "https://art.test/a.jpg"
-
-    @patch("worker.track_api.patch_api_tracks.sync")
-    @patch("worker.track_api.get_groovenet_client")
-    def test_update_track_album_art_url_raises_on_no_response(self, mock_client, mock_sync):
-        mock_sync.return_value = None
-
-        with pytest.raises(Exception, match="Failed to update album art url for track t1"):
-            update_track_album_art_url("t1", 2, "https://art.test/a.jpg")
+        with patch("groovenet_client.GroovenetClient.update_track", side_effect=GroovenetApiError(status, "failed")):
+            with pytest.raises(GroovenetApiError, match="failed"):
+                helper("t1", 2, value)

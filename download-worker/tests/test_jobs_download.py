@@ -133,7 +133,7 @@ class TestDownloadAudioSuccess:
     # os.makedirs is mocked because /app/* doesn't exist outside Docker
     @patch("worker.jobs.download.os.makedirs")
     @patch("worker.jobs.download.analyze_audio_file", return_value={"rhythm": {"bpm": 120}})
-    @patch("worker.jobs.download.patch_api_tracks.sync")
+    @patch("groovenet_client.GroovenetClient.update_track")
     @patch("worker.jobs.download.cleanup_download_directory")
     @patch("worker.jobs.download.shutil.move")
     @patch("worker.jobs.download.download_with_gamdl", return_value="/app/downloads/track-ok.m4a")
@@ -145,7 +145,7 @@ class TestDownloadAudioSuccess:
 
     @patch("worker.jobs.download.os.makedirs")
     @patch("worker.jobs.download.analyze_audio_file", return_value={"rhythm": {"bpm": 120}})
-    @patch("worker.jobs.download.patch_api_tracks.sync")
+    @patch("groovenet_client.GroovenetClient.update_track")
     @patch("worker.jobs.download.cleanup_download_directory")
     @patch("worker.jobs.download.shutil.move")
     @patch("worker.jobs.download.download_with_gamdl", return_value="/app/downloads/track-ok.m4a")
@@ -156,7 +156,7 @@ class TestDownloadAudioSuccess:
 
     @patch("worker.jobs.download.os.makedirs")
     @patch("worker.jobs.download.analyze_audio_file", return_value={"rhythm": {"bpm": 120}})
-    @patch("worker.jobs.download.patch_api_tracks.sync")
+    @patch("groovenet_client.GroovenetClient.update_track")
     @patch("worker.jobs.download.cleanup_download_directory")
     @patch("worker.jobs.download.shutil.move")
     @patch("worker.jobs.download.download_with_gamdl", return_value="/app/downloads/track-ok.m4a")
@@ -171,7 +171,7 @@ class TestDownloadAudioSuccess:
 
     @patch("worker.jobs.download.os.makedirs")
     @patch("worker.jobs.download.analyze_audio_file", side_effect=Exception("essentia down"))
-    @patch("worker.jobs.download.patch_api_tracks.sync")
+    @patch("groovenet_client.GroovenetClient.update_track")
     @patch("worker.jobs.download.cleanup_download_directory")
     @patch("worker.jobs.download.shutil.move")
     @patch("worker.jobs.download.download_with_gamdl", return_value="/app/downloads/track-ok.m4a")
@@ -208,3 +208,32 @@ class TestDownloadWithGamdl:
         from worker.jobs.download import download_with_gamdl
         with pytest.raises(Exception, match="Rate limited"):
             download_with_gamdl("https://music.apple.com/track", "/app/downloads", "t1")
+
+
+@patch("worker.jobs.download.os.makedirs")
+@patch("worker.jobs.download.analyze_audio_file", return_value={"rhythm": {"bpm": 120}})
+@patch("worker.jobs.download.cleanup_download_directory")
+@patch("worker.jobs.download.shutil.move")
+@patch("worker.jobs.download.download_with_gamdl", return_value="/app/downloads/track-ok.m4a")
+@pytest.mark.parametrize("status", [404, 500])
+def test_local_url_write_failure_is_logged_but_download_is_kept(
+    mock_gamdl, mock_move, mock_cleanup, mock_analyze, mock_makedirs, status, fake_redis, caplog,
+):
+    import io
+
+    import requests
+    from worker.jobs.download import download_audio
+
+    response = requests.Response()
+    response.status_code = status
+    response._content = b'{"error":"write rejected"}'
+    response.raw = io.BytesIO(response._content)
+    with patch("requests.Session.request", return_value=response) as send:
+        result = download_audio({"track_id": "track-ok", "friend_id": 1, "job_id": "job-dl-error",
+                                 "apple_music_url": "https://music.apple.com/track/ok"})
+    assert result["success"] is True
+    assert fake_redis.hgetall("job:job-dl-error")["status"] == "completed"
+    assert "Failed to update local_audio_url" in caplog.text
+    assert f"HTTP {status}" in caplog.text
+    assert send.call_args.args[0] == "PATCH"
+    assert send.call_args.kwargs["json"] == {"track_id": "track-ok", "friend_id": 1, "local_audio_url": "track-ok.m4a"}

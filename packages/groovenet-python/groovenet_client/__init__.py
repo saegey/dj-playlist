@@ -1,8 +1,5 @@
+"""The synchronous Groovenet API client shared by Python workers."""
 
-""" A client library for accessing DJ Playlist API """
-from .client import AuthenticatedClient, Client
+from .client import GroovenetApiError, GroovenetClient
 
-__all__ = (
-    "AuthenticatedClient",
-    "Client",
-)
+__all__ = ["GroovenetApiError", "GroovenetClient"]

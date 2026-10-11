@@ -1,26 +1,20 @@
-[tool.poetry]
+[project]
 name = "groovenet-python-client"
 version = "1.0.0"
-description = "A client library for accessing DJ Playlist API"
-authors = []
+description = "Small synchronous Groovenet API client for Python workers"
+requires-python = ">=3.12"
+dependencies = ["requests>=2.32,<3"]
 readme = "README.md"
-packages = [
-    { include = "groovenet_client" },
-]
-include = ["groovenet_client/py.typed"]
-
-[tool.poetry.dependencies]
-python = "^3.10"
-httpx = ">=0.23.0,<0.29.0"
-attrs = ">=22.2.0"
-python-dateutil = "^2.8.0"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling>=1.26,<2"]
+build-backend = "hatchling.build"
 
-[tool.ruff]
-line-length = 120
+[tool.hatch.build.targets.wheel]
+packages = ["groovenet_client"]
 
-[tool.ruff.lint]
-select = ["F", "I", "UP"]
+[dependency-groups]
+dev = ["pytest>=8.0", "pytest-cov>=6.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

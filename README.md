@@ -153,6 +153,24 @@ just lint-all      # every pre-commit hook, over the whole repo
 
 Worktree setup, deployment, releases, and operator-specific overrides are maintainer workflows; see [`AGENTS.md`](AGENTS.md), [`RELEASING.md`](RELEASING.md), and the package-level READMEs when you need them.
 
+### Python API client
+
+`packages/groovenet-python` is a small hand-written `groovenet_client` package
+used by download-worker and fingerprint-service. App requests share a
+`requests.Session`, send `X-Groovenet-Client: worker`, and raise
+`GroovenetApiError` for every non-2xx response. Services own retries and
+best-effort delivery. Both Docker builds use the repository root as context.
+
+When a Python worker needs an endpoint, add its payload type and thin method,
+then exact-request and error tests; see
+[the client guide](packages/groovenet-python/CLAUDE.md). `just generate-spec`
+updates the OpenAPI contract used by the path/verb tests; no Python code is
+generated.
+
+```bash
+just test-python-client
+```
+
 ## Contributing
 
 Contributions are welcome. Please open an issue to discuss larger changes, keep migrations with schema changes, and run the checks above before opening a pull request. See [the license](LICENSE) for reuse terms.

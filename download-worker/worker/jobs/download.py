@@ -5,9 +5,6 @@ import subprocess
 import time
 import traceback
 
-from groovenet_client.api.tracks import patch_api_tracks
-from groovenet_client.models import PatchApiTracksBody
-
 from ..audio_utils import cleanup_download_directory
 from ..config import logger
 from ..redis_utils import append_job_logs, update_job_status
@@ -350,11 +347,9 @@ def download_audio(job_data: JobData) -> JobResult:
 
         try:
             audio_filename = os.path.basename(downloaded_file)
-            body = PatchApiTracksBody(track_id=track_id, friend_id=friend_id)
-            body["local_audio_url"] = audio_filename
-            response = patch_api_tracks.sync(client=get_groovenet_client(), body=body)
-            if response is None:
-                logger.error(f"Failed to update local_audio_url for track {track_id}")
+            get_groovenet_client().update_track({
+                "track_id": track_id, "friend_id": friend_id, "local_audio_url": audio_filename,
+            })
         except Exception as e:
             logger.warning(f"Failed to update local_audio_url: {e}")
 

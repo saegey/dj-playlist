@@ -185,6 +185,48 @@ jobs:
           disable_search: true
           fail_ci_if_error: false
 
+  python-client-coverage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-npm
+        with:
+          cache-dependency-path: my-collection-search/package-lock.json
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install app dependencies and generate the API contract
+        run: |
+          npm ci --prefix my-collection-search
+          npm run openapi:generate-spec --prefix my-collection-search
+
+      - name: Run Python client tests and contract checks with coverage
+        working-directory: packages/groovenet-python
+        env:
+          GROOVENET_REQUIRE_OPENAPI: "1"
+        run: uv run --locked --group dev pytest --cov=groovenet_client --cov-branch --cov-report=xml:coverage.xml
+
+      - name: Build Python client distributions
+        working-directory: packages/groovenet-python
+        run: uv build
+
+      - name: Upload Python client coverage to Codecov
+        uses: codecov/codecov-action@v7
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: packages/groovenet-python/coverage.xml
+          flags: groovenet-python
+          disable_search: true
+          fail_ci_if_error: false
+
   download-worker-coverage:
     runs-on: ubuntu-24.04
     timeout-minutes: 10

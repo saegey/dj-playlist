@@ -31,6 +31,15 @@ class FakeResponse:
     def json(self):
         return self._payload
 
+    def close(self):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
 
 def row(track_id="t1", friend_id=1, values=(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)):
     return {
@@ -50,13 +59,13 @@ def fetched(monkeypatch):
     calls = []
     pages = []
 
-    def fake_get(url, params=None, timeout=None):
+    def fake_get(self, method, url, params=None, timeout=None, **kwargs):
         calls.append({"url": url, "params": params})
         return FakeResponse(
             {"fingerprints": pages[len(calls) - 1] if len(calls) <= len(pages) else []}
         )
 
-    monkeypatch.setattr(reference_loader.requests, "get", fake_get)
+    monkeypatch.setattr(requests.Session, "request", fake_get)
     return calls, pages
 
 
@@ -86,14 +95,13 @@ class TestFetchPage:
 
     def test_accepts_a_bare_list(self, monkeypatch):
         monkeypatch.setattr(
-            reference_loader.requests, "get", lambda *a, **k: FakeResponse([row()])
+            requests.Session, "request", lambda *a, **k: FakeResponse([row()])
         )
         assert len(fetch_page("chromaprint", "1", limit=10, offset=0)) == 1
 
     def test_raises_when_the_app_refuses(self, monkeypatch):
         monkeypatch.setattr(
-            reference_loader.requests,
-            "get",
+            requests.Session, "request",
             lambda *a, **k: FakeResponse(status_code=500, text="boom"),
         )
         with pytest.raises(ReferenceLoadError, match="500"):
@@ -103,14 +111,13 @@ class TestFetchPage:
         def refuse(*a, **k):
             raise requests.ConnectionError("connection refused")
 
-        monkeypatch.setattr(reference_loader.requests, "get", refuse)
+        monkeypatch.setattr(requests.Session, "request", refuse)
         with pytest.raises(ReferenceLoadError, match="Could not reach"):
             fetch_page("chromaprint", "1", limit=10, offset=0)
 
     def test_rejects_a_payload_that_is_not_a_list(self, monkeypatch):
         monkeypatch.setattr(
-            reference_loader.requests,
-            "get",
+            requests.Session, "request",
             lambda *a, **k: FakeResponse({"fingerprints": {"nope": True}}),
         )
         with pytest.raises(ReferenceLoadError, match="expected a list"):
@@ -190,5 +197,15 @@ class TestTryBuildIndex:
         def refuse(*a, **k):
             raise requests.ConnectionError("app is down")
 
-        monkeypatch.setattr(reference_loader.requests, "get", refuse)
+        monkeypatch.setattr(requests.Session, "request", refuse)
         assert try_build_index("chromaprint", "1.6.1") is None
+
+
+def test_invalid_json_preserves_index_refresh_failure_policy(monkeypatch, caplog):
+    def invalid_json(self):
+        raise ValueError("invalid JSON")
+
+    monkeypatch.setattr(FakeResponse, "json", invalid_json)
+    monkeypatch.setattr(requests.Session, "request", lambda *args, **kwargs: FakeResponse())
+    assert try_build_index("chromaprint", "1") is None
+    assert "Invalid fingerprint JSON" in caplog.text
