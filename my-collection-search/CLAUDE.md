@@ -72,6 +72,39 @@
 - SearchResults uses useSearchResults (infinite/page) and intersection observer for loadMore.
 - Playlist views use playlistTrackIds + playlistTracks.
 
+## UI conventions
+Chakra UI v3 with its default theme; `src/app/chakraTheme.ts` adds only
+`accent.solid`. Reference only tokens that exist: an undefined one (`brand.0`
+was) compiles to an invalid value the browser drops, so it fails silently.
+- **Colour:** semantic tokens over raw scales — `bg`, `bg.subtle` (toolbars,
+  active nav), `bg.muted` (row hover), `bg.panel` (inputs, popovers, dialogs),
+  `fg`, `fg.muted` (secondary text), `border`. `fg.subtle` misses 4.5:1
+  contrast; only for non-essential labels such as side positions.
+- **One accent, blue:** `accent.solid` or `colorPalette="blue"` for the
+  primary action, active filters, selection and playback progress. Never two
+  solid blue buttons side by side; `colorPalette="red"` only for destructive
+  actions.
+- **Buttons:** `size="sm"` by default, `xs` inside cards and dense rows;
+  `variant="outline"` is the default, `ghost` for low-weight actions
+  (`color="fg.muted"` for tertiary), `solid` for the one primary action.
+  Icon-only buttons need an `aria-label`.
+- **Badges** (`size="sm"`, `subtle`) have fixed meanings: `red` missing data
+  the pipeline needs (No embedding), `orange` missing analysis (No BPM),
+  `purple` genre/AI-derived, bold `blue` library ID, `green`/`yellow`/`red`
+  similarity score. Always text, never colour alone. Genre badges go through
+  `GenreBadge`.
+- **Shape:** `borderRadius="md"` for buttons, inputs, cards and artwork;
+  `full` only for filter chips, player transport buttons and slider tracks;
+  `xl` for the search toolbar, `2xl` for dialogs and drawers. Separate with
+  1px `border`, not shadows; hover is a background step, never a lift.
+- **Type:** the system UI stack (no webfont); `fontFamily="mono"` only for
+  IDs and paths. Inputs use 16px text so iOS doesn't zoom.
+- **Copy:** terse sentence case, DJ vocabulary ("112 BPM", "D major (10B)",
+  "B2", "LP-342"), no emoji in the UI.
+- **Layout:** pages sit in `PageContainer` (`wide` for lists, `narrow` for
+  settings and forms); phones fold filters into `FilterSheet` and navigation
+  into the bottom drawer.
+
 ## How to extend safely
 - Always use queryKeys helpers (don’t build keys by hand).
 - When you change Track fields shown across lists, update useTracksCacheUpdater to patch all relevant caches.
