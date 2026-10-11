@@ -18,7 +18,11 @@ vi.mock("@/hooks/useRecommendations", () => ({ useRecommendationsQuery: mocks.re
 vi.mock("@/hooks/useSimilarTracks", () => ({ useSimilarTracks: mocks.similar }));
 vi.mock("@/hooks/useSimilarVibeTracks", () => ({ useSimilarVibeTracks: mocks.vibe }));
 vi.mock("@/services/internalApi/tracks", () => ({ fetchTracksByIds: vi.fn(async () => []) }));
-vi.mock("@/components/TrackResult", () => ({ default: (props: { track: Track }) => <div>result {props.track.track_id}</div> }));
+vi.mock("@/components/TrackResult", () => ({
+  default: (props: { track: Track; showUsername?: boolean }) => (
+    <div data-show-username={String(props.showUsername)}>result {props.track.track_id}</div>
+  ),
+}));
 vi.mock("@/components/TrackActionsMenu", () => ({ default: () => null }));
 
 import RelatedTracksSection from "./RelatedTracksSection";
@@ -90,5 +94,19 @@ describe("RelatedTracksSection scope", () => {
     renderWithProviders(<RelatedTracksSection track={track} />);
     expect(screen.getByText("Loading related tracks...")).toBeTruthy();
     expect(mocks.recommendations).toHaveBeenCalledWith([track], 60, expect.objectContaining({ enabled: false }));
+  });
+
+  it("hides the username within one library, but shows it across all libraries (#522)", async () => {
+    mocks.similar.mockReturnValue({
+      data: { tracks: [{ track_id: "s1", friend_id: 4, title: "S", artist: "A", distance: 0.1 }] },
+      isLoading: false,
+      error: null,
+    });
+    const { rerender } = renderWithProviders(<RelatedTracksSection track={track} />);
+    expect((await screen.findByText("result s1")).dataset.showUsername).toBe("false");
+
+    mocks.scope.scope = "all";
+    rerender(<RelatedTracksSection track={track} />);
+    expect(screen.getByText("result s1").dataset.showUsername).toBe("true");
   });
 });

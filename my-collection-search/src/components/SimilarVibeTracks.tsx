@@ -109,7 +109,6 @@ export default function SimilarVibeTracks({
             >
               <TrackResult
                 track={trackWithArtwork}
-                playlistMode={true}
                 showUsername={true}
                 showRating={true}
                 buttons={<TrackActionsMenu track={trackWithArtwork} />}

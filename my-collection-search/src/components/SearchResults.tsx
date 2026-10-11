@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { Box, Text, IconButton, Flex, Spinner } from "@chakra-ui/react";
-import { LuLayoutGrid, LuTable, LuListChecks } from "react-icons/lu";
+import { Box, Text, IconButton, Flex, Grid, Spinner, useBreakpointValue } from "@chakra-ui/react";
+import { useWindowVirtualizer } from "@tanstack/react-virtual";
+import { LuLayoutGrid, LuRows3, LuListChecks } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { analytics } from "@/lib/analytics/client";
 import TrackSelectionBar from "@/components/TrackSelectionBar";
@@ -12,7 +13,7 @@ import { analyzeTrackAsync } from "@/services/internalApi/tracks";
 import { toaster } from "@/components/ui/toaster";
 
 import TrackResultStore from "@/components/TrackResultStore";
-import TrackTableViewWithLoader from "@/components/TrackTableViewWithLoader";
+import { TrackListHeader, TRACK_ROW_HEIGHT } from "@/components/TrackResult";
 import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
 import SearchModeToggle, {
   SEARCH_MODE_PLACEHOLDERS,
@@ -55,34 +56,30 @@ const TrackResultItem: React.FC<{
   trackId: string;
   friendId: number;
   playlistCount?: number;
-  compact?: boolean;
-  playlistMode?: boolean;
+  layout?: "row" | "card";
   showUsername?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
-}> = ({ trackId, friendId, playlistCount, compact, playlistMode, showUsername, isSelected, onToggleSelect }) => {
+}> = ({ trackId, friendId, playlistCount, layout, showUsername, isSelected, onToggleSelect }) => {
   const track = useTrack(trackId, friendId);
 
   if (!track) {
     return null; // Track not yet loaded in store
   }
 
-  const trackResult = (
+  return (
     <TrackResultStore
       trackId={trackId}
       friendId={friendId}
       fallbackTrack={track}
       playlistCount={playlistCount}
       buttons={[<TrackActionsMenu key="menu" track={track} />]}
-      compact={compact}
-      playlistMode={playlistMode}
+      layout={layout}
       showUsername={showUsername}
       isSelected={isSelected}
       onToggleSelect={onToggleSelect}
     />
   );
-
-  return trackResult;
 };
 
 const SearchResults: React.FC = () => {
@@ -240,20 +237,36 @@ const SearchResults: React.FC = () => {
     });
   }, [clearSelection]);
 
-  // View mode state with localStorage persistence
-  const [viewMode, setViewMode] = React.useState<"card" | "table">("card");
+  // Rows/Cards view mode, persisted to localStorage; phones always get cards.
+  const [viewMode, setViewMode] = React.useState<"row" | "card">("row");
 
   React.useEffect(() => {
     const saved = localStorage.getItem("searchViewMode");
-    if (saved === "card" || saved === "table") {
+    if (saved === "row" || saved === "card") {
       setViewMode(saved);
     }
   }, []);
 
-  const handleViewModeChange = (mode: "card" | "table") => {
+  const handleViewModeChange = (mode: "row" | "card") => {
     setViewMode(mode);
     localStorage.setItem("searchViewMode", mode);
   };
+
+  const isMobile = useBreakpointValue({ base: true, md: false }) ?? true;
+  const effectiveLayout: "row" | "card" = isMobile ? "card" : viewMode;
+
+  const rowListRef = React.useRef<HTMLDivElement>(null);
+  const [rowListOffset, setRowListOffset] = React.useState(0);
+  React.useLayoutEffect(() => {
+    setRowListOffset(rowListRef.current?.offsetTop ?? 0);
+  }, [effectiveLayout]);
+
+  const rowVirtualizer = useWindowVirtualizer({
+    count: trackInfo.length,
+    estimateSize: () => TRACK_ROW_HEIGHT,
+    overscan: 8,
+    scrollMargin: rowListOffset,
+  });
 
   const handleFilterToggle = React.useCallback((key: string) => {
     const genreSlug = genreSlugFromChipKey(key);
@@ -461,20 +474,20 @@ const SearchResults: React.FC = () => {
               <LuListChecks />
             </IconButton>
             <IconButton
-              aria-label="Card view"
+              aria-label="Rows view"
+              size="sm"
+              variant={viewMode === "row" ? "solid" : "ghost"}
+              onClick={() => handleViewModeChange("row")}
+            >
+              <LuRows3 />
+            </IconButton>
+            <IconButton
+              aria-label="Cards view"
               size="sm"
               variant={viewMode === "card" ? "solid" : "ghost"}
               onClick={() => handleViewModeChange("card")}
             >
               <LuLayoutGrid />
-            </IconButton>
-            <IconButton
-              aria-label="Table view"
-              size="sm"
-              variant={viewMode === "table" ? "solid" : "ghost"}
-              onClick={() => handleViewModeChange("table")}
-            >
-              <LuTable />
             </IconButton>
           </>
         }
@@ -527,34 +540,62 @@ const SearchResults: React.FC = () => {
             )}
           </Text>
 
-          {viewMode === "card" ? (
-            // Card view
-            trackInfo.map((info) => {
-              const key = `${info.trackId}:${info.friendId}`;
-              return (
-                <TrackResultItem
-                  key={`search-${info.trackId}-${info.friendId}`}
-                  trackId={info.trackId}
-                  friendId={info.friendId}
-                  playlistCount={playlistCounts[key]}
-                  playlistMode={true}
-                  showUsername={false}
-                  isSelected={selectMode ? selectedTracks.has(key) : undefined}
-                  onToggleSelect={selectMode ? () => toggleTrack(info.trackId, info.friendId) : undefined}
-                />
-              );
-            })
+          {effectiveLayout === "row" ? (
+            // Rows view: dense, grid-aligned, virtualised (fixed row height).
+            <Box borderWidth="1px" borderRadius="md" overflow="hidden">
+              <TrackListHeader />
+              <Box ref={rowListRef} position="relative" height={`${rowVirtualizer.getTotalSize()}px`}>
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const info = trackInfo[virtualRow.index];
+                  const key = `${info.trackId}:${info.friendId}`;
+                  return (
+                    <Box
+                      // Keyed by track identity, not the virtualizer's slot index: TrackResult
+                      // carries open-menu/popover state internally, and reusing a slot's DOM node
+                      // for a different track on scroll left that state stuck on the wrong row.
+                      key={key}
+                      data-index={virtualRow.index}
+                      position="absolute"
+                      top={0}
+                      left={0}
+                      width="100%"
+                      height={`${virtualRow.size}px`}
+                      transform={`translateY(${virtualRow.start - rowVirtualizer.options.scrollMargin}px)`}
+                    >
+                      <TrackResultItem
+                        trackId={info.trackId}
+                        friendId={info.friendId}
+                        playlistCount={playlistCounts[key]}
+                        layout="row"
+                        showUsername={false}
+                        isSelected={selectMode ? selectedTracks.has(key) : undefined}
+                        onToggleSelect={selectMode ? () => toggleTrack(info.trackId, info.friendId) : undefined}
+                      />
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Box>
           ) : (
-            // Table view
-            <>
-              <TrackTableViewWithLoader
-                trackInfo={trackInfo}
-                playlistCounts={playlistCounts}
-                buttons={(track) => <TrackActionsMenu track={track} />}
-                selectedTracks={selectedTracks}
-                onToggleTrack={toggleTrack}
-              />
-            </>
+            // Cards view (and every phone, regardless of the toggle). columnGap only:
+            // each card supplies its own mb for row spacing, so rowGap would double it up.
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} columnGap={3} rowGap={0}>
+              {trackInfo.map((info) => {
+                const key = `${info.trackId}:${info.friendId}`;
+                return (
+                  <TrackResultItem
+                    key={`search-${info.trackId}-${info.friendId}`}
+                    trackId={info.trackId}
+                    friendId={info.friendId}
+                    playlistCount={playlistCounts[key]}
+                    layout="card"
+                    showUsername={false}
+                    isSelected={selectMode ? selectedTracks.has(key) : undefined}
+                    onToggleSelect={selectMode ? () => toggleTrack(info.trackId, info.friendId) : undefined}
+                  />
+                );
+              })}
+            </Grid>
           )}
           {hasMore && (
             <Box ref={bottomSentinelRef} height="1px" />

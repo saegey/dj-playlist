@@ -587,7 +587,6 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           droppableId="playlist-droppable"
           renderTrackButtons={renderPlaylistButtons}
           trackResultProps={{
-            playlistMode: true,
             playlistCount: playlistCounts,
           }}
           sortPositionChanges={sortPositionChanges}

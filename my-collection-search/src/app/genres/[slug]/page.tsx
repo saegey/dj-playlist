@@ -176,7 +176,6 @@ export default function GenrePage() {
                   trackId={track.track_id}
                   friendId={track.friend_id}
                   fallbackTrack={track as unknown as Track}
-                  playlistMode={true}
                   showUsername={false}
                   buttons={<TrackActionsMenu track={track as unknown as Track} />}
                   footer={

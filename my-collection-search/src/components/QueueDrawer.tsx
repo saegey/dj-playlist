@@ -340,9 +340,6 @@ export default function QueueDrawer({
                         droppableId="queue-droppable"
                         renderTrackButtons={renderQueueButtons}
                         currentTrackIndex={currentTrackIndex}
-                        trackResultProps={{
-                          playlistMode: true,
-                        }}
                       />
                     </Flex>
                     <Box h={{ base: "72px", md: "84px" }} />
