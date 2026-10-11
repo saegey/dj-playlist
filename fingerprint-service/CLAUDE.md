@@ -35,6 +35,7 @@ fingerprint_service/
   indexer.py       reference-library indexing: hash, decide, fingerprint
   sets.py          set derivation: stream a recording, match every window
   runs.py          per-run progress counters in Redis
+  app_api.py       shared GroovenetClient / requests.Session
   results.py       POSTs the ingest callback and reference fingerprints
   observability.py one JSON line per stage of a live window (#280)
   types.py         Ingest*/Index*/MatchCandidate TypedDicts
@@ -236,9 +237,13 @@ recorded, because a gap in matches is how #279 finds the boundary between one
 play and the next. `status: "failed"` means the chunk could not be processed at
 all, and `error_stage` says where: `resolve`, `decode` or `match`.
 
-This goes over plain `requests` rather than `groovenet_client` because the
-callback route does not exist in the OpenAPI spec yet (#276). Switch to the
-generated client once it does.
+All app requests use the hand-written `GroovenetClient` shared with
+`download-worker`, including reference-index reads. `app_api.py` reuses its
+Session and sends `X-Groovenet-Client: worker` (the app's pipeline identity).
+The client raises on non-2xx responses; this service keeps the existing
+best-effort claims, result-report errors and index-refresh retry policy.
+`FINGERPRINT_RESULT_TIMEOUT` still controls all these requests (default 30s).
+The Docker build uses the repository root to copy the client's path dependency.
 
 ## Logging a live window (#280)
 

@@ -1,6 +1,6 @@
 """Tests for fix_duration, analyze_local_audio, and cover art job handlers."""
 import subprocess
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 
 def make_proc(returncode=0, stdout="", stderr=""):
@@ -162,19 +162,17 @@ class TestExtractEmbeddedCoverArtAlbum:
             **kwargs,
         }
 
-    @patch("worker.jobs.cover_art.requests.post")
+    @patch("groovenet_client.GroovenetClient.extract_cover_art")
     def test_success_path(self, mock_post, fake_redis):
-        mock_post.return_value = MagicMock(
-            ok=True, json=lambda: {"status": "matched", "applied": True, "distance": 4}
-        )
+        mock_post.return_value = {"status": "matched", "applied": True, "distance": 4}
         from worker.jobs.cover_art import extract_embedded_cover_art_album
         result = extract_embedded_cover_art_album(self._job(release_id="rel/99"))
         assert result["success"] is True
         assert result["status"] == "matched"
         assert result["applied"] is True
         args, kwargs = mock_post.call_args
-        assert args[0].endswith("/api/albums/rel%2F99/artwork/match")
-        assert kwargs["params"] == {"friend_id": 4}
+        assert args == ("rel/99", 4)
+        assert kwargs == {"timeout": 180}
 
     def test_missing_release_id_fails(self, fake_redis):
         job = {"track_id": "t", "friend_id": 1, "job_id": "job-album-cover-2"}
@@ -183,9 +181,10 @@ class TestExtractEmbeddedCoverArtAlbum:
         assert result["success"] is False
         assert "release_id" in result["error"]
 
-    @patch("worker.jobs.cover_art.requests.post")
+    @patch("groovenet_client.GroovenetClient.extract_cover_art")
     def test_api_error_fails(self, mock_post, fake_redis):
-        mock_post.return_value = MagicMock(ok=False, status_code=500, text="Server error")
+        from groovenet_client import GroovenetApiError
+        mock_post.side_effect = GroovenetApiError(500, "Server error")
         from worker.jobs.cover_art import extract_embedded_cover_art_album
         result = extract_embedded_cover_art_album(self._job())
         assert result["success"] is False

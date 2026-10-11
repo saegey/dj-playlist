@@ -3,8 +3,7 @@ import os
 import shutil
 from typing import TYPE_CHECKING
 
-import requests
-
+from .app_api import get_groovenet_client
 from .config import logger
 from .subprocess_utils import run_subprocess
 
@@ -159,15 +158,13 @@ def ensure_local_audio_file(
     if os.path.exists(candidate):
         return candidate
 
-    app_url = os.getenv("APP_URL", "http://app:3000")
-    audio_url = f"{app_url}/api/audio?filename={filename}"
+    client = get_groovenet_client()
+    audio_url = f"{client.base_url}/api/audio?filename={filename}"
     tmp_path = f"/tmp/{filename}"
     logger.info(f"Downloading audio for local processing: {audio_url}")
     if log_sink is not None:
         log_sink.append(f"Fetching audio file: {audio_url}")
-    with requests.get(audio_url, stream=True, timeout=60) as response:
-        if not response.ok:
-            raise Exception(f"Failed to fetch audio: {response.status_code} {response.text}")
+    with client.fetch_audio(filename, timeout=60) as response:
         with open(tmp_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=1024 * 1024):
                 if chunk:

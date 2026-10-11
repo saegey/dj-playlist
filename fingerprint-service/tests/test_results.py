@@ -32,17 +32,29 @@ class FakeResponse:
     def ok(self):
         return self.status_code < 400
 
+    def close(self):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    def json(self):
+        raise ValueError("not JSON")
+
 
 @pytest.fixture
 def posted(monkeypatch):
     """Record every POST instead of making one."""
     calls = []
 
-    def fake_post(url, json=None, timeout=None):
+    def fake_post(self, method, url, json=None, timeout=None, **kwargs):
         calls.append({"url": url, "json": json, "timeout": timeout})
         return calls[-1].get("response") or FakeResponse()
 
-    monkeypatch.setattr(results.requests, "post", fake_post)
+    monkeypatch.setattr(requests.Session, "request", fake_post)
     return calls
 
 
@@ -113,7 +125,7 @@ class TestReportResult:
 
     def test_raises_when_the_app_rejects_it(self, job, matcher, monkeypatch):
         monkeypatch.setattr(
-            results.requests, "post", lambda *a, **k: FakeResponse(500, "boom")
+            requests.Session, "request", lambda *a, **k: FakeResponse(500, "boom")
         )
         with pytest.raises(ResultReportError, match="returned 500"):
             report_result(build_result(job(), matcher))
@@ -122,7 +134,7 @@ class TestReportResult:
         def boom(*args, **kwargs):
             raise requests.ConnectionError("no route to host")
 
-        monkeypatch.setattr(results.requests, "post", boom)
+        monkeypatch.setattr(requests.Session, "request", boom)
         with pytest.raises(ResultReportError, match="Could not reach"):
             report_result(build_result(job(), matcher))
 
@@ -137,7 +149,7 @@ class TestTryReportResult:
         def boom(*args, **kwargs):
             raise requests.ConnectionError("no route to host")
 
-        monkeypatch.setattr(results.requests, "post", boom)
+        monkeypatch.setattr(requests.Session, "request", boom)
         assert try_report_result(build_result(job(), matcher)) is False
         [failed] = events("ingest.report_failed")
         assert failed["stage"] == "report"
@@ -177,7 +189,7 @@ class TestPersistFingerprint:
 
     def test_raises_when_the_app_refuses(self, monkeypatch, upsert):
         monkeypatch.setattr(
-            results.requests, "post", lambda *a, **k: FakeResponse(422, "bad friend_id")
+            requests.Session, "request", lambda *a, **k: FakeResponse(422, "bad friend_id")
         )
         with pytest.raises(ResultReportError, match="422"):
             persist_fingerprint(upsert)
@@ -186,7 +198,7 @@ class TestPersistFingerprint:
         def refuse(*args, **kwargs):
             raise requests.ConnectionError("connection refused")
 
-        monkeypatch.setattr(results.requests, "post", refuse)
+        monkeypatch.setattr(requests.Session, "request", refuse)
         with pytest.raises(ResultReportError, match="Could not reach"):
             persist_fingerprint(upsert)
 
@@ -202,7 +214,7 @@ class TestTryPersistFingerprint:
         to skip on.
         """
         monkeypatch.setattr(
-            results.requests, "post", lambda *a, **k: FakeResponse(500, "boom")
+            requests.Session, "request", lambda *a, **k: FakeResponse(500, "boom")
         )
         assert try_persist_fingerprint(upsert) is False
 
@@ -223,17 +235,17 @@ class TestTryRecordFileStats:
     def test_patches_the_fingerprints_collection(self, monkeypatch):
         calls = []
 
-        def fake_patch(url, json=None, timeout=None):
+        def fake_patch(self, method, url, json=None, timeout=None, **kwargs):
             calls.append((url, json))
             return FakeResponse(200)
 
-        monkeypatch.setattr(results.requests, "patch", fake_patch)
+        monkeypatch.setattr(requests.Session, "request", fake_patch)
         assert try_record_file_stats(self.stats) is True
         assert calls[0][0].endswith("/api/fingerprints")
         assert calls[0][1] == self.stats
 
     def test_a_refusal_is_logged_not_raised(self, monkeypatch, caplog):
-        monkeypatch.setattr(results.requests, "patch", lambda *a, **k: FakeResponse(500, "boom"))
+        monkeypatch.setattr(requests.Session, "request", lambda *a, **k: FakeResponse(500, "boom"))
         assert try_record_file_stats(self.stats) is False
         assert "returned 500" in caplog.text
 
@@ -241,7 +253,7 @@ class TestTryRecordFileStats:
         def refuse(*args, **kwargs):
             raise requests.ConnectionError("connection refused")
 
-        monkeypatch.setattr(results.requests, "patch", refuse)
+        monkeypatch.setattr(requests.Session, "request", refuse)
         assert try_record_file_stats(self.stats) is False
         assert "Could not record file stats" in caplog.text
 
@@ -256,11 +268,11 @@ class TestClaimIngest:
     def test_posts_to_the_claim_route(self, monkeypatch):
         calls = []
 
-        def fake_post(url, timeout=None):
+        def fake_post(self, method, url, timeout=None, **kwargs):
             calls.append(url)
             return FakeResponse(200)
 
-        monkeypatch.setattr(results.requests, "post", fake_post)
+        monkeypatch.setattr(requests.Session, "request", fake_post)
 
         assert try_claim_ingest("abc") is True
         assert calls == ["http://app:3000/api/audio/ingest/abc/claim"]
@@ -269,7 +281,7 @@ class TestClaimIngest:
         # A 404 means the app does not know this ingest. Worth a warning, not
         # worth refusing to process audio we are already holding.
         monkeypatch.setattr(
-            results.requests, "post", lambda *a, **k: FakeResponse(404, "gone")
+            requests.Session, "request", lambda *a, **k: FakeResponse(404, "gone")
         )
         assert try_claim_ingest("abc") is False
 
@@ -277,7 +289,7 @@ class TestClaimIngest:
         def refuse(*args, **kwargs):
             raise requests.ConnectionError("connection refused")
 
-        monkeypatch.setattr(results.requests, "post", refuse)
+        monkeypatch.setattr(requests.Session, "request", refuse)
         assert try_claim_ingest("abc") is False
 
 
@@ -312,7 +324,7 @@ class TestSetResults:
         assert posted[0]["json"] == result
 
     def test_a_rejected_report_raises(self, set_job, matcher, monkeypatch):
-        monkeypatch.setattr(results.requests, "post", lambda *a, **k: FakeResponse(422, "bad"))
+        monkeypatch.setattr(requests.Session, "request", lambda *a, **k: FakeResponse(422, "bad"))
         result = build_set_result(set_job(), matcher, window_seconds=15.0, step_seconds=15.0)
         with pytest.raises(ResultReportError, match="422"):
             report_set_result(result)
@@ -322,7 +334,7 @@ class TestSetResults:
         def down(*a, **k):
             raise requests.ConnectionError("refused")
 
-        monkeypatch.setattr(results.requests, "post", down)
+        monkeypatch.setattr(requests.Session, "request", down)
         result = build_set_result(set_job(), matcher, window_seconds=15.0, step_seconds=15.0)
         with pytest.raises(ResultReportError, match="Could not reach"):
             report_set_result(result)
@@ -334,11 +346,43 @@ class TestSetResults:
     def test_claim_is_best_effort(self, monkeypatch, posted):
         assert try_claim_set("d1") is True
 
-        monkeypatch.setattr(results.requests, "post", lambda *a, **k: FakeResponse(404))
+        monkeypatch.setattr(requests.Session, "request", lambda *a, **k: FakeResponse(404))
         assert try_claim_set("d1") is False
 
         def down(*a, **k):
             raise requests.ConnectionError("refused")
 
-        monkeypatch.setattr(results.requests, "post", down)
+        monkeypatch.setattr(requests.Session, "request", down)
         assert try_claim_set("d1") is False
+
+
+@pytest.mark.parametrize("operation, path, method", [
+    (lambda: try_claim_ingest("i1"), "/api/audio/ingest/i1/claim", "POST"),
+    (lambda: try_claim_set("d1"), "/api/set-derivations/d1/claim", "POST"),
+    (lambda: try_record_file_stats(TestTryRecordFileStats.stats), "/api/fingerprints", "PATCH"),
+])
+def test_best_effort_calls_preserve_timeout_and_pipeline_identity(monkeypatch, operation, path, method):
+    calls = []
+
+    def send(self, verb, url, **kwargs):
+        calls.append((verb, url, kwargs))
+        return FakeResponse(204)
+
+    monkeypatch.setattr(results, "APP_URL", "https://app.test/")
+    monkeypatch.setattr(results, "RESULT_TIMEOUT", 17)
+    monkeypatch.setattr(requests.Session, "request", send)
+    assert operation() is True
+    [(verb, url, kwargs)] = calls
+    assert (verb, url) == (method, "https://app.test" + path)
+    assert kwargs["timeout"] == 17
+    assert kwargs["headers"] == {"X-Groovenet-Client": "worker"}
+    assert kwargs["allow_redirects"] is False
+    if method == "POST":
+        assert "json" not in kwargs  # Claims have no body.
+
+
+def test_callbacks_and_loader_share_the_same_session():
+    from fingerprint_service.app_api import get_groovenet_client
+
+    client = get_groovenet_client("https://app.test", 30)
+    assert get_groovenet_client("https://app.test", 30) is client

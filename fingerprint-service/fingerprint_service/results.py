@@ -1,14 +1,10 @@
-"""Report what happened with a chunk back to the app.
-
-Same direction as `download-worker`: the Python side does the work and the app
-owns the database. It posts with `requests` rather than `groovenet_client`
-because the callback route does not exist in the OpenAPI spec yet (#276) —
-switch to the generated client once it does.
-"""
+"""Report results through the shared app client; delivery policy stays here."""
 import logging
 
 import requests
+from groovenet_client import GroovenetApiError
 
+from .app_api import get_groovenet_client
 from .config import APP_URL, RESULT_TIMEOUT, logger
 from .matcher import FingerprintMatcher
 from .observability import STAGE_REPORT, log_event
@@ -79,14 +75,11 @@ def report_result(result: IngestResult) -> None:
     """POST one result, raising on anything the app did not accept."""
     url = result_url(result["ingest_id"])
     try:
-        response = requests.post(url, json=result, timeout=RESULT_TIMEOUT)
+        get_groovenet_client(APP_URL, RESULT_TIMEOUT).report_ingest_result(result["ingest_id"], result)
     except requests.RequestException as e:
         raise ResultReportError(f"Could not reach {url}: {e}") from e
-
-    if not response.ok:
-        raise ResultReportError(
-            f"{url} returned {response.status_code}: {response.text[:500]}"
-        )
+    except GroovenetApiError as e:
+        raise ResultReportError(f"{url} returned {e.status}: {e.message}") from e
 
     logger.info(
         "Reported ingest %s as %s with %d candidate(s)",
@@ -132,15 +125,12 @@ def try_claim_ingest(ingest_id: str) -> bool:
     unreachable would be the worse trade.
     """
     try:
-        response = requests.post(claim_url(ingest_id), timeout=RESULT_TIMEOUT)
+        get_groovenet_client(APP_URL, RESULT_TIMEOUT).claim_ingest(ingest_id)
     except requests.RequestException as e:
         logger.warning("Could not claim ingest %s: %s", ingest_id, e)
         return False
-
-    if not response.ok:
-        logger.warning(
-            "Claim for ingest %s returned %s", ingest_id, response.status_code
-        )
+    except GroovenetApiError as e:
+        logger.warning("Claim for ingest %s returned %s: %s", ingest_id, e.status, e.message)
         return False
     return True
 
@@ -188,14 +178,11 @@ def report_set_result(result: SetResult) -> None:
     """POST one set result, raising on anything the app did not accept."""
     url = set_result_url(result["derivation_id"])
     try:
-        response = requests.post(url, json=result, timeout=RESULT_TIMEOUT)
+        get_groovenet_client(APP_URL, RESULT_TIMEOUT).report_set_result(result["derivation_id"], result)
     except requests.RequestException as e:
         raise ResultReportError(f"Could not reach {url}: {e}") from e
-
-    if not response.ok:
-        raise ResultReportError(
-            f"{url} returned {response.status_code}: {response.text[:500]}"
-        )
+    except GroovenetApiError as e:
+        raise ResultReportError(f"{url} returned {e.status}: {e.message}") from e
 
     logger.info(
         "Reported set %s as %s with %d window(s)",
@@ -222,15 +209,12 @@ def try_report_set_result(result: SetResult) -> bool:
 def try_claim_set(derivation_id: str) -> bool:
     """Tell the app this derivation has been picked up. Best-effort, like ingest."""
     try:
-        response = requests.post(set_claim_url(derivation_id), timeout=RESULT_TIMEOUT)
+        get_groovenet_client(APP_URL, RESULT_TIMEOUT).claim_set_derivation(derivation_id)
     except requests.RequestException as e:
         logger.warning("Could not claim set %s: %s", derivation_id, e)
         return False
-
-    if not response.ok:
-        logger.warning(
-            "Claim for set %s returned %s", derivation_id, response.status_code
-        )
+    except GroovenetApiError as e:
+        logger.warning("Claim for set %s returned %s: %s", derivation_id, e.status, e.message)
         return False
     return True
 
@@ -249,14 +233,11 @@ def persist_fingerprint(upsert: FingerprintUpsert) -> None:
     """
     url = fingerprint_url()
     try:
-        response = requests.post(url, json=upsert, timeout=RESULT_TIMEOUT)
+        get_groovenet_client(APP_URL, RESULT_TIMEOUT).upsert_fingerprint(upsert)
     except requests.RequestException as e:
         raise ResultReportError(f"Could not reach {url}: {e}") from e
-
-    if not response.ok:
-        raise ResultReportError(
-            f"{url} returned {response.status_code}: {response.text[:500]}"
-        )
+    except GroovenetApiError as e:
+        raise ResultReportError(f"{url} returned {e.status}: {e.message}") from e
 
     logger.info(
         "Persisted fingerprint for track %s under %s %s",
@@ -288,16 +269,12 @@ def try_record_file_stats(stats: FileStats) -> bool:
     Losing this costs one hash on the next check and nothing else — the
     fingerprint is still right — so it never fails the track.
     """
-    url = fingerprint_url()
     try:
-        response = requests.patch(url, json=stats, timeout=RESULT_TIMEOUT)
+        get_groovenet_client(APP_URL, RESULT_TIMEOUT).record_file_stats(stats)
     except requests.RequestException as e:
         logger.warning("Could not record file stats for track %s: %s", stats["track_id"], e)
         return False
-
-    if not response.ok:
-        logger.warning(
-            "Recording file stats for track %s returned %s", stats["track_id"], response.status_code
-        )
+    except GroovenetApiError as e:
+        logger.warning("Recording file stats for track %s returned %s: %s", stats["track_id"], e.status, e.message)
         return False
     return True

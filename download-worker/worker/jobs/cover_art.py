@@ -3,13 +3,12 @@ import time
 import traceback
 from urllib.parse import quote
 
-import requests
-
+from ..app_api import get_groovenet_client
 from ..audio_utils import ensure_local_audio_file, get_embedded_art_stream_index
 from ..config import logger
 from ..redis_utils import append_job_logs, update_job_status
 from ..subprocess_utils import run_subprocess
-from ..track_api import APP_HEADERS, update_track_album_art_url
+from ..track_api import update_track_album_art_url
 from ..types import JobData, JobResult
 
 
@@ -105,9 +104,9 @@ def extract_embedded_cover_art_album(job_data: JobData) -> JobResult:
         # The app extracts the embedded (Apple Music) cover and applies it only
         # when it perceptually matches the album's Discogs art; anything else is
         # flagged for manual review rather than silently replacing the cover.
-        app_url = os.getenv('APP_URL', 'http://app:3000')
+        client = get_groovenet_client()
         endpoint = (
-            f"{app_url}/api/albums/{quote(str(release_id), safe='')}/artwork/match"
+            f"{client.base_url}/api/albums/{quote(str(release_id), safe='')}/artwork/match"
         )
 
         update_job_status(job_id, 'processing', 60)
@@ -115,19 +114,7 @@ def extract_embedded_cover_art_album(job_data: JobData) -> JobResult:
         append_job_logs(job_id, log_sink)
         log_sink.clear()
 
-        response = requests.post(
-            endpoint,
-            params={"friend_id": friend_id},
-            headers=APP_HEADERS,
-            timeout=180,
-        )
-        if not response.ok:
-            raise Exception(
-                f"Album cover extraction API failed: {response.status_code} {response.text}"
-            )
-
-        result_payload = response.json()
-        result_payload['success'] = True
+        result_payload = {**client.extract_cover_art(str(release_id), friend_id, timeout=180), "success": True}
         update_job_status(job_id, 'completed', 100, result=result_payload)
         logger.info("Album cover extraction job %s completed", job_id)
         return result_payload

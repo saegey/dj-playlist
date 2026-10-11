@@ -121,7 +121,8 @@ services:
   # reports back over the app's REST API. No published port on purpose.
   fingerprint-service:
     build:
-      context: fingerprint-service
+      context: .
+      dockerfile: fingerprint-service/Dockerfile
     environment:
       REDIS_URL: redis://redis:6379
       APP_URL: http://app:3000

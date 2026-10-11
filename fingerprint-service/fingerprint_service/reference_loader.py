@@ -12,7 +12,9 @@ indexing (#277), base64 over the wire because JSON has no bytes.
 import base64
 
 import requests
+from groovenet_client import GroovenetApiError
 
+from .app_api import get_groovenet_client
 from .config import (
     APP_URL,
     INDEX_PAGE_SIZE,
@@ -39,25 +41,17 @@ def fetch_page(
 ) -> list[dict]:
     """One page of reference fingerprints for an engine and version."""
     try:
-        response = requests.get(
-            fingerprints_url(),
-            params={
-                "fingerprint_type": fingerprint_type,
-                "fingerprint_version": fingerprint_version,
-                "limit": limit,
-                "offset": offset,
-            },
-            timeout=RESULT_TIMEOUT,
+        payload = get_groovenet_client(APP_URL, RESULT_TIMEOUT).list_fingerprints(
+            fingerprint_type, fingerprint_version, limit=limit, offset=offset,
         )
     except requests.RequestException as e:
         raise ReferenceLoadError(f"Could not reach {fingerprints_url()}: {e}") from e
 
-    if not response.ok:
-        raise ReferenceLoadError(
-            f"{fingerprints_url()} returned {response.status_code}: {response.text[:300]}"
-        )
+    except GroovenetApiError as e:
+        raise ReferenceLoadError(f"{fingerprints_url()} returned {e.status}: {e.message}") from e
+    except ValueError as e:
+        raise ReferenceLoadError(f"Invalid fingerprint JSON: {e}") from e
 
-    payload = response.json()
     rows = payload.get("fingerprints", payload) if isinstance(payload, dict) else payload
     if not isinstance(rows, list):
         raise ReferenceLoadError(f"expected a list of fingerprints, got {type(rows).__name__}")

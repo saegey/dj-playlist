@@ -1,9 +1,6 @@
-# Applies to the hand-written Python services. packages/groovenet-python
-# carries its own config and is generated, so it is excluded from the
-# pre-commit hooks rather than linted here.
+# Shared by the hand-written Python services and packages/groovenet-python.
 line-length = 120
 
 [lint]
-# Ruff's defaults (E4/E7/E9, F) plus import sorting and pyupgrade, matching
-# what the generated client is already held to.
+# Ruff defaults plus import sorting and pyupgrade for services and the client.
 select = ["E4", "E7", "E9", "F", "I", "UP"]

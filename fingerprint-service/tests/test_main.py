@@ -424,10 +424,10 @@ class TestIngestEvents:
         wav_file()
         monkeypatch.setattr(results, "APP_URL", "http://svc:hunter2@app:3000")
 
-        def refuse(url, **kwargs):
+        def refuse(self, method, url, **kwargs):
             raise results.requests.ConnectionError(f"{url} Authorization: Bearer sk-live-abc123 token=abc123")
 
-        monkeypatch.setattr(results.requests, "post", refuse)
+        monkeypatch.setattr(results.requests.Session, "request", refuse)
         monkeypatch.setattr(
             service_main,
             "decode_to_pcm",

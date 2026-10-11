@@ -18,7 +18,7 @@ there rather than expanding this file.
 | MCP server | `mcp-server/` | [CLAUDE.md](mcp-server/CLAUDE.md) |
 | Typed API client | `packages/groovenet-client/` | [CLAUDE.md](packages/groovenet-client/CLAUDE.md) |
 | CLI | `packages/groovenet-cli/` | [CLAUDE.md](packages/groovenet-cli/CLAUDE.md) |
-| Generated Python client | `packages/groovenet-python/` | generated — never hand-edit |
+| Python API client | `packages/groovenet-python/` | [CLAUDE.md](packages/groovenet-python/CLAUDE.md) |
 
 ## Architecture
 
@@ -191,8 +191,9 @@ Version source of truth is the root `package.json`, mirrored into
 
 - **Don't run `next dev` or `next build` on the host.** It corrupts the `.next`
   directory shared with the dev container.
-- **`packages/groovenet-python` is generated** by `just generate-python-client`.
-  Hand edits are lost on the next regeneration, and it is excluded from linting.
+- **Python app requests use `GroovenetClient`** in `packages/groovenet-python`.
+  Add only consumed endpoints, with exact-request tests and an OpenAPI path/verb
+  check. See its guide; `just generate-spec` generates the contract, not code.
 - **`just bootstrap-js` uses strict `npm ci` under the pinned npm toolchain.**
   It must leave lockfiles unchanged and fails on an inconsistent lockfile;
   diagnose that failure instead of falling back to `npm install`. See the

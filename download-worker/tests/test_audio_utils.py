@@ -130,7 +130,7 @@ def test_ensure_local_audio_file_raises_when_no_url():
         ensure_local_audio_file({"track_id": "t1", "friend_id": 1})
 
 
-@patch("worker.audio_utils.requests.get")
+@patch("groovenet_client.GroovenetClient.fetch_audio")
 def test_ensure_local_audio_file_downloads_fallback(mock_get, tmp_path):
     mock_response = MagicMock()
     mock_response.ok = True

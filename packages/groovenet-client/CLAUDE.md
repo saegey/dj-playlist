@@ -34,7 +34,9 @@ no build-time link that will catch the drift.
 ## Adding an endpoint
 
 1. Add the method to `client.ts`.
-2. Copy any new types from the app.
+2. Copy any new types from the app. Python worker consumers use
+   `packages/groovenet-python`; add a thin method and exact-request/contract tests
+   there only if a worker consumes the endpoint (see its `CLAUDE.md`).
 3. Wire it into the CLI and/or the MCP server.
 4. Build in order: client → cli → mcp-server (`just build-packages`).
 

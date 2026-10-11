@@ -4,25 +4,12 @@ import time
 from typing import Any
 
 import requests
-from groovenet_client import Client
-from groovenet_client.api.tracks import patch_api_tracks
-from groovenet_client.models import PatchApiTracksBody
+from groovenet_client.types import TrackUpdate
 
+from .app_api import get_groovenet_client
 from .audio_utils import get_audio_metadata_year
 from .config import ESSENTIA_DATA_DIR, logger
 from .subprocess_utils import run_subprocess
-
-# Names the worker to the app, which tags the analytics events its calls cause
-# as pipeline work rather than as someone using the web app.
-APP_HEADERS = {"X-Groovenet-Client": "worker"}
-
-
-def get_groovenet_client() -> Client:
-    return Client(
-        base_url=os.getenv("APP_URL", "http://app:3000"),
-        timeout=30,
-        headers=APP_HEADERS,
-    )
 
 
 def report_job_outcome(job_id: str) -> None:
@@ -32,13 +19,8 @@ def report_job_outcome(job_id: str) -> None:
     analytics, so there is no body. Best-effort: a lost report costs a data
     point, never the job.
     """
-    app_url = os.getenv("APP_URL", "http://app:3000")
     try:
-        resp = requests.post(
-            f"{app_url}/api/jobs/{job_id}/outcome", headers=APP_HEADERS, timeout=10
-        )
-        if not resp.ok:
-            logger.warning(f"Job {job_id} outcome report failed: HTTP {resp.status_code}")
+        get_groovenet_client().report_job_outcome(job_id, timeout=10)
     except Exception as e:
         logger.warning(f"Job {job_id} outcome report failed: {e}")
 
@@ -107,7 +89,7 @@ def update_track_analysis(
             mood_relaxed = _extract_highlevel_mood(highlevel, 'mood_relaxed', 'relaxed')
             mood_aggressive = _extract_highlevel_mood(highlevel, 'mood_aggressive', 'aggressive')
 
-        body = PatchApiTracksBody(track_id=track_id, friend_id=friend_id)
+        body: TrackUpdate = {"track_id": track_id, "friend_id": friend_id}
         if bpm is not None:
             body["bpm"] = bpm
         if key:
@@ -127,22 +109,7 @@ def update_track_analysis(
         if audio_year is not None:
             body["year"] = str(audio_year)
 
-        # Send the PATCH directly rather than via the generated client, which
-        # force-parses the response with response.json() and crashes with
-        # "Expecting value: line 1 column 1 (char 0)" whenever the app returns
-        # an empty/non-JSON body — even though the update itself succeeded.
-        # Here we only care about the status code.
-        app_url = os.getenv("APP_URL", "http://app:3000")
-        resp = requests.patch(
-            f"{app_url}/api/tracks", json=body.to_dict(), headers=APP_HEADERS, timeout=30
-        )
-        if not resp.ok:
-            # 404 => track missing or soft-deleted. Surface it loudly so the job
-            # fails instead of silently discarding the analysis.
-            raise Exception(
-                f"Track update failed: HTTP {resp.status_code} "
-                f"{resp.text[:300]!r} for {track_id}/{friend_id}"
-            )
+        get_groovenet_client().update_track(body)
         logger.info(f"Track {track_id} updated with analysis data")
 
     except Exception as e:
@@ -245,17 +212,13 @@ def analyze_audio_file(
 
 def update_track_duration(track_id: str, friend_id: int, duration_seconds: int) -> None:
     logger.info(f"Updating track duration for {track_id}")
-    body = PatchApiTracksBody(track_id=track_id, friend_id=friend_id)
+    body: TrackUpdate = {"track_id": track_id, "friend_id": friend_id}
     body["duration_seconds"] = duration_seconds
-    response = patch_api_tracks.sync(client=get_groovenet_client(), body=body)
-    if response is None:
-        raise Exception(f"Failed to update duration for track {track_id}")
+    get_groovenet_client().update_track(body)
 
 
 def update_track_album_art_url(track_id: str, friend_id: int, album_art_url: str) -> None:
     logger.info(f"Updating track album art for {track_id}")
-    body = PatchApiTracksBody(track_id=track_id, friend_id=friend_id)
+    body: TrackUpdate = {"track_id": track_id, "friend_id": friend_id}
     body["audio_file_album_art_url"] = album_art_url
-    response = patch_api_tracks.sync(client=get_groovenet_client(), body=body)
-    if response is None:
-        raise Exception(f"Failed to update album art url for track {track_id}")
+    get_groovenet_client().update_track(body)
