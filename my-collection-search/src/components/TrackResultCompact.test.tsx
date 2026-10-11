@@ -43,3 +43,11 @@ describe("TrackResultCompact genre badges", () => {
     expect(screen.getByText("Feminist Anthem").closest("a")).toBeNull();
   });
 });
+
+it("uses effective album badges while retaining track genres", () => {
+  renderWithProviders(<TrackResultCompact track={{ ...sampleTrack, genres: ["Source"], styles: ["Source Style"], album_genres: ["Jazz"], album_styles: [], track_genres: [{ id: "c", name: "Cumbia", slug: "cumbia", parent_id: null, parent_name: null }] } as Track} />);
+  expect(screen.getByText("Jazz")).toBeTruthy();
+  expect(screen.getByText("Cumbia")).toBeTruthy();
+  expect(screen.queryByText("Source")).toBeNull();
+  expect(screen.queryByText("Source Style")).toBeNull();
+});

@@ -13,6 +13,8 @@ import AlbumForm, { AlbumFormData } from "@/components/AlbumForm";
 import CoverArtUpload from "@/components/CoverArtUpload";
 import TrackListBuilder, { TrackFormData } from "@/components/TrackListBuilder";
 import PageContainer from "@/components/layout/PageContainer";
+import AlbumTaxonomyEditor from "@/components/AlbumTaxonomyEditor";
+import type { AlbumTaxonomyOverrides } from "@/api-contract/schemas";
 
 function EditAlbumContent() {
   const router = useRouter();
@@ -51,6 +53,7 @@ function EditAlbumContent() {
   });
 
   const [coverArt, setCoverArt] = useState<File | null>(null);
+  const [taxonomyOverrides, setTaxonomyOverrides] = useState<AlbumTaxonomyOverrides>({});
   const [tracks, setTracks] = useState<TrackFormData[]>([]);
 
   useEffect(() => {
@@ -61,6 +64,10 @@ function EditAlbumContent() {
   useEffect(() => {
     if (!album || hydratedTracks.length === 0 || didHydrateRef.current) return;
 
+    setTaxonomyOverrides({
+      genre_override_ids: album.genre_override_ids ?? null,
+      style_override_ids: album.style_override_ids ?? null,
+    });
     // Hydrate album form
     setAlbumForm({
       title: album.title || '',
@@ -182,8 +189,7 @@ function EditAlbumContent() {
           title: albumForm.title,
           artist: albumForm.artist,
           year: albumForm.year || undefined,
-          genres: albumForm.genres.length > 0 ? albumForm.genres : undefined,
-          styles: albumForm.styles.length > 0 ? albumForm.styles : undefined,
+          ...taxonomyOverrides,
           album_notes: albumForm.album_notes || undefined,
           album_rating: albumForm.album_rating || undefined,
           purchase_price: albumForm.purchase_price ? parseFloat(albumForm.purchase_price) : undefined,
@@ -270,7 +276,9 @@ function EditAlbumContent() {
       <Stack gap={6}>
         <Heading size="2xl">Edit Album</Heading>
 
-        <AlbumForm value={albumForm} onChange={setAlbumForm} />
+        <AlbumForm value={albumForm} onChange={setAlbumForm} taxonomyEditor={
+          <AlbumTaxonomyEditor album={album} value={taxonomyOverrides} onChange={setTaxonomyOverrides} />
+        } />
 
         <CoverArtUpload value={coverArt} onChange={setCoverArt} />
 

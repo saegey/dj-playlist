@@ -9,6 +9,9 @@ import { albumRepository } from '@/server/repositories/albumRepository';
 import { albumArtworkService } from '@/server/services/albumArtworkService';
 import { syncIdentityEmbeddings } from '@/server/services/trackEmbeddingSyncService';
 
+import { AlbumOverrideError, resolveAlbumOverrides } from '@/server/genres/albumOverrides';
+import { triggerGenreSimilarityRefresh } from '@/server/services/genreSimilarityService';
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -61,6 +64,8 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    const overrides = await resolveAlbumOverrides(album);
 
     // Handle cover art upload if provided
     let albumThumbnail: string | undefined;
@@ -115,7 +120,9 @@ export async function POST(request: NextRequest) {
         library_identifier: album.library_identifier,
       };
 
-      const updatedAlbum = await upsertAlbum(client, albumToUpsert);
+      let updatedAlbum = await upsertAlbum(client, albumToUpsert, { preserveSourceTaxonomy: true });
+      await albumRepository.replaceTaxonomyOverrides(client, releaseId, friendId, overrides);
+      updatedAlbum = (await albumRepository.getAlbumWithTaxonomy(client, releaseId, friendId))!;
 
       // Get existing track IDs for this album
       const existingTrackIds = new Set(
@@ -151,8 +158,8 @@ export async function POST(request: NextRequest) {
           track.artist,
           album.title,
           album.year || '',
-          album.styles || [],
-          album.genres || [],
+          updatedAlbum.styles || [],
+          updatedAlbum.genres || [],
           track.duration_seconds ? `${Math.floor(track.duration_seconds / 60)}:${String(track.duration_seconds % 60).padStart(2, '0')}` : '0:00',
           track.duration_seconds || 0,
           position,
@@ -170,12 +177,14 @@ export async function POST(request: NextRequest) {
           album.library_identifier || null,
         ]);
 
-        upsertedTracks.push(upsertedTrack);
+        upsertedTracks.push({ ...upsertedTrack, album_genres: updatedAlbum.effective_genres, album_styles: updatedAlbum.effective_styles });
       }
 
       return { updatedAlbum, upsertedTracks, tracksToDelete };
       }
     );
+
+    triggerGenreSimilarityRefresh();
 
     // Album genres/styles/label feed every track's identity embedding, so
     // refresh them now that the album and tracks are committed.
@@ -197,6 +206,9 @@ export async function POST(request: NextRequest) {
       });
 
   } catch (error) {
+    if (error instanceof AlbumOverrideError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error('Error upserting album:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to update album' },

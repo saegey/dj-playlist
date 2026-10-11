@@ -184,3 +184,14 @@ describe("PlaylistStatsPanel (#480)", () => {
     expect(within(audioCard).getByText("Audio Ready: 0%")).toBeTruthy();
   });
 });
+
+it("tallies effective album genres/styles without replacing the DJ genre", async () => {
+  renderPanel([track({ genres: ["Old Genre"], styles: ["Old Style"], album_genres: ["Latin"], album_styles: ["Cumbia"], track_genres: [{ id: "s", name: "Salsa", slug: "salsa", parent_id: null, parent_name: null }] })]);
+  const genreCard = await findDesktopCard("Top Genres");
+  expect(within(genreCard).getByText("Latin (1)")).toBeTruthy();
+  const styleCard = await findDesktopCard("Ratings & Styles");
+  expect(within(styleCard).getByText("Cumbia (1)")).toBeTruthy();
+  const djCard = await findDesktopCard("Top track genres");
+  expect(within(djCard).getByText("Salsa (1)")).toBeTruthy();
+  expect(screen.queryByText("Old Genre")).toBeNull();
+});

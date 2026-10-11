@@ -60,7 +60,7 @@ export function discogsReleaseToAlbum(
 export async function upsertAlbum(
   db: Queryable,
   album: AlbumToUpsert,
-  options?: { preserveManualFields?: boolean }
+  options?: { preserveManualFields?: boolean; preserveSourceTaxonomy?: boolean }
 ): Promise<Album> {
   return albumRepository.upsertAlbumRecord(db, album, options);
 }
@@ -71,7 +71,7 @@ export async function upsertAlbum(
 export async function upsertAlbums(
   db: Queryable,
   albums: AlbumToUpsert[],
-  options?: { preserveManualFields?: boolean }
+  options?: { preserveManualFields?: boolean; preserveSourceTaxonomy?: boolean }
 ): Promise<Album[]> {
   const upsertedAlbums: Album[] = [];
 

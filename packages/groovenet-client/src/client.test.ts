@@ -462,12 +462,12 @@ describe("GroovenetClient album endpoints", () => {
   it("updateAlbum merges updates into the PATCH body", async () => {
     const client = clientReturning({ success: true, album: {} });
 
-    await client.updateAlbum("r1", 2, { album_notes: "reissue" });
+    await client.updateAlbum("r1", 2, { album_notes: "reissue", genre_override_ids: [], style_override_ids: null });
 
     expect(requestMock).toHaveBeenCalledWith({
       method: "PATCH",
       url: "/albums",
-      data: { release_id: "r1", friend_id: 2, album_notes: "reissue" },
+      data: { release_id: "r1", friend_id: 2, album_notes: "reissue", genre_override_ids: [], style_override_ids: null },
       params: undefined,
     });
   });

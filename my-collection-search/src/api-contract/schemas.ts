@@ -1107,8 +1107,19 @@ export const albumDiscogsRawResponseSchema = z.object({
   data: z.unknown(),
 });
 
+/** Omitted: unchanged; null: reset to Discogs; []: deliberately empty. */
+export const albumTaxonomyOverrideFields = z.object({
+  genre_override_ids: z.array(z.string().uuid()).max(100).nullable().optional(),
+  style_override_ids: z.array(z.string().uuid()).max(100).nullable().optional(),
+});
+
+export type AlbumTaxonomyOverrides = z.infer<typeof albumTaxonomyOverrideFields>;
+
 export const albumEntitySchema = z
   .object({
+    ...albumTaxonomyOverrideFields.shape,
+    effective_genres: z.array(z.string()).optional(),
+    effective_styles: z.array(z.string()).optional(),
     release_id: z.string(),
     friend_id: z.number().int(),
     title: z.string(),
@@ -1126,6 +1137,8 @@ export const albumEntitySchema = z
 
 export const trackEntitySchema = z
   .object({
+    album_genres: z.array(z.string()).optional(),
+    album_styles: z.array(z.string()).optional(),
     track_id: z.string(),
     friend_id: z.number().int(),
     title: z.string(),
@@ -1224,7 +1237,7 @@ export const albumsCleanupSummaryResponseSchema = z.object({
 });
 
 export const albumUpsertWithTracksResponseSchema = z.object({
-  album: z.object({}).passthrough(),
+  album: albumEntitySchema,
   tracks: z.array(z.object({}).passthrough()),
   deletedTracks: z.number().int(),
 });
@@ -1248,7 +1261,7 @@ export const albumSearchQuerySchema = z.object({
 });
 
 export const albumSearchResponseSchema = z.object({
-  hits: z.array(z.object({}).passthrough()),
+  hits: z.array(albumEntitySchema),
   estimatedTotalHits: z.number().int(),
   offset: z.number().int(),
   limit: z.number().int(),
@@ -1259,7 +1272,7 @@ export const albumSearchResponseSchema = z.object({
 });
 
 export const albumDetailResponseSchema = z.object({
-  album: z.object({}).passthrough(),
+  album: albumEntitySchema,
   tracks: z.array(trackEntitySchema),
 });
 
@@ -1816,6 +1829,7 @@ export const recordCareSummaryResponseSchema = z.object({
 
 export const albumUpdateBodySchema = z
   .object({
+    ...albumTaxonomyOverrideFields.shape,
     release_id: z.string().min(1),
     friend_id: intFromInputSchema,
     album_rating: z.number().optional(),
@@ -1830,7 +1844,9 @@ export const albumUpdateBodySchema = z
       value.album_notes !== undefined ||
       value.purchase_price !== undefined ||
       value.condition !== undefined ||
-      value.library_identifier !== undefined,
+      value.library_identifier !== undefined ||
+      value.genre_override_ids !== undefined ||
+      value.style_override_ids !== undefined,
     {
       message: "No fields to update",
     }
@@ -1838,7 +1854,7 @@ export const albumUpdateBodySchema = z
 
 export const albumUpdateResponseSchema = z.object({
   success: z.boolean(),
-  album: z.object({}).passthrough(),
+  album: albumEntitySchema,
   tracksUpdated: z.number().int().optional(),
 });
 

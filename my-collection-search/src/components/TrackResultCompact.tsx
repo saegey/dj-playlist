@@ -83,8 +83,8 @@ export default function TrackResultCompact({
 
   // Collect all genres and styles
   const genreLookup = useGenreLookup();
-  const genres = discogsGenreBadges(track.genres, genreLookup);
-  const styles = discogsGenreBadges(track.styles, genreLookup);
+  const genres = discogsGenreBadges(track.album_genres ?? track.genres, genreLookup);
+  const styles = discogsGenreBadges(track.album_styles ?? track.styles, genreLookup);
   const allGenres = [...genres, ...styles];
   const localTags = trackGenreBadges(track, genreLookup);
 

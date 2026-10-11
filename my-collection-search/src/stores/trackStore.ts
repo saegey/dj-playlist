@@ -34,7 +34,7 @@ const isEmptyValue = (value: unknown): boolean =>
 // `genres`). Unlike `_preserveFields`, a key *present* with any value —
 // including `false` or `[]` — always wins; only a genuinely absent key
 // falls back to what the store already has.
-const SPARSE_SERVER_FIELDS: Array<keyof TrackEntity> = ['hasVectors', 'genres'];
+const SPARSE_SERVER_FIELDS: Array<keyof TrackEntity> = ['hasVectors', 'genres', 'album_genres', 'album_styles'];
 
 function withSparseFieldFallback<T extends Partial<TrackEntity>>(
   incoming: T,

@@ -1,3 +1,5 @@
+import { albumTaxonomySelectSql } from "@/lib/genres/albumTaxonomySql";
+import { effectiveAlbumTaxonomySql } from "@/lib/genres/albumTaxonomySql";
 import { dbQuery } from "@/lib/serverDb";
 import {
   albumGenreFilterClause,
@@ -10,7 +12,7 @@ import { hasVectorsSelectSql, trackGenresSelectSql } from "@/server/repositories
 export type GenrePageCounts = {
   /** Live tracks linked to this genre itself. */
   tracks: number;
-  /** Albums whose own Discogs genres or styles name this genre, or an alias of it. */
+  /** Albums whose effective genres or styles name this genre, or an alias of it. */
   albums: number;
   /** Albums the genre filter returns, subgenres included. */
   albums_total: number;
@@ -56,7 +58,7 @@ export class GenrePageRepository {
         )::integer AS tracks,
         (
           SELECT COUNT(*) FROM albums a
-          WHERE ${discogsGenreMatchSql("COALESCE(a.genres, '{}') || COALESCE(a.styles, '{}')", bind(input.ownKeys))}
+          WHERE ${discogsGenreMatchSql(effectiveAlbumTaxonomySql("a"), bind(input.ownKeys))}
             ${albumFriend}
         )::integer AS albums,
         (
@@ -107,7 +109,7 @@ export class GenrePageRepository {
 
     const { rows } = await dbQuery<GenrePageAlbumRow>(
       `
-      SELECT a.*, COALESCE(p.play_count, 0)::integer AS play_count
+      SELECT a.*, ${albumTaxonomySelectSql("a")}, COALESCE(p.play_count, 0)::integer AS play_count
       FROM albums a
       LEFT JOIN (
         SELECT release_id, friend_id, COUNT(*) AS play_count

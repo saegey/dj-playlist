@@ -251,3 +251,9 @@ describe("primaryGenreBadges", () => {
     });
   });
 });
+
+it("uses effective styles for the primary fallback, including an empty override", () => {
+  const lookup = new Map([["fusion", "fusion"]]);
+  expect(primaryGenreBadges({ styles: ["Old"], album_styles: ["Fusion"] }, lookup)).toEqual({ items: [{ label: "Fusion", slug: "fusion" }], kind: "discogs-style" });
+  expect(primaryGenreBadges({ styles: ["Old"], album_styles: [] }, lookup).items).toEqual([]);
+});
