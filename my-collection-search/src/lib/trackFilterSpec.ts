@@ -1,3 +1,4 @@
+import { effectiveAlbumTaxonomySql } from "@/lib/genres/albumTaxonomySql";
 /**
  * The `filter` string `/api/tracks/search` accepts, parsed into what it
  * actually means: an optional friend and a list of "missing X" checks. Both
@@ -122,8 +123,8 @@ export function discogsGenreMatchSql(discogs: string, keysRef: string): string {
 
 /**
  * Track match for a genre filter. A track with genres of its own matches only
- * on those; one without falls back to its album's Discogs genres and styles
- * (copied onto the track row), so a reconciled `Cumbia` track on a `Salsa`
+ * on those; one without falls back to its album's effective genres and styles
+ * (or source copies for a track without an album row), so a reconciled `Cumbia` track on a `Salsa`
  * album is found by `cumbia`, not `salsa`. `alias` is the `tracks` alias.
  */
 export function trackGenreFilterClause(
@@ -138,7 +139,7 @@ export function trackGenreFilterClause(
     OR (
       NOT EXISTS (SELECT 1 ${ownGenres})
       AND ${discogsGenreMatchSql(
-        `COALESCE(${alias}.genres, '{}') || COALESCE(${alias}.styles, '{}')`,
+        effectiveAlbumTaxonomySql(alias),
         bind(filter.keys)
       )}
     )
@@ -153,7 +154,7 @@ export function trackGenreFilterClause(
 const ALBUM_TRACK_SHARE = { numerator: 1, denominator: 3 };
 
 /**
- * Album match for a genre filter: the album's own Discogs genres and styles,
+ * Album match for a genre filter: the album's effective genres and styles,
  * or at least `ALBUM_TRACK_SHARE` of its live tracks with genre links linked
  * to one of the genres. Tracks with no links don't count either way. `alias`
  * is the `albums` alias.
@@ -164,7 +165,7 @@ export function albumGenreFilterClause(
   alias: string
 ): string {
   const discogs = discogsGenreMatchSql(
-    `COALESCE(${alias}.genres, '{}') || COALESCE(${alias}.styles, '{}')`,
+    effectiveAlbumTaxonomySql(alias),
     bind(filter.keys)
   );
   // DISTINCT: a track linked to two of the genres still counts once.

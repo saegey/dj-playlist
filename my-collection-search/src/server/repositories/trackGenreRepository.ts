@@ -1,3 +1,4 @@
+import { effectiveAlbumValuesSql } from "@/lib/genres/albumTaxonomySql";
 import { dbQuery, withDbTransaction } from "@/lib/serverDb";
 import { normalizeGenreName } from "@/lib/genres/normalization";
 
@@ -17,7 +18,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * array (never null), so reads carry them without a second round trip.
  * `alias` is the `tracks` alias in the surrounding query.
  */
-export function trackGenresSelectSql(alias = "t"): string {
+export function trackGenresSelectSql(alias = "t", sourceAlias = alias): string {
   return `COALESCE((
     SELECT json_agg(json_build_object(
       'id', g.id, 'name', g.name, 'slug', g.slug,
@@ -27,14 +28,16 @@ export function trackGenresSelectSql(alias = "t"): string {
     JOIN genres g ON g.id = tg.genre_id
     LEFT JOIN genres gp ON gp.id = g.parent_id
     WHERE tg.track_id = ${alias}.track_id AND tg.friend_id = ${alias}.friend_id
-  ), '[]'::json) AS track_genres`;
+  ), '[]'::json) AS track_genres,
+  ${effectiveAlbumValuesSql(alias, "genres", `${sourceAlias}.genres`)} AS album_genres,
+  ${effectiveAlbumValuesSql(alias, "styles", `${sourceAlias}.styles`)} AS album_styles`;
 }
 
 /**
  * Select-list expression giving a track row its taxonomy genre ids, each
  * with its immediate parent id, as `track_genre_ids` (never null) — ids, not
  * the raw `local_tags`/`styles` strings scoring code used to compare (#486).
- * Combines the track's direct `track_genres` links with its Discogs `styles`
+ * Combines the track's direct `track_genres` links with its effective album `styles`
  * resolved onto the taxonomy by name or alias, the same way `genre_normalize`
  * resolves a release's genres/styles for genre similarity — styles are a
  * secondary signal here, folded in only once they resolve to a real id, never
@@ -52,7 +55,7 @@ export function trackGenreIdsSelectSql(alias = "t"): string {
       WHERE tg.track_id = ${alias}.track_id AND tg.friend_id = ${alias}.friend_id
       UNION
       SELECT k.genre_id
-      FROM unnest(COALESCE(${alias}.styles, '{}'::text[])) AS d(name)
+      FROM unnest(${effectiveAlbumValuesSql(alias, "styles")}) AS d(name)
       JOIN (
         SELECT normalized_name AS key, id AS genre_id FROM genres
         UNION

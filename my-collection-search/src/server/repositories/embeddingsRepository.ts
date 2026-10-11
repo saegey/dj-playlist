@@ -1,3 +1,4 @@
+import { effectiveAlbumTaxonomySql } from "@/lib/genres/albumTaxonomySql";
 import type { PoolClient } from "pg";
 import { dbQuery } from "@/lib/serverDb";
 import { CURRENT_TEMPLATE_VERSIONS } from "@/lib/embeddings/templateVersions";
@@ -574,7 +575,7 @@ export class EmbeddingsRepository {
     if (filters.genre) {
       clauses.push(`EXISTS (
         SELECT 1
-        FROM unnest(COALESCE(a.genres, t.genres, '{}') || COALESCE(a.styles, t.styles, '{}')) AS g(name)
+        FROM unnest(${effectiveAlbumTaxonomySql("t")}) AS g(name)
         WHERE LOWER(g.name) = LOWER(${bind(filters.genre)})
       )`);
     }

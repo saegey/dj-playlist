@@ -7,7 +7,13 @@ import { withDbTransaction } from "@/lib/serverDb";
 import { albumRepository } from "@/server/repositories/albumRepository";
 import { resolveGenreFilter, unknownGenresError } from "@/server/genres/genreFilter";
 
+import { AlbumOverrideError, resolveAlbumOverrides } from "@/server/genres/albumOverrides";
+import { syncIdentityEmbeddings } from "@/server/services/trackEmbeddingSyncService";
+import { triggerGenreSimilarityRefresh } from "@/server/services/genreSimilarityService";
+
 interface AlbumUpdateRequest {
+  genre_override_ids?: string[] | null;
+  style_override_ids?: string[] | null;
   release_id: string;
   friend_id: number;
   album_rating?: number;
@@ -80,6 +86,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body: AlbumUpdateRequest = await request.json();
+    const overrides = await resolveAlbumOverrides(body);
     const {
       release_id,
       friend_id,
@@ -102,7 +109,9 @@ export async function PATCH(request: NextRequest) {
       album_notes === undefined &&
       purchase_price === undefined &&
       condition === undefined &&
-      library_identifier === undefined
+      library_identifier === undefined &&
+      overrides.genre_override_ids === undefined &&
+      overrides.style_override_ids === undefined
     ) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
@@ -117,6 +126,7 @@ export async function PATCH(request: NextRequest) {
 
     const updatedAlbum = await withDbTransaction(async (client) => {
       return albumRepository.updateAlbumFields(client, {
+        ...overrides,
         release_id,
         friend_id,
         album_rating,
@@ -129,6 +139,11 @@ export async function PATCH(request: NextRequest) {
 
     if (!updatedAlbum) {
       return NextResponse.json({ error: "Album not found" }, { status: 404 });
+    }
+
+    if (overrides.genre_override_ids !== undefined || overrides.style_override_ids !== undefined) {
+      triggerGenreSimilarityRefresh();
+      await syncIdentityEmbeddings(await albumRepository.getTracksByReleaseAndFriend(release_id, friend_id));
     }
 
     let updatedTracksCount = 0;
@@ -150,6 +165,9 @@ export async function PATCH(request: NextRequest) {
       tracksUpdated: updatedTracksCount,
     });
   } catch (error) {
+    if (error instanceof AlbumOverrideError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     console.error("Error updating album:", error);
 
     if (

@@ -77,6 +77,8 @@ export const trackGenreSchema = z.object({
 
 export const trackEntitySchema = z
   .object({
+    album_genres: z.array(z.string()).optional(),
+    album_styles: z.array(z.string()).optional(),
     track_id: z.string(),
     friend_id: z.number().int(),
     title: z.string(),
@@ -177,6 +179,10 @@ export const localPlaybackControlResponseSchema = z.object({
 
 export const albumEntitySchema = z
   .object({
+    effective_genres: z.array(z.string()).optional(),
+    effective_styles: z.array(z.string()).optional(),
+    genre_override_ids: z.array(z.string().uuid()).nullable().optional(),
+    style_override_ids: z.array(z.string().uuid()).nullable().optional(),
     release_id: z.string(),
     friend_id: z.number().int(),
     username: z.string().optional(),

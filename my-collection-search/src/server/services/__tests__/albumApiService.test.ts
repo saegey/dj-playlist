@@ -50,7 +50,7 @@ describe("AlbumApiService.searchAlbums", () => {
     });
 
     const [sql, params] = dbQuery.mock.calls[0];
-    expect(sql).toContain("unnest(COALESCE(a.genres, '{}') || COALESCE(a.styles, '{}'))");
+    expect(sql).toContain("unnest(effective_album_taxonomy_values(a.release_id::text, a.friend_id, 'genres', a.genres) || effective_album_taxonomy_values(a.release_id::text, a.friend_id, 'styles', a.styles))");
     expect(sql).toContain("tg.genre_id = ANY($3::uuid[])");
     expect(params).toEqual([6, ["latin"], ["id-latin"], 20, 0]);
     expect(dbQuery.mock.calls[1][1]).toEqual([6, ["latin"], ["id-latin"]]);

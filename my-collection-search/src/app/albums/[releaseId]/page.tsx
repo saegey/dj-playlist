@@ -338,15 +338,15 @@ function AlbumDetailContent() {
             {album.country && <Text display={{ base: "none", md: "block" }}>{album.country}</Text>}
           </Flex>
 
-          {(album.genres?.length || album.styles?.length) ? (
+          {((album.effective_genres ?? album.genres)?.length || (album.effective_styles ?? album.styles)?.length) ? (
             <Flex gap={1} flexWrap="wrap" display={{ base: "none", md: "flex" }}>
               <GenreBadgeList
-                items={discogsGenreBadges(album.genres, genreLookup)}
+                items={discogsGenreBadges(album.effective_genres ?? album.genres, genreLookup)}
                 kind="discogs-genre"
                 scope="albums"
               />
               <GenreBadgeList
-                items={discogsGenreBadges(album.styles, genreLookup)}
+                items={discogsGenreBadges(album.effective_styles ?? album.styles, genreLookup)}
                 kind="discogs-style"
                 scope="albums"
               />

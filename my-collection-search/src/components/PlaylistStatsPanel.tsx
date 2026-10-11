@@ -45,8 +45,8 @@ function usePlaylistStats(tracks: Track[]) {
     let localAudioCount = 0;
 
     for (const track of tracks) {
-      genreItemLists.push(discogsGenreBadges(track.genres, lookup));
-      styleItemLists.push(discogsGenreBadges(track.styles, lookup));
+      genreItemLists.push(discogsGenreBadges(track.album_genres ?? track.genres, lookup));
+      styleItemLists.push(discogsGenreBadges(track.album_styles ?? track.styles, lookup));
       // The DJ-facing genre (#368): a track's own taxonomy links, falling
       // back to its album's Discogs styles when it has none.
       trackGenreItemLists.push(primaryGenreBadges(track, lookup).items);

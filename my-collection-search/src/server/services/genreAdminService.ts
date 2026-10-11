@@ -156,6 +156,14 @@ export async function mergeGenres(sourceId: string, targetId: string): Promise<v
       [targetId, sourceId]
     );
     await client.query("DELETE FROM track_genres WHERE genre_id=$1", [sourceId]);
+    await client.query("LOCK TABLE album_taxonomy_override_genres IN SHARE ROW EXCLUSIVE MODE");
+    await client.query(
+      `INSERT INTO album_taxonomy_override_genres (release_id, friend_id, kind, genre_id)
+       SELECT release_id, friend_id, kind, $1 FROM album_taxonomy_override_genres WHERE genre_id=$2
+       ON CONFLICT DO NOTHING`,
+      [targetId, sourceId]
+    );
+    await client.query("DELETE FROM album_taxonomy_override_genres WHERE genre_id=$1", [sourceId]);
     // Reconciliation proposals (#372) point at genres by id too; the uuid[]
     // has no foreign key, so retarget it here, keeping order and dropping a
     // duplicate when a proposal already named the survivor.

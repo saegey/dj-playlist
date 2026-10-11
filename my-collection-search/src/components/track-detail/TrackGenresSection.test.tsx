@@ -55,3 +55,11 @@ describe("TrackGenresSection", () => {
     expect(screen.queryByText("Album (Discogs)")).toBeNull();
   });
 });
+
+it("shows effective album values apart from the track's own links", () => {
+  renderSection({ genres: ["Source"], styles: ["Old Style"], album_genres: [], album_styles: ["Fusion"], track_genres: [{ id: "s", name: "Salsa", slug: "salsa", parent_id: null, parent_name: null }] });
+  expect(screen.getByText("Fusion")).toBeTruthy();
+  expect(screen.getByText("Salsa")).toBeTruthy();
+  expect(screen.queryByText("Source")).toBeNull();
+  expect(screen.queryByText("Old Style")).toBeNull();
+});

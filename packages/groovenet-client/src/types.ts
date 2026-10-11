@@ -11,6 +11,8 @@ export type Track = {
   year: string | number;
   styles?: string[];
   genres?: string[];
+  album_genres?: string[];
+  album_styles?: string[];
   duration: string;
   duration_seconds?: number;
   position: string | number;
@@ -247,6 +249,10 @@ export interface Album {
   year?: string;
   genres?: string[];
   styles?: string[];
+  effective_genres?: string[];
+  effective_styles?: string[];
+  genre_override_ids?: string[] | null;
+  style_override_ids?: string[] | null;
   album_thumbnail?: string;
   audio_file_album_art_url?: string;
   discogs_url?: string;
@@ -398,6 +404,8 @@ export interface AlbumPlayableStructure {
 }
 
 export interface AlbumUpdate {
+  genre_override_ids?: string[] | null;
+  style_override_ids?: string[] | null;
   album_rating?: number;
   album_notes?: string;
   purchase_price?: number;

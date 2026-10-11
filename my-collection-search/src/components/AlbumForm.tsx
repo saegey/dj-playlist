@@ -26,12 +26,13 @@ export interface AlbumFormData {
 interface AlbumFormProps {
   value: AlbumFormData;
   onChange: (data: AlbumFormData) => void;
+  taxonomyEditor?: React.ReactNode;
 }
 
 const CONDITIONS = ['', 'Mint', 'Near Mint', 'Very Good', 'Good', 'Fair', 'Poor'];
 const FORMATS = ['', 'Vinyl', 'CD', 'Digital', 'Cassette', 'Other'];
 
-export default function AlbumForm({ value, onChange }: AlbumFormProps) {
+export default function AlbumForm({ value, onChange, taxonomyEditor }: AlbumFormProps) {
   const handleChange = (field: keyof AlbumFormData, val: string | number | string[]) => {
     onChange({ ...value, [field]: val });
   };
@@ -67,18 +68,18 @@ export default function AlbumForm({ value, onChange }: AlbumFormProps) {
             onChange={(e) => handleChange('year', e.target.value)}
             placeholder="2025"
           />
-          <LabeledInput
+          {taxonomyEditor ? null : <LabeledInput
             label="Genres"
             value={value.genres.join(', ')}
             onChange={(e) => handleArrayChange('genres', e.target.value)}
             placeholder="Electronic, House"
-          />
-          <LabeledInput
+          />}
+          {taxonomyEditor ? null : <LabeledInput
             label="Styles"
             value={value.styles.join(', ')}
             onChange={(e) => handleArrayChange('styles', e.target.value)}
             placeholder="Deep House, Tech House"
-          />
+          />}
           <Box flex="1">
             <Text mb={1} fontSize="sm">
               Album Rating
@@ -95,6 +96,8 @@ export default function AlbumForm({ value, onChange }: AlbumFormProps) {
           </Box>
         </Grid>
       </Box>
+
+      {taxonomyEditor}
 
       <Box>
         <Text fontSize="lg" fontWeight="semibold" mb={3}>

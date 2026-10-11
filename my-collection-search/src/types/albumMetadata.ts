@@ -1,4 +1,6 @@
-export interface AlbumMetadata {
+import type { AlbumTaxonomyOverrides } from "@/api-contract/schemas";
+
+export interface AlbumMetadata extends AlbumTaxonomyOverrides {
   title: string;
   artist: string;
   year?: string;

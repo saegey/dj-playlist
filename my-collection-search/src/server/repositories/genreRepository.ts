@@ -1,3 +1,4 @@
+import { effectiveAlbumTaxonomySql } from "@/lib/genres/albumTaxonomySql";
 import { dbQuery, withDbTransaction } from "@/lib/serverDb";
 import type { GenreFilter, GenreFilterRef } from "@/lib/trackFilterSpec";
 
@@ -143,7 +144,7 @@ export class GenreRepository {
       const { rows } = await client.query<GenreFacet>(
       `
       WITH RECURSIVE matched AS (
-        SELECT t.track_id, t.friend_id, t.genres, t.styles
+        SELECT t.track_id, t.friend_id, t.release_id, t.genres, t.styles
         FROM tracks t
         WHERE ${[...where, "t.deleted_at IS NULL"].join(" AND ")}
       ),
@@ -159,7 +160,7 @@ export class GenreRepository {
         UNION
         SELECT m.track_id, m.friend_id, k.genre_id
         FROM matched m
-        CROSS JOIN LATERAL unnest(COALESCE(m.genres, '{}') || COALESCE(m.styles, '{}')) AS d(name)
+        CROSS JOIN LATERAL unnest(${effectiveAlbumTaxonomySql("m")}) AS d(name)
         JOIN genre_keys k ON k.key = genre_normalize(d.name)
         WHERE NOT EXISTS (
           SELECT 1 FROM track_genres tg WHERE tg.track_id = m.track_id AND tg.friend_id = m.friend_id

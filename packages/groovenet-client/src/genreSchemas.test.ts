@@ -39,3 +39,17 @@ describe("genre wire schemas", () => {
     })).toMatchObject({ date_added: null, date_changed: null });
   });
 });
+
+it("preserves album source, effective values and distinct empty/reset override states", () => {
+  const album = { release_id: "r", friend_id: 7, title: "Album", artist: "Artist", track_count: 1,
+    genres: ["Latin"], styles: ["Cumbia"], effective_genres: [], effective_styles: ["Fusion"],
+    genre_override_ids: [], style_override_ids: [id] };
+  expect(albumEntitySchema.parse(album)).toEqual(album);
+  expect(albumEntitySchema.parse({ ...album, genre_override_ids: null }).genre_override_ids).toBeNull();
+  expect(albumEntitySchema.safeParse({ ...album, style_override_ids: ["missing-uuid"] }).success).toBe(false);
+});
+
+it("keeps effective album taxonomy separate from track taxonomy in track reads", () => {
+  const track = { track_id: "t", friend_id: 7, title: "Song", artist: "Artist", album: "Album", album_genres: [], album_styles: ["Fusion"], track_genres: [] };
+  expect(trackEntitySchema.parse(track)).toEqual(track);
+});

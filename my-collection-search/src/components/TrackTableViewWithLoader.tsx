@@ -66,8 +66,8 @@ const TrackTableRow: React.FC<{
 
   if (!track) return null;
 
-  const genres = dedupeDisplayTags(track.genres);
-  const styles = dedupeDisplayTags(track.styles);
+  const genres = dedupeDisplayTags(track.album_genres ?? track.genres);
+  const styles = dedupeDisplayTags(track.album_styles ?? track.styles);
   const allGenres = [...genres, ...styles];
   const artworkSrc = track.audio_file_album_art_url || track.album_thumbnail || PLACEHOLDER_SRC;
   const trackHref = `/tracks/${encodeURIComponent(track.track_id)}?friend_id=${track.friend_id}`;

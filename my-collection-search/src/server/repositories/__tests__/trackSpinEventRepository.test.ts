@@ -63,6 +63,6 @@ describe("TrackSpinEventRepository.listTopTracks", () => {
     expect(sql).toContain("AS track_genres");
     expect(sql).toContain("tg.track_id = aggregated.track_id");
     expect(sql).toContain("tg.friend_id = aggregated.friend_id");
-    expect(sql).toContain("COALESCE(t.styles, '{}') AS styles");
+    expect(sql).toContain("effective_album_taxonomy_values(aggregated.release_id::text, aggregated.friend_id, 'styles', t.styles) AS styles");
   });
 });

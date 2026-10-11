@@ -1,3 +1,4 @@
+import { albumTaxonomySelectSql } from "@/lib/genres/albumTaxonomySql";
 import { dbQuery } from "@/lib/serverDb";
 import type { Album, Track } from "@/types/track";
 import { albumRepository } from "@/server/repositories/albumRepository";
@@ -129,7 +130,7 @@ export class AlbumApiService {
 
     const { rows } = await dbQuery<AlbumSearchHit>(
       `
-      SELECT a.*
+      SELECT a.*, ${albumTaxonomySelectSql("a")}
       FROM albums a
       ${whereSql}
       ORDER BY ${rankSql} ${sortSql}
