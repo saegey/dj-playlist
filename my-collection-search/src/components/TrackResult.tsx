@@ -22,7 +22,12 @@ import { FaPlay } from "react-icons/fa";
 import { FiFileText, FiPlus } from "react-icons/fi";
 import { keyToCamelot } from "@/lib/playlistOrder";
 import { getTrackDurationSeconds } from "@/lib/trackUtils";
-import { primaryGenreBadges, type GenreBadgeItem } from "@/lib/genres/links";
+import {
+  discogsGenreBadges,
+  primaryGenreBadges,
+  trackGenreBadges,
+  type GenreBadgeItem,
+} from "@/lib/genres/links";
 import { useGenreLookup } from "@/hooks/useGenreTaxonomyQuery";
 import { GenreBadgeList, type GenreBadgeKind } from "./GenreBadge";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
@@ -72,6 +77,10 @@ export type TrackResultProps = {
    * list (paired with `TrackListHeader`).
    */
   layout?: "row" | "card";
+  /** "standard" (default) or the lower-height presentation used in jobs and queues. */
+  density?: "standard" | "dense";
+  /** Called when a dense row is clicked (used by the queue to play that track). */
+  onRowClick?: () => void;
   sortPositionChange?: SortPositionChange;
 };
 
@@ -391,6 +400,8 @@ export default function TrackResult({
   isSelected,
   onToggleSelect,
   layout = "card",
+  density = "standard",
+  onRowClick,
   sortPositionChange,
 }: TrackResultProps) {
   const [localRating, setLocalRating] = useState(track.star_rating ?? 0);
@@ -417,6 +428,9 @@ export default function TrackResult({
 
   const genreLookup = useGenreLookup();
   const genreBadges = primaryGenreBadges(track, genreLookup);
+  const discogsGenres = discogsGenreBadges(track.album_genres ?? track.genres, genreLookup);
+  const discogsStyles = discogsGenreBadges(track.album_styles ?? track.styles, genreLookup);
+  const trackGenres = trackGenreBadges(track, genreLookup);
 
   const camelot = keyToCamelot(track.key);
   const durationSeconds = getTrackDurationSeconds(track);
@@ -455,6 +469,198 @@ export default function TrackResult({
     "& .track-result-quick-add": { opacity: 1 },
     "& .track-result-rating": { opacity: 1 },
   };
+
+  const stopRowEvent = (event: React.SyntheticEvent) => event.stopPropagation();
+
+  if (density === "dense" && layout === "row") {
+    return (
+      <Flex
+        data-testid="track-result-dense-row"
+        role="group"
+        aria-label={`Queue item: ${track.title} by ${track.artist}`}
+        tabIndex={onRowClick ? 0 : undefined}
+        onClick={onRowClick}
+        onKeyDown={(event) => {
+          if (onRowClick && event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            onRowClick();
+          }
+        }}
+        align="center"
+        gap={3}
+        py={1.25}
+        px={1}
+        mb={1}
+        borderBottomWidth="1px"
+        borderColor="border"
+        width="100%"
+        minW={0}
+        cursor={onRowClick ? "pointer" : "default"}
+        _hover={{ bg: "bg.muted", ...containerHoverReveal }}
+        _focusVisible={{ outline: "2px solid", outlineColor: "accent.solid", outlineOffset: "-2px" }}
+      >
+        <Box flexShrink={0} width="48px" height="48px" display="flex" alignItems="center" justifyContent="center">
+          {onToggleSelect ? (
+            <Box onMouseDown={stopRowEvent}>
+              <Checkbox.Root checked={isSelected} onChange={onToggleSelect}>
+                <Checkbox.HiddenInput />
+                <Checkbox.Control />
+              </Checkbox.Root>
+            </Box>
+          ) : (
+            <ArtworkPlay track={track} size="48px" iconSize={5} />
+          )}
+        </Box>
+        <Flex direction="column" flex="1" minW={0}>
+          <Flex align="center" gap={1.5} minW={0}>
+            <Link
+              as={NextLink}
+              href={trackHref}
+              onClick={stopRowEvent}
+              onMouseDown={stopRowEvent}
+              fontSize="sm"
+              fontWeight="semibold"
+              lineHeight="1.2"
+              overflow="hidden"
+              textOverflow="ellipsis"
+              whiteSpace="nowrap"
+              minW={0}
+              _hover={{ textDecoration: "underline" }}
+            >
+              {track.title}
+            </Link>
+            {hasNotes && showNotes && <NotesIndicator notes={track.notes as string} />}
+            {showRating && (
+              <Box flexShrink={0} onClick={stopRowEvent} onMouseDown={stopRowEvent}>
+                <RatingStars value={localRating} onChange={handleRatingChange} />
+              </Box>
+            )}
+          </Flex>
+          <Flex gap={1.5} align="center" minW={0} overflow="hidden" fontSize="xs" color="fg.muted">
+            <ArtistLink artist={track.artist} friendId={track.friend_id}>
+              <Text as="span" onClick={stopRowEvent} onMouseDown={stopRowEvent} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                {track.artist}
+              </Text>
+            </ArtistLink>
+            <Text aria-hidden="true" color="fg.subtle">·</Text>
+            <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
+              <Text as="span" onClick={stopRowEvent} onMouseDown={stopRowEvent} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                {track.album}
+              </Text>
+            </AlbumLink>
+            {showUsername && track.username && <Text flexShrink={0} color="fg.subtle">{track.username}</Text>}
+            {showPlaylistCount && typeof playlistCount === "number" && playlistCount > 0 && (
+              <Box flexShrink={0} onClick={stopRowEvent} onMouseDown={stopRowEvent}>
+                <TrackPlaylistUsage track={track} count={playlistCount} />
+              </Box>
+            )}
+          </Flex>
+          {showGenres && (discogsGenres.length > 0 || discogsStyles.length > 0 || trackGenres.length > 0) && (
+            <Flex gap={1.5} alignItems="center" flexWrap="nowrap" overflow="hidden" data-testid="track-genres" onClick={stopRowEvent} onMouseDown={stopRowEvent}>
+              <GenreBadgeList items={discogsGenres.slice(0, 4)} kind="discogs-genre" scope="tracks" size="xs" />
+              <GenreBadgeList items={discogsStyles.slice(0, 4)} kind="discogs-style" scope="tracks" size="xs" />
+              <GenreBadgeList items={trackGenres} kind="track" scope="tracks" size="xs" colorPalette="blue" />
+            </Flex>
+          )}
+        </Flex>
+        {showDetails && durationSeconds ? (
+          <Text fontSize="xs" color="fg.muted" flexShrink={0} fontVariantNumeric="tabular-nums">
+            {formatSeconds(durationSeconds)}
+          </Text>
+        ) : null}
+        <Flex align="center" gap={1} flexShrink={0} onClick={stopRowEvent} onMouseDown={stopRowEvent}>
+          {buttons}
+          <AddToCrateButton track={track} />
+        </Flex>
+      </Flex>
+    );
+  }
+
+  if (density === "dense") {
+    return (
+      <Flex
+        data-testid="track-result-dense-card"
+        borderWidth={[0, "1px"]}
+        borderBottomWidth="1px"
+        borderRadius={[0, "md"]}
+        p={[2, 3]}
+        mb={2}
+        gap={3}
+        width="100%"
+        minW={0}
+        borderColor={isSelected ? "blue.500" : undefined}
+        _hover={{ bg: "bg.muted", ...containerHoverReveal }}
+        _focusWithin={containerHoverReveal}
+      >
+        {onToggleSelect && (
+          <Box flexShrink={0} alignSelf="center">
+            <Checkbox.Root checked={isSelected} onChange={onToggleSelect}>
+              <Checkbox.HiddenInput />
+              <Checkbox.Control />
+            </Checkbox.Root>
+          </Box>
+        )}
+        <ArtworkPlay track={track} size={{ base: "60px", md: "80px" }} iconSize={6} />
+        <Flex direction="column" flex={1} minW={0} gap={1}>
+          <Flex alignItems="center" gap={1.5} minW={0}>
+            <Link
+              as={NextLink}
+              href={trackHref}
+              title={track.title}
+              fontSize={{ base: "md", md: "lg" }}
+              fontWeight="bold"
+              overflow="hidden"
+              textOverflow="ellipsis"
+              whiteSpace="nowrap"
+              minW={0}
+              _hover={{ textDecoration: "underline" }}
+            >
+              {track.title}
+            </Link>
+            {hasNotes && showNotes && <NotesIndicator notes={track.notes as string} />}
+            {score !== undefined && (
+              <Badge colorPalette={score > 90 ? "green" : score > 75 ? "yellow" : "red"} size="xs" flexShrink={0}>
+                {score.toFixed(0)}%
+              </Badge>
+            )}
+            {showRating && <RatingStars value={localRating} onChange={handleRatingChange} />}
+          </Flex>
+          <Flex gap={1.5} fontSize="sm" color="fg.muted" flexWrap="wrap" alignItems="center" minW={0}>
+            <ArtistLink artist={track.artist} friendId={track.friend_id} />
+            <Text aria-hidden="true" color="fg.subtle">·</Text>
+            <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
+              <Text as="span">{track.album}{track.year ? ` (${track.year})` : ""}</Text>
+            </AlbumLink>
+            {showUsername && track.username && <Text fontSize="xs" color="fg.subtle">{track.username}</Text>}
+            {showPlaylistCount && typeof playlistCount === "number" && playlistCount > 0 && (
+              <TrackPlaylistUsage track={track} count={playlistCount} />
+            )}
+          </Flex>
+          {showDetails && (
+            <Flex gap={3} fontSize="xs" color="fg.muted" flexWrap="wrap" alignItems="center">
+              {track.position && <Text>{track.position}</Text>}
+              {durationSeconds && <Text fontVariantNumeric="tabular-nums">{formatSeconds(durationSeconds)}</Text>}
+              {track.bpm && <Text>{track.bpm} BPM</Text>}
+              {track.key && <Text>{track.key} ({camelot})</Text>}
+              {track.danceability && <Text>{track.danceability}</Text>}
+            </Flex>
+          )}
+          {showGenres && (discogsGenres.length > 0 || discogsStyles.length > 0 || trackGenres.length > 0) && (
+            <Flex gap={1.5} alignItems="center" flexWrap="wrap" data-testid="track-genres">
+              <GenreBadgeList items={discogsGenres.slice(0, 4)} kind="discogs-genre" scope="tracks" size="xs" />
+              <GenreBadgeList items={discogsStyles.slice(0, 4)} kind="discogs-style" scope="tracks" size="xs" />
+              <GenreBadgeList items={trackGenres} kind="track" scope="tracks" size="xs" colorPalette="blue" />
+            </Flex>
+          )}
+          {footer && <Box mt={1}>{footer}</Box>}
+        </Flex>
+        <Flex direction="column" alignItems="center" gap={0.5} flexShrink={0}>
+          {buttons}
+          <AddToCrateButton track={track} />
+        </Flex>
+      </Flex>
+    );
+  }
 
   if (layout === "row") {
     return (

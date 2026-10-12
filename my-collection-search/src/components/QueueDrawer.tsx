@@ -140,8 +140,8 @@ function MobileQueueList({
       renderTrackButtons={renderQueueButtons}
       currentTrackIndex={currentTrackIndex}
       trackResultProps={{
-        compact: true,
-        compactVariant: "row",
+        density: "dense",
+        layout: "row",
         onRowClick: (_track, index) => playTrack(index),
       }}
     />

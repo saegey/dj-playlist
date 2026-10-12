@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { sampleTrack } from "@/stories/fixtures/track";
 import type { Track } from "@/types/track";
+import { queryKeys } from "@/lib/queryKeys";
 
 const mocks = vi.hoisted(() => ({
   replacePlaylist: vi.fn(),
@@ -217,12 +218,12 @@ describe("TrackResult layout", () => {
   it("saves a new rating when a star is clicked", async () => {
     const { user } = renderWithProviders(<TrackResult track={{ ...track, star_rating: 0 }} />);
 
-    await user.click(screen.getByRole("radio", { name: "3 stars" }));
+    await user.click(screen.getByRole("radio", { name: "4 stars" }));
 
     expect(mocks.saveTrack).toHaveBeenCalledWith({
       track_id: track.track_id,
       friend_id: track.friend_id,
-      star_rating: 3,
+      star_rating: 4,
     });
   });
 
@@ -251,4 +252,210 @@ describe("TrackResult layout", () => {
       expect(onToggleSelect).toHaveBeenCalledTimes(1);
     }
   );
+});
+
+describe("TrackResult dense layouts", () => {
+  it("renders dense card links, genre sources, playlist usage, notes, footer and actions", async () => {
+    const denseTrack = {
+      ...track,
+      genres: ["Source"],
+      styles: ["Source Style"],
+      album_genres: ["Jazz"],
+      album_styles: [],
+      track_genres: [{ id: "c", name: "Cumbia", slug: "cumbia", parent_id: null, parent_name: null }],
+      notes: "Dense card note",
+      release_id: "release-1",
+      username: "crate-owner",
+    } as Track;
+    const { user, queryClient } = renderWithProviders(
+      <TrackResult
+        track={denseTrack}
+        density="dense"
+        playlistCount={2}
+        footer={<span>Job footer</span>}
+        buttons={<button aria-label="Job details">Details</button>}
+      />
+    );
+    await act(async () => {
+      queryClient.setQueryData(queryKeys.genreTree(), [
+        { id: "j", name: "Jazz", slug: "jazz", parent_id: null, source: "discogs", track_count: 0, album_count: 0, children: [] },
+        { id: "c", name: "Cumbia", slug: "cumbia", parent_id: null, source: "discogs", track_count: 0, album_count: 0, children: [] },
+      ]);
+    });
+
+    expect(screen.getByTestId("track-result-dense-card")).toBeTruthy();
+    expect(screen.getByRole("link", { name: denseTrack.title }).getAttribute("href")).toBe(`/tracks/${denseTrack.track_id}?friend_id=${denseTrack.friend_id}`);
+    expect(screen.getByRole("link", { name: denseTrack.artist }).getAttribute("href")).toBe(`/albums?q=${encodeURIComponent(denseTrack.artist)}&friend_id=${denseTrack.friend_id}`);
+    expect((await screen.findByRole("link", { name: "Search tracks in Jazz" })).getAttribute("href")).toBe("/?genre=jazz");
+    expect((await screen.findByRole("link", { name: "Search tracks in Cumbia" })).getAttribute("href")).toBe("/?genre=cumbia");
+    expect(screen.getByText("2 playlists")).toBeTruthy();
+    expect(screen.getByText("crate-owner")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Has notes" })).toBeTruthy();
+    expect(screen.getByText("Job footer")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Job details" })).toBeTruthy();
+    await user.click(screen.getByRole("radio", { name: "4 stars" }));
+    expect(mocks.saveTrack).toHaveBeenCalledWith({
+      track_id: denseTrack.track_id,
+      friend_id: denseTrack.friend_id,
+      star_rating: 4,
+    });
+  });
+
+  it("honors dense card field visibility and reports selection", async () => {
+    const onToggleSelect = vi.fn();
+    const { user } = renderWithProviders(
+      <TrackResult
+        track={{ ...track, username: "private", notes: "hidden note", star_rating: 0 }}
+        density="dense"
+        showUsername={false}
+        showRating={false}
+        showDetails={false}
+        showGenres={false}
+        showNotes={false}
+        showPlaylistCount={false}
+        playlistCount={3}
+        isSelected
+        onToggleSelect={onToggleSelect}
+      />
+    );
+
+    expect(screen.queryByText("private")).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.queryByTestId("track-genres")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Has notes" })).toBeNull();
+    expect(screen.queryByText("3 playlists")).toBeNull();
+    expect(screen.getByRole("checkbox")).toBeTruthy();
+    await user.click(screen.getByRole("checkbox"));
+    expect(onToggleSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves queue row clicks while links and nested actions remain independent", async () => {
+    const onRowClick = vi.fn();
+    const onRemove = vi.fn();
+    const onToggleSelect = vi.fn();
+    const { user } = renderWithProviders(
+      <TrackResult
+        track={{ ...track, local_audio_url: "track.m4a" }}
+        density="dense"
+        layout="row"
+        onRowClick={onRowClick}
+        isSelected={false}
+        onToggleSelect={onToggleSelect}
+        showRating={false}
+        buttons={<button aria-label="Remove track" onClick={onRemove}>Remove</button>}
+      />
+    );
+    const row = screen.getByTestId("track-result-dense-row");
+
+    await user.click(row);
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("link", { name: track.title }));
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(screen.getByRole("link", { name: track.title }), { key: "Enter" });
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "Remove track" }));
+    expect(onRemove).toHaveBeenCalledTimes(1);
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("checkbox"));
+    expect(onToggleSelect).toHaveBeenCalledTimes(1);
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    row.focus();
+    await user.keyboard("{Enter}");
+    expect(onRowClick).toHaveBeenCalledTimes(2);
+    fireEvent.keyDown(row, { key: " " });
+    expect(onRowClick).toHaveBeenCalledTimes(3);
+  });
+
+  it("plays dense-row artwork without triggering row playback", async () => {
+    const onRowClick = vi.fn();
+    const playableTrack = { ...track, local_audio_url: "track.m4a" };
+    const { user } = renderWithProviders(
+      <TrackResult
+        track={playableTrack}
+        density="dense"
+        layout="row"
+        onRowClick={onRowClick}
+        playlistCount={2}
+      />
+    );
+
+    expect(screen.getByText("2 playlists")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Play" }));
+    expect(mocks.replacePlaylist).toHaveBeenCalledWith(
+      [playableTrack],
+      { autoplay: true, startIndex: 0 }
+    );
+    expect(onRowClick).not.toHaveBeenCalled();
+  });
+
+  it("honors dense row visibility controls for genres, rating, username, usage and duration", () => {
+    renderWithProviders(
+      <TrackResult
+        track={{ ...track, username: "hidden user", notes: "hidden note" }}
+        density="dense"
+        layout="row"
+        showUsername={false}
+        showRating={false}
+        showDetails={false}
+        showGenres={false}
+        showNotes={false}
+        showPlaylistCount={false}
+        playlistCount={4}
+      />
+    );
+
+    expect(screen.queryByText("hidden user")).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(screen.queryByTestId("track-genres")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Has notes" })).toBeNull();
+    expect(screen.queryByText("4 playlists")).toBeNull();
+    expect(screen.queryByText("2:28")).toBeNull();
+  });
+
+  it("keeps the dense row genre slot empty when there are no genre values", () => {
+    renderWithProviders(
+      <TrackResult
+        track={{ ...track, genres: [], styles: [], track_genres: [], local_tags: "" }}
+        density="dense"
+        layout="row"
+      />
+    );
+
+    expect(screen.queryByTestId("track-genres")).toBeNull();
+  });
+
+  it("keeps unreconciled local tags visible as plain text in the dense card", () => {
+    renderWithProviders(
+      <TrackResult
+        track={{ ...track, track_genres: [], local_tags: "Feminist Anthem", genres: [], styles: [] }}
+        density="dense"
+      />
+    );
+
+    expect(screen.getByText("Feminist Anthem").closest("a")).toBeNull();
+  });
+
+  it.each([
+    { score: 0.93, label: "93%" },
+    { score: 0.8, label: "80%" },
+    { score: 0.7, label: "70%" },
+  ])("preserves the dense-card similarity score band for $label", ({ score, label }) => {
+    renderWithProviders(<TrackResult track={{ ...track, _semanticScore: score }} density="dense" />);
+    expect(screen.getByText(label)).toBeTruthy();
+  });
+
+  it("shows a dense-card album without a year when the year is missing", () => {
+    renderWithProviders(<TrackResult track={{ ...track, year: "" }} density="dense" />);
+    expect(screen.getByRole("link", { name: track.album }).textContent).toBe(track.album);
+  });
+
+  it("shows queue duration and uses the placeholder when dense-row artwork fails", () => {
+    const { container } = renderWithProviders(
+      <TrackResult track={{ ...track, local_audio_url: undefined }} density="dense" layout="row" />
+    );
+    expect(screen.getByText("2:28")).toBeTruthy();
+    const image = container.querySelector("img") as HTMLImageElement;
+    fireEvent.error(image);
+    expect(image.src).toContain("data:image/svg+xml");
+  });
 });

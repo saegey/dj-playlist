@@ -401,12 +401,12 @@ export default function JobsPage() {
                   trackId={job.data.track_id}
                   friendId={job.data.friend_id}
                   fallbackTrack={buildFallbackTrack(job)}
-                  compact
+                  density="dense"
+                  layout="card"
                   showUsername={false}
                   showRating={false}
                   showDetails={false}
                   showGenres={false}
-                  showLinks={false}
                   showNotes={false}
                   showPlaylistCount={false}
                   footer={
