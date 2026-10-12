@@ -24,17 +24,47 @@ class TestExtractKeyAnalysis:
 
 
 class TestLogKeyProfileDisagreement:
-    def test_logs_nothing_when_all_three_profiles_agree(self, caplog):
+    def test_logs_nothing_when_every_estimate_agrees(self, caplog):
         log_key_profile_disagreement(
             {
                 "key_edma": {"key": "D", "scale": "minor"},
                 "key_krumhansl": {"key": "D", "scale": "minor"},
                 "key_temperley": {"key": "D", "scale": "minor"},
+                "chords_key": "D",
+                "chords_scale": "minor",
             },
             "trk_001",
             1,
         )
         assert "disagreement" not in caplog.text
+
+    def test_logs_a_chords_key_disagreement_even_when_all_three_profiles_agree(self, caplog):
+        """The real track behind #524: key_edma/krumhansl/temperley all said F
+        major (strengths ~0.68-0.70); only chords_key said C major, matching
+        tunebat/songbpm. The three-profile check alone misses this."""
+        log_key_profile_disagreement(
+            {
+                "key_edma": {"key": "F", "scale": "major", "strength": 0.704965293407},
+                "key_krumhansl": {"key": "F", "scale": "major", "strength": 0.695810675621},
+                "key_temperley": {"key": "F", "scale": "major", "strength": 0.680185735226},
+                "chords_key": "C",
+                "chords_scale": "major",
+            },
+            "trk_001",
+            1,
+        )
+        assert "stored edma=F major" in caplog.text
+        assert "krumhansl=" not in caplog.text
+        assert "temperley=" not in caplog.text
+        assert "chords=C major" in caplog.text
+
+    def test_ignores_a_partial_chords_estimate_missing_scale(self, caplog):
+        log_key_profile_disagreement(
+            {"key_edma": {"key": "F", "scale": "major"}, "chords_key": "C"},
+            "trk_001",
+            1,
+        )
+        assert caplog.text == ""
 
     def test_logs_the_f_c_major_confusion_that_prompted_524(self, caplog):
         log_key_profile_disagreement(

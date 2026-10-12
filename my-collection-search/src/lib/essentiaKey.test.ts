@@ -47,13 +47,15 @@ describe("isKeyConfidenceLow", () => {
 describe("logKeyProfileDisagreement", () => {
   const context = { track_id: "trk_001", friend_id: 1 };
 
-  it("logs nothing when all three profiles agree", () => {
+  it("logs nothing when every estimate agrees", () => {
     const log = vi.fn();
     logKeyProfileDisagreement(
       {
         key_edma: { key: "D", scale: "minor" },
         key_krumhansl: { key: "D", scale: "minor" },
         key_temperley: { key: "D", scale: "minor" },
+        chords_key: "D",
+        chords_scale: "minor",
       },
       context,
       log
@@ -79,6 +81,29 @@ describe("logKeyProfileDisagreement", () => {
     expect(log.mock.calls[0][0]).toContain("temperley=C major");
   });
 
+  it("logs a chords_key disagreement even when all three key profiles agree", () => {
+    // The real track behind #524: key_edma/krumhansl/temperley all say F
+    // major (strengths ~0.68-0.70); only chords_key says C major, matching
+    // what tunebat/songbpm reported. The three-profile check alone misses this.
+    const log = vi.fn();
+    logKeyProfileDisagreement(
+      {
+        key_edma: { key: "F", scale: "major", strength: 0.704965293407 },
+        key_krumhansl: { key: "F", scale: "major", strength: 0.695810675621 },
+        key_temperley: { key: "F", scale: "major", strength: 0.680185735226 },
+        chords_key: "C",
+        chords_scale: "major",
+      },
+      context,
+      log
+    );
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0][0]).toContain("stored edma=F major");
+    expect(log.mock.calls[0][0]).not.toContain("krumhansl=");
+    expect(log.mock.calls[0][0]).not.toContain("temperley=");
+    expect(log.mock.calls[0][0]).toContain("chords=C major");
+  });
+
   it("logs only the profile that actually disagrees", () => {
     const log = vi.fn();
     logKeyProfileDisagreement(
@@ -92,6 +117,16 @@ describe("logKeyProfileDisagreement", () => {
     );
     expect(log.mock.calls[0][0]).not.toContain("krumhansl=");
     expect(log.mock.calls[0][0]).toContain("temperley=C major");
+  });
+
+  it("ignores a partial chords estimate (missing scale)", () => {
+    const log = vi.fn();
+    logKeyProfileDisagreement(
+      { key_edma: { key: "F", scale: "major" }, chords_key: "C" },
+      context,
+      log
+    );
+    expect(log).not.toHaveBeenCalled();
   });
 
   it("does nothing when there is no stored edma key", () => {
