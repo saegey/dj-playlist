@@ -48,7 +48,7 @@ The client must be built first; this package imports its compiled output.
 
 ## Gotchas
 
-- There is no eslint config here, so neither CI nor pre-commit lints it. See
-  issue #253.
+- ESLint uses the shared Node config in the repository root; CI and pre-commit
+  both cover this package.
 - Tool descriptions are what the model sees. Treat them as part of the
   interface, not as comments.

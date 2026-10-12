@@ -77,6 +77,9 @@ test-packages:
 
 lint:
   {{mise_exec}} npm run lint --prefix my-collection-search
+  {{mise_exec}} npm run lint --workspace=@groovenet/client
+  {{mise_exec}} npm run lint --workspace=@groovenet/cli
+  {{mise_exec}} npm run lint --workspace=mcp-server
 
 typecheck:
   {{mise_exec}} npm run typecheck --prefix my-collection-search

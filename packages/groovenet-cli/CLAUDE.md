@@ -209,7 +209,7 @@ Two things that will cost you an afternoon otherwise:
 
 - `--json` emits the raw API shape, which is wider than the table columns —
   fields absent from the table are still present in the JSON.
-- No eslint config here either; see issue #253.
+- ESLint uses the shared Node config in the repository root.
 - **Never pass bare `parseInt` as a commander coercion.** Commander calls it as
   `(value, previous)`, so a numeric default becomes the *radix*:
   `.option("--limit <n>", …, parseInt, 20)` parsed `15` as **25**, and a default
