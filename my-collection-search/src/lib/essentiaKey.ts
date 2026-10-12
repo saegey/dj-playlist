@@ -13,6 +13,9 @@ export type EssentiaTonal = {
   key_edma?: EssentiaKeyEstimate;
   key_krumhansl?: EssentiaKeyEstimate;
   key_temperley?: EssentiaKeyEstimate;
+  /** From chord detection, not a key profile — flat fields, no strength (#524). */
+  chords_key?: string;
+  chords_scale?: string;
 };
 
 export type KeyAnalysis = {
@@ -48,10 +51,13 @@ export function extractKeyAnalysis(tonal: EssentiaTonal | undefined): KeyAnalysi
 }
 
 /**
- * Logs (never throws) when the Krumhansl or Temperley profiles disagree with
- * the EDMA estimate actually stored — e.g. the F-major/C-major confusion
- * that prompted #524. A silent disagreement here is exactly what made that
- * bug invisible: two of the three computed estimates were discarded outright.
+ * Logs (never throws) when another key estimate disagrees with the EDMA
+ * estimate actually stored. On the track that prompted #524, the three key
+ * profiles (edma/krumhansl/temperley) all agreed with each other — the
+ * actual F-major/C-major split was against `chords_key`, a differently
+ * derived estimate from chord detection rather than a key profile. A silent
+ * disagreement here is exactly what made that bug invisible, so this checks
+ * every independent estimate Essentia computed, not just the three profiles.
  */
 export function logKeyProfileDisagreement(
   tonal: EssentiaTonal | undefined,
@@ -64,8 +70,11 @@ export function logKeyProfileDisagreement(
   const disagreements: string[] = [];
   const krumhansl = formatKey(tonal?.key_krumhansl);
   const temperley = formatKey(tonal?.key_temperley);
+  const chords =
+    tonal?.chords_key && tonal?.chords_scale ? `${tonal.chords_key} ${tonal.chords_scale}` : null;
   if (krumhansl && krumhansl !== edma) disagreements.push(`krumhansl=${krumhansl}`);
   if (temperley && temperley !== edma) disagreements.push(`temperley=${temperley}`);
+  if (chords && chords !== edma) disagreements.push(`chords=${chords}`);
 
   if (disagreements.length > 0) {
     log(

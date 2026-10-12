@@ -25,15 +25,24 @@ worker checks for it explicitly.
 ### Key detection (#524)
 
 `tonal` carries **three independent key estimates** — `key_krumhansl`,
-`key_temperley` and `key_edma` — each `{ key, scale, strength }`. Only
-`key_edma` (tuned for electronic/dance music) is stored, as `key`; its
-`strength` (0–1 confidence) is stored alongside it as `key_confidence`, and
-callers log a warning (never fail) when the other two profiles disagree with
-it — see `extractKeyAnalysis`/`logKeyProfileDisagreement` in
+`key_temperley` and `key_edma` — each `{ key, scale, strength }` — plus a
+fourth, differently derived one from chord detection: `chords_key`/
+`chords_scale`, flat strings with no `strength`. Only `key_edma` (tuned for
+electronic/dance music) is stored, as `key`; its `strength` (0–1 confidence)
+is stored alongside it as `key_confidence`, and callers log a warning (never
+fail) when any of the other three disagree with it — see
+`extractKeyAnalysis`/`logKeyProfileDisagreement` in
 `my-collection-search/src/lib/essentiaKey.ts` and the equivalent
-`download-worker/worker/essentia_key.py`. F major vs. C major — a fourth
-apart, sharing 6 of 7 notes — is a known confusion point between profiles, and
-is exactly the shape of disagreement this is meant to surface.
+`download-worker/worker/essentia_key.py`.
+
+The track that prompted #524 (reported F major, tunebat/songbpm said C
+major — a fourth apart, sharing 6 of 7 notes, a known confusion point for
+key detection) turned out *not* to be a disagreement between the three key
+profiles: `key_edma`/`key_krumhansl`/`key_temperley` all agreed on F major
+(strengths ~0.68–0.70). The actual split was against `chords_key`, which said
+C major. Checking only the three profiles would have stayed silent on
+exactly the track that motivated this — which is why `chords_key` is
+checked too.
 
 ### profile.yaml
 
