@@ -434,6 +434,19 @@ migrate-create NAME:
   @if [ -z "{{NAME}}" ]; then echo "Usage: just migrate-create <name>"; exit 1; fi
   cd {{app_dir}} && npm run migrate create {{NAME}}
 
+# Build the one-off maintenance-scripts image (src/scripts/*.ts, e.g.
+# backfill-key-confidence, #524). Not built by `up` or CI — on demand only,
+# here or on the deploy host (there, run the underlying `docker compose
+# build scripts` directly; op/.env.tpl are a local-dev convenience, and the
+# host already has a materialized .env).
+scripts-build: check-compose
+  {{op_env}} {{compose_cmd}} -f docker-compose.yml build scripts
+
+# Run a one-off maintenance script in a throwaway container, e.g.:
+#   just scripts-run npm run backfill-key-confidence -- --limit=5
+scripts-run *args: check-compose
+  {{op_env}} {{compose_cmd}} -f docker-compose.yml run --rm scripts {{args}}
+
 # Verify all migrations apply + roll back + re-apply on a throwaway pgvector db.
 migrate-test:
   #!/usr/bin/env bash
