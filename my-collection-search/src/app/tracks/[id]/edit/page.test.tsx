@@ -64,3 +64,40 @@ describe("TrackEditPage genres", () => {
     expect(mocks.saveTrack.mock.calls[0][0]).toMatchObject({ track_id: "t1", genres: [] });
   });
 });
+
+describe("TrackEditPage key confidence (#524)", () => {
+  beforeEach(() => {
+    mocks.fetchGenreTree.mockReset().mockResolvedValue([]);
+    mocks.saveTrack.mockReset().mockResolvedValue(undefined);
+  });
+
+  it("flags a low-confidence key as uncertain", () => {
+    mocks.track = {
+      track_id: "t1",
+      friend_id: 1,
+      title: "Cumbia del Sol",
+      artist: "Los Destellos",
+      key: "F major",
+      key_confidence: 0.42,
+    } as Partial<Track>;
+
+    renderWithProviders(<TrackEditPage />);
+
+    expect(screen.getByText("Uncertain key")).toBeTruthy();
+  });
+
+  it("does not flag a confident key", () => {
+    mocks.track = {
+      track_id: "t1",
+      friend_id: 1,
+      title: "Cumbia del Sol",
+      artist: "Los Destellos",
+      key: "F major",
+      key_confidence: 0.9,
+    } as Partial<Track>;
+
+    renderWithProviders(<TrackEditPage />);
+
+    expect(screen.queryByText("Uncertain key")).toBeNull();
+  });
+});

@@ -1,0 +1,55 @@
+"""Key extraction from Essentia's `tonal` output (#524).
+
+MusicExtractor computes key three independent ways -- key_krumhansl,
+key_temperley and key_edma -- each `{key, scale, strength}`. Only key_edma
+(tuned for electronic/dance music) is stored; its strength (0-1 confidence)
+travels alongside it instead of being discarded, and a disagreement between
+profiles is logged rather than silently dropped. The TypeScript twin of this
+module is `my-collection-search/src/lib/essentiaKey.ts`.
+"""
+
+from typing import Any
+
+from .config import logger
+
+
+def _format_key(estimate: dict[str, Any] | None) -> str | None:
+    if not estimate or not estimate.get('key') or not estimate.get('scale'):
+        return None
+    return f"{estimate['key']} {estimate['scale']}"
+
+
+def extract_key_analysis(tonal: dict[str, Any] | None) -> tuple[str | None, float | None]:
+    """The value stored as `key`/`key_confidence`: EDMA's key and strength."""
+    tonal = tonal or {}
+    edma = tonal.get('key_edma') or {}
+    strength = edma.get('strength')
+    key_confidence = round(strength, 3) if isinstance(strength, (int, float)) else None
+    return _format_key(edma), key_confidence
+
+
+def log_key_profile_disagreement(tonal: dict[str, Any] | None, track_id: str, friend_id: int) -> None:
+    """Logs (never raises) when Krumhansl or Temperley disagree with the
+    stored EDMA estimate -- e.g. the F-major/C-major confusion that prompted
+    #524."""
+    tonal = tonal or {}
+    edma = _format_key(tonal.get('key_edma'))
+    if not edma:
+        return
+
+    disagreements = []
+    krumhansl = _format_key(tonal.get('key_krumhansl'))
+    temperley = _format_key(tonal.get('key_temperley'))
+    if krumhansl and krumhansl != edma:
+        disagreements.append(f"krumhansl={krumhansl}")
+    if temperley and temperley != edma:
+        disagreements.append(f"temperley={temperley}")
+
+    if disagreements:
+        logger.warning(
+            "Key profile disagreement for track %s (friend %s): stored edma=%s vs %s",
+            track_id,
+            friend_id,
+            edma,
+            ", ".join(disagreements),
+        )

@@ -7,6 +7,8 @@ export type TrackLocalAudioRow = Pick<
   "track_id" | "friend_id" | "local_audio_url"
 >;
 
+export type TrackKeyConfidenceBackfillRow = Pick<Track, "track_id" | "friend_id" | "key">;
+
 export type TrackEssentiaBackfillRow = TrackLocalAudioRow &
   Pick<
     Track,
@@ -44,6 +46,7 @@ type UpdatableTrackFields = Partial<
     | "notes"
     | "bpm"
     | "key"
+    | "key_confidence"
     | "danceability"
     | "mood_happy"
     | "mood_sad"
@@ -84,6 +87,7 @@ export type TrackReindexRow = TrackWithLibraryIdentifierRow;
 export type TrackAnalysisBulkUpdate = Pick<Track, "local_audio_url"> & {
   bpm?: number | null;
   key?: string | null;
+  key_confidence?: number | null;
   danceability?: number | null;
   duration_seconds?: number | null;
 };
@@ -113,6 +117,7 @@ const UPDATABLE_COLUMNS = {
   notes: "notes",
   bpm: "bpm",
   key: "key",
+  key_confidence: "key_confidence",
   danceability: "danceability",
   mood_happy: "mood_happy",
   mood_sad: "mood_sad",
@@ -521,6 +526,34 @@ export class TrackRepository {
     return rows;
   }
 
+  /** Tracks analyzed before key_confidence existed: a key on record, nothing to say how sure (#524). */
+  async findTracksMissingKeyConfidence(
+    friendId: number | null,
+    limit?: number
+  ): Promise<TrackKeyConfidenceBackfillRow[]> {
+    const query = `
+      SELECT track_id, friend_id, key
+      FROM tracks
+      WHERE key IS NOT NULL
+        AND key_confidence IS NULL
+        ${friendId !== null ? "AND friend_id = $1" : ""}
+      ORDER BY friend_id, track_id
+      ${limit ? `LIMIT $${friendId !== null ? 2 : 1}` : ""}
+    `;
+
+    const { rows } = await dbQuery<TrackKeyConfidenceBackfillRow>(
+      query,
+      friendId !== null
+        ? limit
+          ? [friendId, limit]
+          : [friendId]
+        : limit
+        ? [limit]
+        : []
+    );
+    return rows;
+  }
+
   async updateTrackFields(
     data: UpdateTrackInput
   ): Promise<TrackWithLibraryIdentifierRow | null> {
@@ -656,6 +689,13 @@ export class TrackRepository {
       vals.push(updates.key);
     } else if (updates.key === null) {
       sets.push(`key = $${i++}`);
+      vals.push(null);
+    }
+    if (typeof updates.key_confidence === "number") {
+      sets.push(`key_confidence = $${i++}`);
+      vals.push(updates.key_confidence);
+    } else if (updates.key_confidence === null) {
+      sets.push(`key_confidence = $${i++}`);
       vals.push(null);
     }
     if (typeof updates.danceability === "number") {

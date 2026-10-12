@@ -24,4 +24,13 @@ describe("toTrackEditFormState", () => {
     ]);
     expect(toTrackEditFormState(null).track_genres).toEqual([]);
   });
+
+  it("carries key_confidence through, defaulting to null (#524)", () => {
+    expect(
+      toTrackEditFormState({ track_id: "t", friend_id: 1, key: "F major", key_confidence: 0.42 })
+        .key_confidence
+    ).toBe(0.42);
+    expect(toTrackEditFormState({ track_id: "t", friend_id: 1 }).key_confidence).toBeNull();
+    expect(toTrackEditFormState(null).key_confidence).toBeNull();
+  });
 });

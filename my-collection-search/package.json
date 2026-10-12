@@ -41,6 +41,7 @@
     "screenshots:readme": "tsx scripts/readme-screenshots.ts",
     "screenshots:mobile": "tsx scripts/mobile-screenshots.ts",
     "backfill-essentia": "tsx src/scripts/backfill-essentia.ts",
+    "backfill-key-confidence": "tsx src/scripts/backfill-key-confidence.ts",
     "openapi:check": "node --import tsx/esm scripts/check-openapi.ts",
     "openapi:generate-spec": "node --import tsx/esm scripts/generate-openapi-json.ts ../openapi-generated.json",
     "storybook": "storybook dev -p 6006",

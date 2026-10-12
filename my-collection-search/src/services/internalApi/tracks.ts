@@ -28,6 +28,7 @@ import { http } from "@/services/http";
 import type { Track, TrackGenre } from "@/types/track";
 import type { TrackEditFormProps } from "@/components/track-edit/types";
 import type { TrackAttributeFilters } from "@/lib/trackFilters";
+import type { EssentiaTonal } from "@/lib/essentiaKey";
 
 export type TrackPlaylistMembership = z.infer<typeof trackPlaylistMembershipSchema>;
 type TrackPlaylistsApiResponse = z.infer<typeof trackPlaylistsResponseSchema>;
@@ -120,7 +121,7 @@ export type AnalyzeArgs = {
 };
 export type AnalyzeResponse = {
   rhythm?: { bpm?: number; danceability?: number };
-  tonal?: { key_edma?: { key?: string; scale?: string } };
+  tonal?: EssentiaTonal;
   metadata?: { audio_properties?: { length: number } };
   [k: string]: unknown;
 };

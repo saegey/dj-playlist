@@ -11,6 +11,7 @@ class TrackUpdate(TypedDict):
     audio_file_album_art_url: NotRequired[str]
     bpm: NotRequired[int]
     key: NotRequired[str]
+    key_confidence: NotRequired[float]
     danceability: NotRequired[float]
     mood_happy: NotRequired[float]
     mood_sad: NotRequired[float]

@@ -9,6 +9,7 @@ from groovenet_client.types import TrackUpdate
 from .app_api import get_groovenet_client
 from .audio_utils import get_audio_metadata_year
 from .config import ESSENTIA_DATA_DIR, logger
+from .essentia_key import extract_key_analysis, log_key_profile_disagreement
 from .subprocess_utils import run_subprocess
 
 
@@ -54,6 +55,7 @@ def update_track_analysis(
     try:
         bpm = None
         key = None
+        key_confidence = None
         danceability = None
         duration_seconds = None
         mood_happy = None
@@ -70,10 +72,8 @@ def update_track_analysis(
 
         if 'tonal' in analysis_data and analysis_data['tonal']:
             tonal = analysis_data['tonal']
-            if 'key_edma' in tonal and tonal['key_edma']:
-                key_edma = tonal['key_edma']
-                if 'key' in key_edma and 'scale' in key_edma:
-                    key = f"{key_edma['key']} {key_edma['scale']}"
+            key, key_confidence = extract_key_analysis(tonal)
+            log_key_profile_disagreement(tonal, track_id, friend_id)
 
         if 'metadata' in analysis_data and analysis_data['metadata']:
             metadata = analysis_data['metadata']
@@ -94,6 +94,8 @@ def update_track_analysis(
             body["bpm"] = bpm
         if key:
             body["key"] = key
+        if key_confidence is not None:
+            body["key_confidence"] = key_confidence
         if danceability is not None:
             body["danceability"] = danceability
         if duration_seconds is not None:
