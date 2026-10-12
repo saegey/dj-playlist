@@ -31,8 +31,8 @@ interface DraggableTrackListProps {
   ) => React.ReactNode;
   /** Additional props for TrackResultStore */
   trackResultProps?: {
-    compact?: boolean;
-    compactVariant?: "card" | "row";
+    density?: "standard" | "dense";
+    layout?: "card" | "row";
     onRowClick?: (track: Track | undefined, index: number) => void;
     playlistCount?: Record<string, number>;
   };
@@ -68,7 +68,7 @@ export default function DraggableTrackList({
               // Playlists can contain duplicate track refs; include index to ensure uniqueness.
               const draggableKey = `${trackPlay.track_id}:${trackPlay.friend_id}:${idx}`;
               const isCurrentTrack = currentTrackIndex === idx;
-              const useRowVariant = trackResultProps?.compactVariant === "row";
+              const useDenseRow = trackResultProps?.density === "dense" && trackResultProps?.layout === "row";
               const sortPositionChange =
                 sortPositionChanges[
                   `${trackPlay.track_id}:${trackPlay.friend_id}:${idx}`
@@ -91,12 +91,12 @@ export default function DraggableTrackList({
                       opacity={snapshot.isDragging ? 0.9 : 1}
                       bg={
                         isCurrentTrack
-                          ? useRowVariant
+                          ? useDenseRow
                             ? "whiteAlpha.100"
                             : "bg.muted"
                           : undefined
                       }
-                      borderRadius={isCurrentTrack ? (useRowVariant ? "xl" : "md") : undefined}
+                      borderRadius={isCurrentTrack ? (useDenseRow ? "xl" : "md") : undefined}
                     >
                       <TrackResultStore
                         key={`${droppableId}-${trackPlay.track_id}:${trackPlay.friend_id}:${idx}`}
@@ -108,8 +108,8 @@ export default function DraggableTrackList({
                             ? renderTrackButtons(track, idx)
                             : undefined
                         }
-                        compact={trackResultProps?.compact}
-                        compactVariant={trackResultProps?.compactVariant}
+                        density={trackResultProps?.density}
+                        layout={trackResultProps?.layout}
                         onRowClick={
                           trackResultProps?.onRowClick
                             ? () => trackResultProps.onRowClick?.(track, idx)

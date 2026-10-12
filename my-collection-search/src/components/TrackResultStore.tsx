@@ -1,6 +1,5 @@
 import React from 'react';
 import TrackResult, { type TrackResultProps } from './TrackResult';
-import TrackResultCompact from './TrackResultCompact';
 import { useTrack } from '@/hooks/useTrack';
 import type { Track } from '@/types/track';
 import { useTrackStore } from '@/stores/trackStore';
@@ -10,11 +9,6 @@ interface TrackResultStoreProps extends Omit<TrackResultProps, 'track'> {
   trackId: string;
   friendId: number;
   fallbackTrack?: Track;
-  compact?: boolean;
-  compactVariant?: "card" | "row";
-  onRowClick?: () => void;
-  /** TrackResultCompact-only: hidden on TrackResult (`compact` false/undefined). */
-  showLinks?: boolean;
   fetchIfMissing?: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
@@ -30,8 +24,6 @@ export default function TrackResultStore({
   trackId,
   friendId,
   fallbackTrack,
-  compact = false,
-  compactVariant = "card",
   fetchIfMissing = false,
   isSelected,
   onToggleSelect,
@@ -73,18 +65,6 @@ export default function TrackResultStore({
 
   if (!track) {
     return null; // Could render a skeleton or placeholder here
-  }
-
-  if (compact) {
-    return (
-      <TrackResultCompact
-        track={track}
-        variant={compactVariant}
-        isSelected={isSelected}
-        onToggleSelect={onToggleSelect}
-        {...props}
-      />
-    );
   }
 
   return (

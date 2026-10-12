@@ -171,3 +171,45 @@ export const MultipleRows: Story = {
     </Box>
   ),
 };
+
+export const DenseJobCard: Story = {
+  name: 'Dense card — jobs page',
+  args: {
+    density: 'dense',
+    layout: 'card',
+    showUsername: false,
+    showRating: false,
+    showDetails: false,
+    showGenres: false,
+    showNotes: false,
+    showPlaylistCount: false,
+    footer: <Box borderTopWidth="1px" pt={2}>Job status and actions</Box>,
+    buttons: <button aria-label="Job details">Details</button>,
+  },
+};
+
+export const DenseQueueRow: Story = {
+  name: 'Dense row — queue, clickable with actions',
+  args: {
+    track: trackWithAudio,
+    density: 'dense',
+    layout: 'row',
+    onRowClick: () => {},
+    buttons: <button aria-label="Remove track">Remove</button>,
+  },
+};
+
+export const DenseSelectedCard: Story = {
+  name: 'Dense card — selected with genre badges',
+  args: {
+    density: 'dense',
+    layout: 'card',
+    isSelected: true,
+    onToggleSelect: () => {},
+    track: {
+      ...sampleTrack,
+      track_genres: [{ id: 'cumbia', name: 'Cumbia', slug: 'cumbia', parent_id: null, parent_name: null }],
+      local_tags: 'Psychedelic Cumbia',
+    },
+  },
+};
