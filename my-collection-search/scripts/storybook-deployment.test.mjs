@@ -25,7 +25,21 @@ function compose(overrides, environment = {}) {
   ], {
     cwd: fixture,
     // Use fixture configuration, never the caller's credentials or .env.
-    env: { PATH: process.env.PATH, POSTGRES_PASSWORD: 'storybook-test', ...environment },
+    // docker-compose.prod.yml's volumes require these (groovenet#538); the
+    // value is irrelevant here, only that interpolation has something to use.
+    env: {
+      PATH: process.env.PATH,
+      POSTGRES_PASSWORD: 'storybook-test',
+      PROD_DB_DATA_VOLUME: 'storybook-test',
+      PROD_MUSIC_DATA_VOLUME: 'storybook-test',
+      PROD_DB_DUMPS_VOLUME: 'storybook-test',
+      PROD_DISCOGS_EXPORTS_VOLUME: 'storybook-test',
+      PROD_REDIS_DATA_VOLUME: 'storybook-test',
+      PROD_COOKIE_DATA_VOLUME: 'storybook-test',
+      PROD_ALBUM_COVERS_VOLUME: 'storybook-test',
+      PROD_ESSENTIA_DATA_VOLUME: 'storybook-test',
+      ...environment,
+    },
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   })).services.app;
