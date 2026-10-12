@@ -169,6 +169,28 @@ describe("TrackResult layout", () => {
     expect(screen.getByText("—")).toBeTruthy();
   });
 
+  it("flags a low-confidence key with an '!' that opens a popover (#524)", async () => {
+    const { user } = renderWithProviders(
+      <TrackResult track={{ ...track, key: "F major", key_confidence: 0.42 }} />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Uncertain key" }));
+
+    expect(await screen.findByText(/42% confident/)).toBeTruthy();
+  });
+
+  it("does not flag a confident key", () => {
+    renderWithProviders(<TrackResult track={{ ...track, key: "F major", key_confidence: 0.9 }} />);
+
+    expect(screen.queryByRole("button", { name: "Uncertain key" })).toBeNull();
+  });
+
+  it("does not flag a key with no confidence on record", () => {
+    renderWithProviders(<TrackResult track={{ ...track, key: "F major", key_confidence: null }} />);
+
+    expect(screen.queryByRole("button", { name: "Uncertain key" })).toBeNull();
+  });
+
   it("shows a static image with no Play button when the track has no local audio", () => {
     renderWithProviders(<TrackResult track={{ ...track, local_audio_url: undefined }} />);
 

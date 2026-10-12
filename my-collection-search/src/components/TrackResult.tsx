@@ -21,6 +21,7 @@ import { Track } from "@/types/track";
 import { FaPlay } from "react-icons/fa";
 import { FiFileText, FiPlus } from "react-icons/fi";
 import { keyToCamelot } from "@/lib/playlistOrder";
+import { isKeyConfidenceLow } from "@/lib/essentiaKey";
 import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import {
   discogsGenreBadges,
@@ -123,7 +124,15 @@ export function TrackListHeader() {
 // ---------------------------------------------------------------------------
 
 /** Camelot code bold, key name muted, optional dot coloured by wheel position. */
-function KeyChip({ keyName, camelot }: { keyName?: string | null; camelot: string }) {
+function KeyChip({
+  keyName,
+  camelot,
+  keyConfidence,
+}: {
+  keyName?: string | null;
+  camelot: string;
+  keyConfidence?: number | null;
+}) {
   if (!keyName || !camelot || camelot === "-") {
     return (
       <Text fontSize="sm" color="fg.subtle">
@@ -154,7 +163,45 @@ function KeyChip({ keyName, camelot }: { keyName?: string | null; camelot: strin
       <Text as="span" fontSize="xs" color="fg.muted" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
         {keyName}
       </Text>
+      {isKeyConfidenceLow(keyConfidence) && <KeyConfidenceIndicator keyConfidence={keyConfidence} />}
     </Flex>
+  );
+}
+
+/** "!" trigger on a low-confidence key; a popover explains why instead of just hiding it (#524). */
+function KeyConfidenceIndicator({ keyConfidence }: { keyConfidence?: number | null }) {
+  return (
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <Box
+          as="button"
+          display="inline-flex"
+          alignItems="center"
+          flexShrink={0}
+          color="orange.400"
+          _hover={{ color: "orange.300" }}
+          aria-label="Uncertain key"
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
+        >
+          <Text as="span" fontSize="xs" fontWeight="bold">
+            !
+          </Text>
+        </Box>
+      </Popover.Trigger>
+      <Popover.Positioner>
+        <Popover.Content maxW="260px">
+          <Popover.Body>
+            <Text fontSize="sm">
+              Uncertain key
+              {typeof keyConfidence === "number" &&
+                ` — Essentia's estimate is only ${Math.round(keyConfidence * 100)}% confident`}
+              . Worth a listen before trusting it.
+            </Text>
+          </Popover.Body>
+        </Popover.Content>
+      </Popover.Positioner>
+    </Popover.Root>
   );
 }
 
@@ -781,7 +828,11 @@ export default function TrackResult({
             <Box />
           )}
 
-          {showDetails ? <KeyChip keyName={track.key} camelot={camelot} /> : <Box />}
+          {showDetails ? (
+            <KeyChip keyName={track.key} camelot={camelot} keyConfidence={track.key_confidence} />
+          ) : (
+            <Box />
+          )}
 
           {/*
             A Grid child that renders null (GenreList, for a track with no genres)
@@ -889,7 +940,7 @@ export default function TrackResult({
         {showDetails && (
           <Flex alignItems="center" gap={2} flexWrap="wrap">
             <BpmValue bpm={track.bpm} align="left" />
-            <KeyChip keyName={track.key} camelot={camelot} />
+            <KeyChip keyName={track.key} camelot={camelot} keyConfidence={track.key_confidence} />
             {durationSeconds && (
               <Text fontSize="xs" color="fg.muted" fontVariantNumeric="tabular-nums">
                 {formatSeconds(durationSeconds)}
