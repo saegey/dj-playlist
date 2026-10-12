@@ -1,4 +1,9 @@
 # Non-secret config — committed values
+# Pins the Compose project name so a bare `docker compose ...` run from this
+# directory can never default to the directory's basename instead — see
+# .env.example for why (groovenet#538). Keep in step with deploy-prod.sh's
+# PROJECT_NAME default.
+COMPOSE_PROJECT_NAME=dj-playlist
 POSTGRES_USER=djplaylist
 POSTGRES_DB=djplaylist
 DISCOGS_FOLDER_ID=0
@@ -6,6 +11,18 @@ APP_AUDIO_MOUNT=
 WORKER_AUDIO_MOUNT=
 APP_ALBUM_COVERS_SRC=
 WORKER_ALBUM_COVERS_SRC=
+
+# docker-compose.prod.yml only: external volume names, required per host with
+# no shared default — see .env.example for why. Fill in this host's actual
+# volume names before rendering; do not share one literal value across hosts.
+PROD_DB_DATA_VOLUME=
+PROD_MUSIC_DATA_VOLUME=
+PROD_DB_DUMPS_VOLUME=
+PROD_DISCOGS_EXPORTS_VOLUME=
+PROD_REDIS_DATA_VOLUME=
+PROD_COOKIE_DATA_VOLUME=
+PROD_ALBUM_COVERS_VOLUME=
+PROD_ESSENTIA_DATA_VOLUME=
 ANALYTICS_PROVIDER=posthog
 POSTHOG_HOST=https://us.i.posthog.com
 JOB_TTL_ACTIVE_SECONDS=604800
