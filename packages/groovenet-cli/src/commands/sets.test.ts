@@ -298,7 +298,10 @@ function client(overrides: Partial<Record<keyof SetsClient, ReturnType<typeof vi
   return {
     hasSetRecording: vi.fn().mockResolvedValue(false),
     uploadSetRecording: vi.fn(async (_sha: string, body: NodeJS.ReadableStream, opts: { onProgress?: (n: number) => void }) => {
-      for await (const _chunk of body) opts.onProgress?.(bytes.length);
+      for await (const chunk of body) {
+        expect(chunk).toBeDefined();
+        opts.onProgress?.(bytes.length);
+      }
       return {};
     }),
     createSetDerivation: vi.fn().mockResolvedValue({ ...derivation({ status: "queued" }), reused: false }),

@@ -137,16 +137,16 @@ under our pin. Pinning cannot repair dependency/lockfile inconsistencies; fix
 those separately under the pinned npm without unrelated dependency updates.
 
 `just bootstrap` installs a git pre-commit hook that runs file hygiene checks,
-[ruff](https://docs.astral.sh/ruff/) over the Python services, and ESLint over
-the staged web files. The same hooks run in CI, so the hook only moves the
-feedback earlier — skip it with `git commit --no-verify` and CI will still
-catch it.
+[ruff](https://docs.astral.sh/ruff/) over the Python services and Python client,
+and ESLint over changed web and Node package files. The same hooks run in CI,
+so the hook only moves the feedback earlier — skip it with `git commit
+--no-verify` and CI will still catch it.
 
 Useful checks:
 
 ```bash
 just test
-just lint
+just lint          # web app, client, CLI and MCP server
 just typecheck
 just lint-all      # every pre-commit hook, over the whole repo
 ```

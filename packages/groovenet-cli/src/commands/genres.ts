@@ -291,8 +291,13 @@ export async function runReviewCommand(
   io: GenresIO = consoleIO
 ): Promise<number> {
   if (!isTTY) throw new Error("Review is interactive: run it in a terminal");
-  const { allFriends: _all, friendId: _friend, ...rest } = opts;
-  return runReview(client, { ...rest, friendId: resolveFriendId(opts) }, readKey, ask, io);
+  return runReview(client, {
+    minTracks: opts.minTracks,
+    method: opts.method,
+    autoAcceptExact: opts.autoAcceptExact,
+    examples: opts.examples,
+    friendId: resolveFriendId(opts),
+  }, readKey, ask, io);
 }
 
 async function action(run: () => Promise<number>): Promise<void> {

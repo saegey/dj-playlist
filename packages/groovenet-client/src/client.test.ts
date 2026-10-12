@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const requestMock = vi.hoisted(() => vi.fn());
-const createMock = vi.hoisted(() => vi.fn((_config: unknown) => ({ request: requestMock })));
+const createMock = vi.hoisted(() => vi.fn(() => ({ request: requestMock })));
 const isAxiosErrorMock = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock("axios", () => ({

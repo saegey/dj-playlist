@@ -19,22 +19,30 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
-    defaults:
-      run:
-        working-directory: my-collection-search
-
     steps:
       - uses: actions/checkout@v7
 
       - uses: ./.github/actions/setup-npm
         with:
-          cache-dependency-path: my-collection-search/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            my-collection-search/package-lock.json
 
-      - name: Install dependencies
+      - name: Install workspace dependencies
         run: npm ci
 
-      - name: Run lint
+      - name: Install web dependencies
+        run: npm ci --prefix my-collection-search
+
+      - name: Lint web app
+        working-directory: my-collection-search
         run: npm run lint
+
+      - name: Lint Node packages
+        run: |
+          npm run lint --workspace=@groovenet/client
+          npm run lint --workspace=@groovenet/cli
+          npm run lint --workspace=mcp-server
 
   test:
     runs-on: ubuntu-24.04

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   loadConfig: vi.fn(),
-  client: { logPlaylistSpins: vi.fn() },
+  client: { logPlaylistSpins: vi.fn(), getLiveSet: vi.fn() },
   Client: vi.fn(),
   printJson: vi.fn(),
   printSuccess: vi.fn(),
@@ -36,6 +36,7 @@ beforeEach(() => {
     created: 2,
     skipped: 0,
   });
+  mocks.client.getLiveSet.mockResolvedValue({ title: "Sunday set", status: "active" });
 });
 
 afterEach(() => { process.exitCode = undefined; });
@@ -107,5 +108,44 @@ describe("playlists log-spins", () => {
     expect(mocks.client.logPlaylistSpins).not.toHaveBeenCalled();
     expect(mocks.printError).toHaveBeenCalledWith("Provide either --at or --performance, not both.");
     expect(process.exitCode).toBe(1);
+  });
+});
+
+describe("playlists set show", () => {
+  it("prints the set as JSON when requested", async () => {
+    const program = new Command().exitOverride();
+    addPlaylistsCommands(program);
+    await program.parseAsync(["node", "test", "playlists", "set", "show", "12", "--json"]);
+
+    expect(mocks.client.getLiveSet).toHaveBeenCalledWith("12");
+    expect(mocks.printJson).toHaveBeenCalledWith({ title: "Sunday set", status: "active" });
+  });
+
+  it("prints a readable set summary by default", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const program = new Command().exitOverride();
+      addPlaylistsCommands(program);
+      await program.parseAsync(["node", "test", "playlists", "set", "show", "12"]);
+
+      expect(mocks.client.getLiveSet).toHaveBeenCalledWith("12");
+      expect(log).toHaveBeenCalledWith("Sunday set · active");
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("uses a fallback for sets without a title", async () => {
+    mocks.client.getLiveSet.mockResolvedValueOnce({ title: "", status: "active" });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    try {
+      const program = new Command().exitOverride();
+      addPlaylistsCommands(program);
+      await program.parseAsync(["node", "test", "playlists", "set", "show", "12"]);
+
+      expect(log).toHaveBeenCalledWith("Untitled set · active");
+    } finally {
+      log.mockRestore();
+    }
   });
 });

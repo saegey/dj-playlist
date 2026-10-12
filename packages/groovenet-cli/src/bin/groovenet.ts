@@ -14,7 +14,6 @@ import { addRecordsCommands } from "../commands/records.js";
 import { addGenresCommands } from "../commands/genres.js";
 
 const require = createRequire(import.meta.url);
-// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 const { version } = require("../../package.json") as { version: string };
 
 const program = new Command();

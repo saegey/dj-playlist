@@ -32,17 +32,31 @@ repos:
         args: [--fix]
         files: ^(download-worker|ga-service|essentia-api|fingerprint-service|packages/groovenet-python)/
 
-  # eslint runs through the local install so it picks up
-  # my-collection-search/eslint.config.mjs. packages/* and mcp-server have no
-  # eslint config of their own yet, so they are not covered here.
+  # Each local hook runs ESLint from the directory that owns its flat config.
+  # App and package filenames are filtered into separate hooks for mixed batches.
   - repo: local
     hooks:
       - id: eslint
         name: eslint (my-collection-search)
-        # pre-commit passes repo-relative paths, but eslint has to run from
-        # my-collection-search to find eslint.config.mjs — so cd there and
-        # strip the prefix off each filename.
-        entry: bash -c 'cd my-collection-search && exec npx eslint --fix --no-warn-ignored "${@#my-collection-search/}"' --
+        entry: bash -c 'cd my-collection-search && exec ./node_modules/.bin/eslint --fix --no-warn-ignored -- "${@#my-collection-search/}"' --
         language: system
         files: ^my-collection-search/.*\.(ts|tsx|js|jsx|mjs)$
+        pass_filenames: true
+      - id: eslint-groovenet-client
+        name: eslint (groovenet-client)
+        entry: bash -c 'cd packages/groovenet-client && exec ../../node_modules/.bin/eslint --fix --no-warn-ignored -- "${@#packages/groovenet-client/}"' --
+        language: system
+        files: ^packages/groovenet-client/.*\.(ts|tsx|js|jsx|mjs)$
+        pass_filenames: true
+      - id: eslint-groovenet-cli
+        name: eslint (groovenet-cli)
+        entry: bash -c 'cd packages/groovenet-cli && exec ../../node_modules/.bin/eslint --fix --no-warn-ignored -- "${@#packages/groovenet-cli/}"' --
+        language: system
+        files: ^packages/groovenet-cli/.*\.(ts|tsx|js|jsx|mjs)$
+        pass_filenames: true
+      - id: eslint-mcp-server
+        name: eslint (mcp-server)
+        entry: bash -c 'cd mcp-server && exec ../node_modules/.bin/eslint --fix --no-warn-ignored -- "${@#mcp-server/}"' --
+        language: system
+        files: ^mcp-server/.*\.(ts|tsx|js|jsx|mjs)$
         pass_filenames: true

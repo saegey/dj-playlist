@@ -122,8 +122,9 @@ the one it's running in, but anything removed another way needs
 `just worktree-gc`. It's a dry run by default; pass `--apply` to actually
 remove the stacks and fragments it finds.
 
-Pre-commit runs file hygiene, ruff over the Python services, and ESLint over
-the web app. CI runs the same hooks, so `--no-verify` only defers the failure.
+Pre-commit runs file hygiene, ruff over the Python services and Python client,
+and ESLint over the web app, Node client, CLI and MCP server. CI runs the same
+hooks, so `--no-verify` only defers the failure.
 
 ### Coverage is a required PR check
 

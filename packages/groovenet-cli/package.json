@@ -12,6 +12,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
+    "lint": "eslint .",
     "start": "node build/bin/groovenet.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov",
