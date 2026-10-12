@@ -98,7 +98,7 @@ describe("useJobEventsSSE key extraction (#524)", () => {
     });
 
     await waitFor(() => {
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("stored edma=F major"));
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("stored key=F major"));
     });
     warnSpy.mockRestore();
   });

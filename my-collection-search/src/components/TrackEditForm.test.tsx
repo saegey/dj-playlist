@@ -71,21 +71,23 @@ describe("TrackEditForm key confidence (#524)", () => {
     fetchGenreTree.mockResolvedValue([]);
   });
 
-  it("flags a low-confidence key as uncertain", () => {
+  it("flags a low-confidence key as uncertain, with the percentage", () => {
     renderForm(vi.fn(), { ...TRACK, key: "F major", key_confidence: 0.42 });
 
-    expect(screen.getByText("Uncertain key")).toBeTruthy();
+    expect(screen.getByText(/Uncertain key — 42% confident/)).toBeTruthy();
   });
 
-  it("does not flag a confident key", () => {
+  it("shows the plain percentage for a confident key, not the uncertain flag", () => {
     renderForm(vi.fn(), { ...TRACK, key: "F major", key_confidence: 0.9 });
 
-    expect(screen.queryByText("Uncertain key")).toBeNull();
+    expect(screen.queryByText(/Uncertain key/)).toBeNull();
+    expect(screen.getByText("90% confident")).toBeTruthy();
   });
 
-  it("does not flag a key with no confidence on record", () => {
+  it("shows nothing for a key with no confidence on record", () => {
     renderForm(vi.fn(), { ...TRACK, key: "F major" });
 
-    expect(screen.queryByText("Uncertain key")).toBeNull();
+    expect(screen.queryByText(/Uncertain key/)).toBeNull();
+    expect(screen.queryByText(/% confident/)).toBeNull();
   });
 });

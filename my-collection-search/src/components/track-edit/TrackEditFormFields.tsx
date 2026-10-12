@@ -7,7 +7,7 @@ import LabeledTextarea from "@/components/form/LabeledTextarea";
 import GenrePicker from "@/components/GenrePicker";
 import type { TrackEditFormState } from "@/components/track-edit/types";
 import type { TrackGenre } from "@/types/track";
-import { isKeyConfidenceLow } from "@/lib/essentiaKey";
+import { formatKeyConfidencePercent, isKeyConfidenceLow } from "@/lib/essentiaKey";
 
 type TrackEditFormFieldsProps = {
   values: TrackEditFormState;
@@ -72,11 +72,16 @@ export default function TrackEditFormFields({
               value={values.key}
               onChange={onChange}
             />
-            {isKeyConfidenceLow(values.key_confidence) && (
-              <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
-                Uncertain key
-              </Badge>
-            )}
+            {formatKeyConfidencePercent(values.key_confidence) !== null &&
+              (isKeyConfidenceLow(values.key_confidence) ? (
+                <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
+                  Uncertain key — {formatKeyConfidencePercent(values.key_confidence)}% confident
+                </Badge>
+              ) : (
+                <Text fontSize="xs" color="fg.muted" mt={1}>
+                  {formatKeyConfidencePercent(values.key_confidence)}% confident
+                </Text>
+              ))}
           </Box>
           <Box flex={{ base: "1 1 calc(50% - 4px)", md: "1" }}>
             <LabeledInput

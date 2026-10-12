@@ -179,16 +179,21 @@ describe("TrackResult layout", () => {
     expect(await screen.findByText(/42% confident/)).toBeTruthy();
   });
 
-  it("does not flag a confident key", () => {
-    renderWithProviders(<TrackResult track={{ ...track, key: "F major", key_confidence: 0.9 }} />);
+  it("does not flag a confident key as uncertain, but still shows its confidence on click (#524)", async () => {
+    const { user } = renderWithProviders(
+      <TrackResult track={{ ...track, key: "F major", key_confidence: 0.9 }} />
+    );
 
     expect(screen.queryByRole("button", { name: "Uncertain key" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Key confidence" }));
+    expect(await screen.findByText(/90% confident/)).toBeTruthy();
   });
 
-  it("does not flag a key with no confidence on record", () => {
+  it("shows nothing clickable for a key with no confidence on record", () => {
     renderWithProviders(<TrackResult track={{ ...track, key: "F major", key_confidence: null }} />);
 
     expect(screen.queryByRole("button", { name: "Uncertain key" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Key confidence" })).toBeNull();
   });
 
   it("shows a static image with no Play button when the track has no local audio", () => {

@@ -111,24 +111,26 @@ describe("POST /api/tracks/upload", () => {
     );
   });
 
-  it("stores the edma key and its confidence, not just the key", async () => {
+  it("stores the consensus key and confidence, not just edma's (#524)", async () => {
+    // krumhansl+temperley outvote edma's minority "F major" here.
     const res = await POST(makeRequest());
 
     expect(res.status).toBe(200);
     expect(mockUpdateTrackAnalysis).toHaveBeenCalledWith(
       "t1",
-      expect.objectContaining({ key: "F major", key_confidence: 0.62 })
+      expect.objectContaining({ key: "C major", key_confidence: 0.565 })
     );
   });
 
-  it("logs when krumhansl/temperley disagree with the stored edma key (#524)", async () => {
+  it("logs edma as disagreeing when it's outvoted by krumhansl/temperley (#524)", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     await POST(makeRequest());
 
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("stored edma=F major")
+      expect.stringContaining("stored key=C major")
     );
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("edma=F major"));
     warnSpy.mockRestore();
   });
 

@@ -177,24 +177,25 @@ describe("findTracksForEssentiaBackfill()", () => {
   });
 });
 
-// ─── findTracksMissingKeyConfidence ───────────────────────────────────────────
+// ─── findTracksWithKeyForRecompute ────────────────────────────────────────────
 
-describe("findTracksMissingKeyConfidence() (#524)", () => {
-  it("filters to tracks with a key but no key_confidence", async () => {
+describe("findTracksWithKeyForRecompute() (#524)", () => {
+  it("selects every track with a stored key, regardless of key_confidence", async () => {
     dbQuery.mockResolvedValue({ rows: [] });
 
-    await makeRepo().findTracksMissingKeyConfidence(null);
+    await makeRepo().findTracksWithKeyForRecompute(null);
 
     const [sql, params] = dbQuery.mock.calls[0];
     expect(sql).toContain("key IS NOT NULL");
-    expect(sql).toContain("key_confidence IS NULL");
+    expect(sql).not.toContain("key_confidence IS NULL");
+    expect(sql).toContain("key_confidence");
     expect(params).toEqual([]);
   });
 
   it("passes [friendId] when only friendId is provided", async () => {
     dbQuery.mockResolvedValue({ rows: [] });
 
-    await makeRepo().findTracksMissingKeyConfidence(5);
+    await makeRepo().findTracksWithKeyForRecompute(5);
 
     const [sql, params] = dbQuery.mock.calls[0];
     expect(params).toEqual([5]);
@@ -204,7 +205,7 @@ describe("findTracksMissingKeyConfidence() (#524)", () => {
   it("passes [limit] when only limit is provided (no friendId)", async () => {
     dbQuery.mockResolvedValue({ rows: [] });
 
-    await makeRepo().findTracksMissingKeyConfidence(null, 50);
+    await makeRepo().findTracksWithKeyForRecompute(null, 50);
 
     const [sql, params] = dbQuery.mock.calls[0];
     expect(params).toEqual([50]);
@@ -214,7 +215,7 @@ describe("findTracksMissingKeyConfidence() (#524)", () => {
   it("passes [friendId, limit] when both are provided", async () => {
     dbQuery.mockResolvedValue({ rows: [] });
 
-    await makeRepo().findTracksMissingKeyConfidence(3, 25);
+    await makeRepo().findTracksWithKeyForRecompute(3, 25);
 
     const [, params] = dbQuery.mock.calls[0];
     expect(params).toEqual([3, 25]);
