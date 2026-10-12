@@ -117,3 +117,14 @@ COPY src/server/genres/taxonomySeed.js ./src/server/genres/taxonomySeed.js
 # Verify every migration can load in the deployed image before publishing it.
 # Database-only tests on the checkout cannot detect missing image dependencies.
 RUN node --input-type=module -e "import { readdir } from 'node:fs/promises'; for (const file of await readdir('./migrations')) { if (file.endsWith('.js')) await import('./migrations/' + file); }"
+
+# One-off maintenance scripts (src/scripts/*.ts), e.g. backfill-key-confidence
+# (#524). Built on demand only — not part of the CI publish pipeline, and not
+# started by a plain `docker compose up` (see its `scripts` profile). Reuses
+# `deps`'s node_modules, which still has devDependencies (tsx) at this point
+# in the build, before `builder`/`runner` set NODE_ENV=production.
+FROM base AS scripts
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY package*.json tsconfig.json ./
+COPY src ./src
