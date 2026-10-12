@@ -17,6 +17,7 @@ import {
 import { analytics } from "@/lib/analytics/server";
 import { dbPool } from "@/lib/serverDb";
 import { cleanupDiscogsReleases } from "@/server/services/discogsCleanupService";
+import type { TrackUpsertFailure } from "@/server/services/trackUpsertService";
 
 const DISCOGS_USER_TOKEN = process.env.DISCOGS_USER_TOKEN;
 // Username can be passed as a param or defaults to env
@@ -46,6 +47,7 @@ export async function GET(request: NextRequest) {
         const allIds: string[] = [];
         const newReleases: string[] = [];
         const errors: { releaseId: string; error: string }[] = [];
+        const trackErrors: TrackUpsertFailure[] = [];
         const dateAddedMap: Map<string, string> = new Map(); // Store date_added from collection
 
         // Use a manifest per username
@@ -289,10 +291,30 @@ export async function GET(request: NextRequest) {
               controller.enqueue(
                 encoder.encode(`Upserting tracks to Postgres...\n\n`)
               );
-              const upserted = await upsertTracks(allTracks);
+              const { upserted, errors: upsertErrors } = await upsertTracks(allTracks);
+              trackErrors.push(...upsertErrors);
               controller.enqueue(
                 encoder.encode(`Upserted ${upserted.length} tracks to Postgres\n\n`)
               );
+
+              const failuresByRelease = new Map<string, TrackUpsertFailure[]>();
+              for (const failure of upsertErrors) {
+                const releaseId = failure.releaseId ?? "unknown";
+                const failures = failuresByRelease.get(releaseId) ?? [];
+                failures.push(failure);
+                failuresByRelease.set(releaseId, failures);
+              }
+              for (const [releaseId, failures] of failuresByRelease) {
+                controller.enqueue(encoder.encode(
+                  `Release ${releaseId} fetched with track upsert failures (${failures.length}):\n`
+                ));
+                for (const failure of failures) {
+                  controller.enqueue(encoder.encode(
+                    `  - Track ${failure.trackId}@${failure.username}: ${failure.error}\n`
+                  ));
+                }
+                controller.enqueue(encoder.encode("\n"));
+              }
 
               // Step 6: Ingest albums
               controller.enqueue(
@@ -369,7 +391,9 @@ export async function GET(request: NextRequest) {
               }
 
               controller.enqueue(
-                encoder.encode(`\n✅ Auto-ingest complete!\n\n`)
+                encoder.encode(trackErrors.length > 0
+                  ? `\nAuto-ingest incomplete. Track upsert failures: ${trackErrors.length}.\n\n`
+                  : `\n✅ Auto-ingest complete!\n\n`)
               );
             } catch (e) {
               const errorMessage = e instanceof Error ? e.message : String(e);
@@ -391,14 +415,16 @@ export async function GET(request: NextRequest) {
             {
               new_releases: newReleases.length,
               removed_releases: removedIds.length,
-              error_count: errors.length,
+              error_count: errors.length + trackErrors.length,
               duration_ms: Date.now() - syncStartedAt,
             },
             { request }
           );
 
           controller.enqueue(
-            encoder.encode(`\n🎉 All operations complete!\n\n`)
+            encoder.encode(trackErrors.length > 0
+              ? `\nAll operations complete with track upsert failures. Failed tracks: ${trackErrors.length}; affected releases: ${new Set(trackErrors.map((error) => error.releaseId)).size}.\n\n`
+              : `\n🎉 All operations complete!\n\n`)
           );
           controller.close();
         } catch (e) {
