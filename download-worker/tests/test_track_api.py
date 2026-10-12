@@ -40,8 +40,9 @@ class TestUpdateTrackAnalysis:
         assert body["year"] == "1999"
 
     @patch("groovenet_client.GroovenetClient.update_track")
-    def test_logs_key_profile_disagreement_instead_of_discarding_it(self, mock_patch, caplog):
-        """Regression: #524 — key_krumhansl/key_temperley were computed and discarded silently."""
+    def test_consensus_overrides_a_minority_edma_and_logs_its_disagreement(self, mock_patch, caplog):
+        """Regression: #524 — key_krumhansl/key_temperley were computed and discarded
+        silently, so edma's minority answer was stored and trusted as fact."""
         from worker.track_api import update_track_analysis
 
         mock_patch.return_value.ok = True
@@ -58,9 +59,11 @@ class TestUpdateTrackAnalysis:
             },
         )
 
-        assert "stored edma=F major" in caplog.text
-        assert "krumhansl=C major" in caplog.text
-        assert "temperley=C major" in caplog.text
+        body = mock_patch.call_args.args[0]
+        assert body["key"] == "C major"
+        assert body["key_confidence"] == 0.565
+        assert "stored key=C major" in caplog.text
+        assert "edma=F major" in caplog.text
 
 
 class TestAnalyzeAudioFile:

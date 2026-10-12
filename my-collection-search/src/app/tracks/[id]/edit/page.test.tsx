@@ -71,7 +71,7 @@ describe("TrackEditPage key confidence (#524)", () => {
     mocks.saveTrack.mockReset().mockResolvedValue(undefined);
   });
 
-  it("flags a low-confidence key as uncertain", () => {
+  it("flags a low-confidence key as uncertain, with the percentage", () => {
     mocks.track = {
       track_id: "t1",
       friend_id: 1,
@@ -83,10 +83,10 @@ describe("TrackEditPage key confidence (#524)", () => {
 
     renderWithProviders(<TrackEditPage />);
 
-    expect(screen.getByText("Uncertain key")).toBeTruthy();
+    expect(screen.getByText(/Uncertain key — 42% confident/)).toBeTruthy();
   });
 
-  it("does not flag a confident key", () => {
+  it("shows the plain percentage for a confident key, not the uncertain flag", () => {
     mocks.track = {
       track_id: "t1",
       friend_id: 1,
@@ -98,6 +98,7 @@ describe("TrackEditPage key confidence (#524)", () => {
 
     renderWithProviders(<TrackEditPage />);
 
-    expect(screen.queryByText("Uncertain key")).toBeNull();
+    expect(screen.queryByText(/Uncertain key/)).toBeNull();
+    expect(screen.getByText("90% confident")).toBeTruthy();
   });
 });

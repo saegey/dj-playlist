@@ -21,7 +21,7 @@ import { Track } from "@/types/track";
 import { FaPlay } from "react-icons/fa";
 import { FiFileText, FiPlus } from "react-icons/fi";
 import { keyToCamelot } from "@/lib/playlistOrder";
-import { isKeyConfidenceLow } from "@/lib/essentiaKey";
+import { formatKeyConfidencePercent, isKeyConfidenceLow } from "@/lib/essentiaKey";
 import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import {
   discogsGenreBadges,
@@ -163,13 +163,20 @@ function KeyChip({
       <Text as="span" fontSize="xs" color="fg.muted" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
         {keyName}
       </Text>
-      {isKeyConfidenceLow(keyConfidence) && <KeyConfidenceIndicator keyConfidence={keyConfidence} />}
+      {typeof keyConfidence === "number" && <KeyConfidenceIndicator keyConfidence={keyConfidence} />}
     </Flex>
   );
 }
 
-/** "!" trigger on a low-confidence key; a popover explains why instead of just hiding it (#524). */
-function KeyConfidenceIndicator({ keyConfidence }: { keyConfidence?: number | null }) {
+/**
+ * Trigger on the key chip that always reveals the confidence on click — an
+ * orange "!" + "Uncertain key" below the low threshold, a neutral "i"
+ * above it. Showing the number is the point: a confident key used to look
+ * identical to a dubious one with nothing to click at all (#524).
+ */
+function KeyConfidenceIndicator({ keyConfidence }: { keyConfidence: number }) {
+  const low = isKeyConfidenceLow(keyConfidence);
+  const percent = formatKeyConfidencePercent(keyConfidence);
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
@@ -178,14 +185,14 @@ function KeyConfidenceIndicator({ keyConfidence }: { keyConfidence?: number | nu
           display="inline-flex"
           alignItems="center"
           flexShrink={0}
-          color="orange.400"
-          _hover={{ color: "orange.300" }}
-          aria-label="Uncertain key"
+          color={low ? "orange.400" : "fg.subtle"}
+          _hover={{ color: low ? "orange.300" : "fg.muted" }}
+          aria-label={low ? "Uncertain key" : "Key confidence"}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
           onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
         >
           <Text as="span" fontSize="xs" fontWeight="bold">
-            !
+            {low ? "!" : "i"}
           </Text>
         </Box>
       </Popover.Trigger>
@@ -193,10 +200,9 @@ function KeyConfidenceIndicator({ keyConfidence }: { keyConfidence?: number | nu
         <Popover.Content maxW="260px">
           <Popover.Body>
             <Text fontSize="sm">
-              Uncertain key
-              {typeof keyConfidence === "number" &&
-                ` — Essentia's estimate is only ${Math.round(keyConfidence * 100)}% confident`}
-              . Worth a listen before trusting it.
+              {low
+                ? `Uncertain key — Essentia's estimate is only ${percent}% confident. Worth a listen before trusting it.`
+                : `${percent}% confident in this key.`}
             </Text>
           </Popover.Body>
         </Popover.Content>

@@ -29,7 +29,7 @@ import GenrePicker from "@/components/GenrePicker";
 import { useTrackByIdQuery } from "@/hooks/useTrackByIdQuery";
 import { useTracksQuery } from "@/hooks/useTracksQuery";
 import { cleanSoundcloudUrl } from "@/lib/url";
-import { isKeyConfidenceLow } from "@/lib/essentiaKey";
+import { formatKeyConfidencePercent, isKeyConfidenceLow } from "@/lib/essentiaKey";
 import { toaster } from "@/components/ui/toaster";
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -216,11 +216,16 @@ export default function TrackEditPage() {
                     value={form.key}
                     onChange={handleChange}
                   />
-                  {isKeyConfidenceLow(form.key_confidence) && (
-                    <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
-                      Uncertain key
-                    </Badge>
-                  )}
+                  {formatKeyConfidencePercent(form.key_confidence) !== null &&
+                    (isKeyConfidenceLow(form.key_confidence) ? (
+                      <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
+                        Uncertain key — {formatKeyConfidencePercent(form.key_confidence)}% confident
+                      </Badge>
+                    ) : (
+                      <Text fontSize="xs" color="fg.muted" mt={1}>
+                        {formatKeyConfidencePercent(form.key_confidence)}% confident
+                      </Text>
+                    ))}
                 </Box>
                 <LabeledInput
                   label="Danceability"
