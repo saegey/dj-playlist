@@ -74,28 +74,36 @@ services:
       - essentia_data:/app/essentia-data
     restart: unless-stopped
 
+# Every volume below is external and its name comes from a required env var
+# with no fallback default. A literal shared default (e.g. "teststack_db_data")
+# is exactly what let two differently-named deploys (PROJECT_NAME=dj-playlist
+# and PROJECT_NAME=groovenet, both from /srv/docker/groovenet) silently mount
+# the same Postgres data directory at once on 2026-10-11, corrupting it beyond
+# repair. Requiring each PROD_*_VOLUME var to be set in this host's .env makes
+# a second, differently-named deploy fail loudly on startup instead of quietly
+# sharing another stack's data. See groovenet#538 for the incident.
 volumes:
   db_data:
-    name: teststack_db_data_v2
+    name: ${PROD_DB_DATA_VOLUME:?Set PROD_DB_DATA_VOLUME in .env to this host's db_data volume name}
     external: true
   music_data:
-    name: teststack_music_data
+    name: ${PROD_MUSIC_DATA_VOLUME:?Set PROD_MUSIC_DATA_VOLUME in .env to this host's music_data volume name}
     external: true
   db_dumps:
-    name: teststack_db_dumps
+    name: ${PROD_DB_DUMPS_VOLUME:?Set PROD_DB_DUMPS_VOLUME in .env to this host's db_dumps volume name}
     external: true
   discogs_exports:
-    name: teststack_discogs_exports
+    name: ${PROD_DISCOGS_EXPORTS_VOLUME:?Set PROD_DISCOGS_EXPORTS_VOLUME in .env to this host's discogs_exports volume name}
     external: true
   redis_data:
-    name: teststack_redis_data
+    name: ${PROD_REDIS_DATA_VOLUME:?Set PROD_REDIS_DATA_VOLUME in .env to this host's redis_data volume name}
     external: true
   cookie_data:
-    name: teststack_cookie_data
+    name: ${PROD_COOKIE_DATA_VOLUME:?Set PROD_COOKIE_DATA_VOLUME in .env to this host's cookie_data volume name}
     external: true
   album_covers:
-    name: teststack_album_covers
+    name: ${PROD_ALBUM_COVERS_VOLUME:?Set PROD_ALBUM_COVERS_VOLUME in .env to this host's album_covers volume name}
     external: true
   essentia_data:
-    name: teststack_essentia_data
+    name: ${PROD_ESSENTIA_DATA_VOLUME:?Set PROD_ESSENTIA_DATA_VOLUME in .env to this host's essentia_data volume name}
     external: true
