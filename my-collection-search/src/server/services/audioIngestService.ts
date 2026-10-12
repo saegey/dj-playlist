@@ -300,8 +300,8 @@ export class AudioIngestService {
     probed: ProbedAudio
   ): Promise<string> {
     const day = new Date().toISOString().slice(0, 10);
-    const relativePath = path.join(day, `${ingestId}.${extensionFor(probed)}`);
-    const target = path.join(ingestDir(), relativePath);
+    const relativePath = path.join(/* turbopackIgnore: true */ day, `${ingestId}.${extensionFor(probed)}`);
+    const target = path.join(/* turbopackIgnore: true */ ingestDir(), relativePath);
     await fsp.mkdir(path.dirname(target), { recursive: true });
     await fsp.rename(tempPath, target);
     return relativePath;
