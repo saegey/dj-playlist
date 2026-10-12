@@ -7,7 +7,10 @@ export type TrackLocalAudioRow = Pick<
   "track_id" | "friend_id" | "local_audio_url"
 >;
 
-export type TrackKeyConfidenceBackfillRow = Pick<Track, "track_id" | "friend_id" | "key">;
+export type TrackKeyConfidenceBackfillRow = Pick<
+  Track,
+  "track_id" | "friend_id" | "key" | "key_confidence"
+>;
 
 export type TrackEssentiaBackfillRow = TrackLocalAudioRow &
   Pick<
@@ -526,16 +529,15 @@ export class TrackRepository {
     return rows;
   }
 
-  /** Tracks analyzed before key_confidence existed: a key on record, nothing to say how sure (#524). */
-  async findTracksMissingKeyConfidence(
+  /** Every track with a stored key, to recompute against the saved analysis JSON (#524). */
+  async findTracksWithKeyForRecompute(
     friendId: number | null,
     limit?: number
   ): Promise<TrackKeyConfidenceBackfillRow[]> {
     const query = `
-      SELECT track_id, friend_id, key
+      SELECT track_id, friend_id, key, key_confidence
       FROM tracks
       WHERE key IS NOT NULL
-        AND key_confidence IS NULL
         ${friendId !== null ? "AND friend_id = $1" : ""}
       ORDER BY friend_id, track_id
       ${limit ? `LIMIT $${friendId !== null ? 2 : 1}` : ""}
