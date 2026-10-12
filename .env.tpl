@@ -1,4 +1,9 @@
 # Non-secret config — committed values
+# Pins the Compose project name so a bare `docker compose ...` run from this
+# directory can never default to the directory's basename instead — see
+# .env.example for why (groovenet#538). Keep in step with deploy-prod.sh's
+# PROJECT_NAME default.
+COMPOSE_PROJECT_NAME=dj-playlist
 POSTGRES_USER=djplaylist
 POSTGRES_DB=djplaylist
 DISCOGS_FOLDER_ID=0
