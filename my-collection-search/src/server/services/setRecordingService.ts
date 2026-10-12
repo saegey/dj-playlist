@@ -44,7 +44,7 @@ export class RecordingRejected extends Error {
 }
 
 export function setRecordingsDir(): string {
-  return path.resolve(process.env.SET_RECORDINGS_DIR || "/app/set-recordings");
+  return path.resolve(/* turbopackIgnore: true */ process.env.SET_RECORDINGS_DIR || "/app/set-recordings");
 }
 
 /** 2 GiB: a long night as lossless audio, with room to spare. */
@@ -140,7 +140,7 @@ export class SetRecordingService {
       }
 
       const filePath = `${sha256}.${extensionFor(probed.formatName)}`;
-      await fsp.rename(tempPath, path.join(dir, filePath));
+      await fsp.rename(tempPath, path.join(/* turbopackIgnore: true */ dir, filePath));
       const recording = await this.repository.create({
         sha256,
         file_path: filePath,

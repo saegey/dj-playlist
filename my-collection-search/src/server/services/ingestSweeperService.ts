@@ -40,7 +40,7 @@ type GlobalWithSweeper = typeof globalThis & {
 };
 
 export function ingestDir(): string {
-  return path.resolve(process.env.AUDIO_INGEST_DIR || "/app/audio-ingest");
+  return path.resolve(/* turbopackIgnore: true */ process.env.AUDIO_INGEST_DIR || "/app/audio-ingest");
 }
 
 function positiveNumber(raw: string | undefined, fallback: number): number {
@@ -244,7 +244,7 @@ export async function sweepIngestDirectory(
   for (const decision of decisions) {
     if (!decision.deleted) continue;
     try {
-      await fsp.unlink(path.join(dir, decision.fileName));
+      await fsp.unlink(path.join(/* turbopackIgnore: true */ dir, decision.fileName));
       deleted += 1;
       bytesReclaimed += decision.bytes;
     } catch (error) {
