@@ -35,6 +35,7 @@ vi.mock("@/server/services/albumUpsertService", () => albumUpsert);
 vi.mock("@/server/services/trackEmbeddingSyncService", () => embeddingSync);
 
 import { GET } from "../route";
+import { syncDiscogsStream } from "@/services/internalApi/discogs";
 import { setAnalyticsProvider } from "@/lib/analytics/server";
 import { MemoryAnalyticsProvider } from "@/lib/analytics/providers/memory";
 
@@ -58,6 +59,7 @@ describe("GET /api/discogs — analytics", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     setAnalyticsProvider(null);
   });
 
@@ -91,7 +93,7 @@ describe("GET /api/discogs — analytics", () => {
   });
 });
 
-describe("GET /api/discogs — embeddings sync (#385)", () => {
+describe("GET /api/discogs — auto-ingest and streamed failures", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     analyticsEvents.reset();
@@ -105,7 +107,10 @@ describe("GET /api/discogs — embeddings sync (#385)", () => {
     manifest.getTracksFromManifestReleases.mockReturnValue([{ track_id: "t1" }]);
     discogs.getCollectionPage.mockResolvedValue(page([1]));
     discogs.getReleaseDetails.mockResolvedValue({ id: 1 });
-    trackUpsert.upsertTracks.mockResolvedValue([{ track_id: "t1", friend_id: 1 }]);
+    trackUpsert.upsertTracks.mockResolvedValue({
+      upserted: [{ track_id: "t1", friend_id: 1 }], errors: [],
+    });
+    embeddingSync.syncIdentityEmbeddings.mockResolvedValue({ queued: 1 });
     albumUpsert.getAlbumsFromManifestReleases.mockResolvedValue([]);
     albumUpsert.upsertAlbums.mockResolvedValue([]);
   });
@@ -113,6 +118,7 @@ describe("GET /api/discogs — embeddings sync (#385)", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     setAnalyticsProvider(null);
   });
 
@@ -134,6 +140,9 @@ describe("GET /api/discogs — embeddings sync (#385)", () => {
       { track_id: "t1", friend_id: 1 },
     ]);
     expect(body).toContain("Embeddings: 1 queued for background generation");
+    expect(body).toContain("Upserted 1 tracks to Postgres");
+    expect(body).toContain("✅ Auto-ingest complete!");
+    expect(body).not.toContain("track upsert failures");
     expect(body).toContain("All operations complete");
   });
 
@@ -152,5 +161,71 @@ describe("GET /api/discogs — embeddings sync (#385)", () => {
     const body = await runSync();
 
     expect(body).toContain("⚠️  Failed to queue embeddings: redis down");
+  });
+
+  it("streams release and track failures to the UI consumer and ends with a partial-failure summary", async () => {
+    discogs.getCollectionPage.mockResolvedValue(page([1, 2, 3]));
+    discogs.getReleaseDetails.mockResolvedValueOnce({ id: 1 })
+      .mockResolvedValueOnce({ id: 2 }).mockRejectedValueOnce(new Error("429"));
+    const successful = [{ track_id: "1-B1", friend_id: 1 }];
+    const errors = [
+      { trackId: "1-A1", releaseId: "1", username: "dj", error: "constraint violation" },
+      { trackId: "1-A2", releaseId: "1", username: "dj", error: "connection lost" },
+      { trackId: "2-A1", releaseId: "2", username: "dj", error: "timeout" },
+    ];
+    const tracks = [...successful, ...errors.map((e) => ({ track_id: e.trackId }))];
+    manifest.getTracksFromManifestReleases.mockReturnValue(tracks);
+    trackUpsert.upsertTracks.mockResolvedValue({ upserted: successful, errors });
+    const lines: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      const response = await GET(new Request("http://localhost/api/discogs?username=dj") as never);
+      expect(response.headers.get("Content-Type")).toBe("text/event-stream");
+      return response;
+    }));
+
+    const stream = syncDiscogsStream("dj", (line) => lines.push(line));
+    await vi.runAllTimersAsync();
+    await stream;
+
+    expect(lines).toContain("Release 1 fetched with track upsert failures (2):");
+    expect(lines).toContain("Release 2 fetched with track upsert failures (1):");
+    for (const error of errors) {
+      expect(lines).toContain(`  - Track ${error.trackId}@dj: ${error.error}`);
+    }
+    expect(lines).toContain("Error for release ID 3: 429");
+    expect(lines).toContain("  - Release 3: 429");
+    expect(lines).toContain("Auto-ingest incomplete. Track upsert failures: 3.");
+    expect(lines.at(-1)).toBe("All operations complete with track upsert failures. Failed tracks: 3; affected releases: 2.");
+    expect(lines.join("\n")).not.toContain("✅ Auto-ingest complete!");
+    expect(lines.join("\n")).not.toContain("🎉 All operations complete!");
+    expect(trackUpsert.upsertTracks).toHaveBeenCalledWith(tracks);
+    expect(albumUpsert.upsertAlbums).toHaveBeenCalledWith({}, [], { preserveManualFields: true });
+    expect(embeddingSync.syncIdentityEmbeddings).toHaveBeenCalledWith(successful);
+    expect(manifest.saveManifest).toHaveBeenCalledWith("/dev/null", ["1", "2"]);
+    expect(analyticsEvents.events.at(-1)?.properties).toMatchObject({ new_releases: 2, error_count: 4 });
+  });
+
+  it("reports an all-track failure, including an absent release ID, and closes the stream", async () => {
+    trackUpsert.upsertTracks.mockResolvedValue({ upserted: [], errors: [{
+      trackId: "t1", username: "dj", error: "Could not resolve friend_id",
+    }] });
+    const body = await runSync();
+    expect(body).toContain("Upserted 0 tracks to Postgres");
+    expect(body).toContain("Release unknown fetched with track upsert failures (1):");
+    expect(body).toContain("Track t1@dj: Could not resolve friend_id");
+    expect(body).toContain("Auto-ingest incomplete. Track upsert failures: 1.");
+    expect(body).toContain("All operations complete with track upsert failures. Failed tracks: 1; affected releases: 1.");
+    expect(embeddingSync.syncIdentityEmbeddings).toHaveBeenCalledWith([]);
+  });
+
+  it("keeps a soft-deleted no-op successful even when fewer tracks were upserted than loaded", async () => {
+    manifest.getTracksFromManifestReleases.mockReturnValue([{ track_id: "t1" }, { track_id: "deleted" }]);
+    const body = await runSync();
+    expect(body).toContain("Loaded 2 tracks");
+    expect(body).toContain("Upserted 1 tracks to Postgres");
+    expect(body).toContain("✅ Auto-ingest complete!");
+    expect(body).toContain("🎉 All operations complete!");
+    expect(body).not.toContain("track upsert failures");
+    expect(analyticsEvents.events.at(-1)?.properties.error_count).toBe(0);
   });
 });

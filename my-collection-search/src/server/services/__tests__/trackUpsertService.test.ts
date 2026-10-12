@@ -55,9 +55,9 @@ beforeEach(() => {
 // ─── Empty / no usernames ───────────────────────────────────────────────────
 
 describe("upsertTracks — nothing to do", () => {
-  it("returns [] and touches no repositories for an empty list", async () => {
+  it("returns empty successes and errors and touches no repositories for an empty list", async () => {
     const result = await upsertTracks([]);
-    expect(result).toEqual([]);
+    expect(result).toEqual({ upserted: [], errors: [] });
     expect(mockInsertFriendsIfMissing).not.toHaveBeenCalled();
     expect(mockListByUsernames).not.toHaveBeenCalled();
     expect(mockUpsertTrack).not.toHaveBeenCalled();
@@ -123,7 +123,13 @@ describe("upsertTracks — friend resolution", () => {
     mockListByUsernames.mockResolvedValueOnce([]);
     mockFindIdByUsername.mockResolvedValueOnce(null); // still unresolved
     const result = await upsertTracks([track({ username: "ghost" })]);
-    expect(result).toEqual([]);
+    expect(result).toEqual({
+      upserted: [],
+      errors: [{
+        trackId: "t1", releaseId: undefined, username: "ghost",
+        error: "Could not resolve friend_id for username='ghost'",
+      }],
+    });
     expect(mockUpsertTrack).not.toHaveBeenCalled();
   });
 });
@@ -140,7 +146,7 @@ describe("upsertTracks — result handling", () => {
       track({ track_id: "t1" }),
       track({ track_id: "t2" }),
     ]);
-    expect(result).toEqual([{ track_id: "t1" }]);
+    expect(result).toEqual({ upserted: [{ track_id: "t1" }], errors: [] });
   });
 
   it("continues the batch when one upsert throws", async () => {
@@ -149,9 +155,71 @@ describe("upsertTracks — result handling", () => {
       .mockRejectedValueOnce(new Error("constraint violation"))
       .mockResolvedValueOnce({ track_id: "t2" });
     const result = await upsertTracks([
-      track({ track_id: "t1" }),
-      track({ track_id: "t2" }),
+      track({ track_id: "t1", release_id: "32596437" }),
+      track({ track_id: "t2", release_id: "32596437" }),
     ]);
-    expect(result).toEqual([{ track_id: "t2" }]);
+    expect(result).toEqual({
+      upserted: [{ track_id: "t2" }],
+      errors: [{
+        trackId: "t1", releaseId: "32596437", username: "alice",
+        error: "constraint violation",
+      }],
+    });
+  });
+});
+
+describe("upsertTracks — failure reporting (#497)", () => {
+  it("retains successful rows and every failure across releases, including non-Error rejections", async () => {
+    mockListByUsernames.mockResolvedValueOnce([{ username: "alice", id: 1 }]);
+    mockUpsertTrack
+      .mockResolvedValueOnce({ track_id: "1-A1" })
+      .mockRejectedValueOnce(new Error("constraint violation"))
+      .mockResolvedValueOnce(null)
+      .mockRejectedValueOnce("connection lost")
+      .mockResolvedValueOnce({ track_id: "2-B1" });
+
+    const tracks = [
+      track({ track_id: "1-A1", release_id: "1" }),
+      track({ track_id: "1-A2", release_id: "1" }),
+      track({ track_id: "1-A3", release_id: "1" }),
+      track({ track_id: "2-A1", release_id: "2" }),
+      track({ track_id: "2-B1", release_id: "2" }),
+    ];
+    const result = await upsertTracks(tracks);
+
+    expect(result).toEqual({
+      upserted: [{ track_id: "1-A1" }, { track_id: "2-B1" }],
+      errors: [
+        { trackId: "1-A2", releaseId: "1", username: "alice", error: "constraint violation" },
+        { trackId: "2-A1", releaseId: "2", username: "alice", error: "connection lost" },
+      ],
+    });
+    expect(mockUpsertTrack.mock.calls).toEqual(tracks.map((t) => [t, 1]));
+  });
+
+  it.each(["insert", "lookup"])("reports a per-track friend %s failure and continues", async (operation) => {
+    mockListByUsernames.mockResolvedValueOnce([{ username: "alice", id: 1 }]);
+    if (operation === "insert") {
+      mockInsertFriendIfMissing.mockRejectedValueOnce(new Error("friend insert failed"));
+    } else {
+      mockFindIdByUsername.mockRejectedValueOnce(new Error("friend lookup failed"));
+    }
+
+    const result = await upsertTracks([
+      track({ track_id: "1-A1", release_id: "1", username: "bob" }),
+      track({ track_id: "1-A2", release_id: "1" }),
+    ]);
+
+    expect(result.upserted).toEqual([track({ track_id: "1-A2", release_id: "1" })]);
+    expect(result.errors).toEqual([{
+      trackId: "1-A1", releaseId: "1", username: "bob", error: `friend ${operation} failed`,
+    }]);
+    expect(mockUpsertTrack).toHaveBeenCalledTimes(1);
+  });
+
+  it("still rejects a batch-level friend resolution failure", async () => {
+    mockInsertFriendsIfMissing.mockRejectedValueOnce(new Error("database unavailable"));
+    await expect(upsertTracks([track()])).rejects.toThrow("database unavailable");
+    expect(mockUpsertTrack).not.toHaveBeenCalled();
   });
 });
