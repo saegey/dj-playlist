@@ -13,16 +13,23 @@ APP_ALBUM_COVERS_SRC=
 WORKER_ALBUM_COVERS_SRC=
 
 # docker-compose.prod.yml only: external volume names, required per host with
-# no shared default — see .env.example for why. Fill in this host's actual
-# volume names before rendering; do not share one literal value across hosts.
-PROD_DB_DATA_VOLUME=
-PROD_MUSIC_DATA_VOLUME=
-PROD_DB_DUMPS_VOLUME=
-PROD_DISCOGS_EXPORTS_VOLUME=
-PROD_REDIS_DATA_VOLUME=
-PROD_COOKIE_DATA_VOLUME=
-PROD_ALBUM_COVERS_VOLUME=
-PROD_ESSENTIA_DATA_VOLUME=
+# no shared default — see .env.example for why. `just deploy`/deploy-prod.sh
+# render this whole file over the target host's .env on every deploy (see
+# deploy-prod-remote in justfile), so an empty placeholder here does not
+# survive a redeploy — it wipes out whatever the host had, which is exactly
+# what broke the first deploy after groovenet#539 merged. These are therefore
+# committed as this repo's one real deploy target's actual values, not a
+# placeholder. Adding a genuinely second host is the moment to make these
+# vary — e.g. templated from a value `render-env.sh` substitutes per host —
+# not before.
+PROD_DB_DATA_VOLUME=groovenet_prod_db_data_restored_20261011
+PROD_MUSIC_DATA_VOLUME=teststack_music_data
+PROD_DB_DUMPS_VOLUME=teststack_db_dumps
+PROD_DISCOGS_EXPORTS_VOLUME=teststack_discogs_exports
+PROD_REDIS_DATA_VOLUME=teststack_redis_data
+PROD_COOKIE_DATA_VOLUME=teststack_cookie_data
+PROD_ALBUM_COVERS_VOLUME=teststack_album_covers
+PROD_ESSENTIA_DATA_VOLUME=teststack_essentia_data
 ANALYTICS_PROVIDER=posthog
 POSTHOG_HOST=https://us.i.posthog.com
 JOB_TTL_ACTIVE_SECONDS=604800
