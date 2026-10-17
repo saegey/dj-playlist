@@ -1,7 +1,8 @@
 services:
   app:
     build:
-      context: my-collection-search
+      context: .
+      dockerfile: my-collection-search/Dockerfile
       target: runner
     labels:
       - "deployed.revision=*${GIT_SHA:-dev}"  # change on every commit -> forces recreate
@@ -50,14 +51,15 @@ services:
 
   migrate:
     build:
-      context: my-collection-search
+      context: .
+      dockerfile: my-collection-search/Dockerfile
       target: migrator
     profiles:
       - migrate
-    working_dir: /app
+    working_dir: /repo/my-collection-search
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-djplaylist}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-djplaylist}
-    entrypoint: ["sh", "-c", "until pg_isready -h db -U ${POSTGRES_USER:-djplaylist}; do sleep 1; done && sh /app/scripts/migrate-preflight.sh && npm run migrate -- up"]
+    entrypoint: ["sh", "-c", "until pg_isready -h db -U ${POSTGRES_USER:-djplaylist}; do sleep 1; done && sh /repo/my-collection-search/scripts/migrate-preflight.sh && npm run migrate -- up"]
     depends_on:
       - db
 
@@ -67,11 +69,12 @@ services:
   # supplies it, e.g. `just scripts-run npm run backfill-key-confidence -- --limit=5`.
   scripts:
     build:
-      context: my-collection-search
+      context: .
+      dockerfile: my-collection-search/Dockerfile
       target: scripts
     profiles:
       - scripts
-    working_dir: /app
+    working_dir: /repo/my-collection-search
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-djplaylist}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-djplaylist}
       ESSENTIA_DATA_DIR: /app/essentia-data

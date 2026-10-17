@@ -3,6 +3,7 @@ import { dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const repoRoot = dirname(__dirname);
 
 const allowedDevOrigins = [
   "localhost",
@@ -13,6 +14,7 @@ const allowedDevOrigins = [
 /** @type {import("next").NextConfig} */
 const nextConfig = {
   output: "standalone",
+  outputFileTracingRoot: repoRoot,
   allowedDevOrigins,
   experimental: {
     serverActions: {

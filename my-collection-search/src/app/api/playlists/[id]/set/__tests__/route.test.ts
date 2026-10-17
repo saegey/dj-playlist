@@ -5,6 +5,19 @@ vi.mock("@/server/services/liveSetService", () => ({ liveSetService: service }))
 import { DELETE, GET, POST, PUT } from "../route";
 
 const context = (id: string) => ({ params: Promise.resolve({ id }) });
+const liveSet = {
+  id: 4,
+  playlist_id: 9,
+  title: null,
+  status: "draft",
+  notes: null,
+  location_name: null,
+  location_city: null,
+  cover_image_url: null,
+  collaborators: [],
+  performances: [],
+  media: [],
+};
 beforeEach(() => vi.clearAllMocks());
 
 describe("playlist set lifecycle route", () => {
@@ -36,13 +49,15 @@ describe("playlist set lifecycle route", () => {
   });
 
   it("gets a set and returns 404 when absent", async () => {
-    service.getByPlaylistId.mockResolvedValueOnce({ id: 4, playlist_id: 9 }).mockResolvedValueOnce(null);
+    service.getByPlaylistId.mockResolvedValueOnce(liveSet).mockResolvedValueOnce(null);
     expect((await GET(new Request("http://localhost"), context("9"))).status).toBe(200);
     expect((await GET(new Request("http://localhost"), context("9"))).status).toBe(404);
   });
 
   it("handles invalid and failing reads", async () => {
     expect((await GET(new Request("http://localhost"), context("bad"))).status).toBe(400);
+    service.getByPlaylistId.mockResolvedValueOnce({ id: 4, playlist_id: 9 });
+    expect((await GET(new Request("http://localhost"), context("9"))).status).toBe(500);
     service.getByPlaylistId.mockRejectedValueOnce(new Error("db"));
     expect((await GET(new Request("http://localhost"), context("9"))).status).toBe(500);
   });
@@ -54,6 +69,19 @@ describe("playlist set lifecycle route", () => {
     const valid = await PUT(new Request("http://localhost", { method: "PUT", body: JSON.stringify({ status: "draft" }) }), context("9"));
     expect(valid.status).toBe(200);
     expect(service.updateForPlaylist).toHaveBeenCalledWith(9, { status: "draft" });
+  });
+
+  it("rejects invalid nested media before updating", async () => {
+    const response = await PUT(
+      new Request("http://localhost", {
+        method: "PUT",
+        body: JSON.stringify({ media: [{ media_type: "stream", url: "https://example.com" }] }),
+      }),
+      context("9")
+    );
+
+    expect(response.status).toBe(400);
+    expect(service.updateForPlaylist).not.toHaveBeenCalled();
   });
 
   it("returns 404 for a missing set deletion", async () => {

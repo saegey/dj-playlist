@@ -77,4 +77,17 @@ describe("OpenAPI contract coverage", () => {
       ).toBe(true);
     }
   });
+
+  it("documents live-set enums and the shared update contract", () => {
+    const doc = getOpenApiDocument();
+    const schemas = doc.components.schemas as Record<string, { enum?: string[] }>;
+    expect(schemas.LiveSetStatus.enum).toEqual(["draft", "performed", "archived"]);
+    expect(schemas.LiveSetMediaType.enum).toEqual(["image", "flyer", "audio", "youtube", "link"]);
+
+    const update = getOperation("/api/playlists/{id}/set", "put") as {
+      requestBody?: { content?: { "application/json"?: { schema?: { $ref?: string } } } };
+    };
+    expect(update.requestBody?.content?.["application/json"]?.schema?.$ref)
+      .toBe("#/components/schemas/LiveSetUpdate");
+  });
 });

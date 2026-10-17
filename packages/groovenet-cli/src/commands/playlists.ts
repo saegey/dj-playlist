@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { GroovenetClient, loadConfig } from "@groovenet/client";
+import type { LiveSet } from "@groovenet/contracts";
 import { printPlaylists, printTracks, printJson, printSuccess, printError } from "../output.js";
 import { boundedIntOption } from "../options.js";
 
@@ -14,7 +15,7 @@ export function addPlaylistsCommands(program: Command): void {
 
   sets.command("show <id>").option("--json", "Output as JSON").action(async (id: string, opts: { json?: boolean }) => {
     try {
-      const set = await makeClient().getLiveSet(id);
+      const set: LiveSet = await makeClient().getLiveSet(id);
       if (opts.json) printJson(set);
       else console.log(`${set.title || "Untitled set"} · ${set.status}`);
     }

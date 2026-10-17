@@ -1,4 +1,6 @@
 import type { DiscogsSimpleArtist, DiscogsVideo } from "@/types/discogs";
+import type { LiveSetSummary } from "@groovenet/contracts";
+export type { LiveSetStatus, LiveSetCollaborator, LiveSetSummary } from "@groovenet/contracts";
 
 export type Track = {
   id: number;
@@ -85,25 +87,6 @@ export interface Playlist {
   total_duration_seconds?: number;
   /** Present only when the playlist has been promoted to a set. */
   set?: LiveSetSummary;
-}
-
-export type LiveSetStatus = "draft" | "performed" | "archived";
-
-export interface LiveSetCollaborator {
-  friend_id: number;
-  username: string;
-  role: string;
-}
-
-export interface LiveSetSummary {
-  id: number;
-  title: string | null;
-  status: LiveSetStatus;
-  cover_image_url: string | null;
-  last_performed_at: string | null;
-  venue_name: string | null;
-  location_city: string | null;
-  collaborators: LiveSetCollaborator[];
 }
 
 export interface DiscogsRelease {

@@ -189,7 +189,7 @@ jobs:
       - name: Build and push webapp
         uses: docker/build-push-action@v7
         with:
-          context: ./my-collection-search
+          context: .
           file: ./my-collection-search/Dockerfile
           # Without this, buildx builds the last stage in the Dockerfile
           # (migrator), producing an image that exits 0 and restart-loops.
@@ -490,7 +490,7 @@ jobs:
       - name: Build and push migrate image
         uses: docker/build-push-action@v7
         with:
-          context: ./my-collection-search
+          context: .
           file: ./my-collection-search/Dockerfile
           target: migrator
           push: ${{ env.SHOULD_PUSH == 'true' }}

@@ -1,6 +1,16 @@
 // Core domain types for the Groovenet DJ collection system.
 // Copied from my-collection-search/src/types/track.ts — Next.js app is the source of truth.
 
+export type {
+  LiveSet,
+  LiveSetDeleteResponse,
+  LiveSetMediaType,
+  LiveSetMutationResponse,
+  LiveSetStatus,
+  LiveSetSummary,
+  LiveSetUpdate,
+} from "@groovenet/contracts";
+
 export type Track = {
   id: number;
   track_id: string;
@@ -56,16 +66,6 @@ export interface Playlist {
   name: string;
   tracks: { track_id: string; friend_id: number; position: number }[];
   created_at: string;
-}
-
-export type LiveSetStatus = "draft" | "performed" | "archived";
-export type LiveSetMediaType = "image" | "flyer" | "audio" | "youtube" | "link";
-export interface LiveSet {
-  id: number; playlist_id: number; title: string | null; status: LiveSetStatus;
-  notes: string | null; location_name: string | null; location_city: string | null; cover_image_url: string | null;
-  collaborators: Array<{ friend_id: number; username: string; role: string }>;
-  performances: Array<{ performed_at: string; venue_name: string | null; location_city: string | null; notes: string | null }>;
-  media: Array<{ media_type: LiveSetMediaType; url: string; filename: string | null; caption: string | null }>;
 }
 
 export interface Friend {
