@@ -484,6 +484,19 @@ describe("GroovenetClient album endpoints", () => {
       params: { friend_id: 2 },
     });
   });
+
+  it("deleteAlbum deletes by release id scoped to a friend", async () => {
+    const result = { success: true };
+    const client = clientReturning(result);
+
+    await expect(client.deleteAlbum("r1", 2)).resolves.toBe(result);
+    expect(requestMock).toHaveBeenCalledWith({
+      method: "DELETE",
+      url: "/albums/r1",
+      data: undefined,
+      params: { friend_id: 2 },
+    });
+  });
 });
 
 describe("GroovenetClient spin endpoints", () => {

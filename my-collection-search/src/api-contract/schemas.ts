@@ -1276,6 +1276,10 @@ export const albumDetailResponseSchema = z.object({
   tracks: z.array(trackEntitySchema),
 });
 
+export const albumDeleteResponseSchema = z.object({
+  success: z.boolean(),
+});
+
 // ─── Album artwork (#494) ────────────────────────────────────────────────────
 
 export const albumArtSourceSchema = z.enum(["discogs", "apple_music", "upload"]);

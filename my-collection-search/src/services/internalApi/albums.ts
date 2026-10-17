@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   albumCreateResponseSchema,
+  albumDeleteResponseSchema,
   albumDetailResponseSchema,
   albumDiscogsRawResponseSchema,
   albumPlayableStructureResponseSchema,
@@ -57,6 +58,7 @@ export type AlbumUpdateResponse = Omit<AlbumUpdateApiResponse, "album"> & {
 export type QueueAlbumDownloadsResponse = z.infer<
   typeof queueAlbumDownloadsResponseSchema
 >;
+export type AlbumDeleteResponse = z.infer<typeof albumDeleteResponseSchema>;
 export type UpsertAlbumWithTracksApiResponse = z.infer<
   typeof albumUpsertWithTracksResponseSchema
 >;
@@ -163,6 +165,18 @@ export async function updateAlbum(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
   });
+}
+
+export async function deleteAlbum(
+  releaseId: string,
+  friendId: number
+): Promise<AlbumDeleteResponse> {
+  return await http<AlbumDeleteResponse>(
+    `/api/albums/${encodeURIComponent(releaseId)}?friend_id=${friendId}`,
+    {
+      method: "DELETE",
+    }
+  );
 }
 
 export async function queueAlbumDownloads(
