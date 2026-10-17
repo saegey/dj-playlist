@@ -26,6 +26,16 @@ describe("genre contracts", () => {
     expect(genreUpdateBodySchema.safeParse({ parent_id: null }).success).toBe(true);
     expect(genreUpdateBodySchema.safeParse({}).success).toBe(false);
   });
+  it("documents and validates the optional similar-genres limit", () => {
+    const route = operations.find((route) => route.operationId === "getSimilarGenres")!;
+    expect(route.querySchema!.parse({ limit: "3" })).toEqual({ limit: 3 });
+    expect(route.querySchema!.parse({})).toEqual({});
+    expect(route.querySchema!.safeParse({ limit: "0" }).success).toBe(false);
+    expect(route.openapi.parameters).toContainEqual(expect.objectContaining({
+      name: "limit", in: "query", schema: { type: "integer", minimum: 1, default: 20 },
+    }));
+    expect(route.openapi.responses["400"]).toBeDefined();
+  });
   it("documents a recursive tree with explicit fields and a resolvable reference", () => {
     const doc = getOpenApiDocument();
     expect(doc.components.schemas.GenreTreeNode).toMatchObject({

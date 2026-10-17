@@ -719,6 +719,35 @@ describe("GroovenetClient playlist endpoints", () => {
 });
 
 describe("GroovenetClient genres", () => {
+  it("gets similar genres with an encoded slug and the requested limit, preserving the raw response", async () => {
+    const response = {
+      genre: { id: "g-1", name: "Cumbia", slug: "cumbia", track_count: 20 },
+      related: [{ id: "g-2", name: "Salsa", slug: "salsa", track_count: 10, score: 1.42,
+        signals: { taxonomy: "sibling", npmi: 0.42, shared_albums: 7 } }],
+    };
+    const client = clientReturning(response);
+
+    await expect(client.getSimilarGenres("cumbia/son?", { limit: 3 })).resolves.toBe(response);
+    expect(requestMock).toHaveBeenCalledWith({
+      method: "GET", url: "/genres/cumbia%2Fson%3F/similar", data: undefined, params: { limit: 3 },
+    });
+  });
+
+  it("leaves the similar-genre limit to the API when omitted, including empty results", async () => {
+    const response = { genre: { id: "g-1", name: "Cumbia", slug: "cumbia", track_count: 0 }, related: [] };
+    const client = clientReturning(response);
+    await expect(client.getSimilarGenres("cumbia")).resolves.toBe(response);
+    expect(requestMock).toHaveBeenCalledWith({
+      method: "GET", url: "/genres/cumbia/similar", data: undefined, params: {},
+    });
+  });
+
+  it("propagates errors loading similar genres", async () => {
+    const client = clientReturning(null);
+    requestMock.mockRejectedValue(new Error("Unknown genre: polka"));
+    await expect(client.getSimilarGenres("polka")).rejects.toThrow("Unknown genre: polka");
+  });
+
   it("gets the canonical taxonomy tree", async () => {
     const genres = [{ id: "genre-1", name: "Latin", children: [] }];
     const client = clientReturning({ genres });

@@ -11,6 +11,7 @@ vi.mock("@/server/repositories/genreSimilarityRepository", () => ({ genreSimilar
 
 import {
   getGenreSimilarPage,
+  RELATED_LIMIT,
   minSupportAlbums,
   recomputeGenreSimilarity,
   refreshIntervalMinutes,
@@ -92,6 +93,7 @@ describe("getGenreSimilarPage", () => {
   it("finds a genre by slug or id and resolves its related genres globally (no friend scope)", async () => {
     const page = await getGenreSimilarPage("cumbia");
 
+    expect(genreSimilarityRepository.topForGenre).toHaveBeenCalledWith(uuid(2), RELATED_LIMIT);
     expect(genreRepository.trackFacets).toHaveBeenCalledWith([], []);
     expect(page).toEqual({
       genre: { id: uuid(2), name: "Cumbia", slug: "cumbia", track_count: 30 },
@@ -103,6 +105,25 @@ describe("getGenreSimilarPage", () => {
     genreRepository.trackFacets.mockResolvedValue([]);
     const page = await getGenreSimilarPage("cumbia");
     expect(page?.genre.track_count).toBe(0);
+  });
+
+  it("passes a custom limit through to the stored ranking", async () => {
+    genreSimilarityRepository.topForGenre.mockResolvedValue([
+      { related_genre_id: uuid(3), score: 1.4, signals: { taxonomy: "sibling" } },
+    ]);
+    const page = await getGenreSimilarPage("cumbia", 1);
+    expect(genreSimilarityRepository.topForGenre).toHaveBeenCalledWith(uuid(2), 1);
+    expect(page?.related).toHaveLength(1);
+    expect(page?.related[0].score).toBe(1.4);
+  });
+
+  it("limits the taxonomy-sibling fallback too", async () => {
+    genreRepository.listFlat.mockResolvedValue([...flat, row(5, "Porro", 1)]);
+    genreRepository.trackFacets.mockResolvedValue([
+      { id: uuid(2), track_count: 30 }, { id: uuid(3), track_count: 12 }, { id: uuid(5), track_count: 20 },
+    ]);
+    const page = await getGenreSimilarPage("cumbia", 1);
+    expect(page?.related).toEqual([{ id: uuid(5), name: "Porro", slug: "porro", track_count: 20 }]);
   });
 });
 

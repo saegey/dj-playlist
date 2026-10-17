@@ -8,6 +8,7 @@ import type {
   LiveSet,
   Friend,
   GenreTreeResponse,
+  GenreSimilarResponse, GenreSimilarQuery,
   Genre, GenreCreateInput, GenreUpdateInput, GenreAliasResponse, GenreMergeResponse,
   GenreReconciliationRequest, GenreReconciliationRun, GenreReconciliationCoverage,
   GenreProposal, GenreProposalQuery, GenreProposalListResponse, GenreProposalUpdate,
@@ -446,6 +447,13 @@ export class GroovenetClient {
 
   async getGenres(): Promise<GenreTreeResponse> {
     return this.request<GenreTreeResponse>("GET", "/genres");
+  }
+
+  /** Ranked related genres and their signals, across every collection, by slug or id. */
+  async getSimilarGenres(slug: string, query: GenreSimilarQuery = {}): Promise<GenreSimilarResponse> {
+    return this.request<GenreSimilarResponse>(
+      "GET", `/genres/${encodeURIComponent(slug)}/similar`, undefined, { ...query }
+    );
   }
 
   /**
