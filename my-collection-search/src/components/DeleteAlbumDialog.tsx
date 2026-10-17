@@ -39,9 +39,7 @@ export default function DeleteAlbumDialog({
   return (
     <Dialog.Root
       open={open}
-      onOpenChange={(details) => {
-        if (!details.open) onClose();
-      }}
+      onOpenChange={() => onClose()}
       role="alertdialog"
       initialFocusEl={() => cancelRef.current}
     >

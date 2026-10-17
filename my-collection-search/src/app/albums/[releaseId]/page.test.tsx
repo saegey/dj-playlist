@@ -67,11 +67,19 @@ vi.mock("@/components/DeleteAlbumDialog", () => ({
     releaseId: string;
     onClose: () => void;
     onDeleted: () => void;
+    notify: (opts: { title: string; type: string }) => void;
   }) =>
     props.open ? (
       <div role="dialog" aria-label="Delete album">
         <button onClick={() => props.onClose()}>Close delete</button>
-        <button onClick={() => props.onDeleted()}>Confirm delete</button>
+        <button
+          onClick={() => {
+            props.notify({ title: "Album deleted.", type: "success" });
+            props.onDeleted();
+          }}
+        >
+          Confirm delete
+        </button>
       </div>
     ) : null,
 }));

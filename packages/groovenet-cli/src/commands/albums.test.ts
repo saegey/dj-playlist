@@ -120,4 +120,14 @@ describe("albums delete command wiring", () => {
     expect(printError).toHaveBeenCalledWith("boom");
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
+
+  it("falls back to a generic message when a non-Error is thrown", async () => {
+    mocks.client.deleteAlbum.mockRejectedValue("boom");
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+
+    await runDelete("r1", "--yes");
+
+    expect(printError).toHaveBeenCalledWith("boom");
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
 });

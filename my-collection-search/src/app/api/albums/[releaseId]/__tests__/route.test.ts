@@ -161,4 +161,11 @@ describe("DELETE /api/albums/[releaseId]", () => {
     expect(res.status).toBe(500);
     expect(mockWithDbTransaction).not.toHaveBeenCalled();
   });
+
+  it("falls back to a generic message when a non-Error is thrown", async () => {
+    mockGetAlbumByReleaseAndFriend.mockRejectedValue("db down");
+    const res = await DELETE(deleteReq("r1", "7"), params());
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Unknown error");
+  });
 });
