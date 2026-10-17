@@ -78,7 +78,7 @@ Dry run:
 ./scripts/restore-restic-assets.sh --restore-target /tmp/restore --dry-run
 ```
 
-If your app container name is not `webapp`:
+If your app container name is not `groovenet_webapp`:
 
 ```bash
 ./scripts/restore-restic-assets.sh --restore-target /tmp/restore --app-container <container_name>
