@@ -24,6 +24,7 @@ groovenet config set api_key <token>   # if your instance requires auth
 ```bash
 groovenet tracks search "miles davis"     # search tracks
 groovenet tracks search --genre latin     # Latin and every subgenre (cumbia, salsa, …)
+groovenet genres similar cumbia --limit 5 # related genres, scores, and signals
 groovenet albums search "kind of blue"    # browse albums
 groovenet playlists list                  # list playlists
 groovenet playlists log-spins 176         # log the latest performance as spins
@@ -50,8 +51,22 @@ Run `groovenet --help` (or `groovenet <command> --help`) for the full command re
 | `albums` | Browse and manage albums |
 | `playlists` | Manage playlists |
 | `friends` | Manage the friends system |
+| `genres` | Find similar genres and reconcile track tags onto the taxonomy |
 | `fingerprint-library` | Build the reference fingerprint index used to recognise vinyl as it plays |
 | `sets` | Derive a corrected tracklist from a recording of a set, and diff it against the plan |
+
+### genres similar
+
+```bash
+groovenet genres similar cumbia
+groovenet genres similar cumbia --limit 5 --json
+```
+
+Lists related genre names and slugs, scores, and short signals such as
+`sibling, NPMI 0.42, 7 shared albums`. A missing score or signal is shown as
+`-` for the API's taxonomy-sibling fallback. `--json` prints the raw
+`{ genre, related }` response. Similarity uses every collection; the server
+defaults to at most 20 related genres, with fewer when unavailable.
 
 ### playlists log-spins
 

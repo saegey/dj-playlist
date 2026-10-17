@@ -28,7 +28,7 @@ vinyl               status | detections | ingests | aggregate
 sets                derive | review | show
 records             clean | sleeve | log | copies (add | label | remove)
                     history | void | care [--summary]
-genres              reconcile | review | apply | proposals | coverage
+genres              similar | reconcile | review | apply | proposals | coverage
 ```
 
 **Every command takes `--json`.** Use it for anything programmatic — the default

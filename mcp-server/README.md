@@ -37,6 +37,18 @@ Uses the shared [`@groovenet/client`](../packages/groovenet-client) typed API cl
 | `get_friends` | List friends and their IDs |
 | `add_friend` | Add a friend by username |
 
+### Genre discovery
+
+| Tool | Description |
+|---|---|
+| `get_similar_genres` | Ranked related genres to widen a playlist's genre choice or explain genre neighbourhoods |
+
+`get_similar_genres` takes a required `slug` (a genre slug such as `cumbia`, or
+an id) and an optional positive integer `limit` (server default: 20). Returns
+the raw `{ genre, related }` API data as JSON text, including scores and
+taxonomy, NPMI, and shared-album signals. Similarity uses every collection;
+scores and signals can be absent for the taxonomy-sibling fallback.
+
 ### External Search
 | Tool | Description |
 |---|---|
@@ -88,6 +100,7 @@ claude mcp list
 ## Example Queries
 
 - "Search for techno tracks between 128-132 BPM in A minor"
+- "What genres are similar to cumbia so I can widen this playlist?"
 - "Show me my highest rated albums"
 - "What albums were added most recently?"
 - "Download all missing tracks for album 1234567"
@@ -110,6 +123,17 @@ All tools delegate to `GroovenetClient` methods — no API logic is duplicated i
 2. Rebuild the client: `npm run build --workspace=packages/groovenet-client`
 3. Add the tool definition and handler case in `mcp-server/src/index.ts`
 4. Rebuild: `npm run build --workspace=mcp-server`
+
+## Tests
+
+From the repo root:
+
+```bash
+npm run build --workspace=@groovenet/client
+npm --workspace=mcp-server test
+```
+
+Tests exercise the MCP stdio interface against a local HTTP fixture server.
 
 ## License
 

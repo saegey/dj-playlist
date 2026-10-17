@@ -66,7 +66,8 @@ export async function resolveRelated(
 
 /** `GET /api/genres/{slug}/similar` (#377): computed over every collection, not scoped to one friend. */
 export async function getGenreSimilarPage(
-  ref: string
+  ref: string,
+  limit: number = RELATED_LIMIT
 ): Promise<{ genre: GenrePageRef; related: GenreRelatedRef[] } | null> {
   const flat = await genreRepository.listFlat();
   const key = ref.trim().toLowerCase();
@@ -75,7 +76,7 @@ export async function getGenreSimilarPage(
 
   const facets = await genreRepository.trackFacets([], []);
   const totals = new Map(facets.map((facet) => [facet.id, facet.track_count]));
-  const related = await resolveRelated(flat, genre, totals, RELATED_LIMIT);
+  const related = await resolveRelated(flat, genre, totals, limit);
   return {
     genre: { id: genre.id, name: genre.name, slug: genre.slug, track_count: totals.get(genre.id) ?? 0 },
     related,

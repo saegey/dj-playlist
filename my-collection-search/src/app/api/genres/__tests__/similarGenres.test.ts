@@ -6,8 +6,8 @@ vi.mock("@/server/services/genreSimilarityService", () => ({ getGenreSimilarPage
 
 import { GET } from "../[id]/similar/route";
 
-const call = (ref: string) =>
-  GET(new NextRequest(`http://localhost/api/genres/${ref}/similar`), { params: Promise.resolve({ id: ref }) });
+const call = (ref: string, query = "") =>
+  GET(new NextRequest(`http://localhost/api/genres/${ref}/similar${query}`), { params: Promise.resolve({ id: ref }) });
 
 const page = {
   genre: { id: "8c1d7f3e-2b6a-4d59-9f0e-3a7b5c2d1e40", name: "Cumbia", slug: "cumbia", track_count: 412 },
@@ -29,7 +29,22 @@ describe("GET /api/genres/{id}/similar", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(page);
-    expect(getGenreSimilarPage).toHaveBeenCalledWith("cumbia");
+    expect(getGenreSimilarPage).toHaveBeenCalledWith("cumbia", undefined);
+  });
+
+  it("forwards an explicit limit, preserving the response", async () => {
+    getGenreSimilarPage.mockResolvedValue(page);
+    const response = await call("cumbia", "?limit=3");
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(page);
+    expect(getGenreSimilarPage).toHaveBeenCalledWith("cumbia", 3);
+  });
+
+  it.each(["0", "-1", "1.5", "nope", "3oops", "", "Infinity"])("rejects invalid limit %s before loading genres", async (limit) => {
+    const response = await call("cumbia", `?limit=${limit}`);
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: "Invalid query parameters" });
+    expect(getGenreSimilarPage).not.toHaveBeenCalled();
   });
 
   it("404s an unknown genre", async () => {

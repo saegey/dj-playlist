@@ -78,6 +78,7 @@ import {
   genrePageQuerySchema,
   genrePageResponseSchema,
   genreSimilarResponseSchema,
+  genreSimilarQuerySchema,
   trackGenreFacetsResponseSchema,
   genreCreateBodySchema,
   genreUpdateBodySchema,
@@ -4559,6 +4560,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
     summary: "A genre's ranked similar genres (#377): taxonomy plus collection co-occurrence, with the signals that explain each one",
     tags: ["Genres"],
     successSchema: genreSimilarResponseSchema,
+    querySchema: genreSimilarQuerySchema,
     errorSchema: apiErrorSchema,
     openapi: {
       parameters: [
@@ -4569,8 +4571,16 @@ export const apiContractRoutes: ApiContractRoute[] = [
           description: "Genre slug or id",
           schema: { type: "string" },
         },
+        {
+          name: "limit",
+          in: "query",
+          required: false,
+          description: "Maximum related genres to return; fewer may be available (the stored ranking contains up to 20 per genre)",
+          schema: { type: "integer", minimum: 1, default: 20 },
+        },
       ],
       responses: {
+        "400": jsonError("Invalid query parameters"),
         "200": {
           description: "Computed over every collection; falls back to taxonomy siblings until the table has rows for this genre",
           content: {

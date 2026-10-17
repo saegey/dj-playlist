@@ -1,9 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { trackEntitySchema, albumEntitySchema, genreSchema, genreTreeResponseSchema, genreCreateInputSchema, genreUpdateInputSchema, genreAliasInputSchema, genreMergeInputSchema, genreAliasResponseSchema, genreMergeResponseSchema } from "./schemas.js";
+import { trackEntitySchema, albumEntitySchema, genreSchema, genreTreeResponseSchema, genreCreateInputSchema, genreUpdateInputSchema, genreAliasInputSchema, genreMergeInputSchema, genreAliasResponseSchema, genreMergeResponseSchema, genreSimilarResponseSchema, genreSimilaritySignalsSchema } from "./schemas.js";
 
 const id = "6df3a956-f05c-4ef2-a218-0813d0ca7c47";
 const genre = { id, name: "Latin", slug: "latin", parent_id: null, source: "discogs" };
 describe("genre wire schemas", () => {
+  it("accepts ranked related genres, unscored fallback genres, and empty results", () => {
+    const ref = { id, name: "Cumbia", slug: "cumbia", track_count: 12 };
+    for (const related of [[], [ref], [{ ...ref, score: 1.42, signals: { taxonomy: "sibling", npmi: 0.42, shared_albums: 7 } }]]) {
+      const response = { genre: ref, related };
+      expect(genreSimilarResponseSchema.parse(response)).toEqual(response);
+    }
+    for (const taxonomy of ["sibling", "parent", "child"]) {
+      expect(genreSimilaritySignalsSchema.parse({ taxonomy })).toEqual({ taxonomy });
+    }
+    for (const signals of [{ taxonomy: "cousin" }, { npmi: 1.1 }, { npmi: -1.1 }, { shared_albums: -1 }, { shared_albums: 1.5 }]) {
+      expect(genreSimilaritySignalsSchema.safeParse(signals).success).toBe(false);
+    }
+    expect(genreSimilarResponseSchema.safeParse({ genre: { ...ref, track_count: -1 }, related: [] }).success).toBe(false);
+  });
+
   it("accepts nested taxonomy nodes and mutation responses", () => {
     expect(genreSchema.parse(genre)).toEqual(genre);
     const child = { ...genre, parent_id: id, source: "custom", track_count: 0, album_count: 0, children: [] };

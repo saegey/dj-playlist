@@ -20,6 +20,18 @@ const client = new GroovenetClient({ baseUrl: API_BASE, apiKey: API_KEY, clientN
 // Define tool schemas
 const tools = [
   {
+    name: "get_similar_genres",
+    description: "Find ranked related genres to widen a genre choice for a playlist or explain a genre's neighbourhood. Returns the seed genre and related genres with scores and taxonomy/co-occurrence signals (sibling, parent or child; NPMI; shared albums). Computed across every collection; scores and signals can be absent in the taxonomy-sibling fallback.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        slug: { type: "string", minLength: 1, description: "Genre slug (e.g. 'cumbia') or genre id" },
+        limit: { type: "integer", minimum: 1, description: "Maximum related genres to return (server default: 20; fewer may be available)" },
+      },
+      required: ["slug"],
+    },
+  },
+  {
     name: "search_tracks",
     description: "Search for tracks in your collection by title, artist, album, genre, or tags — or, with mode 'semantic' or 'hybrid', by a natural-language description of the sound (e.g. 'dusty 70s cumbia with brass'). Supports filtering by genre (including subgenres), BPM range, key, and star rating. The query may be empty to list by filters alone.",
     inputSchema: {
@@ -378,6 +390,7 @@ interface ToolArgs {
   album?: string;
   isrc?: string;
   // similarity
+  slug?: string;
   era?: string;
   country?: string;
   tags?: string;
@@ -419,6 +432,15 @@ function formatDuration(seconds: number): string {
 
 async function handleToolCall(name: string, args: ToolArgs) {
   switch (name) {
+    case "get_similar_genres": {
+      if (typeof args.slug !== "string" || args.slug.trim().length === 0) {
+        throw new Error("slug is required and must be a nonempty string");
+      }
+      if (args.limit !== undefined && (!Number.isSafeInteger(args.limit) || args.limit < 1)) {
+        throw new Error("limit must be a positive integer");
+      }
+      return jsonResult(await client.getSimilarGenres(args.slug, { limit: args.limit }));
+    }
     case "log_record_action": {
       if ((args.release_id === undefined) === (args.copy_id === undefined)) {
         throw new Error("Supply exactly one of release_id or copy_id");

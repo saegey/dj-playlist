@@ -429,6 +429,26 @@ export const genreTreeNodeSchema: z.ZodType<GenreTreeNode> = z.lazy(() =>
 
 export const genreTreeResponseSchema = z.object({ genres: z.array(genreTreeNodeSchema) });
 
+export const genrePageRefSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  slug: z.string(),
+  track_count: z.number().int().nonnegative(),
+});
+export const genreSimilaritySignalsSchema = z.object({
+  taxonomy: z.enum(["sibling", "parent", "child"]).optional(),
+  npmi: z.number().min(-1).max(1).optional(),
+  shared_albums: z.number().int().nonnegative().optional(),
+});
+export const genreRelatedRefSchema = genrePageRefSchema.extend({
+  score: z.number().optional(),
+  signals: genreSimilaritySignalsSchema.optional(),
+});
+export const genreSimilarResponseSchema = z.object({
+  genre: genrePageRefSchema,
+  related: z.array(genreRelatedRefSchema),
+});
+
 export const genreSchema = z.object({ id: z.string().uuid(), name: z.string(), slug: z.string(), parent_id: z.string().uuid().nullable(), source: genreSourceSchema });
 export const genreCreateInputSchema = z.object({ name: z.string().trim().min(1), parent_id: z.string().uuid() });
 export const genreUpdateInputSchema = z.object({ name: z.string().trim().min(1).optional(), parent_id: z.string().uuid().nullable().optional() }).refine((value) => value.name !== undefined || value.parent_id !== undefined, { message: "name or parent_id is required" });
