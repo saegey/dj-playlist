@@ -13,6 +13,7 @@ dependencies = [
     # The reference index is held as packed arrays (#315): ~165 MiB for the
     # library instead of 1.8 GiB of tuples, and vectorised stage-1 voting.
     "numpy==2.5.3",
+    "sentry-sdk>=2.0,<3",
 ]
 
 [dependency-groups]

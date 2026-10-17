@@ -10,6 +10,7 @@ from .jobs.analyze import analyze_local_audio
 from .jobs.cover_art import extract_embedded_cover_art, extract_embedded_cover_art_album
 from .jobs.download import download_audio, has_download_urls
 from .jobs.duration import fix_duration
+from .observability import capture_exception, init_sentry
 from .types import JobData, JobResult
 
 QUEUE_KEY = "download_queue"
@@ -97,6 +98,7 @@ def process_job(job_json: str) -> JobResult | None:
     except Exception as e:
         logger.error(f"Job processing failed: {e}")
         logger.error(traceback.format_exc())
+        capture_exception(e)
         return None
 
 
@@ -114,6 +116,7 @@ def run_once() -> None:
 
 
 def main() -> None:
+    init_sentry()
     logger.info("Starting download worker...")
     logger.info(f"Connecting to Redis: {redis_conn.connection_pool.connection_kwargs}")
 
@@ -132,6 +135,7 @@ def main() -> None:
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
             logger.error(traceback.format_exc())
+            capture_exception(e)
             time.sleep(1)
 
 

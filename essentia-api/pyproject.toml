@@ -6,4 +6,8 @@ dependencies = [
     "fastapi>=0.141.1",
     "uvicorn>=0.54.0",
     "requests>=2.31.0",
+    "sentry-sdk>=2.0,<3",
 ]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "pytest-cov>=6.0"]

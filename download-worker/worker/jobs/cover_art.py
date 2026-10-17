@@ -6,6 +6,7 @@ from urllib.parse import quote
 from ..app_api import get_groovenet_client
 from ..audio_utils import ensure_local_audio_file, get_embedded_art_stream_index
 from ..config import logger
+from ..observability import capture_exception
 from ..redis_utils import append_job_logs, update_job_status
 from ..subprocess_utils import run_subprocess
 from ..track_api import update_track_album_art_url
@@ -74,6 +75,7 @@ def extract_embedded_cover_art(job_data: JobData) -> JobResult:
         return result_payload
 
     except Exception as e:
+        capture_exception(e)
         error_msg = f"Cover art extraction failed: {str(e)}"
         logger.error(f"Job {job_id} failed: {error_msg}")
         logger.error(traceback.format_exc())
@@ -120,6 +122,7 @@ def extract_embedded_cover_art_album(job_data: JobData) -> JobResult:
         return result_payload
 
     except Exception as e:
+        capture_exception(e)
         error_msg = f"Album cover extraction failed: {str(e)}"
         logger.error(f"Job {job_id} failed: {error_msg}")
         logger.error(traceback.format_exc())

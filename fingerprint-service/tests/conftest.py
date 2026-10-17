@@ -15,8 +15,10 @@ def fake_redis():
 
 
 @pytest.fixture(autouse=True)
-def patch_redis(fake_redis, monkeypatch):
+def patch_redis(fake_redis, monkeypatch, request):
     """Replace the module-level redis_conn in every module that holds a reference."""
+    if request.node.path.name == "test_observability_sentry.py":
+        return
     monkeypatch.setattr("fingerprint_service.main.redis_conn", fake_redis)
 
 

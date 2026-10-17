@@ -13,6 +13,8 @@ Environment only; it runs as a daemon and does **not** read
 | `API_BASE` | required |
 | `API_KEY` | optional |
 | `DEFAULT_FRIEND_ID` | optional |
+| `SENTRY_DSN` | optional; enables exception reporting |
+| `SENTRY_RELEASE` | optional; release label (defaults to the root package version) |
 
 Register it:
 

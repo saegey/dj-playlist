@@ -3,6 +3,7 @@ import traceback
 
 from ..audio_utils import ensure_local_audio_file
 from ..config import logger
+from ..observability import capture_exception
 from ..redis_utils import append_job_logs, update_job_status
 from ..track_api import analyze_audio_file
 from ..types import JobData, JobResult
@@ -39,6 +40,7 @@ def analyze_local_audio(job_data: JobData) -> JobResult:
         return result
 
     except Exception as e:
+        capture_exception(e)
         error_msg = f"Local analysis failed: {str(e)}"
         logger.error(f"Job {job_id} failed: {error_msg}")
         logger.error(traceback.format_exc())

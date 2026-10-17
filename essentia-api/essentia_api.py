@@ -10,8 +10,19 @@ from urllib.parse import urlparse
 import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from observability import capture_exception, init_sentry
 
+init_sentry()
 app = FastAPI()
+
+
+@app.middleware("http")
+async def capture_unhandled_exceptions(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as error:
+        capture_exception(error)
+        raise
 
 
 @app.get("/health")
