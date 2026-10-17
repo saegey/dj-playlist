@@ -1,5 +1,12 @@
 import { z } from "zod";
 import {
+  liveSetDeleteResponseSchema,
+  liveSetMutationResponseSchema,
+  liveSetSchema,
+  liveSetSummarySchema,
+  liveSetUpdateSchema,
+} from "@groovenet/contracts";
+import {
   CLEANING_METHODS,
   RECORD_ACTION_TYPES,
   RECORD_CARE_STATUSES,
@@ -537,24 +544,7 @@ export const playlistSchema = z
     created_at: z.string(),
     total_duration_seconds: z.number().optional(),
     tracks: z.array(playlistTrackRefSchema),
-    set: z
-      .object({
-        id: z.number().int(),
-        title: z.string().nullable(),
-        status: z.enum(["draft", "performed", "archived"]),
-        cover_image_url: z.string().nullable(),
-        last_performed_at: z.string().nullable(),
-        venue_name: z.string().nullable(),
-        location_city: z.string().nullable(),
-        collaborators: z.array(
-          z.object({
-            friend_id: z.number().int(),
-            username: z.string(),
-            role: z.string(),
-          })
-        ),
-      })
-      .optional(),
+    set: liveSetSummarySchema.optional(),
   })
   .passthrough();
 
@@ -584,6 +574,11 @@ export const playlistDeleteQuerySchema = z.object({
 export const playlistDetailParamsSchema = z.object({
   id: intFromInputSchema,
 });
+
+export const liveSetResponseSchema = liveSetSchema;
+export const liveSetUpdateBodySchema = liveSetUpdateSchema;
+export const liveSetMutationSchema = liveSetMutationResponseSchema;
+export const liveSetDeleteSchema = liveSetDeleteResponseSchema;
 
 export const playlistDetailResponseSchema = z.object({
   playlist_id: z.number().int(),

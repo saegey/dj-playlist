@@ -1,19 +1,9 @@
 import type { PoolClient } from "pg";
+import type { LiveSetStatus, LiveSetUpdate } from "@groovenet/contracts";
 import { dbQuery } from "@/lib/serverDb";
 
-export type LiveSetStatus = "draft" | "performed" | "archived";
-export type LiveSetMediaType = "image" | "flyer" | "audio" | "youtube" | "link";
-export type LiveSetUpdate = {
-  title?: string | null;
-  status?: LiveSetStatus;
-  notes?: string | null;
-  location_name?: string | null;
-  location_city?: string | null;
-  cover_image_url?: string | null;
-  collaborators?: Array<{ friend_id: number; role?: string }>;
-  performances?: Array<{ performed_at: string; venue_name?: string | null; location_city?: string | null; notes?: string | null }>;
-  media?: Array<{ media_type: LiveSetMediaType; url: string; filename?: string | null; caption?: string | null }>;
-};
+export type { LiveSetStatus, LiveSetMediaType, LiveSetUpdate } from "@groovenet/contracts";
+
 
 export type LiveSetRecord = {
   id: number;

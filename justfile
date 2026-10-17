@@ -39,6 +39,7 @@ bootstrap-tools:
 bootstrap-node:
   {{mise_exec}} node scripts/check-npm-toolchain.mjs
   {{mise_exec}} npm ci --no-fund --no-audit --loglevel=error
+  {{mise_exec}} npm run build --workspace=@groovenet/contracts
   {{mise_exec}} npm ci --prefix my-collection-search --no-fund --no-audit --loglevel=error
 
 bootstrap-python:
@@ -70,6 +71,8 @@ test-packages:
   {{mise_exec}} node scripts/check-npm-toolchain.mjs
   {{mise_exec}} npm ci --no-fund --no-audit
   {{mise_exec}} node --test scripts/npm-toolchain.test.mjs
+  {{mise_exec}} npm run build --workspace=@groovenet/contracts
+  {{mise_exec}} npm run test:coverage --workspace=@groovenet/contracts
   {{mise_exec}} npm run test --workspace=packages/groovenet-client
   # The CLI imports @groovenet/client by its build output, so build it first.
   {{mise_exec}} npm run build --workspace=packages/groovenet-client
@@ -77,11 +80,13 @@ test-packages:
 
 lint:
   {{mise_exec}} npm run lint --prefix my-collection-search
+  {{mise_exec}} npm run lint --workspace=@groovenet/contracts
   {{mise_exec}} npm run lint --workspace=@groovenet/client
   {{mise_exec}} npm run lint --workspace=@groovenet/cli
   {{mise_exec}} npm run lint --workspace=mcp-server
 
 typecheck:
+  {{mise_exec}} npm run build --workspace=@groovenet/contracts
   {{mise_exec}} npm run typecheck --prefix my-collection-search
   {{mise_exec}} npm run build --workspace=packages/groovenet-client
   {{mise_exec}} npm run build --workspace=packages/groovenet-cli
@@ -187,7 +192,7 @@ compose-logs: check-compose
   {{op_env}} {{compose_cmd}} -f docker-compose.yml -f docker-compose.prod.yml logs -f
 
 build-app:
-  {{buildkit_env}} docker buildx build --target runner -t {{registry}}/webapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
+  {{buildkit_env}} docker buildx build --target runner -t {{registry}}/webapp:{{tag}} -f {{app_dir}}/Dockerfile .
 
 build-essentia:
   {{buildkit_env}} docker buildx build -t {{registry}}/essentia-api:{{tag}} -f essentia-api/Dockerfile essentia-api
@@ -222,6 +227,7 @@ rebuild-up-containers services="app essentia ga-service download-worker fingerpr
 build-all: build-app build-essentia build-ga-service build-download-worker build-fingerprint-service
 
 build-packages:
+  {{mise_exec}} npm run build --workspace=packages/groovenet-contracts
   {{mise_exec}} npm run build --workspace=packages/groovenet-client
   {{mise_exec}} npm run build --workspace=packages/groovenet-cli
   {{mise_exec}} npm run build --workspace=mcp-server
@@ -280,7 +286,7 @@ generate-spec:
   {{mise_exec}} npm run openapi:generate-spec --prefix my-collection-search
 
 push-images:
-  {{buildkit_env}} docker buildx build --platform {{platform}} --target runner --push -t {{registry}}/webapp:{{tag}} -f {{app_dir}}/Dockerfile {{app_dir}}
+  {{buildkit_env}} docker buildx build --platform {{platform}} --target runner --push -t {{registry}}/webapp:{{tag}} -f {{app_dir}}/Dockerfile .
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/essentia-api:{{tag}} -f essentia-api/Dockerfile essentia-api
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/ga-service:{{tag}} -f ga-service/Dockerfile ga-service
   {{buildkit_env}} docker buildx build --platform {{platform}} --push -t {{registry}}/download-worker:{{tag}} -f download-worker/Dockerfile .

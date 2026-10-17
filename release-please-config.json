@@ -23,6 +23,12 @@
       "include-component-in-tag": true,
       "changelog-path": "CHANGELOG.md"
     },
+    "packages/groovenet-contracts": {
+      "package-name": "@groovenet/contracts",
+      "component": "groovenet-contracts",
+      "include-component-in-tag": true,
+      "changelog-path": "CHANGELOG.md"
+    },
     "packages/groovenet-cli": {
       "package-name": "@groovenet/cli",
       "component": "groovenet-cli",

@@ -2,27 +2,35 @@
 
 FROM node:26-bookworm-slim AS base
 # All stages inherit the app's exact npm pin, checked against mise in CI.
-COPY package.json /tmp/npm-toolchain.json
+COPY my-collection-search/package.json /tmp/npm-toolchain.json
 RUN npm install -g "npm@$(node -p "require('/tmp/npm-toolchain.json').engines.npm")" && \
     test "$(npm --version)" = "$(node -p "require('/tmp/npm-toolchain.json').engines.npm")"
 
 FROM base AS deps
-WORKDIR /app
-COPY package*.json ./
+WORKDIR /repo
+COPY package.json package-lock.json ./
+COPY packages ./packages
+COPY mcp-server/package.json ./mcp-server/package.json
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --ignore-scripts
+RUN npm run build --workspace=@groovenet/contracts
+COPY my-collection-search/package*.json ./my-collection-search/
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefix my-collection-search --ignore-scripts
 
 FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+WORKDIR /repo
+COPY --from=deps /repo/node_modules ./node_modules
+COPY --from=deps /repo/my-collection-search/node_modules ./my-collection-search/node_modules
 COPY . .
+WORKDIR /repo/my-collection-search
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 # Build from this checkout before Next.js inventories public files. Releases,
 # CI candidates and local image builds all package the same verified bundle.
 ENV STORYBOOK_DISABLE_TELEMETRY=1
 RUN npm run build-storybook
-RUN --mount=type=cache,target=/app/.next/cache \
+RUN --mount=type=cache,target=/repo/my-collection-search/.next/cache \
     npm run build
 
 FROM base AS runner
@@ -49,7 +57,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 --gid nodejs -m nextjs
 
-WORKDIR /app
+WORKDIR /app/my-collection-search
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -59,19 +67,27 @@ ENV HOSTNAME=0.0.0.0
 # Next.js standalone output (next.config.mjs: output: "standalone"): a
 # self-contained server with a traced, minimal node_modules — far smaller than
 # copying the full dependency tree, so much less to build/push per image.
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /repo/my-collection-search/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /repo/my-collection-search/.next/static ./my-collection-search/.next/static
+COPY --from=builder --chown=nextjs:nodejs /repo/my-collection-search/public ./my-collection-search/public
 
 # Every path a named volume mounts over has to exist here first. Docker seeds a
 # new volume's ownership from the image, so a path missing from this list is
 # created root-owned and the app — running as nextjs — cannot write to it.
 # `audio-ingest` was missing, and the ingest route (#275) failed every upload
 # with EACCES while reporting a 500 the listener device politely retried.
-RUN mkdir -p cookies dumps discogs_exports audio audio-ingest essentia-data public/uploads/album-covers && \
+RUN mkdir -p /app/cookies /app/dumps /app/discogs_exports /app/audio /app/audio-ingest /app/essentia-data /app/public/uploads/album-covers /app/my-collection-search/public/uploads && \
+    rm -rf /app/my-collection-search/cookies /app/my-collection-search/dumps /app/my-collection-search/discogs_exports /app/my-collection-search/audio /app/my-collection-search/audio-ingest /app/my-collection-search/essentia-data /app/my-collection-search/public/uploads/album-covers && \
+    ln -s /app/cookies /app/my-collection-search/cookies && \
+    ln -s /app/dumps /app/my-collection-search/dumps && \
+    ln -s /app/discogs_exports /app/my-collection-search/discogs_exports && \
+    ln -s /app/audio /app/my-collection-search/audio && \
+    ln -s /app/audio-ingest /app/my-collection-search/audio-ingest && \
+    ln -s /app/essentia-data /app/my-collection-search/essentia-data && \
+    ln -s /app/public/uploads/album-covers /app/my-collection-search/public/uploads/album-covers && \
     chown -R nextjs:nodejs /app
 
-COPY --chmod=755 entrypoint.sh /entrypoint.sh
+COPY --chmod=755 my-collection-search/entrypoint.sh /entrypoint.sh
 
 # Build metadata surfaced by the About page (/api/version). Kept last so these
 # per-commit values don't invalidate the cache of the COPY/apt layers above.
@@ -90,12 +106,9 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["node", "server.js"]
 
-FROM base AS migrator
-WORKDIR /app
+FROM deps AS migrator
+WORKDIR /repo/my-collection-search
 
-COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --ignore-scripts
 RUN --mount=type=cache,target=/root/.npm \
     npm install -g node-pg-migrate@8.0.4
 
@@ -110,9 +123,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get install -y --no-install-recommends postgresql-client-15
 # Migrations run without the Next.js source tree. Copy their runtime inputs
 # directly so this target does not depend on an application build.
-COPY migrations ./migrations
-COPY scripts ./scripts
-COPY src/server/genres/taxonomySeed.js ./src/server/genres/taxonomySeed.js
+COPY my-collection-search/migrations ./migrations
+COPY my-collection-search/scripts ./scripts
+COPY my-collection-search/src/server/genres/taxonomySeed.js ./src/server/genres/taxonomySeed.js
 
 # Verify every migration can load in the deployed image before publishing it.
 # Database-only tests on the checkout cannot detect missing image dependencies.
@@ -124,7 +137,8 @@ RUN node --input-type=module -e "import { readdir } from 'node:fs/promises'; for
 # `deps`'s node_modules, which still has devDependencies (tsx) at this point
 # in the build, before `builder`/`runner` set NODE_ENV=production.
 FROM base AS scripts
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY package*.json tsconfig.json ./
-COPY src ./src
+WORKDIR /repo/my-collection-search
+COPY --from=deps /repo/node_modules /repo/node_modules
+COPY --from=deps /repo/my-collection-search/node_modules ./node_modules
+COPY my-collection-search/package*.json my-collection-search/tsconfig.json ./
+COPY my-collection-search/src ./src

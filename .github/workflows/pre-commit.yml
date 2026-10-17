@@ -31,6 +31,9 @@ jobs:
       - name: Install workspace dependencies
         run: npm ci
 
+      - name: Build shared contracts
+        run: npm run build --workspace=@groovenet/contracts
+
       - name: Install web dependencies
         run: npm ci --prefix my-collection-search
 

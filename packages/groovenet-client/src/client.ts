@@ -6,6 +6,9 @@ import type {
   PlaylistSpinsInput,
   PlaylistSpinsResult,
   LiveSet,
+  LiveSetDeleteResponse,
+  LiveSetMutationResponse,
+  LiveSetUpdate,
   Friend,
   GenreTreeResponse,
   Genre, GenreCreateInput, GenreUpdateInput, GenreAliasResponse, GenreMergeResponse,
@@ -403,16 +406,16 @@ export class GroovenetClient {
     return this.request<LiveSet>("GET", `/playlists/${playlistId}/set`);
   }
 
-  async createLiveSet(playlistId: number | string): Promise<{ id: number; playlist_id: number }> {
-    return this.request("POST", `/playlists/${playlistId}/set`);
+  async createLiveSet(playlistId: number | string): Promise<LiveSetMutationResponse> {
+    return this.request<LiveSetMutationResponse>("POST", `/playlists/${playlistId}/set`);
   }
 
-  async updateLiveSet(playlistId: number | string, set: Partial<LiveSet>): Promise<void> {
-    await this.request("PUT", `/playlists/${playlistId}/set`, set);
+  async updateLiveSet(playlistId: number | string, set: LiveSetUpdate): Promise<void> {
+    await this.request<LiveSetMutationResponse>("PUT", `/playlists/${playlistId}/set`, set);
   }
 
   async deleteLiveSet(playlistId: number | string): Promise<void> {
-    await this.request("DELETE", `/playlists/${playlistId}/set`);
+    await this.request<LiveSetDeleteResponse>("DELETE", `/playlists/${playlistId}/set`);
   }
 
   async generatePlaylist(tracks: Track[]): Promise<Track[]> {
