@@ -20,6 +20,7 @@ import type { DiscogsLookupVideo } from "@/types/discogs";
 import type { EnrichmentTypes } from "@/stores/enrichmentStore";
 import { genreChanges, type TrackEditFormProps } from "@/components/track-edit/types";
 import GenrePicker from "@/components/GenrePicker";
+import { toaster } from "@/components/ui/toaster";
 import { buildTrackMetadataPrompt } from "@/lib/prompts";
 import { useTrackMetadataMutation } from "@/hooks/useTrackMetadataMutation";
 import { useYouTubeMusicSearchMutation } from "@/hooks/useYouTubeMusicSearchMutation";
@@ -205,6 +206,14 @@ export default function EnrichmentTrackStep({
         changes.youtube_url = selectedYoutubeUrl;
       }
       await onSave(changes);
+    } catch (err) {
+      // The wizard only advances after a successful save, so staying on this
+      // track lets the user retry or skip.
+      toaster.create({
+        title: "Failed to save track",
+        description: err instanceof Error ? err.message : String(err),
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }
