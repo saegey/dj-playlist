@@ -6,7 +6,8 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import type { Track, TrackGenre } from "@/types/track";
 
-const { fetchMetadata, fetchGenreTree } = vi.hoisted(() => ({
+const { fetchMetadata, fetchGenreTree, toasterCreate } = vi.hoisted(() => ({
+  toasterCreate: vi.fn(),
   fetchMetadata: vi.fn(),
   fetchGenreTree: vi.fn(),
 }));
@@ -21,6 +22,7 @@ vi.mock("@/services/internalApi/discogs", () => ({
   lookupDiscogsVideos: vi.fn(),
   extractDiscogsVideos: vi.fn(),
 }));
+vi.mock("@/components/ui/toaster", () => ({ toaster: { create: toasterCreate } }));
 vi.mock("@/services/internalApi/genres", () => ({ fetchGenreTree }));
 
 import EnrichmentTrackStep from "../EnrichmentTrackStep";
@@ -43,8 +45,7 @@ const TRACK: Track = {
 
 const LLM_ONLY = { llm: true, appleMusic: false, youtube: false, fetchAudio: false };
 
-function renderStep(track: Track = TRACK) {
-  const onSave = vi.fn().mockResolvedValue(undefined);
+function renderStep(track: Track = TRACK, onSave = vi.fn().mockResolvedValue(undefined)) {
   renderWithProviders(
     <EnrichmentTrackStep
       track={track}
@@ -145,5 +146,28 @@ describe("EnrichmentTrackStep — AI genres (#374)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save & Next" }));
 
     await waitFor(() => expect(onSave).toHaveBeenCalledWith({}));
+  });
+
+  it.each([
+    [new Error("Failed to update track"), "Failed to update track"],
+    ["boom", "boom"],
+  ])("shows a toast and re-enables Save when onSave rejects (%s)", async (rejection, message) => {
+    const onSave = vi.fn().mockRejectedValue(rejection);
+    renderStep(TRACK, onSave);
+
+    await userEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+
+    await waitFor(() =>
+      expect(toasterCreate).toHaveBeenCalledWith({
+        title: "Failed to save track",
+        description: message,
+        type: "error",
+      })
+    );
+    await waitFor(() =>
+      expect(
+        (screen.getByRole("button", { name: "Save & Next" }) as HTMLButtonElement).disabled
+      ).toBe(false)
+    );
   });
 });
