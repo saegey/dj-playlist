@@ -25,7 +25,16 @@ services:
       - essentia_data:/app/essentia-data
       - db_dumps:/app/dumps
       - discogs_exports:/app/discogs_exports
-    command: sh -c "npm ci && ln -sfn /app/node_modules /packages/groovenet-contracts/node_modules && npm --prefix /packages/groovenet-contracts run build && npm run dev -- -H 0.0.0.0 -p 3000"
+    # `just bootstrap`'s root npm ci can leave packages/groovenet-contracts with
+    # its own real node_modules (hoisting conflicts with the root's typescript
+    # alias force a nested install there), built for the host's platform. On
+    # Apple Silicon that's darwin-arm64, not this Linux container's arm64, so
+    # ln -sfn on its own is a no-op: linking onto an existing real directory
+    # places the link inside it instead of replacing it, leaving contracts'
+    # own (wrong-platform) typescript in charge. rm -rf first so the symlink
+    # actually takes over and contracts builds against this container's
+    # freshly-installed, correct-platform node_modules.
+    command: sh -c "npm ci && rm -rf /packages/groovenet-contracts/node_modules && ln -sfn /app/node_modules /packages/groovenet-contracts/node_modules && npm --prefix /packages/groovenet-contracts run build && npm run dev -- -H 0.0.0.0 -p 3000"
 
   essentia:
 

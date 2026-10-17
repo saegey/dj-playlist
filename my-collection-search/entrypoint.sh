@@ -46,9 +46,13 @@ done
 # (anything in its node_modules — which contains its own server.js files —
 # sits much deeper), so this only ever matches the real one; a dev container
 # with no standalone build just skips this, process.cwd() there is already
-# the bind-mounted checkout.
-app_dir="$(dirname "$(find /app/my-collection-search -maxdepth 2 -name server.js 2>/dev/null | head -n1)")"
-if [ -n "$app_dir" ] && [ -d "$app_dir" ]; then
+# the bind-mounted checkout. Guard on the find result itself, not dirname's
+# output: dirname of an empty string is ".", so checking app_dir here would
+# treat a dev container's missing server.js as a match on WORKDIR and rm -rf
+# a live mounted volume (cookie_data) out from under it.
+server_js="$(find /app/my-collection-search -maxdepth 2 -name server.js 2>/dev/null | head -n1)"
+if [ -n "$server_js" ]; then
+  app_dir="$(dirname "$server_js")"
   mkdir -p "$app_dir/public/uploads"
   for name in cookies dumps discogs_exports audio audio-ingest essentia-data; do
     rm -rf "${app_dir:?}/$name"
