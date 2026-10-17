@@ -37,7 +37,7 @@ else
   COMPOSE_CMD=(docker compose)
 fi
 BUILD_SERVICES=(app essentia ga-service download-worker)
-NAMED_CONTAINERS=(webapp essentia-api ga-service download-worker)
+NAMED_CONTAINERS=(groovenet_webapp groovenet_essentia_api groovenet_ga_service groovenet_download_worker)
 MIN_FREE_GB="${MIN_FREE_GB:-5}"
 PGUSER="${POSTGRES_USER:-djplaylist}"
 PGDB="${POSTGRES_DB:-djplaylist}"
@@ -82,8 +82,8 @@ remove_stale_app_image_if_needed() {
 verify_running_app_container() {
   local expected_image_id actual_image_id actual_cmd
   expected_image_id="$(app_image_id)"
-  actual_image_id="$(docker inspect webapp --format '{{.Image}}' 2>/dev/null || true)"
-  actual_cmd="$(docker inspect webapp --format '{{json .Config.Cmd}}' 2>/dev/null || true)"
+  actual_image_id="$(docker inspect groovenet_webapp --format '{{.Image}}' 2>/dev/null || true)"
+  actual_cmd="$(docker inspect groovenet_webapp --format '{{json .Config.Cmd}}' 2>/dev/null || true)"
 
   if [[ -z "${expected_image_id}" ]]; then
     echo "ERROR: unable to resolve built app image id for ${APP_IMAGE}"
@@ -91,14 +91,14 @@ verify_running_app_container() {
   fi
 
   if [[ "${actual_image_id}" != "${expected_image_id}" ]]; then
-    echo "ERROR: running webapp container does not use the freshly built image"
+    echo "ERROR: running groovenet_webapp container does not use the freshly built image"
     echo "Expected image id: ${expected_image_id}"
     echo "Actual image id:   ${actual_image_id}"
     exit 1
   fi
 
   if [[ "${actual_cmd}" != "${EXPECTED_APP_CMD}" ]]; then
-    echo "ERROR: running webapp container has unexpected Cmd: ${actual_cmd}"
+    echo "ERROR: running groovenet_webapp container has unexpected Cmd: ${actual_cmd}"
     exit 1
   fi
 }
