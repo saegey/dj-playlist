@@ -23,6 +23,9 @@ WORKDIR /repo
 COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/my-collection-search/node_modules ./my-collection-search/node_modules
 COPY . .
+# The Docker context excludes generated build directories. Restore the contracts
+# output produced in `deps` so local package exports resolve in Storybook/Vite.
+COPY --from=deps /repo/packages/groovenet-contracts/build ./packages/groovenet-contracts/build
 WORKDIR /repo/my-collection-search
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
