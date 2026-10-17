@@ -186,7 +186,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build and push webapp
+      - name: Build webapp
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -196,7 +196,13 @@ jobs:
           target: runner
           # runner builds and verifies Storybook before packaging public assets;
           # release tags promote this same candidate bundle without a host build.
-          push: ${{ env.SHOULD_PUSH == 'true' }}
+          # Loaded locally (not pushed yet) so the smoke test below can run it
+          # before anything reaches the registry; push is a separate step,
+          # gated on that smoke test passing. buildx can't push and load in
+          # the same invocation, and amd64-only (this repo's only platform)
+          # is what load requires anyway.
+          push: false
+          load: true
           platforms: ${{ env.PLATFORMS }}
           tags: ${{ steps.tags.outputs.tags }}
           provenance: false
@@ -216,6 +222,52 @@ jobs:
             APP_VERSION=${{ env.IMAGE_TAG }}
             GIT_SHA=${{ github.sha }}
             BUILD_TIME=${{ steps.tags.outputs.build_time }}
+
+      # Catches a built-but-unbootable image (e.g. a Dockerfile CMD/WORKDIR
+      # mismatch) before it reaches the registry or a deploy. No real
+      # Postgres/Redis needed: the app's DB pool is lazy and every background
+      # scheduler tick catches its own connection errors, so a crash here
+      # means the process itself failed to start, not that a dependency was
+      # unreachable. Runs on every build, PR previews included.
+      - name: Smoke test webapp image boots
+        shell: bash
+        run: |
+          set -euo pipefail
+          img="$(head -n1 <<< "${{ steps.tags.outputs.tags }}")"
+          echo "Booting $img ..."
+          docker run -d --name smoke-webapp \
+            -e DATABASE_URL="postgres://smoke:smoke@127.0.0.1:5432/smoke" \
+            "$img"
+
+          healthy=false
+          for attempt in $(seq 1 30); do
+            if docker exec smoke-webapp node -e \
+              "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+            then
+              healthy=true
+              break
+            fi
+            sleep 2
+          done
+
+          docker logs smoke-webapp
+          docker rm -f smoke-webapp >/dev/null 2>&1 || true
+
+          if [[ "$healthy" != "true" ]]; then
+            echo "::error::webapp image never became healthy"
+            exit 1
+          fi
+          echo "webapp image is healthy"
+
+      - name: Push webapp
+        if: env.SHOULD_PUSH == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            [[ -n "$tag" ]] || continue
+            docker push "$tag"
+          done <<< "${{ steps.tags.outputs.tags }}"
 
   build-essentia:
     needs: [changes, test]
