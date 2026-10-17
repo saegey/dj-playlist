@@ -155,7 +155,8 @@ is failing.
 - **Postgres is the source of truth.** Schema changes need a migration in
   `my-collection-search/migrations/`; verify with `just migrate-test`.
 - **Track types live in `my-collection-search/src/types/track.ts`.** Other
-  packages copy from there; keep them in step.
+  packages still copy those types; migrated API contracts such as live sets
+  live in `packages/groovenet-contracts/` and are imported by each consumer.
 - **Build order for the packages:** client → cli → mcp-server
   (`just build-packages`).
 - **Integration tests are gated** behind `RUN_*_TESTS` env vars and run against

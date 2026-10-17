@@ -8,6 +8,7 @@ import {
 } from "@/api-contract/schemas";
 import { http } from "@/services/http";
 import type { Playlist, Track } from "@/types/track";
+import type { LiveSet, LiveSetUpdate } from "@groovenet/contracts";
 
 export type PlaylistTrackPayload = z.infer<typeof playlistTrackInputSchema>;
 export type PlaylistTrackIdsResponse = z.infer<typeof playlistDetailResponseSchema>;
@@ -15,15 +16,8 @@ export type CreatePlaylistTracks = string[] | PlaylistTrackPayload[];
 
 type PlaylistGeneticResponse = z.infer<typeof playlistGeneticResponseSchema>;
 export type PlaylistOptimizerMode = "genetic" | "greedy" | "cohesive_blocks";
-export type LiveSetMediaType = "image" | "flyer" | "audio" | "youtube" | "link";
-export type LiveSetDetail = {
-  id: number; playlist_id: number; title: string | null;
-  status: "draft" | "performed" | "archived"; notes: string | null;
-  location_name: string | null; location_city: string | null; cover_image_url: string | null;
-  collaborators: Array<{ friend_id: number; username: string; role: string }>;
-  performances: Array<{ id?: number; performed_at: string; venue_name: string | null; location_city: string | null; notes: string | null }>;
-  media: Array<{ id?: number; media_type: LiveSetMediaType; url: string; filename: string | null; caption: string | null }>;
-};
+export type { LiveSetMediaType } from "@groovenet/contracts";
+export type LiveSetDetail = LiveSet;
 
 export async function importPlaylist(
   name: string,
@@ -76,7 +70,7 @@ export async function fetchLiveSet(playlistId: number): Promise<LiveSetDetail> {
   return http<LiveSetDetail>(`/api/playlists/${encodeURIComponent(String(playlistId))}/set`, { method: "GET", cache: "no-store" });
 }
 
-export async function updateLiveSet(playlistId: number, body: Partial<LiveSetDetail>): Promise<void> {
+export async function updateLiveSet(playlistId: number, body: LiveSetUpdate): Promise<void> {
   await http(`/api/playlists/${encodeURIComponent(String(playlistId))}/set`, {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });

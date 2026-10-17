@@ -1,5 +1,12 @@
 import { z } from "zod";
 import {
+  liveSetDeleteResponseSchema,
+  liveSetMutationResponseSchema,
+  liveSetSchema,
+  liveSetSummarySchema,
+  liveSetUpdateSchema,
+} from "@groovenet/contracts";
+import {
   CLEANING_METHODS,
   RECORD_ACTION_TYPES,
   RECORD_CARE_STATUSES,
@@ -458,7 +465,7 @@ export const jobsEventsSseResponseSchema = z.object({
 export const jobDetailsResponseSchema = jobInfoSchema.extend({
   delay: z.number().optional(),
   timestamp: z.number().optional(),
-  opts: z.record(z.unknown()).optional(),
+  opts: z.record(z.string(), z.unknown()).optional(),
   logs: z.array(z.unknown()).optional(),
 });
 
@@ -537,24 +544,7 @@ export const playlistSchema = z
     created_at: z.string(),
     total_duration_seconds: z.number().optional(),
     tracks: z.array(playlistTrackRefSchema),
-    set: z
-      .object({
-        id: z.number().int(),
-        title: z.string().nullable(),
-        status: z.enum(["draft", "performed", "archived"]),
-        cover_image_url: z.string().nullable(),
-        last_performed_at: z.string().nullable(),
-        venue_name: z.string().nullable(),
-        location_city: z.string().nullable(),
-        collaborators: z.array(
-          z.object({
-            friend_id: z.number().int(),
-            username: z.string(),
-            role: z.string(),
-          })
-        ),
-      })
-      .optional(),
+    set: liveSetSummarySchema.optional(),
   })
   .passthrough();
 
@@ -584,6 +574,11 @@ export const playlistDeleteQuerySchema = z.object({
 export const playlistDetailParamsSchema = z.object({
   id: intFromInputSchema,
 });
+
+export const liveSetResponseSchema = liveSetSchema;
+export const liveSetUpdateBodySchema = liveSetUpdateSchema;
+export const liveSetMutationSchema = liveSetMutationResponseSchema;
+export const liveSetDeleteSchema = liveSetDeleteResponseSchema;
 
 export const playlistDetailResponseSchema = z.object({
   playlist_id: z.number().int(),
@@ -638,7 +633,7 @@ export const playlistGeneticResponseSchema = z
     mode: z.enum(["genetic", "greedy", "cohesive_blocks"]).optional(),
     result: z.union([
       z.array(playlistGeneticResultTrackSchema),
-      z.record(playlistGeneticResultTrackSchema),
+      z.record(z.string(), playlistGeneticResultTrackSchema),
     ]),
   })
   .passthrough();
@@ -728,7 +723,7 @@ export const trackPlaylistCountsBodySchema = z.object({
   track_refs: z.array(trackPlaylistCountRefSchema),
 });
 
-export const trackPlaylistCountsResponseSchema = z.record(z.number().int());
+export const trackPlaylistCountsResponseSchema = z.record(z.string(), z.number().int());
 
 export const trackPlaylistMembershipSchema = z.object({
   id: z.number().int(),
@@ -2680,7 +2675,7 @@ export const genreProposalApplyResponseSchema = z.object({
   skipped: z.array(z.object({ id: z.string().uuid(), value: z.string(), reason: z.string() })),
 });
 
-const countsOf = <T extends string>(keys: readonly [T, ...T[]]) =>
+const countsOf = <T extends string>(keys: readonly T[]) =>
   z.object(Object.fromEntries(keys.map((key) => [key, z.number().int()])) as Record<T, z.ZodNumber>);
 
 export const genreReconciliationCoverageSchema = z.object({

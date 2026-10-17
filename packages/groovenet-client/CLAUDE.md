@@ -25,11 +25,11 @@ Every method funnels through one private `request()`, which unwraps axios errors
 into `Error("API Error: …")`, preferring the response body's `error` field, then
 `message`, then the axios message.
 
-## Types are copied, not shared
+## Types
 
-`my-collection-search/src/types/track.ts` is the source of truth. `types.ts`
-here is a **copy** — when the app's types change, update this file too. There is
-no build-time link that will catch the drift.
+Most domain types are still copied from `my-collection-search/src/types/track.ts`.
+Migrated API contracts live in `@groovenet/contracts`; re-export those inferred
+types here so client and CLI consumers share the declaration.
 
 ## Adding an endpoint
 

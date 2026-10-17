@@ -113,6 +113,10 @@ import {
   playlistCreateBodySchema,
   playlistDeleteQuerySchema,
   playlistDetailParamsSchema,
+  liveSetResponseSchema,
+  liveSetUpdateBodySchema,
+  liveSetMutationSchema,
+  liveSetDeleteSchema,
   playlistDetailResponseSchema,
   playlistGeneticBodySchema,
   playlistGeneticResponseSchema,
@@ -5927,14 +5931,29 @@ export const apiContractRoutes: ApiContractRoute[] = [
     summary: `${method === "get" ? "Get" : method === "post" ? "Create" : method === "put" ? "Update" : "Remove"} a playlist set`,
     tags: ["Playlists", "Sets"],
     paramsSchema: playlistDetailParamsSchema,
-    bodySchema: method === "put" ? z.object({}).passthrough() : undefined,
-    successSchema: z.object({}).passthrough(),
+    bodySchema: method === "put" ? liveSetUpdateBodySchema : undefined,
+    successSchema: method === "get"
+      ? liveSetResponseSchema
+      : method === "delete"
+        ? liveSetDeleteSchema
+        : liveSetMutationSchema,
     errorSchema: apiErrorSchema,
     openapi: {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
-      ...(method === "put" ? { requestBody: { required: true, content: { "application/json": { schema: { type: "object", additionalProperties: true } } } } } : {}),
+      ...(method === "put" ? { requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/LiveSetUpdate" } } } } } : {}),
       responses: {
-        "200": { description: "Set operation completed", content: { "application/json": { schema: { type: "object", additionalProperties: true } } } },
+        [method === "post" ? "201" : "200"]: {
+          description: "Set operation completed",
+          content: {
+            "application/json": {
+              schema: method === "get"
+                ? { $ref: "#/components/schemas/LiveSet" }
+                : method === "delete"
+                  ? { $ref: "#/components/schemas/LiveSetDeleteResponse" }
+                  : { $ref: "#/components/schemas/LiveSetMutationResponse" },
+            },
+          },
+        },
         "404": { description: "Playlist or set not found", content: { "application/json": { schema: errorResponseSchemaObject } } },
       },
     },

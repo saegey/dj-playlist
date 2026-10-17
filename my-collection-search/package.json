@@ -49,11 +49,12 @@
     "test:storybook": "mkdir -p coverage && node --test --experimental-test-coverage --test-coverage-include=scripts/check-storybook.mjs --test-reporter=spec --test-reporter=lcov --test-reporter-destination=stdout --test-reporter-destination=coverage/storybook.lcov scripts/check-storybook.test.mjs scripts/storybook-deployment.test.mjs"
   },
   "dependencies": {
+    "@groovenet/contracts": "file:../packages/groovenet-contracts",
     "@chakra-ui/react": "^3.37.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@hello-pangea/dnd": "^18.0.1",
-    "@sentry/nextjs": "^10.75.0",
+    "@sentry/nextjs": "^11.0.0",
     "@tanstack/react-query": "^5.104.0",
     "@tanstack/react-query-devtools": "^5.104.0",
     "@tanstack/react-virtual": "3.14.15",
@@ -75,6 +76,7 @@
     "react-markdown": "^10.1.0",
     "sharp": "^0.35.5",
     "uuid": "^14.0.2",
+    "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
