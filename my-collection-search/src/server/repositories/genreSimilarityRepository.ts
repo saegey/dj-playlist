@@ -41,26 +41,24 @@ const ALBUM_GENRE_CTE = `
 export class GenreSimilarityRepository {
   /** Distinct-album co-occurrence counts, per-genre album counts, and the collection's total album count. */
   async loadCoOccurrence(): Promise<GenreCoOccurrenceData> {
-    return withDbTransaction(async (client) => {
-      const [pairs, albumCounts, total] = await Promise.all([
-        client.query<GenreCoOccurrenceRow>(`
-          ${ALBUM_GENRE_CTE}
-          SELECT g1.genre_id::text AS genre_id_a, g2.genre_id::text AS genre_id_b, COUNT(*)::integer AS shared_albums
-          FROM album_genre g1
-          JOIN album_genre g2
-            ON g1.release_id = g2.release_id AND g1.friend_id = g2.friend_id AND g1.genre_id < g2.genre_id
-          GROUP BY g1.genre_id, g2.genre_id
-        `),
-        client.query<GenreAlbumCountRow>(`
-          ${ALBUM_GENRE_CTE}
-          SELECT genre_id::text AS genre_id, COUNT(*)::integer AS album_count
-          FROM album_genre
-          GROUP BY genre_id
-        `),
-        client.query<{ total: number }>(`SELECT COUNT(*)::integer AS total FROM albums`),
-      ]);
-      return { pairs: pairs.rows, albumCounts: albumCounts.rows, totalAlbums: total.rows[0]?.total ?? 0 };
-    });
+    const [pairs, albumCounts, total] = await Promise.all([
+      dbQuery<GenreCoOccurrenceRow>(`
+        ${ALBUM_GENRE_CTE}
+        SELECT g1.genre_id::text AS genre_id_a, g2.genre_id::text AS genre_id_b, COUNT(*)::integer AS shared_albums
+        FROM album_genre g1
+        JOIN album_genre g2
+          ON g1.release_id = g2.release_id AND g1.friend_id = g2.friend_id AND g1.genre_id < g2.genre_id
+        GROUP BY g1.genre_id, g2.genre_id
+      `),
+      dbQuery<GenreAlbumCountRow>(`
+        ${ALBUM_GENRE_CTE}
+        SELECT genre_id::text AS genre_id, COUNT(*)::integer AS album_count
+        FROM album_genre
+        GROUP BY genre_id
+      `),
+      dbQuery<{ total: number }>(`SELECT COUNT(*)::integer AS total FROM albums`),
+    ]);
+    return { pairs: pairs.rows, albumCounts: albumCounts.rows, totalAlbums: total.rows[0]?.total ?? 0 };
   }
 
   /** Recomputes the whole table in one transaction (#377): idempotent, a second run with the same inputs writes the same rows. */

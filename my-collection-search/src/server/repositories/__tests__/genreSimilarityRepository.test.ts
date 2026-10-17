@@ -13,8 +13,8 @@ describe("GenreSimilarityRepository", () => {
   beforeEach(() => vi.resetAllMocks());
 
   describe("loadCoOccurrence", () => {
-    it("loads pairs, per-genre album counts and the collection total in one transaction", async () => {
-      clientQuery
+    it("loads pairs, per-genre album counts and the collection total with separate pooled queries", async () => {
+      dbQuery
         .mockResolvedValueOnce({ rows: [{ genre_id_a: "a", genre_id_b: "b", shared_albums: 4 }] })
         .mockResolvedValueOnce({ rows: [{ genre_id: "a", album_count: 10 }, { genre_id: "b", album_count: 6 }] })
         .mockResolvedValueOnce({ rows: [{ total: 50 }] });
@@ -26,14 +26,15 @@ describe("GenreSimilarityRepository", () => {
         albumCounts: [{ genre_id: "a", album_count: 10 }, { genre_id: "b", album_count: 6 }],
         totalAlbums: 50,
       });
-      expect(clientQuery).toHaveBeenCalledTimes(3);
-      expect(clientQuery.mock.calls[0][0]).toContain("album_genre g1");
-      expect(clientQuery.mock.calls[1][0]).toContain("GROUP BY genre_id");
-      expect(clientQuery.mock.calls[2][0]).toContain("FROM albums");
+      expect(dbQuery).toHaveBeenCalledTimes(3);
+      expect(dbQuery.mock.calls[0][0]).toContain("album_genre g1");
+      expect(dbQuery.mock.calls[1][0]).toContain("GROUP BY genre_id");
+      expect(dbQuery.mock.calls[2][0]).toContain("FROM albums");
+      expect(clientQuery).not.toHaveBeenCalled();
     });
 
     it("defaults the total to zero when the query somehow returns no row", async () => {
-      clientQuery
+      dbQuery
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] })
         .mockResolvedValueOnce({ rows: [] });
