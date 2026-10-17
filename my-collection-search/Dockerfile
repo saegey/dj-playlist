@@ -79,15 +79,17 @@ COPY --from=builder --chown=nextjs:nodejs /repo/my-collection-search/public ./my
 # created root-owned and the app — running as nextjs — cannot write to it.
 # `audio-ingest` was missing, and the ingest route (#275) failed every upload
 # with EACCES while reporting a 500 the listener device politely retried.
-RUN mkdir -p /app/cookies /app/dumps /app/discogs_exports /app/audio /app/audio-ingest /app/essentia-data /app/public/uploads/album-covers /app/my-collection-search/public/uploads && \
-    rm -rf /app/my-collection-search/cookies /app/my-collection-search/dumps /app/my-collection-search/discogs_exports /app/my-collection-search/audio /app/my-collection-search/audio-ingest /app/my-collection-search/essentia-data /app/my-collection-search/public/uploads/album-covers && \
-    ln -s /app/cookies /app/my-collection-search/cookies && \
-    ln -s /app/dumps /app/my-collection-search/dumps && \
-    ln -s /app/discogs_exports /app/my-collection-search/discogs_exports && \
-    ln -s /app/audio /app/my-collection-search/audio && \
-    ln -s /app/audio-ingest /app/my-collection-search/audio-ingest && \
-    ln -s /app/essentia-data /app/my-collection-search/essentia-data && \
-    ln -s /app/public/uploads/album-covers /app/my-collection-search/public/uploads/album-covers && \
+#
+# The symlinks that used to live here (pointing app code's process.cwd()-relative
+# reads — cookies, dumps, discogs_exports, audio, audio-ingest, essentia-data,
+# public/uploads/album-covers — at these volumes) moved to entrypoint.sh: Next's
+# generated standalone server.js runs `process.chdir(__dirname)` at startup,
+# which is the nested directory outputFileTracingRoot produces
+# (/app/my-collection-search/my-collection-search, not this WORKDIR), so a
+# symlink created here at build time was never where the running server
+# actually looked. entrypoint.sh finds that real directory at container start
+# instead of hardcoding it.
+RUN mkdir -p /app/cookies /app/dumps /app/discogs_exports /app/audio /app/audio-ingest /app/essentia-data /app/public/uploads/album-covers && \
     chown -R nextjs:nodejs /app
 
 COPY --chmod=755 my-collection-search/entrypoint.sh /entrypoint.sh
