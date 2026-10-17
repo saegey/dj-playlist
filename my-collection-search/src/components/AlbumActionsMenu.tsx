@@ -13,7 +13,7 @@ import {
   Icon,
   Text,
 } from "@chakra-ui/react";
-import { FiDownload, FiDroplet, FiEdit, FiFileText, FiImage, FiMoreVertical, FiPlay, FiZap } from "react-icons/fi";
+import { FiDownload, FiDroplet, FiEdit, FiFileText, FiImage, FiMoreVertical, FiPlay, FiTrash2, FiZap } from "react-icons/fi";
 import { SiDiscogs } from "react-icons/si";
 import NextLink from "next/link";
 import { menuDivider, drawerDivider, DrawerItem } from "@/components/ui/action-menu-primitives";
@@ -33,6 +33,8 @@ export interface AlbumActionsMenuProps {
   discogsUrl?: string;
   onViewRawDiscogs?: () => void;
   editAlbumHref?: string;
+  /** Permanently delete the album and its tracks (#511). */
+  onDeleteAlbum?: () => void;
 }
 
 
@@ -49,6 +51,7 @@ export default function AlbumActionsMenu({
   discogsUrl,
   onViewRawDiscogs,
   editAlbumHref,
+  onDeleteAlbum,
 }: AlbumActionsMenuProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const close = () => setDrawerOpen(false);
@@ -57,6 +60,7 @@ export default function AlbumActionsMenu({
     !!onPlayAlbum || !!onDownloadMissing || !!onEnrichAlbum || !!onLogCare || !!onChangeArtwork;
   const hasDiscogs = !!discogsUrl || !!onViewRawDiscogs;
   const hasEdit = !!editAlbumHref;
+  const hasDelete = !!onDeleteAlbum;
 
   return (
     <>
@@ -127,6 +131,15 @@ export default function AlbumActionsMenu({
                     {editAlbumHref && (
                       <DrawerItem icon={<FiEdit />} label="Edit Album & Tracks" href={editAlbumHref} />
                     )}
+                    {hasEdit && hasDelete && drawerDivider}
+                    {onDeleteAlbum && (
+                      <DrawerItem
+                        icon={<FiTrash2 />}
+                        label="Delete Album..."
+                        color="red.500"
+                        onClick={() => { onDeleteAlbum(); close(); }}
+                      />
+                    )}
                   </Stack>
                 </Drawer.Body>
               </Drawer.Content>
@@ -189,6 +202,17 @@ export default function AlbumActionsMenu({
                   <Link as={NextLink} href={editAlbumHref}>
                     <FiEdit /> Edit Album & Tracks
                   </Link>
+                </Menu.Item>
+              )}
+              {(hasAlbumActions || hasDiscogs || hasEdit) && hasDelete && menuDivider}
+              {onDeleteAlbum && (
+                <Menu.Item
+                  value="delete-album"
+                  onSelect={onDeleteAlbum}
+                  color="fg.error"
+                  _hover={{ bg: "bg.error", color: "fg.error" }}
+                >
+                  <FiTrash2 /> Delete Album...
                 </Menu.Item>
               )}
             </Menu.Content>

@@ -125,6 +125,11 @@ export type AnalyticsEvents = {
     friend_id: number;
     track_count: number;
   };
+  album_deleted: ServerSource & {
+    release_id: string;
+    friend_id: number;
+    track_count: number;
+  };
   // One per download job, reported by the worker when the job ends. Over
   // `album_download_queued` and `audio_fetch_queued`, the download success rate.
   track_download_completed: ServerSource & {

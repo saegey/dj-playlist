@@ -21,6 +21,7 @@ import type {
   AlbumPlayableStructure,
   AlbumUpdate,
   AlbumDownloadResult,
+  AlbumDeleteResponse,
   SpinCreateInput,
   SpinCreateResponse,
   SpinDeleteResponse,
@@ -302,6 +303,15 @@ export class GroovenetClient {
     return this.request<AlbumDownloadResult>(
       "POST",
       `/albums/${releaseId}/download`,
+      undefined,
+      { friend_id: friendId }
+    );
+  }
+
+  async deleteAlbum(releaseId: string, friendId: number): Promise<AlbumDeleteResponse> {
+    return this.request<AlbumDeleteResponse>(
+      "DELETE",
+      `/albums/${releaseId}`,
       undefined,
       { friend_id: friendId }
     );

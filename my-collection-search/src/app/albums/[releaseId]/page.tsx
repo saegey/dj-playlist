@@ -32,6 +32,7 @@ import RecordActionDialog from "@/components/records/RecordActionDialog";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import AlbumActionsMenu from "@/components/AlbumActionsMenu";
 import AlbumArtworkDialog from "@/components/AlbumArtworkDialog";
+import DeleteAlbumDialog from "@/components/DeleteAlbumDialog";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { toaster } from "@/components/ui/toaster";
 import { useColorModeValue } from "@/components/ui/color-mode";
@@ -88,6 +89,7 @@ function AlbumDetailContent() {
   const [discogsRawModalOpen, setDiscogsRawModalOpen] = React.useState(false);
   const [logCareOpen, setLogCareOpen] = React.useState(false);
   const [artworkOpen, setArtworkOpen] = React.useState(false);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
 
   const mutedText = useColorModeValue("gray.600", "gray.400");
   const subtleText = useColorModeValue("gray.500", "gray.500");
@@ -405,6 +407,7 @@ function AlbumDetailContent() {
             discogsUrl={album.discogs_url}
             onViewRawDiscogs={() => setDiscogsRawModalOpen(true)}
             editAlbumHref={`/albums/${releaseId}/edit?friend_id=${friendId}`}
+            onDeleteAlbum={() => setDeleteOpen(true)}
           />
         </Flex>
       </Flex>
@@ -433,6 +436,15 @@ function AlbumDetailContent() {
         releaseId={releaseId}
         friendId={friendId}
         albumTitle={album.title}
+      />
+      <DeleteAlbumDialog
+        open={deleteOpen}
+        releaseId={releaseId}
+        friendId={friendId}
+        albumTitle={album.title}
+        onClose={() => setDeleteOpen(false)}
+        onDeleted={() => router.push("/albums")}
+        notify={(opts) => toaster.create({ title: opts.title, type: opts.type as "success" | "error" })}
       />
 
       {/* Track list */}

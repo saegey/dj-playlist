@@ -9,6 +9,7 @@ import {
   recommendationSettingsQuerySchema,
   recommendationSettingsResponseSchema,
   albumCreateResponseSchema,
+  albumDeleteResponseSchema,
   albumDetailResponseSchema,
   albumDiscogsRawResponseSchema,
   albumPlayableStructureResponseSchema,
@@ -7225,6 +7226,67 @@ export const apiContractRoutes: ApiContractRoute[] = [
                   },
                 },
                 required: ["album", "tracks"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid query parameter",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "404": {
+          description: "Album not found",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "deleteAlbum",
+    method: "delete",
+    path: "/api/albums/{releaseId}",
+    summary:
+      "Hard-delete an album and its tracks. For a Discogs-origin album, the next " +
+      "full sync re-adds it unless it's also removed from the Discogs collection.",
+    tags: ["Albums"],
+    paramsSchema: albumReleaseParamsSchema,
+    querySchema: albumFriendQuerySchema,
+    successSchema: albumDeleteResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "releaseId",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+        },
+        {
+          name: "friend_id",
+          in: "query",
+          required: true,
+          schema: { type: "integer" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Album deleted",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: { success: { type: "boolean" } },
+                required: ["success"],
               },
             },
           },

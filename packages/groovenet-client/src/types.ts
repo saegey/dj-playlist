@@ -452,6 +452,10 @@ export interface AlbumDownloadResult {
   tracksQueued: number;
 }
 
+export interface AlbumDeleteResponse {
+  success: boolean;
+}
+
 export interface SpinTrackRef {
   track_id: string;
   friend_id: number;

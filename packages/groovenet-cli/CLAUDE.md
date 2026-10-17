@@ -20,7 +20,7 @@ Keys: `api_base`, `api_key`, `default_friend_id`, `username`, `insecure_tls`.
 config              set | show
 tracks              search | show | update | missing-apple-music | deleted
                     restore | recommend | similar-identity | similar-vibe
-albums              list | show | update | download
+albums              list | show | update | download | delete
 playlists           list | show | create | generate | log-spins
 friends             list | add
 fingerprint-library (no subcommands — scope flags)

@@ -6,10 +6,11 @@ import { renderWithProviders } from "@/test/renderWithProviders";
 import { queryKeys } from "@/lib/queryKeys";
 
 // Only the record-care wiring is under test; everything else is stubbed.
+const routerPush = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({
   useParams: () => ({ releaseId: "rel" }),
   useSearchParams: () => new URLSearchParams("friend_id=7"),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: routerPush }),
 }));
 vi.mock("@/hooks/useAlbumsQuery", () => ({
   useAlbumDetailQuery: () => ({ error: null }),
@@ -56,6 +57,29 @@ vi.mock("@/components/AlbumArtworkDialog", () => ({
     props.open ? (
       <div role="dialog" aria-label="Cover art">
         <button onClick={() => props.onOpenChange(false)}>Close art</button>
+      </div>
+    ) : null,
+}));
+
+vi.mock("@/components/DeleteAlbumDialog", () => ({
+  default: (props: {
+    open: boolean;
+    releaseId: string;
+    onClose: () => void;
+    onDeleted: () => void;
+    notify: (opts: { title: string; type: string }) => void;
+  }) =>
+    props.open ? (
+      <div role="dialog" aria-label="Delete album">
+        <button onClick={() => props.onClose()}>Close delete</button>
+        <button
+          onClick={() => {
+            props.notify({ title: "Album deleted.", type: "success" });
+            props.onDeleted();
+          }}
+        >
+          Confirm delete
+        </button>
       </div>
     ) : null,
 }));
@@ -137,5 +161,29 @@ describe("album page cover art (#494)", () => {
 
     await user.click(cover);
     expect(await screen.findByRole("dialog", { name: "Cover art" })).toBeTruthy();
+  });
+});
+
+describe("album page delete (#511)", () => {
+  it("opens the delete dialog from the album menu and can be dismissed without deleting", async () => {
+    const { user } = renderWithProviders(<AlbumDetailPage />);
+
+    await user.click(screen.getAllByRole("button", { name: "Album actions" })[0]);
+    await user.click(await screen.findByRole("button", { name: /Delete Album/ }));
+    expect(await screen.findByRole("dialog", { name: "Delete album" })).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Close delete" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Delete album" })).toBeNull());
+    expect(routerPush).not.toHaveBeenCalled();
+  });
+
+  it("navigates to the albums list once the album is deleted", async () => {
+    const { user } = renderWithProviders(<AlbumDetailPage />);
+
+    await user.click(screen.getAllByRole("button", { name: "Album actions" })[0]);
+    await user.click(await screen.findByRole("button", { name: /Delete Album/ }));
+    await user.click(await screen.findByRole("button", { name: "Confirm delete" }));
+
+    expect(routerPush).toHaveBeenCalledWith("/albums");
   });
 });

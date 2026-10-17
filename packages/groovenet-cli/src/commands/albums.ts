@@ -5,6 +5,7 @@ import Table from "cli-table3";
 import chalk from "chalk";
 import { printJson, printSuccess, printError, printTracks } from "../output.js";
 import { collectOption, intOption } from "../options.js";
+import { readlineAsk, type Ask } from "./setsReview.js";
 
 function makeClient(): GroovenetClient {
   const cfg = loadConfig();
@@ -47,6 +48,41 @@ function printAlbums(albums: Album[], json: boolean): void {
     ]);
   }
   console.log(table.toString());
+}
+
+export interface DeleteAlbumOptions {
+  friendId?: number;
+  yes?: boolean;
+}
+
+/**
+ * `albums delete`: permanently removes an album and its tracks. Asks first
+ * unless `--yes`, and refuses to guess without a terminal to ask on.
+ */
+export async function runDeleteAlbum(
+  client: Pick<GroovenetClient, "deleteAlbum">,
+  releaseId: string,
+  opts: DeleteAlbumOptions,
+  isTTY: boolean,
+  ask: Ask = readlineAsk()
+): Promise<void> {
+  const friendId = opts.friendId ?? defaultFriendId();
+  if (!opts.yes) {
+    if (!isTTY) {
+      throw new Error("Deleting an album is permanent: pass --yes to delete without a terminal.");
+    }
+    const raw = await ask(
+      `Permanently delete album ${releaseId} and its tracks? If it came from Discogs, the next full ` +
+        `sync will re-add it unless you also remove it from your Discogs collection. [y/N] `
+    );
+    const answer = raw.trim().toLowerCase();
+    if (answer !== "y" && answer !== "yes") {
+      console.log(chalk.gray("Not deleted."));
+      return;
+    }
+  }
+  await client.deleteAlbum(releaseId, friendId);
+  printSuccess(`✓ Deleted album ${releaseId}.`);
 }
 
 export function addAlbumsCommands(program: Command): void {
@@ -203,6 +239,20 @@ export function addAlbumsCommands(program: Command): void {
         } else {
           printSuccess(`✓ Queued ${result.tracksQueued} track(s) for download.`);
         }
+      } catch (err: unknown) {
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+    });
+
+  albums
+    .command("delete <release-id>")
+    .description("Permanently delete an album and its tracks")
+    .option("--friend-id <n>", "Friend ID", intOption)
+    .option("--yes", "Delete without asking")
+    .action(async (releaseId: string, opts: { friendId?: number; yes?: boolean }) => {
+      try {
+        await runDeleteAlbum(makeClient(), releaseId, opts, Boolean(process.stdin.isTTY));
       } catch (err: unknown) {
         printError(err instanceof Error ? err.message : String(err));
         process.exit(1);

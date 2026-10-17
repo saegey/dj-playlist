@@ -42,6 +42,13 @@ describe("searchAlbums", () => {
   });
 });
 
+it("deleteAlbum DELETEs the release, scoped to a friend", async () => {
+  httpMock.mockReset().mockResolvedValue({ success: true });
+  const { deleteAlbum } = await import("./albums");
+  await deleteAlbum("r1", 7);
+  expect(httpMock).toHaveBeenCalledWith("/api/albums/r1?friend_id=7", { method: "DELETE" });
+});
+
 it("transports empty selections and reset without converting them to omissions", async () => {
   const { updateAlbum, upsertAlbumWithTracks } = await import("./albums");
   await updateAlbum({ release_id: "r", friend_id: 7, genre_override_ids: [], style_override_ids: null });
