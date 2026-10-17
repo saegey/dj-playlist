@@ -13,6 +13,7 @@ import type {
   GenreProposal,
   GenreReconciliationCoverage,
   GenreReconciliationRun,
+  GenreSimilarResponse,
 } from "@groovenet/client";
 import {
   addGenresCommands,
@@ -21,18 +22,28 @@ import {
   formatRunProgress,
   formatRunSummary,
   renderProposals,
+  renderSimilarGenres,
   resolveFriendId,
   runApply,
   runCoverage,
   runProposals,
   runReviewCommand,
   runReconcile,
+  runSimilarGenres,
   toRequest,
   waitForReconciliation,
   type GenresIO,
 } from "./genres.js";
 
 const strip = (text: string) => text.replace(/\x1b\[[0-9;]*m/g, "");
+
+const similar: GenreSimilarResponse = {
+  genre: { id: "cumbia-id", name: "Cumbia", slug: "cumbia", track_count: 412 },
+  related: [{
+    id: "salsa-id", name: "Salsa", slug: "salsa", track_count: 253,
+    score: 1.42, signals: { taxonomy: "sibling", npmi: 0.42, shared_albums: 7 },
+  }],
+};
 
 function run(overrides: Partial<GenreReconciliationRun> = {}): GenreReconciliationRun {
   return {
@@ -326,8 +337,67 @@ describe("runReviewCommand()", () => {
   });
 });
 
+describe("similar genres", () => {
+  it("renders genre, slug, score, and all signals", () => {
+    const rendered = strip(renderSimilarGenres(similar));
+    for (const text of ["Similar genres for Cumbia", "Genre", "Slug", "Score", "Signals", "Salsa", "salsa", "1.42", "sibling", "NPMI 0.42", "7 shared albums"]) {
+      expect(rendered).toContain(text);
+    }
+  });
+
+  it("renders partial signals, zero values, and unscored fallback genres", () => {
+    const ref = similar.related[0];
+    const result: GenreSimilarResponse = {
+      ...similar,
+      related: [
+        { ...ref, name: "Zero", score: 0, signals: { npmi: 0, shared_albums: 0 } },
+        { ...ref, name: "Negative", signals: { npmi: -0.25 } },
+        { ...ref, name: "Parent", signals: { taxonomy: "parent" } },
+        { ...ref, name: "Child", signals: { taxonomy: "child" } },
+        { id: "fallback", name: "Porro", slug: "porro", track_count: 10 },
+        { ...ref, name: "No signals", signals: {} },
+      ],
+    };
+    const rendered = strip(renderSimilarGenres(result));
+    for (const text of ["0.00", "NPMI 0.00", "0 shared albums", "NPMI -0.25", "parent", "child", "Porro", "No signals"]) {
+      expect(rendered).toContain(text);
+    }
+    expect(rendered).toMatch(/Porro\s+│ porro\s+│ -\s+│ -/);
+    expect(rendered).not.toContain("undefined");
+  });
+
+  it("handles empty results", () => {
+    expect(renderSimilarGenres({ ...similar, related: [] })).toBe("No similar genres found for Cumbia.");
+  });
+
+  it("prints a table and passes the slug and limit to the client", async () => {
+    const client = { getSimilarGenres: vi.fn().mockResolvedValue(similar) };
+    const out = captureIO();
+    await expect(runSimilarGenres(client, "cumbia", { limit: 3 }, out)).resolves.toBe(0);
+    expect(client.getSimilarGenres).toHaveBeenCalledWith("cumbia", { limit: 3 });
+    expect(out.lines).toEqual([strip(renderSimilarGenres(similar))]);
+    expect(out.written).toBe("");
+  });
+
+  it("prints the raw API response as one JSON document", async () => {
+    const client = { getSimilarGenres: vi.fn().mockResolvedValue(similar) };
+    const out = captureIO();
+    await runSimilarGenres(client, "cumbia", { json: true }, out);
+    expect(JSON.parse(out.written)).toEqual(similar);
+    expect(out.written).toBe(JSON.stringify(similar, null, 2) + "\n");
+    expect(out.lines).toEqual([]);
+    expect(client.getSimilarGenres).toHaveBeenCalledWith("cumbia", { limit: undefined });
+  });
+
+  it("propagates API errors", async () => {
+    const client = { getSimilarGenres: vi.fn().mockRejectedValue(new Error("Unknown genre: polka")) };
+    await expect(runSimilarGenres(client, "polka", {}, captureIO())).rejects.toThrow("Unknown genre: polka");
+  });
+});
+
 describe("addGenresCommands()", () => {
   const methods = {
+    getSimilarGenres: vi.fn(),
     startGenreReconciliation: vi.fn(),
     getGenreReconciliationRun: vi.fn(),
     getGenreReconciliationCoverage: vi.fn(),
@@ -336,6 +406,7 @@ describe("addGenresCommands()", () => {
   };
 
   beforeEach(() => {
+    methods.getSimilarGenres.mockReset().mockResolvedValue(similar);
     methods.startGenreReconciliation.mockReset().mockResolvedValue(run());
     methods.getGenreReconciliationRun.mockReset().mockResolvedValue(run({ status: "completed" }));
     methods.getGenreReconciliationCoverage.mockReset().mockResolvedValue(coverage);
@@ -361,6 +432,32 @@ describe("addGenresCommands()", () => {
     addGenresCommands(program);
     return program.parseAsync(["node", "groovenet", "genres", ...args]);
   }
+
+  it("similar forwards its slug and optional limit and JSON flags", async () => {
+    await parse("similar", "cumbia", "--limit", "15", "--json");
+    expect(methods.getSimilarGenres).toHaveBeenCalledWith("cumbia", { limit: 15 });
+    expect(process.stdout.write).toHaveBeenCalledWith(JSON.stringify(similar, null, 2) + "\n");
+    expect(process.exitCode).toBe(0);
+    await parse("similar", "salsa");
+    expect(methods.getSimilarGenres).toHaveBeenLastCalledWith("salsa", { limit: undefined });
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("Salsa"));
+  });
+
+  it("similar requires a slug and rejects invalid limits", async () => {
+    await expect(parse("similar")).rejects.toThrow(/missing required argument/);
+    for (const limit of ["0", "-1", "nope"]) {
+      await expect(parse("similar", "cumbia", "--limit", limit)).rejects.toThrow();
+    }
+    expect(methods.getSimilarGenres).not.toHaveBeenCalled();
+  });
+
+  it("similar reports API errors and exits 1", async () => {
+    methods.getSimilarGenres.mockRejectedValue(new Error("API Error: Unknown genre: polka"));
+    const exit = vi.spyOn(process, "exit").mockImplementation((() => undefined) as never);
+    await parse("similar", "polka");
+    expect(exit).toHaveBeenCalledWith(1);
+    expect(process.stderr.write).toHaveBeenCalledWith(expect.stringContaining("Unknown genre: polka"));
+  });
 
   it("reconcile passes its flags through", async () => {
     await parse("reconcile", "--no-ai", "--new-genre-min-tracks", "3", "--limit", "20", "--refresh", "--no-wait");

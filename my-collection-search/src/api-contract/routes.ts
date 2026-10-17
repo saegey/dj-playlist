@@ -9,6 +9,7 @@ import {
   recommendationSettingsQuerySchema,
   recommendationSettingsResponseSchema,
   albumCreateResponseSchema,
+  albumDeleteResponseSchema,
   albumDetailResponseSchema,
   albumDiscogsRawResponseSchema,
   albumPlayableStructureResponseSchema,
@@ -78,6 +79,7 @@ import {
   genrePageQuerySchema,
   genrePageResponseSchema,
   genreSimilarResponseSchema,
+  genreSimilarQuerySchema,
   trackGenreFacetsResponseSchema,
   genreCreateBodySchema,
   genreUpdateBodySchema,
@@ -4563,6 +4565,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
     summary: "A genre's ranked similar genres (#377): taxonomy plus collection co-occurrence, with the signals that explain each one",
     tags: ["Genres"],
     successSchema: genreSimilarResponseSchema,
+    querySchema: genreSimilarQuerySchema,
     errorSchema: apiErrorSchema,
     openapi: {
       parameters: [
@@ -4573,8 +4576,16 @@ export const apiContractRoutes: ApiContractRoute[] = [
           description: "Genre slug or id",
           schema: { type: "string" },
         },
+        {
+          name: "limit",
+          in: "query",
+          required: false,
+          description: "Maximum related genres to return; fewer may be available (the stored ranking contains up to 20 per genre)",
+          schema: { type: "integer", minimum: 1, default: 20 },
+        },
       ],
       responses: {
+        "400": jsonError("Invalid query parameters"),
         "200": {
           description: "Computed over every collection; falls back to taxonomy siblings until the table has rows for this genre",
           content: {
@@ -7234,6 +7245,67 @@ export const apiContractRoutes: ApiContractRoute[] = [
                   },
                 },
                 required: ["album", "tracks"],
+              },
+            },
+          },
+        },
+        "400": {
+          description: "Invalid query parameter",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "404": {
+          description: "Album not found",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: {
+            "application/json": { schema: errorResponseSchemaObject },
+          },
+        },
+      },
+    },
+  },
+  {
+    operationId: "deleteAlbum",
+    method: "delete",
+    path: "/api/albums/{releaseId}",
+    summary:
+      "Hard-delete an album and its tracks. For a Discogs-origin album, the next " +
+      "full sync re-adds it unless it's also removed from the Discogs collection.",
+    tags: ["Albums"],
+    paramsSchema: albumReleaseParamsSchema,
+    querySchema: albumFriendQuerySchema,
+    successSchema: albumDeleteResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      parameters: [
+        {
+          name: "releaseId",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+        },
+        {
+          name: "friend_id",
+          in: "query",
+          required: true,
+          schema: { type: "integer" },
+        },
+      ],
+      responses: {
+        "200": {
+          description: "Album deleted",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: { success: { type: "boolean" } },
+                required: ["success"],
               },
             },
           },

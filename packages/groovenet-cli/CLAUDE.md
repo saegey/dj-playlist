@@ -20,7 +20,7 @@ Keys: `api_base`, `api_key`, `default_friend_id`, `username`, `insecure_tls`.
 config              set | show
 tracks              search | show | update | missing-apple-music | deleted
                     restore | recommend | similar-identity | similar-vibe
-albums              list | show | update | download
+albums              list | show | update | download | delete
 playlists           list | show | create | generate | log-spins
 friends             list | add
 fingerprint-library (no subcommands — scope flags)
@@ -28,7 +28,7 @@ vinyl               status | detections | ingests | aggregate
 sets                derive | review | show
 records             clean | sleeve | log | copies (add | label | remove)
                     history | void | care [--summary]
-genres              reconcile | review | apply | proposals | coverage
+genres              similar | reconcile | review | apply | proposals | coverage
 ```
 
 **Every command takes `--json`.** Use it for anything programmatic — the default

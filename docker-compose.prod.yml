@@ -5,7 +5,7 @@
 services:
   app:
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/webapp:${IMAGE_TAG:-latest}
-    container_name: webapp
+    container_name: groovenet_webapp
     env_file:
       - .env
     environment:
@@ -33,10 +33,12 @@ services:
     networks:
       # Keep the old `myapp` name resolvable on the network so existing reverse
       # proxies (e.g. Caddy: reverse_proxy myapp:3000) keep working after the
-      # container was renamed to `webapp`.
+      # container was renamed. `webapp` stays resolvable too, since the
+      # container is now `groovenet_webapp`.
       default:
         aliases:
           - myapp
+          - webapp
     restart: unless-stopped
 
   migrate:
@@ -45,27 +47,33 @@ services:
     # runner image with a stage that falls back to the base Node CMD.
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/webapp-migrate:${IMAGE_TAG:-latest}
 
+  db:
+    container_name: groovenet_db
+
+  redis:
+    container_name: groovenet_redis
+
   essentia:
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/essentia-api:${IMAGE_TAG:-latest}
-    container_name: essentia-api
+    container_name: groovenet_essentia_api
 
   ga-service:
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/ga-service:${IMAGE_TAG:-latest}
-    container_name: ga-service
+    container_name: groovenet_ga_service
 
   fingerprint-service:
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/fingerprint-service:${IMAGE_TAG:-latest}
-    container_name: fingerprint-service
+    container_name: groovenet_fingerprint_service
     restart: unless-stopped
 
   fingerprint-set-worker:
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/fingerprint-service:${IMAGE_TAG:-latest}
-    container_name: fingerprint-set-worker
+    container_name: groovenet_fingerprint_set_worker
     restart: unless-stopped
 
   download-worker:
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/download-worker:${IMAGE_TAG:-latest}
-    container_name: download-worker
+    container_name: groovenet_download_worker
     volumes:
       # Keep worker and app pointed at the same backing store for /app/audio.
       - ${WORKER_AUDIO_MOUNT:-music_data:/app/audio}

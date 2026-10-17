@@ -104,6 +104,36 @@ export interface GenreTreeResponse {
   genres: GenreTreeNode[];
 }
 
+/** Copied from the app's genre API contract schemas. Counts include subgenres. */
+export interface GenrePageRef {
+  id: string;
+  name: string;
+  slug: string;
+  track_count: number;
+}
+
+export interface GenreSimilaritySignals {
+  taxonomy?: "sibling" | "parent" | "child";
+  npmi?: number;
+  shared_albums?: number;
+}
+
+/** Scores and signals are absent for the taxonomy-sibling fallback. */
+export interface GenreRelatedRef extends GenrePageRef {
+  score?: number;
+  signals?: GenreSimilaritySignals;
+}
+
+export interface GenreSimilarResponse {
+  genre: GenrePageRef;
+  related: GenreRelatedRef[];
+}
+
+export interface GenreSimilarQuery {
+  /** Maximum related genres to return; defaults to 20 on the server. */
+  limit?: number;
+}
+
 // ── Genre reconciliation (#372) ─────────────────────────────────────────────
 
 export type GenreProposalAction = "map" | "new_genre" | "descriptor" | "drop";
@@ -420,6 +450,10 @@ export interface AlbumDownloadResult {
   message: string;
   jobIds: string[];
   tracksQueued: number;
+}
+
+export interface AlbumDeleteResponse {
+  success: boolean;
 }
 
 export interface SpinTrackRef {

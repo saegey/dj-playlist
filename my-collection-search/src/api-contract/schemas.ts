@@ -1271,6 +1271,10 @@ export const albumDetailResponseSchema = z.object({
   tracks: z.array(trackEntitySchema),
 });
 
+export const albumDeleteResponseSchema = z.object({
+  success: z.boolean(),
+});
+
 // ─── Album artwork (#494) ────────────────────────────────────────────────────
 
 export const albumArtSourceSchema = z.enum(["discogs", "apple_music", "upload"]);
@@ -2191,6 +2195,10 @@ export const genrePageResponseSchema = z.object({
 export type GenrePageResponse = z.infer<typeof genrePageResponseSchema>;
 
 /** `GET /api/genres/{id}/similar` (#377): the same ranking `related` reads on the genre page, standalone. */
+export const genreSimilarQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().optional(),
+});
+
 export const genreSimilarResponseSchema = z.object({
   genre: genrePageRefSchema,
   related: z.array(genreRelatedRefSchema),

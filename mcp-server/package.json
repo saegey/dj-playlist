@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
+    "test": "npm run build && node --test test/*.test.mjs",
     "lint": "eslint .",
     "start": "node build/index.js",
     "dev": "tsc && node build/index.js",

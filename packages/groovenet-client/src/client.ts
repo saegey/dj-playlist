@@ -11,6 +11,7 @@ import type {
   LiveSetUpdate,
   Friend,
   GenreTreeResponse,
+  GenreSimilarResponse, GenreSimilarQuery,
   Genre, GenreCreateInput, GenreUpdateInput, GenreAliasResponse, GenreMergeResponse,
   GenreReconciliationRequest, GenreReconciliationRun, GenreReconciliationCoverage,
   GenreProposal, GenreProposalQuery, GenreProposalListResponse, GenreProposalUpdate,
@@ -23,6 +24,7 @@ import type {
   AlbumPlayableStructure,
   AlbumUpdate,
   AlbumDownloadResult,
+  AlbumDeleteResponse,
   SpinCreateInput,
   SpinCreateResponse,
   SpinDeleteResponse,
@@ -309,6 +311,15 @@ export class GroovenetClient {
     );
   }
 
+  async deleteAlbum(releaseId: string, friendId: number): Promise<AlbumDeleteResponse> {
+    return this.request<AlbumDeleteResponse>(
+      "DELETE",
+      `/albums/${releaseId}`,
+      undefined,
+      { friend_id: friendId }
+    );
+  }
+
   // ── Spins ──────────────────────────────────────────────────────────────────
 
   async listSpins(query: SpinListQuery): Promise<SpinListResponse> {
@@ -449,6 +460,13 @@ export class GroovenetClient {
 
   async getGenres(): Promise<GenreTreeResponse> {
     return this.request<GenreTreeResponse>("GET", "/genres");
+  }
+
+  /** Ranked related genres and their signals, across every collection, by slug or id. */
+  async getSimilarGenres(slug: string, query: GenreSimilarQuery = {}): Promise<GenreSimilarResponse> {
+    return this.request<GenreSimilarResponse>(
+      "GET", `/genres/${encodeURIComponent(slug)}/similar`, undefined, { ...query }
+    );
   }
 
   /**

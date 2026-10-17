@@ -3,6 +3,7 @@ import { queryKeys } from "@/lib/queryKeys";
 import { useEffect } from "react";
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  deleteAlbum,
   getAlbumWithTracks,
   searchAlbums,
   updateAlbum,
@@ -168,6 +169,25 @@ export function useUpdateAlbumMutation() {
           { library_identifier: libraryIdentifier }
         );
       }
+    },
+  });
+}
+
+/**
+ * Hook for permanently deleting an album and its tracks (#511).
+ */
+export function useDeleteAlbumMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ releaseId, friendId }: { releaseId: string; friendId: number }) => {
+      return await deleteAlbum(releaseId, friendId);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["albums"] });
+      queryClient.removeQueries({
+        queryKey: ["album", variables.releaseId, variables.friendId],
+      });
     },
   });
 }

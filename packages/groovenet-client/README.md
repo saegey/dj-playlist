@@ -35,6 +35,18 @@ const cfg = loadConfig();
 saveConfig({ ...cfg, api_base: "https://your-groovenet-host/api" });
 ```
 
+### Similar genres
+
+```ts
+const { genre, related } = await client.getSimilarGenres("cumbia", { limit: 5 });
+```
+
+Accepts a genre slug or id and returns the raw `{ genre, related }` API response.
+Related genres carry a score and signals (`taxonomy`, `npmi`, `shared_albums`)
+when a stored ranking is available; the taxonomy-sibling fallback omits those
+fields. Similarity uses every collection. Omitting `limit` uses the server's
+default of 20; fewer results may be available.
+
 ## Exports
 
 - `GroovenetClient` — the typed API client

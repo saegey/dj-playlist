@@ -7,6 +7,7 @@ import type {
   GenreReconciliationCoverage,
   GenreReconciliationRequest,
   GenreReconciliationRun,
+  GenreSimilarResponse,
 } from "@groovenet/client";
 import chalk from "chalk";
 import Table from "cli-table3";
@@ -30,6 +31,35 @@ import {
  */
 
 export type GenresIO = FingerprintLibraryIO;
+
+export function renderSimilarGenres(result: GenreSimilarResponse): string {
+  if (result.related.length === 0) return `No similar genres found for ${result.genre.name}.`;
+  const table = new Table({
+    head: ["Genre", "Slug", "Score", "Signals"].map((h) => chalk.cyan(h)),
+    wordWrap: true,
+  });
+  for (const genre of result.related) {
+    const signals = genre.signals;
+    const labels: string[] = [];
+    if (signals?.taxonomy !== undefined) labels.push(signals.taxonomy);
+    if (signals?.npmi !== undefined) labels.push(`NPMI ${signals.npmi.toFixed(2)}`);
+    if (signals?.shared_albums !== undefined) labels.push(`${signals.shared_albums} shared albums`);
+    table.push([genre.name, genre.slug, genre.score?.toFixed(2) ?? "-", labels.join(", ") || "-"]);
+  }
+  return `Similar genres for ${result.genre.name}\n${table.toString()}`;
+}
+
+export async function runSimilarGenres(
+  client: Pick<GroovenetClient, "getSimilarGenres">,
+  slug: string,
+  opts: { limit?: number; json?: boolean },
+  io: GenresIO = consoleIO
+): Promise<number> {
+  const result = await client.getSimilarGenres(slug, { limit: opts.limit });
+  if (opts.json) io.write(JSON.stringify(result, null, 2) + "\n");
+  else io.log(renderSimilarGenres(result));
+  return 0;
+}
 
 export type ReconcileClient = Pick<
   GroovenetClient,
@@ -311,6 +341,15 @@ async function action(run: () => Promise<number>): Promise<void> {
 
 export function addGenresCommands(program: Command): void {
   const genres = program.command("genres").description("Genre taxonomy and local_tags reconciliation");
+
+  genres
+    .command("similar <slug>")
+    .description("Find related genres with scores and signals to widen a playlist")
+    .option("--limit <n>", "Maximum related genres (server default: 20)", boundedIntOption(1))
+    .option("--json", "Output the raw API response as JSON")
+    .action((slug: string, opts: { limit?: number; json?: boolean }) =>
+      action(() => runSimilarGenres(makeClient(), slug, opts))
+    );
 
   genres
     .command("reconcile")
