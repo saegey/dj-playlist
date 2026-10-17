@@ -107,7 +107,13 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["node", "server.js"]
+# outputFileTracingRoot (next.config.mjs) points at the monorepo root, so
+# Next's standalone output nests this app's own server.js one level deeper
+# than this WORKDIR — but WORKDIR must stay here: cookieUtils.ts and
+# backupStatusService.ts resolve their directories off process.cwd(), which
+# only lines up with the volume symlinks below (cookies, dumps, ...) at this
+# level. `node <path>` doesn't change cwd, so this keeps both correct.
+CMD ["node", "my-collection-search/server.js"]
 
 FROM deps AS migrator
 WORKDIR /repo/my-collection-search
