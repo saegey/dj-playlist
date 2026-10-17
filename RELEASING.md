@@ -234,6 +234,4 @@ node packages/groovenet-cli/build/bin/groovenet.js sets derive set.mp3 --playlis
 ```
 
 > `just release` no longer tags/builds/deploys in one shot — releases are cut by
-> release-please. The `release-localbuild-*` recipes remain as an escape hatch
-> for building + deploying locally (e.g. bypassing the registry) and still use
-> timestamp tags, which is fine for non-registry local builds.
+> release-please.
