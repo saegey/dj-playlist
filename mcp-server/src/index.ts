@@ -7,9 +7,11 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { GroovenetClient, type Track, type RecordActionInput, type RecordCareStatus, type SleeveType, type CleaningMethod, type TrackSearchMode, type TrackSearchQuery } from "@groovenet/client";
 import dotenv from "dotenv";
+import { captureException, initSentry } from "./observability.js";
 
 // Stdio is the MCP protocol channel; dotenv's startup banner must stay off it.
 dotenv.config({ quiet: true });
+initSentry();
 
 const API_BASE = process.env.API_BASE || "http://localhost:3000/api";
 const API_KEY = process.env.API_KEY;
@@ -877,6 +879,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       (request.params.arguments ?? {}) as ToolArgs
     );
   } catch (error: unknown) {
+    captureException(error);
     return {
       content: [{
         type: "text",
@@ -894,6 +897,7 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
+  captureException(error);
   console.error("Fatal error in main():", error);
   process.exit(1);
 });

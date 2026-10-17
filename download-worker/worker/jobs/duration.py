@@ -3,6 +3,7 @@ import traceback
 
 from ..audio_utils import ensure_local_audio_file, get_duration_seconds
 from ..config import logger
+from ..observability import capture_exception
 from ..redis_utils import append_job_logs, update_job_status
 from ..track_api import update_track_duration
 from ..types import JobData, JobResult
@@ -41,6 +42,7 @@ def fix_duration(job_data: JobData) -> JobResult:
         return result
 
     except Exception as e:
+        capture_exception(e)
         error_msg = f"Duration fix failed: {str(e)}"
         logger.error(f"Job {job_id} failed: {error_msg}")
         logger.error(traceback.format_exc())

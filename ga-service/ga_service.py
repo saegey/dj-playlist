@@ -11,6 +11,7 @@ except ImportError:
     ConfigDict = None
 from typing import Literal
 
+from observability import capture_exception, init_sentry
 from optimizer import (
     run_cohesive_blocks_optimizer,
     run_genetic_algorithm,
@@ -19,6 +20,16 @@ from optimizer import (
 from starlette.concurrency import run_in_threadpool
 
 app = FastAPI()
+init_sentry()
+
+
+@app.middleware("http")
+async def capture_unhandled_exceptions(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as error:
+        capture_exception(error)
+        raise
 
 
 @app.get("/health")

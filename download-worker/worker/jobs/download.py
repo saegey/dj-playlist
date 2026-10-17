@@ -7,6 +7,7 @@ import traceback
 
 from ..audio_utils import cleanup_download_directory
 from ..config import logger
+from ..observability import capture_exception
 from ..redis_utils import append_job_logs, update_job_status
 from ..subprocess_utils import run_subprocess
 from ..track_api import analyze_audio_file, get_groovenet_client, report_job_outcome
@@ -396,6 +397,7 @@ def download_audio(job_data: JobData) -> JobResult:
         return result
 
     except Exception as e:
+        capture_exception(e)
         error_msg = f"Download failed: {str(e)}"
         logger.error(f"Job {job_id} failed: {error_msg}")
         logger.error(traceback.format_exc())

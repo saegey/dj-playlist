@@ -59,6 +59,7 @@ from .results import (
     try_report_set_result,
 )
 from .runs import record_outcome
+from .sentry import capture_exception, init_sentry
 from .sets import InvalidSetJob, derive, parse_set_job, window_settings
 from .types import IngestJob, IngestResult, SetResult
 
@@ -330,9 +331,11 @@ def process_job(job_json: str, matcher: FingerprintMatcher) -> IngestResult | No
         result = build_result(job, matcher, error=str(e), error_stage=STAGE_RESOLVE)
     except _StageFailure as e:
         logger.error(traceback.format_exc())
+        capture_exception(e.error)
         result = build_result(job, matcher, error=str(e.error), error_stage=e.stage)
     except Exception as e:
         logger.error(traceback.format_exc())
+        capture_exception(e)
         result = build_result(job, matcher, error=str(e), error_stage=STAGE_MATCH)
 
     _log_terminal(job, result, timings, started)
@@ -370,6 +373,7 @@ def process_index_job(job_json: str, matcher: FingerprintMatcher) -> None:
     except Exception as e:
         logger.error(f"Indexing failed for track {job['track_id']}: {e}")
         logger.error(traceback.format_exc())
+        capture_exception(e)
         result, upsert = outcome(job, "failed", error=str(e)), None
 
     if stats is not None:
@@ -460,6 +464,7 @@ def process_set_job(job_json: str, matcher: FingerprintMatcher) -> SetResult | N
     except Exception as e:
         logger.error(f"Set derivation failed: {e}")
         logger.error(traceback.format_exc())
+        capture_exception(e)
         result = _failed_set(job, matcher, str(e))
 
     try_report_set_result(result)
@@ -511,6 +516,7 @@ def _key_name(key: str | bytes) -> str:
 
 
 def main() -> None:
+    init_sentry()
     logger.info("Starting fingerprint service...")
     logger.info(f"Connecting to Redis: {redis_conn.connection_pool.connection_kwargs}")
 
@@ -540,6 +546,7 @@ def main() -> None:
         except Exception as e:
             logger.error(f"Unexpected error: {e}")
             logger.error(traceback.format_exc())
+            capture_exception(e)
             time.sleep(1)
 
 

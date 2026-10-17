@@ -103,10 +103,18 @@ services:
   essentia:
     build:
       context: essentia-api
+    environment:
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-0.3.2}
+      SENTRY_SERVICE: essentia-api
 
   ga-service:
     build:
       context: ga-service
+    environment:
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-0.3.2}
+      SENTRY_SERVICE: ga-service
 
   redis:
     image: redis:7-alpine
@@ -129,6 +137,9 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-djplaylist}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-djplaylist}
       GAMDL_COOKIE_FILE: /app/cookies/gamdl_cookies.txt
       ESSENTIA_DATA_DIR: /app/essentia-data
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-0.3.2}
+      SENTRY_SERVICE: download-worker
     depends_on:
       - redis
       - db
@@ -164,6 +175,9 @@ services:
       # Live windows and library indexing. Set recordings go to their own
       # worker below, so a three-hour decode never delays a live window.
       FINGERPRINT_QUEUES: fingerprint_queue,fingerprint_index_queue
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-0.3.2}
+      SENTRY_SERVICE: fingerprint-service
     depends_on:
       - redis
     volumes:
@@ -182,6 +196,7 @@ services:
     environment:
       FINGERPRINT_QUEUES: fingerprint_set_queue
       FINGERPRINT_HEARTBEAT_KEY: fingerprint:heartbeat:set
+      SENTRY_SERVICE: fingerprint-set-worker
     volumes:
       # Whole set recordings, read-only. Not the ingest volume: the app sweeps
       # anything there without an `audio_ingests` row. A host path works too.

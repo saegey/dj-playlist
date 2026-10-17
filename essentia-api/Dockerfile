@@ -14,7 +14,7 @@ COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-project
 
-COPY essentia_api.py .
+COPY essentia_api.py observability.py ./
 
 EXPOSE 8001
 
