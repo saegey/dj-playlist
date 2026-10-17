@@ -18,6 +18,9 @@
     "test:coverage": "vitest run --coverage --coverage.include=src/liveSets.ts --coverage.reporter=lcov"
   },
   "files": ["build/"],
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "zod": "^4.6.5"
   },
