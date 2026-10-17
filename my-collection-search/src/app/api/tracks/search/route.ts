@@ -7,6 +7,7 @@ import {
 import { parseTrackFilterSpec, type TrackAttributeFilters } from "@/lib/trackFilterSpec";
 import {
   buildTrackSearchWhere,
+  libraryIdentifierSelectSql,
   lexicalMatchClause,
   parseTrackSearchParams,
 } from "@/server/services/trackSearchWhere";
@@ -71,6 +72,7 @@ async function searchTracksPg(params: {
   const { rows } = await dbQuery(
     `
     SELECT t.*
+      , ${libraryIdentifierSelectSql("t")}
       , ${hasVectorsSelectSql("t")}
       , ${trackGenresSelectSql("t")}
     FROM tracks t

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTrackSearchWhere,
+  libraryIdentifierSelectSql,
   lexicalMatchClause,
   parseTrackSearchParams,
 } from "../trackSearchWhere";
@@ -41,5 +42,13 @@ describe("parseTrackSearchParams", () => {
   it("leaves genre out when none is given", () => {
     const parsed = parseTrackSearchParams(new URLSearchParams("q=x"));
     expect(parsed.success && parsed.data.genre).toBeUndefined();
+  });
+});
+
+describe("libraryIdentifierSelectSql", () => {
+  it("prefers the album's identifier over the legacy track column", () => {
+    const sql = libraryIdentifierSelectSql("t");
+    expect(sql).toContain("a.release_id = t.release_id AND a.friend_id = t.friend_id");
+    expect(sql).toMatch(/COALESCE\([\s\S]*,\s*t\.library_identifier\s*\) AS library_identifier/);
   });
 });
