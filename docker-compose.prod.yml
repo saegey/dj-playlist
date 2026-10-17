@@ -45,6 +45,12 @@ services:
     # runner image with a stage that falls back to the base Node CMD.
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/webapp-migrate:${IMAGE_TAG:-latest}
 
+  db:
+    container_name: db
+
+  redis:
+    container_name: redis
+
   essentia:
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/essentia-api:${IMAGE_TAG:-latest}
     container_name: essentia-api
