@@ -3,6 +3,7 @@ import { getServingModel } from "@/lib/embeddings/config";
 import { embeddingsRepository } from "@/server/repositories/embeddingsRepository";
 import { embedSearchQuery, normalizeQuery } from "@/server/services/queryEmbeddingService";
 import type { TrackAttributeFilters, TrackMissingFilter } from "@/lib/trackFilterSpec";
+import { libraryIdentifierSelectSql } from "@/server/services/trackSearchWhere";
 import { hasVectorsSelectSql, trackGenresSelectSql } from "@/server/repositories/trackGenreRepository";
 
 /**
@@ -86,6 +87,7 @@ export async function semanticTrackSearch(params: {
     const { rows } = await client.query<TrackRow>(
       `
       SELECT t.*
+        , ${libraryIdentifierSelectSql("t")}
         , ${hasVectorsSelectSql("t")}
         , ${trackGenresSelectSql("t")}
       FROM tracks t

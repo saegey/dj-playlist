@@ -84,6 +84,7 @@ describe("semanticTrackSearch", () => {
     });
     const [hydrateSql, hydrateParams] = client.query.mock.calls[1];
     expect(hydrateSql).toContain('AS "hasVectors"');
+    expect(hydrateSql).toContain("AS library_identifier");
     expect(hydrateSql).toContain("t.deleted_at IS NULL");
     expect(hydrateParams).toEqual([["a", "b", "gone"], [1, 1, 1]]);
     // Distance order, and a match whose row vanished is dropped.

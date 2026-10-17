@@ -134,6 +134,14 @@ describe("GET /api/tracks/search — behavior", () => {
     expect(params).toEqual(["jazz", 20, 0]);
   });
 
+  it("selects the album's library identifier without joining albums", async () => {
+    stubDb([], "0");
+    await GET(req("?q=jazz"));
+    const [sql] = mockDbQuery.mock.calls[0];
+    expect(sql).toContain("AS library_identifier");
+    expect(sql).not.toMatch(/JOIN albums/i);
+  });
+
   it("omits the ranking/text clause when q is empty", async () => {
     stubDb([], "0");
     await GET(req());

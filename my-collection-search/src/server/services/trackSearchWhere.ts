@@ -66,3 +66,17 @@ export function parseTrackSearchParams(searchParams: URLSearchParams) {
     ...(genres.length > 0 ? { genre: genres } : {}),
   });
 }
+
+/**
+ * The track's library identifier as the album sees it, falling back to the
+ * legacy per-track column. A subquery rather than a join so the unqualified
+ * columns in the search WHERE clauses stay unambiguous.
+ */
+export function libraryIdentifierSelectSql(alias: string): string {
+  return `COALESCE(
+    (SELECT a.library_identifier FROM albums a
+      WHERE a.release_id = ${alias}.release_id AND a.friend_id = ${alias}.friend_id
+      LIMIT 1),
+    ${alias}.library_identifier
+  ) AS library_identifier`;
+}
