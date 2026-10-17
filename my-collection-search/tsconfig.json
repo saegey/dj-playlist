@@ -19,6 +19,7 @@
     // "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "preserveSymlinks": true,
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [

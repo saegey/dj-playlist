@@ -70,6 +70,12 @@ jobs:
             package-lock.json
             my-collection-search/package-lock.json
 
+      - name: Install workspace dependencies
+        run: npm ci --prefix ..
+
+      - name: Build shared contracts
+        run: npm run build --workspace=@groovenet/contracts --prefix ..
+
       - name: Install dependencies
         run: npm ci
 
