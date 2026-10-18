@@ -204,3 +204,82 @@ describe("TrackActionsMenu desktop dropdown — grouping", () => {
     ]);
   });
 });
+
+describe("TrackActionsMenu desktop dropdown — optional items", () => {
+  it("opens cover art and track debug from their items", async () => {
+    const onChangeArtwork = vi.fn();
+    const onOpenTrackDebug = vi.fn();
+    const { user, menuButton } = setup(trackWithEverything, { onChangeArtwork, onOpenTrackDebug });
+    await chooseMenuItem(user, menuButton, /Cover Art/);
+    expect(onChangeArtwork).toHaveBeenCalled();
+    await chooseMenuItem(user, menuButton, /Track Debug/);
+    expect(onOpenTrackDebug).toHaveBeenCalled();
+  });
+});
+
+describe("TrackActionsMenu mobile drawer", () => {
+  async function openDrawer(
+    track: Track = trackWithEverything,
+    props: Partial<React.ComponentProps<typeof TrackActionsMenu>> = {}
+  ) {
+    const rendered = renderWithProviders(<TrackActionsMenu track={track} {...props} />);
+    const trigger = screen.getAllByRole("button", { name: "Track actions", hidden: true })[0];
+    await rendered.user.click(trigger);
+    await screen.findByText("Add to Playlist");
+    return rendered;
+  }
+
+  it("lists the same groups in the same order as the desktop menu", async () => {
+    await openDrawer(trackWithEverything, {
+      onOpenTrackDebug: vi.fn(),
+      onChangeArtwork: vi.fn(),
+    });
+    const labels = [
+      "Play", "Add to Queue", "Add to Playlist", "Edit Track", "Enrich Track",
+      "Cover Art...", "Track Debug", "Fetch Audio", "Upload Audio",
+      "Remove Audio", "Delete Track", "Apple Music", "YouTube", "SoundCloud",
+    ];
+    for (let i = 1; i < labels.length; i++) {
+      const prev = screen.getByText(labels[i - 1]);
+      const next = screen.getByText(labels[i]);
+      expect(prev.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
+  it.each([
+    ["Play", () => expect(mocks.replacePlaylist).toHaveBeenCalled()],
+    ["Add to Queue", () => expect(mocks.appendToQueue).toHaveBeenCalledWith(trackWithEverything)],
+    ["Add to Playlist", () => expect(mocks.openForTrack).toHaveBeenCalledWith(trackWithEverything)],
+    ["Enrich Track", () => expect(mocks.push).toHaveBeenCalledWith("/enrich")],
+    ["Fetch Audio", () => expect(mocks.analyzeTrackAsync).toHaveBeenCalled()],
+  ])("runs %s", async (label, assertion) => {
+    const { user } = await openDrawer();
+    await user.click(screen.getByText(label));
+    await vi.waitFor(assertion);
+  });
+
+  it("runs cover art and track debug", async () => {
+    const onChangeArtwork = vi.fn();
+    const onOpenTrackDebug = vi.fn();
+    const { user } = await openDrawer(trackWithEverything, { onChangeArtwork, onOpenTrackDebug });
+    await user.click(screen.getByText("Cover Art..."));
+    expect(onChangeArtwork).toHaveBeenCalled();
+    await user.click(screen.getAllByRole("button", { name: "Track actions", hidden: true })[0]);
+    await user.click(await screen.findByText("Track Debug"));
+    expect(onOpenTrackDebug).toHaveBeenCalled();
+  });
+
+  it("opens the destructive confirmations", async () => {
+    const { user } = await openDrawer();
+    await user.click(screen.getByText("Remove Audio"));
+    expect(await screen.findByRole("dialog", { name: "Remove Audio" })).toBeTruthy();
+  });
+
+  it("opens the delete confirmation and the upload picker", async () => {
+    const { user } = await openDrawer();
+    await user.click(screen.getByText("Upload Audio"));
+    await user.click(screen.getAllByRole("button", { name: "Track actions", hidden: true })[0]);
+    await user.click(await screen.findByText("Delete Track"));
+    expect(await screen.findByRole("dialog", { name: "Delete track?" })).toBeTruthy();
+  });
+});
