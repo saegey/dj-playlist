@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.4](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.3...v0.3.4) (2026-10-18)
+
+
+### Features
+
+* **settings:** fold default Discogs sync into a unified Discogs page ([#579](https://github.com/Public-Vinyl-Radio/groovenet/issues/579)) ([55d43e5](https://github.com/Public-Vinyl-Radio/groovenet/commit/55d43e5e1e25666bb6629516501bf0ad2a835cd3))
+
+
+### Bug Fixes
+
+* **contracts:** set publishConfig.access to public ([#568](https://github.com/Public-Vinyl-Radio/groovenet/issues/568)) ([efac33e](https://github.com/Public-Vinyl-Radio/groovenet/commit/efac33e359d81378b69d534c769e6c60f49a3950))
+* **deps:** bump pinned npm from 12.0.0 to 12.0.1 ([#565](https://github.com/Public-Vinyl-Radio/groovenet/issues/565)) ([0170708](https://github.com/Public-Vinyl-Radio/groovenet/commit/017070811afd304ffa18bca65bd170ad3ac9dc99))
+* **dev:** fix dev container startup crash and stale contracts node_modules ([#566](https://github.com/Public-Vinyl-Radio/groovenet/issues/566)) ([c37ce84](https://github.com/Public-Vinyl-Radio/groovenet/commit/c37ce841342af3510cf121a8cc9463136bdd34d6))
+* **download-worker:** run analysis as a separate job and restart essentia/ga-service ([#583](https://github.com/Public-Vinyl-Radio/groovenet/issues/583)) ([e58fb1d](https://github.com/Public-Vinyl-Radio/groovenet/commit/e58fb1d5be76b7fd49a5449fc174f7c291b7ea14))
+* **enrich:** strip null bytes from AI-generated fields before writing to Postgres ([#580](https://github.com/Public-Vinyl-Radio/groovenet/issues/580)) ([a0627f8](https://github.com/Public-Vinyl-Radio/groovenet/commit/a0627f8dbcddf314c0f236d44bcf0e344f594ced))
+* **playlists:** delete playlist_tracks with their playlist and add FK cascade ([#582](https://github.com/Public-Vinyl-Radio/groovenet/issues/582)) ([94386e9](https://github.com/Public-Vinyl-Radio/groovenet/commit/94386e9fb4709ae50b64b96d753ac54cad94a67f))
+* **search:** show the album's library identifier in track search results ([#564](https://github.com/Public-Vinyl-Radio/groovenet/issues/564)) ([e37931b](https://github.com/Public-Vinyl-Radio/groovenet/commit/e37931b020925a5448278242139f58ed06be130b))
+
 ## [0.3.3](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.2...v0.3.3) (2026-10-17)
 
 
