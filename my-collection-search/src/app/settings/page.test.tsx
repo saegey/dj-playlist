@@ -22,7 +22,6 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/providers/SettingsDialogProvider", () => passthrough("SettingsDialogsProvider"));
 vi.mock("@/providers/SyncStreamsProvider", () => passthrough("SyncStreamsProvider"));
-vi.mock("@/components/settings/ActionsGrid", () => stub("actions"));
 vi.mock("@/components/settings/FriendsDiscogsSection", () => stub("friends"));
 vi.mock("@/components/settings/DatabaseBackups", () => stub("backups"));
 vi.mock("@/components/settings/DatabaseRestore", () => stub("restore"));
@@ -59,8 +58,8 @@ describe("SettingsPage", () => {
   it("opens the section named in the URL, with its heading and description", () => {
     mocks.searchParams = new URLSearchParams("section=library");
     renderWithProviders(<SettingsPage />);
-    expect(screen.getByRole("heading", { name: "Library Data" })).toBeTruthy();
-    expect(screen.getByText("friends and Discogs import settings")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Discogs" })).toBeTruthy();
+    expect(screen.getByText("your default library and friends' collections")).toBeTruthy();
     expect(screen.getByText("friends")).toBeTruthy();
   });
 

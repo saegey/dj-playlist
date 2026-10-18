@@ -13,10 +13,12 @@ import {
   IconButton,
   Skeleton,
   Dialog,
+  Badge,
 } from "@chakra-ui/react";
 import { FiRefreshCcw, FiTrash } from "react-icons/fi";
 
 import { useFriendsQuery } from "@/hooks/useFriendsQuery";
+import { useUsername } from "@/providers/UsernameProvider";
 import {
   useSyncDiscogs,
   useVerifyManifests,
@@ -37,7 +39,10 @@ export default function FriendsDiscogsSection() {
   const [verificationResults, setVerificationResults] = useState<
     VerificationResult[]
   >([]);
-  const [pendingUsername, setPendingUsername] = useState<string | undefined>();
+  // `undefined` username targets the default library (server-side Discogs config).
+  const [pendingSync, setPendingSync] = useState<{ username?: string } | null>(
+    null
+  );
   const [removedReleasesOpen, setRemovedReleasesOpen] = useState(false);
   const [removedReleases, setRemovedReleases] = useState<string[]>([]);
   const [removedUsername, setRemovedUsername] = useState<string>("");
@@ -52,6 +57,11 @@ export default function FriendsDiscogsSection() {
     removeFriendPending, // (available if you want a global disable)
     addFriendPending,
   } = useFriendsQuery();
+
+  // The app-wide default library is usually also a friends row (the owner's own
+  // account); badge that row rather than listing the same account twice.
+  const { friend: defaultFriend } = useUsername();
+  const defaultUsername = defaultFriend?.username;
 
   // Discogs per-friend sync (streamed output handled by dialog/context)
   const discogsSync = useSyncDiscogs((data) => {
@@ -77,8 +87,8 @@ export default function FriendsDiscogsSection() {
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  const handleSyncClick = async (username: string) => {
-    setPendingUsername(username);
+  const handleSyncClick = async (username?: string) => {
+    setPendingSync({ username });
     try {
       const result = await verifyManifests.mutateAsync();
       if (result.summary.totalManifests === 0) {
@@ -106,8 +116,8 @@ export default function FriendsDiscogsSection() {
       });
       setVerificationOpen(false);
       // Proceed with sync
-      if (pendingUsername) {
-        discogsSync.mutate({ username: pendingUsername });
+      if (pendingSync) {
+        discogsSync.mutate({ username: pendingSync.username });
       }
     } catch (err) {
       toaster.create({
@@ -120,8 +130,8 @@ export default function FriendsDiscogsSection() {
 
   const handleContinueWithoutCleanup = () => {
     setVerificationOpen(false);
-    if (pendingUsername) {
-      discogsSync.mutate({ username: pendingUsername });
+    if (pendingSync) {
+      discogsSync.mutate({ username: pendingSync.username });
     }
   };
 
@@ -170,15 +180,22 @@ export default function FriendsDiscogsSection() {
   };
 
   const disableAdd = addFriendPending;
+  const defaultInFriends =
+    !!defaultUsername && friends.some((f) => f.username === defaultUsername);
+  const syncBusy = discogsSync.isPending || verifyManifests.isPending;
+  // Only the row being synced spins; the others are just disabled.
+  const isSyncing = (username?: string) =>
+    syncBusy && pendingSync !== null && pendingSync.username === username;
 
   return (
     <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
       <Heading size="md" mb={2}>
-        Friends&apos; Discogs Collections
+        Discogs Collections
       </Heading>
       <Text mb={2}>
-        Add friends&apos; Discogs usernames to sync or browse their collections
-        for playlist collaboration or borrowing albums.
+        Sync your default library, and add friends&apos; Discogs usernames to
+        sync or browse their collections for playlist collaboration or
+        borrowing albums.
       </Text>
 
       <HStack mb={4}>
@@ -205,6 +222,28 @@ export default function FriendsDiscogsSection() {
       </HStack>
 
       <VStack align="stretch">
+        {!friendsLoading && !defaultInFriends && (
+        <HStack width="100%" justifyContent="space-between">
+          <HStack>
+            <Text fontWeight="medium">Default library</Text>
+            <Badge>default</Badge>
+          </HStack>
+          <HStack justifyContent="flex-end" flexGrow={1}>
+            <Tooltip content="Sync default library">
+              <IconButton
+                aria-label="Sync default library"
+                size="xs"
+                variant="outline"
+                onClick={() => handleSyncClick(undefined)}
+                loading={isSyncing(undefined)}
+                disabled={syncBusy}
+              >
+                <FiRefreshCcw />
+              </IconButton>
+            </Tooltip>
+          </HStack>
+        </HStack>
+        )}
         {friendsLoading ? (
           [...Array(3)].map((_, i) => (
             <HStack key={i} width="100%" justifyContent="space-between">
@@ -224,7 +263,10 @@ export default function FriendsDiscogsSection() {
               width="100%"
               justifyContent="space-between"
             >
-              <Text fontWeight="medium">{friend.username}</Text>
+              <HStack>
+                <Text fontWeight="medium">{friend.username}</Text>
+                {friend.username === defaultUsername && <Badge>default</Badge>}
+              </HStack>
               <HStack justifyContent="flex-end" flexGrow={1}>
                 <Tooltip content="Sync collection">
                   <IconButton
@@ -232,16 +274,13 @@ export default function FriendsDiscogsSection() {
                     size="xs"
                     variant="outline"
                     onClick={() => handleSyncClick(friend.username)}
-                    loading={
-                      discogsSync.isPending || verifyManifests.isPending
-                    }
-                    disabled={
-                      discogsSync.isPending || verifyManifests.isPending
-                    }
+                    loading={isSyncing(friend.username)}
+                    disabled={syncBusy}
                   >
                     <FiRefreshCcw />
                   </IconButton>
                 </Tooltip>
+                {friend.username !== defaultUsername && (
                 <Tooltip content="Remove friend">
                   <IconButton
                     aria-label="Remove friend"
@@ -254,6 +293,7 @@ export default function FriendsDiscogsSection() {
                     <FiTrash />
                   </IconButton>
                 </Tooltip>
+                )}
               </HStack>
             </HStack>
           ))

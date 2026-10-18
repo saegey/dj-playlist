@@ -2,6 +2,8 @@ AuthKey*
 all_tracks.json
 all_tracks_cleaned.json
 node_modules/
+# The dev container symlinks this to /app/node_modules; "node_modules/" above only matches directories.
+/packages/groovenet-contracts/node_modules
 packages/*/build/
 mcp-server/build/
 discogs_exports/
