@@ -10,6 +10,7 @@
 
 import { CandidateTrack, GenreRef } from "./recommendation-candidate-retriever";
 import { getCamelotCode } from "./audio-vibe-normalization";
+import { DEFAULT_GENRE_SIMILARITY_WEIGHTS } from "./genres/genreSimilarity";
 
 /**
  * Mode for constraint application
@@ -212,54 +213,155 @@ export function calculateKeyBonus(
   return bonus * confidence;
 }
 
+// ─── Genre overlap weights (#487) ─────────────────────────────────────────────
+
+/** Tag bonus at full genre overlap; scaled linearly by `calculateGenreOverlap`. */
+export const TAG_BONUS_WEIGHT = 0.08;
+
 /**
- * Calculate Jaccard overlap between two arrays
+ * Strict mode rejects a candidate whose soft genre overlap is below this.
+ * Small on purpose: it only drops candidates with nothing or next to nothing
+ * in common with the seed (one weak co-occurrence link among several genres),
+ * never one sharing a genre, an ancestor/descendant or a sibling.
  */
-export function calculateJaccardOverlap(arr1: string[], arr2: string[]): number {
-  if (arr1.length === 0 && arr2.length === 0) return 0;
+export const MIN_GENRE_OVERLAP = 0.05;
 
-  const set1 = new Set(arr1.map(s => s.toLowerCase()));
-  const set2 = new Set(arr2.map(s => s.toLowerCase()));
+/**
+ * Most credit a merely *related* genre (a `genre_similarity` row) can earn,
+ * so it always ranks below the same genre or an ancestor/descendant (1.0).
+ */
+export const RELATED_GENRE_MAX_CREDIT = 0.8;
 
-  const intersection = new Set([...set1].filter(x => set2.has(x)));
-  const union = new Set([...set1, ...set2]);
+/**
+ * Highest score `computeGenreSimilarity` can store under its default weights
+ * (a sibling at full NPMI), used to map a stored score into [0, 1] before
+ * applying `RELATED_GENRE_MAX_CREDIT`. A taxonomy-only sibling (score 1)
+ * therefore earns 0.4, and a pure co-occurrence pair earns 0.4 * NPMI.
+ */
+export const GENRE_SIMILARITY_MAX_SCORE =
+  DEFAULT_GENRE_SIMILARITY_WEIGHTS.taxonomyWeight * DEFAULT_GENRE_SIMILARITY_WEIGHTS.taxonomySiblingBase +
+  DEFAULT_GENRE_SIMILARITY_WEIGHTS.coOccurrenceWeight;
 
-  if (union.size === 0) return 0;
-
-  return intersection.size / union.size;
+/**
+ * What the soft overlap needs beyond the two tracks' own genres: the
+ * `genre_similarity` table and the full taxonomy (for ancestors beyond the
+ * immediate parent). Load it once per recommendation request with
+ * `loadGenreOverlapContext` and pass it to every candidate — never a query
+ * per candidate.
+ */
+export interface GenreOverlapContext {
+  /** Related-genre score keyed by `similarityKey(a, b)`, the higher of both directions. */
+  similarity: Map<string, number>;
+  /** Every genre's parent id, for walking the ancestor chain. */
+  parentOf: Map<string, string | null>;
 }
 
-/**
- * Expand each genre to itself plus its immediate parent id, so a seed in a
- * parent genre and a candidate in one of its children (or vice versa) show
- * up as overlapping rather than disjoint (#486) — cheap, since each track's
- * own `track_genres` rows already carry that parent id.
- */
-function expandWithParent(genres: GenreRef[]): string[] {
-  const ids: string[] = [];
-  for (const genre of genres) {
-    ids.push(genre.id);
-    if (genre.parentId) ids.push(genre.parentId);
+export const EMPTY_GENRE_OVERLAP_CONTEXT: GenreOverlapContext = {
+  similarity: new Map(),
+  parentOf: new Map(),
+};
+
+function similarityKey(a: string, b: string): string {
+  return a < b ? `${a}\u0000${b}` : `${b}\u0000${a}`;
+}
+
+/** Builds the in-memory context from the raw `genre_similarity` rows and the taxonomy. */
+export function buildGenreOverlapContext(
+  pairs: Array<{ genreId: string; relatedGenreId: string; score: number }>,
+  taxonomy: Array<{ id: string; parentId: string | null }>
+): GenreOverlapContext {
+  const similarity = new Map<string, number>();
+  for (const pair of pairs) {
+    if (pair.genreId === pair.relatedGenreId) continue;
+    const key = similarityKey(pair.genreId, pair.relatedGenreId);
+    // Top-N truncation can keep a pair on one side only, or with the same
+    // score twice; either direction counts.
+    similarity.set(key, Math.max(similarity.get(key) ?? 0, pair.score));
   }
-  return ids;
+  return { similarity, parentOf: new Map(taxonomy.map((g) => [g.id, g.parentId])) };
+}
+
+function hasAncestor(id: string, ancestorId: string, parentOf: Map<string, string | null>): boolean {
+  const seen = new Set<string>();
+  let parentId = parentOf.get(id) ?? null;
+  // The taxonomy forbids cycles; `seen` is a defensive bound, not a fix.
+  while (parentId && !seen.has(parentId)) {
+    if (parentId === ancestorId) return true;
+    seen.add(parentId);
+    parentId = parentOf.get(parentId) ?? null;
+  }
+  return false;
 }
 
 /**
- * Jaccard overlap of two tracks' taxonomy genres (direct links plus styles
- * already resolved onto the taxonomy), hierarchy-aware via `expandWithParent`.
- * Replaces comparing raw `local_tags`/`styles` strings (#486): spelling
- * variants and aliases resolve to the same id upstream, so they no longer
- * understate overlap.
+ * How well genre `a` is matched by genre `b`: 1 for the same genre or an
+ * ancestor/descendant, a scaled `genre_similarity` score for a related one,
+ * otherwise 0.
  */
-export function calculateGenreOverlap(seedGenres: GenreRef[], candidateGenres: GenreRef[]): number {
-  return calculateJaccardOverlap(expandWithParent(seedGenres), expandWithParent(candidateGenres));
+function genreMatch(a: string, b: string, context: GenreOverlapContext, parentOf: Map<string, string | null>): number {
+  if (a === b || hasAncestor(a, b, parentOf) || hasAncestor(b, a, parentOf)) return 1;
+  const score = context.similarity.get(similarityKey(a, b));
+  if (!score || score <= 0) return 0;
+  return RELATED_GENRE_MAX_CREDIT * Math.min(1, score / GENRE_SIMILARITY_MAX_SCORE);
+}
+
+function meanBestMatch(
+  from: string[],
+  to: string[],
+  context: GenreOverlapContext,
+  parentOf: Map<string, string | null>
+): number {
+  let total = 0;
+  for (const a of from) {
+    let best = 0;
+    for (const b of to) {
+      best = Math.max(best, genreMatch(a, b, context, parentOf));
+      if (best === 1) break;
+    }
+    total += best;
+  }
+  return total / from.length;
+}
+
+/**
+ * Soft overlap of two tracks' taxonomy genres, in [0, 1] (#487). For each
+ * seed genre, the best match among the candidate's genres (see
+ * `genreMatch`), averaged; the same from the candidate's side; then the mean
+ * of both directions — so a candidate carrying many extra genres the seed
+ * lacks, or the reverse, scores below a full match.
+ *
+ * Without a context (no similarity table loaded) only exact and
+ * parent/child matches count, using each ref's own `parentId`.
+ */
+export function calculateGenreOverlap(
+  seedGenres: GenreRef[],
+  candidateGenres: GenreRef[],
+  context: GenreOverlapContext = EMPTY_GENRE_OVERLAP_CONTEXT
+): number {
+  if (seedGenres.length === 0 || candidateGenres.length === 0) return 0;
+
+  // The refs' own parent ids cover genres the loaded taxonomy doesn't know yet.
+  const parentOf = new Map(context.parentOf);
+  for (const genre of [...seedGenres, ...candidateGenres]) {
+    if (!parentOf.has(genre.id)) parentOf.set(genre.id, genre.parentId);
+  }
+
+  const seedIds = [...new Set(seedGenres.map((g) => g.id))];
+  const candidateIds = [...new Set(candidateGenres.map((g) => g.id))];
+  const forward = meanBestMatch(seedIds, candidateIds, context, parentOf);
+  const backward = meanBestMatch(candidateIds, seedIds, context, parentOf);
+  return (forward + backward) / 2;
 }
 
 /**
  * Calculate genre overlap bonus
  */
-export function calculateTagBonus(seedGenres: GenreRef[], candidateGenres: GenreRef[]): number {
-  return 0.08 * calculateGenreOverlap(seedGenres, candidateGenres);
+export function calculateTagBonus(
+  seedGenres: GenreRef[],
+  candidateGenres: GenreRef[],
+  context: GenreOverlapContext = EMPTY_GENRE_OVERLAP_CONTEXT
+): number {
+  return TAG_BONUS_WEIGHT * calculateGenreOverlap(seedGenres, candidateGenres, context);
 }
 
 /**
@@ -334,7 +436,8 @@ export function calculateEnergyPenalty(
 function shouldRejectCandidate(
   seed: SeedTrack,
   candidate: CandidateTrack,
-  mode: RecommendationMode
+  mode: RecommendationMode,
+  genreContext: GenreOverlapContext
 ): boolean {
   const seedBpm = seed.bpm;
   const candBpm = candidate.metadata.bpm;
@@ -356,9 +459,9 @@ function shouldRejectCandidate(
       return true;
     }
 
-    // Reject if no genre overlap
-    const genreOverlap = calculateGenreOverlap(seed.genres, candidate.metadata.genreRefs);
-    if (genreOverlap === 0) {
+    // Reject if the genres share (next to) nothing, related genres included
+    const genreOverlap = calculateGenreOverlap(seed.genres, candidate.metadata.genreRefs, genreContext);
+    if (genreOverlap < MIN_GENRE_OVERLAP) {
       return true;
     }
   }
@@ -398,12 +501,14 @@ function shouldRejectCandidate(
  * @param seed - Seed track
  * @param candidates - Candidates from Phase 1
  * @param mode - Constraint mode (blend, mixable, strict)
+ * @param genreContext - Similarity table and taxonomy, loaded once per request
  * @returns Filtered candidates with bonuses and penalties
  */
 export function applyConstraintsAndBonuses(
   seed: SeedTrack,
   candidates: CandidateTrack[],
-  mode: RecommendationMode = "blend"
+  mode: RecommendationMode = "blend",
+  genreContext: GenreOverlapContext = EMPTY_GENRE_OVERLAP_CONTEXT
 ): ScoredCandidate[] {
   console.log(`[RecommendationPreScorer] Applying constraints and bonuses (mode: ${mode})`);
   console.log(`[RecommendationPreScorer] Input candidates: ${candidates.length}`);
@@ -413,7 +518,7 @@ export function applyConstraintsAndBonuses(
 
   for (const candidate of candidates) {
     // Step 1: Apply hard constraints
-    if (shouldRejectCandidate(seed, candidate, mode)) {
+    if (shouldRejectCandidate(seed, candidate, mode, genreContext)) {
       rejected++;
       continue;
     }
@@ -431,7 +536,7 @@ export function applyConstraintsAndBonuses(
       candidate.metadata.keyConfidence
     );
 
-    const tagBonus = calculateTagBonus(seed.genres, candidate.metadata.genreRefs);
+    const tagBonus = calculateTagBonus(seed.genres, candidate.metadata.genreRefs, genreContext);
 
     const eraBonus = calculateEraBonus(
       seed.eraBucket,
