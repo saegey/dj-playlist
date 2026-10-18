@@ -79,15 +79,7 @@ export type AppleMusicResult = {
   duration?: number;
 };
 
-export interface Playlist {
-  id: number;
-  name: string;
-  tracks: { track_id: string; friend_id: number; position: number }[];
-  created_at: string;
-  total_duration_seconds?: number;
-  /** Present only when the playlist has been promoted to a set. */
-  set?: LiveSetSummary;
-}
+export type { Playlist } from "@groovenet/contracts";
 
 export interface DiscogsRelease {
   id: number | string;

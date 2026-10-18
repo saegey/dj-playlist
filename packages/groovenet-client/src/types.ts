@@ -9,6 +9,14 @@ export type {
   LiveSetStatus,
   LiveSetSummary,
   LiveSetUpdate,
+  Playlist,
+  PlaylistDetail,
+  PlaylistGeneticRequest,
+  PlaylistGeneticResponse,
+  PlaylistOptimizerMode,
+  PlaylistSpinsInput,
+  PlaylistSpinsResult,
+  PlaylistTrackRef,
 } from "@groovenet/contracts";
 
 export type Track = {
@@ -61,12 +69,6 @@ export type Track = {
   hasVectors?: boolean;
 };
 
-export interface Playlist {
-  id: number;
-  name: string;
-  tracks: { track_id: string; friend_id: number; position: number }[];
-  created_at: string;
-}
 
 export interface Friend {
   id: number;
@@ -517,20 +519,6 @@ export interface SpinDerived {
   selected_side_count: number;
   album_side_count: number;
   track_count: number;
-}
-
-export interface PlaylistSpinsInput {
-  performed_at?: string;
-  performance_id?: number;
-  derivation_id?: string;
-}
-
-export interface PlaylistSpinsResult {
-  playlist_id: number;
-  performance_id: number | null;
-  performed_at: string;
-  created: number;
-  skipped: number;
 }
 
 export interface SpinCreateBodyBase {

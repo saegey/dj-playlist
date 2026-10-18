@@ -5,6 +5,20 @@ import {
   liveSetSchema,
   liveSetSummarySchema,
   liveSetUpdateSchema,
+  playlistCreateSchema,
+  playlistDetailSchema,
+  playlistGeneticInvalidItemSchema as sharedPlaylistGeneticInvalidItemSchema,
+  playlistGeneticRequestSchema,
+  playlistGeneticResponseSchema as sharedPlaylistGeneticResponseSchema,
+  playlistGeneticResultTrackSchema as sharedPlaylistGeneticResultTrackSchema,
+  playlistGeneticTrackSchema as sharedPlaylistGeneticTrackSchema,
+  playlistGeneticValidationErrorSchema as sharedPlaylistGeneticValidationErrorSchema,
+  playlistSchema as sharedPlaylistSchema,
+  playlistSpinsInputSchema,
+  playlistSpinsResultSchema,
+  playlistTrackInputSchema as sharedPlaylistTrackInputSchema,
+  playlistTrackRefSchema as sharedPlaylistTrackRefSchema,
+  playlistUpdateSchema,
 } from "@groovenet/contracts";
 import {
   CLEANING_METHODS,
@@ -496,76 +510,17 @@ export const friendDeleteQuerySchema = z.object({
   username: z.string().min(1),
 });
 
-export const playlistTrackRefSchema = z.object({
-  track_id: z.string(),
-  friend_id: z.number().int().nullable().optional(),
-  position: z.number().int().optional(),
-});
-
-export const playlistTrackInputSchema = z
-  .object({
-    track_id: z.string(),
-    friend_id: z.number().int().optional(),
-    username: z.string().nullable().optional(),
-    title: z.string().nullable().optional(),
-    artist: z.string().nullable().optional(),
-    album: z.string().nullable().optional(),
-    year: z.union([z.string(), z.number()]).nullable().optional(),
-    styles: z.array(z.string()).nullable().optional(),
-    genres: z.array(z.string()).nullable().optional(),
-    duration: z.string().nullable().optional(),
-    duration_seconds: z.number().nullable().optional(),
-    position: z.union([z.string(), z.number()]).nullable().optional(),
-    discogs_url: z.string().nullable().optional(),
-    apple_music_url: z.string().nullable().optional(),
-    youtube_url: z.string().nullable().optional(),
-    soundcloud_url: z.string().nullable().optional(),
-    album_thumbnail: z.string().nullable().optional(),
-    local_tags: z.string().nullable().optional(),
-    bpm: z.union([z.number(), z.string()]).nullable().optional(),
-    key: z.string().nullable().optional(),
-    danceability: z.number().nullable().optional(),
-    notes: z.string().nullable().optional(),
-    star_rating: z.number().nullable().optional(),
-    release_id: z.string().nullable().optional(),
-    mood_happy: z.number().nullable().optional(),
-    mood_sad: z.number().nullable().optional(),
-    mood_relaxed: z.number().nullable().optional(),
-    mood_aggressive: z.number().nullable().optional(),
-    local_audio_url: z.string().nullable().optional(),
-  })
-  .passthrough();
+export const playlistTrackRefSchema = sharedPlaylistTrackRefSchema;
+export const playlistTrackInputSchema = sharedPlaylistTrackInputSchema;
 export type PlaylistTrackInput = z.infer<typeof playlistTrackInputSchema>;
 
-export const playlistSchema = z
-  .object({
-    id: z.number().int(),
-    name: z.string(),
-    created_at: z.string(),
-    total_duration_seconds: z.number().optional(),
-    tracks: z.array(playlistTrackRefSchema),
-    set: liveSetSummarySchema.optional(),
-  })
-  .passthrough();
+export const playlistSchema = sharedPlaylistSchema;
+export const playlistCreateBodySchema = playlistCreateSchema;
 
-export const playlistCreateBodySchema = z
-  .object({
-    name: z.string(),
-    tracks: z.array(playlistTrackInputSchema).optional().default([]),
-    default_friend_id: z.number().int().optional(),
-  })
-  .passthrough();
-
-export const playlistPatchBodySchema = z
-  .object({
-    id: intFromInputSchema,
-    name: z.string().optional(),
-    tracks: z
-      .array(z.union([z.string(), playlistTrackInputSchema]))
-      .optional(),
-    default_friend_id: z.number().int().optional(),
-  })
-  .passthrough();
+// The id arrives as a JSON number from clients but is coerced from text elsewhere.
+export const playlistPatchBodySchema = playlistUpdateSchema.extend({
+  id: intFromInputSchema,
+});
 
 export const playlistDeleteQuerySchema = z.object({
   id: intFromInputSchema,
@@ -580,74 +535,17 @@ export const liveSetUpdateBodySchema = liveSetUpdateSchema;
 export const liveSetMutationSchema = liveSetMutationResponseSchema;
 export const liveSetDeleteSchema = liveSetDeleteResponseSchema;
 
-export const playlistDetailResponseSchema = z.object({
-  playlist_id: z.number().int(),
-  playlist_name: z.string().nullable().optional(),
-  tracks: z.array(playlistTrackRefSchema),
-});
+export const playlistDetailResponseSchema = playlistDetailSchema;
 
-export const playlistSpinsBodySchema = z
-  .object({
-    performed_at: z.string().min(1).refine((value) => !Number.isNaN(Date.parse(value)), "Invalid timestamp").optional(),
-    performance_id: z.number().int().positive().optional(),
-    derivation_id: z.string().uuid().optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.performed_at != null && value.performance_id != null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Provide either performed_at or performance_id, not both",
-      });
-    }
-  });
+export const playlistSpinsBodySchema = playlistSpinsInputSchema;
+export const playlistSpinsResponseSchema = playlistSpinsResultSchema;
 
-export const playlistSpinsResponseSchema = z.object({
-  playlist_id: z.number().int(),
-  performance_id: z.number().int().nullable(),
-  performed_at: z.string(),
-  created: z.number().int().nonnegative(),
-  skipped: z.number().int().nonnegative(),
-});
-
-export const playlistGeneticTrackSchema = z
-  .object({
-    track_id: z.string().min(1),
-    friend_id: z.number().int().optional(),
-    bpm: z.union([z.number(), z.string()]).nullable().optional(),
-  })
-  .passthrough();
-
-export const playlistGeneticBodySchema = z.object({
-  playlist: z.array(playlistGeneticTrackSchema).min(1),
-  mode: z.enum(["genetic", "greedy", "cohesive_blocks"]).optional(),
-});
-
-export const playlistGeneticResultTrackSchema = z
-  .object({
-    track_id: z.string().min(1),
-  })
-  .passthrough();
-
-export const playlistGeneticResponseSchema = z
-  .object({
-    mode: z.enum(["genetic", "greedy", "cohesive_blocks"]).optional(),
-    result: z.union([
-      z.array(playlistGeneticResultTrackSchema),
-      z.record(z.string(), playlistGeneticResultTrackSchema),
-    ]),
-  })
-  .passthrough();
-
-export const playlistGeneticInvalidItemSchema = z.object({
-  track_id: z.string().optional(),
-  reason: z.string(),
-});
-
-export const playlistGeneticValidationErrorSchema = z.object({
-  error: z.string(),
-  invalid: z.array(playlistGeneticInvalidItemSchema),
-  invalid_count: z.number().int(),
-});
+export const playlistGeneticTrackSchema = sharedPlaylistGeneticTrackSchema;
+export const playlistGeneticBodySchema = playlistGeneticRequestSchema;
+export const playlistGeneticResultTrackSchema = sharedPlaylistGeneticResultTrackSchema;
+export const playlistGeneticResponseSchema = sharedPlaylistGeneticResponseSchema;
+export const playlistGeneticInvalidItemSchema = sharedPlaylistGeneticInvalidItemSchema;
+export const playlistGeneticValidationErrorSchema = sharedPlaylistGeneticValidationErrorSchema;
 
 export const trackSearchModeSchema = z.enum(["lexical", "semantic", "hybrid"]);
 export type TrackSearchMode = z.infer<typeof trackSearchModeSchema>;

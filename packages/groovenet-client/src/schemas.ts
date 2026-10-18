@@ -29,42 +29,12 @@ export const nonNegativeIntFromInputSchema = z.preprocess(
   z.number().int().min(0)
 );
 
-export const playlistTrackInputSchema = z
-  .object({
-    track_id: z.string(),
-    friend_id: z.number().int().optional(),
-    username: z.string().nullable().optional(),
-    title: z.string().nullable().optional(),
-    artist: z.string().nullable().optional(),
-    album: z.string().nullable().optional(),
-    year: z.union([z.string(), z.number()]).nullable().optional(),
-    styles: z.array(z.string()).nullable().optional(),
-    genres: z.array(z.string()).nullable().optional(),
-    duration: z.string().nullable().optional(),
-    duration_seconds: z.number().nullable().optional(),
-    position: z.union([z.string(), z.number()]).nullable().optional(),
-    discogs_url: z.string().nullable().optional(),
-    apple_music_url: z.string().nullable().optional(),
-    youtube_url: z.string().nullable().optional(),
-    spotify_url: z.string().nullable().optional(),
-    soundcloud_url: z.string().nullable().optional(),
-    album_thumbnail: z.string().nullable().optional(),
-    local_tags: z.string().nullable().optional(),
-    bpm: z.union([z.number(), z.string()]).nullable().optional(),
-    key: z.string().nullable().optional(),
-    danceability: z.number().nullable().optional(),
-    notes: z.string().nullable().optional(),
-    star_rating: z.number().nullable().optional(),
-    release_id: z.string().nullable().optional(),
-    mood_happy: z.number().nullable().optional(),
-    mood_sad: z.number().nullable().optional(),
-    mood_relaxed: z.number().nullable().optional(),
-    mood_aggressive: z.number().nullable().optional(),
-    local_audio_url: z.string().nullable().optional(),
-  })
-  .passthrough();
-
-export type PlaylistTrackInput = z.infer<typeof playlistTrackInputSchema>;
+export {
+  playlistGeneticRequestSchema as playlistGeneticBodySchema,
+  playlistGeneticResponseSchema,
+  playlistTrackInputSchema,
+} from "@groovenet/contracts";
+export type { PlaylistTrackInput } from "@groovenet/contracts";
 
 /** A taxonomy genre linked to a track (#371). */
 export const trackGenreSchema = z.object({
@@ -124,29 +94,6 @@ export const trackSearchGetResponseSchema = z.object({
   mode: trackSearchModeSchema.optional(),
   degraded: z.boolean().optional(),
 });
-
-export const playlistGeneticBodySchema = z.object({
-  playlist: z
-    .array(
-      z
-        .object({
-          track_id: z.string().min(1),
-          friend_id: z.number().int().optional(),
-          bpm: z.union([z.number(), z.string()]).nullable().optional(),
-        })
-        .passthrough()
-    )
-    .min(1),
-});
-
-export const playlistGeneticResponseSchema = z
-  .object({
-    result: z.union([
-      z.array(z.object({ track_id: z.string().min(1) }).passthrough()),
-      z.record(z.string(), z.object({ track_id: z.string().min(1) }).passthrough()),
-    ]),
-  })
-  .passthrough();
 
 export const jobInfoSchema = z
   .object({

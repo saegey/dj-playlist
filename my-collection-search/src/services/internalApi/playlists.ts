@@ -1,21 +1,21 @@
-import { z } from "zod";
-import {
-  playlistCreateBodySchema,
-  playlistDetailResponseSchema,
-  playlistGeneticResponseSchema,
-  playlistPatchBodySchema,
-  playlistTrackInputSchema,
-} from "@/api-contract/schemas";
 import { http } from "@/services/http";
-import type { Playlist, Track } from "@/types/track";
-import type { LiveSet, LiveSetUpdate } from "@groovenet/contracts";
+import type { Track } from "@/types/track";
+import type {
+  LiveSet,
+  LiveSetUpdate,
+  Playlist,
+  PlaylistCreate,
+  PlaylistDetail,
+  PlaylistGeneticResponse,
+  PlaylistOptimizerMode,
+  PlaylistTrackInput,
+  PlaylistUpdate,
+} from "@groovenet/contracts";
 
-export type PlaylistTrackPayload = z.infer<typeof playlistTrackInputSchema>;
-export type PlaylistTrackIdsResponse = z.infer<typeof playlistDetailResponseSchema>;
+export type PlaylistTrackPayload = PlaylistTrackInput;
+export type PlaylistTrackIdsResponse = PlaylistDetail;
 export type CreatePlaylistTracks = string[] | PlaylistTrackPayload[];
-
-type PlaylistGeneticResponse = z.infer<typeof playlistGeneticResponseSchema>;
-export type PlaylistOptimizerMode = "genetic" | "greedy" | "cohesive_blocks";
+export type { PlaylistOptimizerMode };
 export type { LiveSetMediaType } from "@groovenet/contracts";
 export type LiveSetDetail = LiveSet;
 
@@ -27,7 +27,7 @@ export async function importPlaylist(
   const normalizedTracks = tracks.map((track) =>
     typeof track === "string" ? { track_id: track } : track
   );
-  const body: z.input<typeof playlistCreateBodySchema> = {
+  const body: PlaylistCreate = {
     name,
     tracks: normalizedTracks,
     default_friend_id: friendId,
@@ -122,7 +122,7 @@ export async function updatePlaylist(
   id: number,
   data: { name?: string; tracks?: CreatePlaylistTracks }
 ): Promise<Playlist> {
-  const body: z.input<typeof playlistPatchBodySchema> = { id, ...data };
+  const body: PlaylistUpdate = { id, ...data };
   return await http<Playlist>("/api/playlists", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

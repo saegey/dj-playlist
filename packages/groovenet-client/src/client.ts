@@ -3,8 +3,10 @@ import { Agent as HttpsAgent } from "https";
 import type {
   Track,
   Playlist,
+  PlaylistDetail,
   PlaylistSpinsInput,
   PlaylistSpinsResult,
+  PlaylistTrackRef,
   LiveSet,
   LiveSetDeleteResponse,
   LiveSetMutationResponse,
@@ -375,12 +377,9 @@ export class GroovenetClient {
 
   async getPlaylistTracks(
     playlistId: number | string
-  ): Promise<{ track_refs: { track_id: string; friend_id: number; position?: number }[] }> {
-    const result = await this.request<{
-      playlist_id: number;
-      playlist_name?: string | null;
-      tracks: { track_id: string; friend_id?: number | null; position?: number }[];
-    }>("GET", `/playlists/${playlistId}/tracks`);
+  ): Promise<{ track_refs: PlaylistTrackRef[] }> {
+    const result = await this.request<PlaylistDetail>("GET", `/playlists/${playlistId}/tracks`);
+    // Older servers returned entries without a friend; default them to the first friend.
     return {
       track_refs: result.tracks.map((t) => ({
         track_id: t.track_id,

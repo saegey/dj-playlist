@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { playlistDeleteResponseSchema } from "@groovenet/contracts";
 import { exampleFromSchema } from "./exampleFromSchema";
 import {
   aiPromptSettingsGetResponseSchema,
@@ -203,32 +204,6 @@ const errorResponseSchemaObject: Record<string, unknown> = {
     message: { type: "string" },
   },
   required: ["error"],
-  additionalProperties: true,
-};
-
-const playlistTrackObjectSchema: Record<string, unknown> = {
-  type: "object",
-  properties: {
-    track_id: { type: "string" },
-    friend_id: { type: "integer" },
-    position: { type: "integer" },
-  },
-  required: ["track_id", "friend_id"],
-  additionalProperties: true,
-};
-
-const playlistObjectSchema: Record<string, unknown> = {
-  type: "object",
-  properties: {
-    id: { type: "integer" },
-    name: { type: "string" },
-    created_at: { type: "string" },
-    tracks: {
-      type: "array",
-      items: playlistTrackObjectSchema,
-    },
-  },
-  required: ["id", "name", "created_at", "tracks"],
   additionalProperties: true,
 };
 
@@ -5660,7 +5635,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
           description: "Playlists fetched",
           content: {
             "application/json": {
-              schema: { type: "array", items: playlistObjectSchema },
+              schema: { type: "array", items: { $ref: "#/components/schemas/Playlist" } },
               examples: {
                 playlistsList: {
                   summary: "Playlists list",
@@ -5693,19 +5668,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
         required: true,
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                name: { type: "string" },
-                tracks: {
-                  type: "array",
-                  items: { type: "object", additionalProperties: true },
-                },
-                default_friend_id: { type: "integer" },
-              },
-              required: ["name"],
-              additionalProperties: true,
-            },
+            schema: { $ref: "#/components/schemas/PlaylistCreate" },
           },
         },
       },
@@ -5713,7 +5676,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
         "201": {
           description: "Playlist created",
           content: {
-            "application/json": { schema: playlistObjectSchema },
+            "application/json": { schema: { $ref: "#/components/schemas/Playlist" } },
           },
         },
         "500": {
@@ -5739,22 +5702,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
         required: true,
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                id: { type: "integer" },
-                name: { type: "string" },
-                tracks: {
-                  type: "array",
-                  items: {
-                    oneOf: [{ type: "string" }, { type: "object", additionalProperties: true }],
-                  },
-                },
-                default_friend_id: { type: "integer" },
-              },
-              required: ["id"],
-              additionalProperties: true,
-            },
+            schema: { $ref: "#/components/schemas/PlaylistUpdate" },
           },
         },
       },
@@ -5762,7 +5710,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
         "200": {
           description: "Playlist updated",
           content: {
-            "application/json": { schema: playlistObjectSchema },
+            "application/json": { schema: { $ref: "#/components/schemas/Playlist" } },
           },
         },
         "400": {
@@ -5793,7 +5741,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
     summary: "Delete playlist",
     tags: ["Playlists"],
     querySchema: playlistDeleteQuerySchema,
-    successSchema: z.object({ success: z.boolean() }),
+    successSchema: playlistDeleteResponseSchema,
     errorSchema: apiErrorSchema,
     openapi: {
       parameters: [
@@ -5809,11 +5757,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
           description: "Playlist deleted",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: { success: { type: "boolean" } },
-                required: ["success"],
-              },
+              schema: { $ref: "#/components/schemas/PlaylistDeleteResponse" },
             },
           },
         },
@@ -5855,16 +5799,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
           description: "Playlist detail",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  playlist_id: { type: "integer" },
-                  playlist_name: { type: ["string", "null"] },
-                  tracks: { type: "array", items: playlistTrackObjectSchema },
-                },
-                required: ["playlist_id", "tracks"],
-                additionalProperties: true,
-              },
+              schema: { $ref: "#/components/schemas/PlaylistDetail" },
               examples: {
                 playlistDetail: {
                   summary: "Playlist detail",
@@ -5905,20 +5840,12 @@ export const apiContractRoutes: ApiContractRoute[] = [
         required: true,
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                performed_at: { type: "string", format: "date-time", description: "Use when the playlist has no live-set performance" },
-                performance_id: { type: "integer", description: "A performance belonging to this playlist; latest performance is used by default" },
-                derivation_id: { type: "string", format: "uuid", description: "Use matched offsets and omit entries marked not played" },
-              },
-              additionalProperties: false,
-            },
+            schema: { $ref: "#/components/schemas/PlaylistSpinsInput" },
           },
         },
       },
       responses: {
-        "200": { description: "Playlist spins logged (or skipped when already present)", content: { "application/json": { schema: { type: "object", additionalProperties: true } } } },
+        "200": { description: "Playlist spins logged (or skipped when already present)", content: { "application/json": { schema: { $ref: "#/components/schemas/PlaylistSpinsResult" } } } },
         "400": { description: "Invalid timestamp, derivation, or playlist contents", content: { "application/json": { schema: errorResponseSchemaObject } } },
         "404": { description: "Playlist or performance not found", content: { "application/json": { schema: errorResponseSchemaObject } } },
       },
@@ -5972,35 +5899,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
         required: true,
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                playlist: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      track_id: { type: "string" },
-                      friend_id: { type: "integer" },
-                      bpm: { type: ["number", "string", "null"] },
-                    },
-                    required: ["track_id"],
-                    additionalProperties: true,
-                  },
-                  minItems: 1,
-                },
-                mode: {
-                  type: "string",
-                  enum: ["genetic", "greedy", "cohesive_blocks"],
-                  default: "genetic",
-                  example: "cohesive_blocks",
-                  description:
-                    "Optimizer mode. cohesive_blocks favors genre/vibe blocks and fade-friendly transitions.",
-                },
-              },
-              required: ["playlist"],
-              additionalProperties: false,
-            },
+            schema: { $ref: "#/components/schemas/PlaylistGeneticRequest" },
             examples: {
               geneticRequest: {
                 summary: "Three tracks, each supplying its embedding differently",
@@ -6015,30 +5914,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
           description: "Genetic ordering result",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  mode: {
-                    type: "string",
-                    enum: ["genetic", "greedy", "cohesive_blocks"],
-                    example: "cohesive_blocks",
-                  },
-                  result: {
-                    oneOf: [
-                      {
-                        type: "array",
-                        items: { type: "object", additionalProperties: true },
-                      },
-                      {
-                        type: "object",
-                        additionalProperties: { type: "object", additionalProperties: true },
-                      },
-                    ],
-                  },
-                },
-                required: ["result"],
-                additionalProperties: true,
-              },
+              schema: { $ref: "#/components/schemas/PlaylistGeneticResponse" },
             },
           },
         },
@@ -6046,27 +5922,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
           description: "Invalid track data for optimization",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  error: { type: "string" },
-                  invalid: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        track_id: { type: "string" },
-                        reason: { type: "string" },
-                      },
-                      required: ["reason"],
-                      additionalProperties: false,
-                    },
-                  },
-                  invalid_count: { type: "integer" },
-                },
-                required: ["error", "invalid", "invalid_count"],
-                additionalProperties: true,
-              },
+              schema: { $ref: "#/components/schemas/PlaylistGeneticValidationError" },
             },
           },
         },
