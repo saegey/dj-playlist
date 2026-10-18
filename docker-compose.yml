@@ -103,6 +103,7 @@ services:
   essentia:
     build:
       context: essentia-api
+    restart: unless-stopped
     environment:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_RELEASE: ${SENTRY_RELEASE:-0.3.2}
@@ -111,6 +112,7 @@ services:
   ga-service:
     build:
       context: ga-service
+    restart: unless-stopped
     environment:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_RELEASE: ${SENTRY_RELEASE:-0.3.2}
