@@ -17,7 +17,7 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=6.0",
     "pytest-mock>=3.16.0",
-    "fakeredis>=2.38.0",
+    "fakeredis>=2.39.0",
 ]
 
 [tool.uv.sources]
