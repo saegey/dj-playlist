@@ -75,6 +75,24 @@ describe("GenreSimilarityRepository", () => {
     });
   });
 
+  describe("loadOverlapData", () => {
+    it("loads the whole similarity table and every genre's parent", async () => {
+      dbQuery
+        .mockResolvedValueOnce({ rows: [{ genre_id: "a", related_genre_id: "b", score: 1.2 }] })
+        .mockResolvedValueOnce({ rows: [{ id: "a", parent_id: null }, { id: "b", parent_id: "a" }] });
+
+      const result = await new GenreSimilarityRepository().loadOverlapData();
+
+      expect(result).toEqual({
+        pairs: [{ genre_id: "a", related_genre_id: "b", score: 1.2 }],
+        taxonomy: [{ id: "a", parent_id: null }, { id: "b", parent_id: "a" }],
+      });
+      expect(dbQuery).toHaveBeenCalledTimes(2);
+      expect(dbQuery.mock.calls[0][0]).toContain("FROM genre_similarity");
+      expect(dbQuery.mock.calls[1][0]).toContain("FROM genres");
+    });
+  });
+
   describe("topForGenre", () => {
     it("queries by genre_id, ordered best first, limited", async () => {
       dbQuery.mockResolvedValue({

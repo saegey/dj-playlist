@@ -7,6 +7,7 @@
 
 import { retrieveCandidates } from "../recommendation-candidate-retriever";
 import { applyConstraintsAndBonuses, SeedTrack } from "../recommendation-pre-scorer";
+import { loadGenreOverlapContext } from "@/server/services/genreSimilarityService";
 
 /**
  * Example 1: Basic usage with blend mode
@@ -89,10 +90,14 @@ async function compareModes() {
     danceability: 0.8,
   };
 
+  // Similar genres count as partial overlap (#487): load the table once per
+  // request and share it across every candidate and mode.
+  const genreContext = await loadGenreOverlapContext();
+
   // Apply all three modes
-  const blend = applyConstraintsAndBonuses(seed, candidates.candidates, "blend");
-  const mixable = applyConstraintsAndBonuses(seed, candidates.candidates, "mixable");
-  const strict = applyConstraintsAndBonuses(seed, candidates.candidates, "strict");
+  const blend = applyConstraintsAndBonuses(seed, candidates.candidates, "blend", genreContext);
+  const mixable = applyConstraintsAndBonuses(seed, candidates.candidates, "mixable", genreContext);
+  const strict = applyConstraintsAndBonuses(seed, candidates.candidates, "strict", genreContext);
 
   console.log(`\n📊 Mode Comparison:`);
   console.log(`  Blend:   ${blend.length} candidates (most permissive)`);

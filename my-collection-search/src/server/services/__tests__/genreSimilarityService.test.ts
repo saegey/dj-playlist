@@ -5,12 +5,14 @@ const genreSimilarityRepository = vi.hoisted(() => ({
   topForGenre: vi.fn(),
   loadCoOccurrence: vi.fn(),
   replaceAll: vi.fn(),
+  loadOverlapData: vi.fn(),
 }));
 vi.mock("@/server/repositories/genreRepository", () => ({ genreRepository }));
 vi.mock("@/server/repositories/genreSimilarityRepository", () => ({ genreSimilarityRepository }));
 
 import {
   getGenreSimilarPage,
+  loadGenreOverlapContext,
   RELATED_LIMIT,
   minSupportAlbums,
   recomputeGenreSimilarity,
@@ -241,5 +243,26 @@ describe("startGenreSimilarityRefresh()", () => {
 
     expect(interval).toHaveBeenCalledTimes(1);
     expect(interval).toHaveBeenCalledWith(expect.any(Function), 60_000);
+  });
+});
+
+describe("loadGenreOverlapContext", () => {
+  beforeEach(() => vi.resetAllMocks());
+
+  it("builds the pre-scorer's in-memory context from one load", async () => {
+    genreSimilarityRepository.loadOverlapData.mockResolvedValue({
+      pairs: [{ genre_id: uuid(2), related_genre_id: uuid(3), score: 1.5 }],
+      taxonomy: [
+        { id: uuid(1), parent_id: null },
+        { id: uuid(2), parent_id: uuid(1) },
+      ],
+    });
+
+    const context = await loadGenreOverlapContext();
+
+    expect(genreSimilarityRepository.loadOverlapData).toHaveBeenCalledTimes(1);
+    expect([...context.similarity.values()]).toEqual([1.5]);
+    expect(context.parentOf.get(uuid(2))).toBe(uuid(1));
+    expect(context.parentOf.get(uuid(1))).toBeNull();
   });
 });

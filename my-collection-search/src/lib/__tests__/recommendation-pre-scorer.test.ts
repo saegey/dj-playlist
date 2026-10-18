@@ -7,7 +7,10 @@ import {
   calculateEraBonus,
   calculateEnergyPenalty,
   calculateCamelotDistance,
-  calculateJaccardOverlap,
+  buildGenreOverlapContext,
+  GENRE_SIMILARITY_MAX_SCORE,
+  MIN_GENRE_OVERLAP,
+  RELATED_GENRE_MAX_CREDIT,
   areErasAdjacent,
   applyConstraintsAndBonuses,
   type SeedTrack,
@@ -16,8 +19,6 @@ import type { CandidateTrack, GenreRef } from "../recommendation-candidate-retri
 
 const HOUSE: GenreRef = { id: "house", parentId: "electronic" };
 const TECHNO: GenreRef = { id: "techno", parentId: "electronic" };
-const PROGRESSIVE: GenreRef = { id: "progressive-house", parentId: "house" };
-const TRANCE: GenreRef = { id: "trance", parentId: "electronic" };
 const SALSA: GenreRef = { id: "salsa", parentId: "latin" };
 
 describe("calculateBpmBonus", () => {
@@ -79,55 +80,114 @@ describe("calculateKeyBonus", () => {
   });
 });
 
-describe("calculateJaccardOverlap", () => {
-  it.each([
-    [["a", "b", "c"], ["a", "b", "c"], 1.0, "perfect overlap"],
-    [["a", "b"], ["c", "d"], 0.0, "no overlap"],
-    [["a", "b", "c"], ["a", "b", "d"], 0.5, "partial overlap"],
-    [["A", "B"], ["a", "b"], 1.0, "case insensitive"],
-    [[], [], 0.0, "empty arrays"],
-    [["a"], [], 0.0, "one empty array"],
-  ] as const)("%s ∩ %s === %s (%s)", (a, b, expected, label) => {
-    void label;
-    expect(calculateJaccardOverlap([...a], [...b])).toBeCloseTo(expected, 3);
-  });
-});
+// Latin
+//  ├─ Cumbia ─ Digital Cumbia
+//  ├─ Chicha (related to Cumbia: sibling + co-occurrence)
+//  ├─ Porro  (related to Cumbia: sibling only)
+//  └─ Salsa  (sibling, but not in Cumbia's stored top N)
+// Rock (unrelated root)
+const LATIN: GenreRef = { id: "latin", parentId: null };
+const CUMBIA: GenreRef = { id: "cumbia", parentId: "latin" };
+const DIGITAL_CUMBIA: GenreRef = { id: "digital-cumbia", parentId: "cumbia" };
+const CHICHA: GenreRef = { id: "chicha", parentId: "latin" };
+const PORRO: GenreRef = { id: "porro", parentId: "latin" };
+const ROCK: GenreRef = { id: "rock", parentId: null };
+
+const LATIN_CONTEXT = buildGenreOverlapContext(
+  [
+    { genreId: "cumbia", relatedGenreId: "chicha", score: 1.6 },
+    { genreId: "chicha", relatedGenreId: "cumbia", score: 1.6 },
+    { genreId: "porro", relatedGenreId: "cumbia", score: 1 }, // kept on Porro's side only
+    { genreId: "house", relatedGenreId: "techno", score: 1 },
+  ],
+  [LATIN, CUMBIA, DIGITAL_CUMBIA, CHICHA, PORRO, SALSA, ROCK].map(({ id, parentId }) => ({ id, parentId }))
+);
 
 describe("calculateGenreOverlap", () => {
   it("returns 1 for identical genre sets", () => {
-    expect(calculateGenreOverlap([HOUSE], [HOUSE])).toBeCloseTo(1, 3);
+    expect(calculateGenreOverlap([HOUSE, TECHNO], [TECHNO, HOUSE], LATIN_CONTEXT)).toBe(1);
   });
 
   it("returns 0 for genres from unrelated taxonomy branches", () => {
-    expect(calculateGenreOverlap([HOUSE], [SALSA])).toBe(0);
+    expect(calculateGenreOverlap([CUMBIA], [ROCK], LATIN_CONTEXT)).toBe(0);
   });
 
-  it("returns 0 for two empty genre lists", () => {
-    expect(calculateGenreOverlap([], [])).toBe(0);
+  it("returns 0 when either side has no genres", () => {
+    expect(calculateGenreOverlap([], [], LATIN_CONTEXT)).toBe(0);
+    expect(calculateGenreOverlap([CUMBIA], [], LATIN_CONTEXT)).toBe(0);
   });
 
-  it("treats a genre and its child as overlapping, not disjoint (#486)", () => {
-    // PROGRESSIVE's parent is house; its own id never appears on the seed side.
-    expect(calculateGenreOverlap([HOUSE], [PROGRESSIVE])).toBeGreaterThan(0);
+  it("counts a parent/child pair as a full match", () => {
+    expect(calculateGenreOverlap([CUMBIA], [DIGITAL_CUMBIA])).toBe(1);
+    expect(calculateGenreOverlap([DIGITAL_CUMBIA], [CUMBIA])).toBe(1);
   });
 
-  it("gives a parent/child pair partial credit, short of a direct match", () => {
-    const parentChild = calculateGenreOverlap([HOUSE], [PROGRESSIVE]);
-    const directMatch = calculateGenreOverlap([HOUSE], [HOUSE]);
-    expect(parentChild).toBeLessThan(directMatch);
+  it("counts a grandparent as a full match through the loaded taxonomy", () => {
+    expect(calculateGenreOverlap([LATIN], [DIGITAL_CUMBIA], LATIN_CONTEXT)).toBe(1);
   });
 
-  it("gives siblings under the same parent partial credit via the shared parent", () => {
-    // HOUSE and TECHNO are both children of "electronic".
-    expect(calculateGenreOverlap([HOUSE], [TECHNO])).toBeGreaterThan(0);
+  it("gives a related-only pair the scaled similarity score, short of a full match", () => {
+    const expected = RELATED_GENRE_MAX_CREDIT * (1.6 / GENRE_SIMILARITY_MAX_SCORE);
+    expect(calculateGenreOverlap([CUMBIA], [CHICHA], LATIN_CONTEXT)).toBeCloseTo(expected, 6);
+    expect(expected).toBeLessThan(1);
+  });
+
+  it("reads a pair stored on one side only, from either direction", () => {
+    const expected = RELATED_GENRE_MAX_CREDIT * (1 / GENRE_SIMILARITY_MAX_SCORE);
+    expect(calculateGenreOverlap([CUMBIA], [PORRO], LATIN_CONTEXT)).toBeCloseTo(expected, 6);
+    expect(calculateGenreOverlap([PORRO], [CUMBIA], LATIN_CONTEXT)).toBeCloseTo(expected, 6);
+  });
+
+  it("gives siblings no credit without a similarity row", () => {
+    expect(calculateGenreOverlap([CUMBIA], [SALSA], LATIN_CONTEXT)).toBe(0);
+    expect(calculateGenreOverlap([HOUSE], [TECHNO])).toBe(0);
+  });
+
+  it("averages the best match in both directions", () => {
+    // Seed → candidate: cumbia matches cumbia (1). Candidate → seed: cumbia 1, rock 0 → 0.5.
+    expect(calculateGenreOverlap([CUMBIA], [CUMBIA, ROCK], LATIN_CONTEXT)).toBeCloseTo(0.75, 6);
+  });
+
+  it("caps an out-of-range stored score at the related-genre credit", () => {
+    const context = buildGenreOverlapContext([{ genreId: "a", relatedGenreId: "b", score: 99 }], []);
+    const a = { id: "a", parentId: null };
+    const b = { id: "b", parentId: null };
+    expect(calculateGenreOverlap([a], [b], context)).toBeCloseTo(RELATED_GENRE_MAX_CREDIT, 6);
+  });
+
+  it("ignores self pairs and non-positive scores", () => {
+    const context = buildGenreOverlapContext(
+      [
+        { genreId: "a", relatedGenreId: "a", score: 1 },
+        { genreId: "a", relatedGenreId: "b", score: 0 },
+      ],
+      []
+    );
+    expect(context.similarity.size).toBe(1);
+    expect(calculateGenreOverlap([{ id: "a", parentId: null }], [{ id: "b", parentId: null }], context)).toBe(0);
+  });
+
+  it("stops walking a (forbidden) parent cycle instead of looping", () => {
+    const context = buildGenreOverlapContext([], [
+      { id: "x", parentId: "y" },
+      { id: "y", parentId: "x" },
+    ]);
+    expect(calculateGenreOverlap([{ id: "x", parentId: "y" }], [ROCK], context)).toBe(0);
   });
 });
 
 describe("calculateTagBonus", () => {
-  it("computes 0.08 * the hierarchy-aware genre-id jaccard overlap", () => {
-    // Seed expands to {house, electronic, techno}; candidate to {house, electronic, trance}.
-    // Intersection: 2 (house, electronic), Union: 4, Jaccard: 0.5, Bonus: 0.08 * 0.5 = 0.04
-    expect(calculateTagBonus([HOUSE, TECHNO], [HOUSE, TRANCE])).toBeCloseTo(0.04, 3);
+  it("is 0.08 times the soft overlap", () => {
+    expect(calculateTagBonus([CUMBIA], [CUMBIA, ROCK], LATIN_CONTEXT)).toBeCloseTo(0.06, 6);
+  });
+
+  it("scores a Cumbia seed's Chicha and Porro candidates above unrelated genres (#487)", () => {
+    const chicha = calculateTagBonus([CUMBIA], [CHICHA], LATIN_CONTEXT);
+    const porro = calculateTagBonus([CUMBIA], [PORRO], LATIN_CONTEXT);
+    const rock = calculateTagBonus([CUMBIA], [ROCK], LATIN_CONTEXT);
+    expect(chicha).toBeGreaterThan(porro);
+    expect(porro).toBeGreaterThan(rock);
+    expect(rock).toBe(0);
   });
 });
 
@@ -240,6 +300,34 @@ describe("applyConstraintsAndBonuses — strict mode", () => {
     const scored = applyConstraintsAndBonuses(seed, candidates, "strict");
     expect(scored).toHaveLength(1);
     expect(scored[0].trackId).toBe("good");
+  });
+
+  it("keeps a Cumbia seed's Chicha and Porro candidates, rejecting only the unrelated one (#487)", () => {
+    const cumbiaSeed = makeSeed({ genres: [CUMBIA] });
+    const candidates = [
+      makeCandidate("chicha", { genreRefs: [CHICHA] }),
+      makeCandidate("porro", { genreRefs: [PORRO] }),
+      makeCandidate("rock", { genreRefs: [ROCK] }),
+    ];
+
+    const scored = applyConstraintsAndBonuses(cumbiaSeed, candidates, "strict", LATIN_CONTEXT);
+    expect(scored.map((c) => c.trackId)).toEqual(["chicha", "porro"]);
+    expect(scored[0].bonuses.tagBonus).toBeGreaterThan(scored[1].bonuses.tagBonus);
+  });
+
+  it("rejects a candidate whose only link is below the minimum overlap", () => {
+    // A weak co-occurrence-only pair: credit 0.8 * 0.1 / 2 = 0.04, under the threshold.
+    const weak = buildGenreOverlapContext([{ genreId: "cumbia", relatedGenreId: "rock", score: 0.1 }], []);
+    expect(calculateGenreOverlap([CUMBIA], [ROCK], weak)).toBeLessThan(MIN_GENRE_OVERLAP);
+    expect(calculateGenreOverlap([CUMBIA], [ROCK], weak)).toBeGreaterThan(0);
+
+    const scored = applyConstraintsAndBonuses(
+      makeSeed({ genres: [CUMBIA] }),
+      [makeCandidate("rock", { genreRefs: [ROCK] })],
+      "strict",
+      weak
+    );
+    expect(scored).toHaveLength(0);
   });
 });
 

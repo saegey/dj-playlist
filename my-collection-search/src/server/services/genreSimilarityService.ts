@@ -1,6 +1,10 @@
 import type { GenrePageRef } from "@/api-contract/schemas";
 import { byCount } from "@/lib/genres/genrePageRefs";
 import { computeGenreSimilarity, DEFAULT_TOP_N, type GenreSimilaritySignals } from "@/lib/genres/genreSimilarity";
+import {
+  buildGenreOverlapContext,
+  type GenreOverlapContext,
+} from "@/lib/recommendation-pre-scorer";
 import { genreRepository, type GenreRow } from "@/server/repositories/genreRepository";
 import { genreSimilarityRepository } from "@/server/repositories/genreSimilarityRepository";
 
@@ -150,4 +154,16 @@ export function startGenreSimilarityRefresh(): void {
   setInterval(() => void refreshTick(), 60_000);
 
   console.log("[genre-similarity] started");
+}
+
+/**
+ * The pre-scorer's soft genre overlap context (#487): load once per
+ * recommendation request and pass to `applyConstraintsAndBonuses`.
+ */
+export async function loadGenreOverlapContext(): Promise<GenreOverlapContext> {
+  const { pairs, taxonomy } = await genreSimilarityRepository.loadOverlapData();
+  return buildGenreOverlapContext(
+    pairs.map((row) => ({ genreId: row.genre_id, relatedGenreId: row.related_genre_id, score: row.score })),
+    taxonomy.map((row) => ({ id: row.id, parentId: row.parent_id }))
+  );
 }

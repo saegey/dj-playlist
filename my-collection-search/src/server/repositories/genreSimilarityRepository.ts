@@ -11,6 +11,11 @@ export type GenreCoOccurrenceData = {
   totalAlbums: number;
 };
 
+export type GenreSimilarityPairRow = { genre_id: string; related_genre_id: string; score: number };
+export type GenreParentRow = { id: string; parent_id: string | null };
+
+export type GenreOverlapData = { pairs: GenreSimilarityPairRow[]; taxonomy: GenreParentRow[] };
+
 export type GenreSimilarityRow = { related_genre_id: string; score: number; signals: GenreSimilaritySignals };
 
 /**
@@ -78,6 +83,23 @@ export class GenreSimilarityRepository {
         [genreIds, relatedIds, scores, signals]
       );
     });
+  }
+
+  /**
+   * The whole similarity table plus every genre's parent (#487) — both
+   * small (about 450 genres, top 20 related each) — for the recommendation
+   * pre-scorer to hold in memory for one request instead of joining per
+   * candidate.
+   */
+  async loadOverlapData(): Promise<GenreOverlapData> {
+    const [pairs, taxonomy] = await Promise.all([
+      dbQuery<GenreSimilarityPairRow>(
+        `SELECT genre_id::text AS genre_id, related_genre_id::text AS related_genre_id, score
+         FROM genre_similarity`
+      ),
+      dbQuery<GenreParentRow>(`SELECT id::text AS id, parent_id::text AS parent_id FROM genres`),
+    ]);
+    return { pairs: pairs.rows, taxonomy: taxonomy.rows };
   }
 
   /** A genre's stored related genres, best first; empty when the table has no rows for it. */

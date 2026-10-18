@@ -6,7 +6,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { dbPool, dbQuery } from "@/lib/serverDb";
 import { createGenre } from "@/server/services/genreAdminService";
-import { recomputeGenreSimilarity } from "../genreSimilarityService";
+import { calculateGenreOverlap } from "@/lib/recommendation-pre-scorer";
+import { loadGenreOverlapContext, recomputeGenreSimilarity } from "../genreSimilarityService";
 
 const dbTest = it.skipIf(process.env.RUN_DB_TESTS !== "1");
 const USERNAME = "genre-similarity-test";
@@ -183,5 +184,22 @@ describe("genre similarity (integration)", () => {
 
     expect(after).toEqual(before);
     expect(after.length).toBeGreaterThan(0);
+  });
+
+  dbTest("loads the table and taxonomy into the pre-scorer's soft-overlap context (#487)", async () => {
+    await recomputeGenreSimilarity();
+    const context = await loadGenreOverlapContext();
+
+    // Real uuid ids come back as text, keyed so either direction finds the pair.
+    expect(context.parentOf.get(ids.C)).toBe(ids.A);
+    expect(context.parentOf.get(ids.A)).toBe(ids.Latin);
+    const cumbia = { id: ids.A, parentId: ids.Latin };
+    const salsa = { id: ids.B, parentId: ids.Latin };
+    const related = calculateGenreOverlap([cumbia], [salsa], context);
+    expect(related).toBeGreaterThan(0);
+    expect(related).toBeLessThan(1);
+    expect(calculateGenreOverlap([salsa], [cumbia], context)).toBeCloseTo(related, 6);
+    // Two levels apart, so only the loaded taxonomy (not the ref's own parentId) can see it.
+    expect(calculateGenreOverlap([{ id: ids.Latin, parentId: null }], [{ id: ids.C, parentId: ids.A }], context)).toBe(1);
   });
 });
