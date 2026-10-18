@@ -21,6 +21,7 @@ export const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   return (
     <Box
+      data-testid="floating-player"
       position="fixed"
       bottom={{ base: "calc(env(safe-area-inset-bottom, 0px) + 90px)", md: 4 }}
       left="50%"
