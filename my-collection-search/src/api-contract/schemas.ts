@@ -1,5 +1,33 @@
 import { z } from "zod";
 import {
+  albumArtMatchStatusSchema,
+  albumArtSourceSchema,
+  albumArtworkStateSchema,
+  albumDeleteResponseSchema,
+  albumDetailSchema,
+  albumPlayableStructureSchema,
+  albumPlayableStructureSideSchema,
+  albumPlayableStructureTrackSchema,
+  albumSchema,
+  albumTaxonomyOverridesSchema,
+  albumSearchResponseSchema,
+  genreFilterRefSchema,
+  trackAudioMetadataEmbeddedCoverSchema,
+  trackAudioMetadataSchema,
+  trackDeleteResponseSchema,
+  trackEssentiaSchema,
+  trackExtractEmbeddedCoverResponseSchema,
+  trackGenreSchema,
+  trackPlaylistCountRefSchema,
+  trackPlaylistCountsRequestSchema,
+  trackPlaylistCountsResponseSchema,
+  trackPlaylistMembershipSchema,
+  trackPlaylistsResponseSchema,
+  trackSchema,
+  trackSearchModeSchema,
+  trackSearchResponseSchema,
+  type GenreFilterRef,
+  type TrackSearchMode,
   liveSetDeleteResponseSchema,
   liveSetMutationResponseSchema,
   liveSetSchema,
@@ -122,14 +150,6 @@ export const providerTrackMetadataBodySchema = z.object({
   prompt: z.string().min(1),
   friend_id: intFromInputSchema.optional(),
   track_id: z.string().min(1).optional(),
-});
-
-export const trackGenreSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  slug: z.string(),
-  parent_id: z.string().uuid().nullable(),
-  parent_name: z.string().nullable(),
 });
 
 export const providerTrackMetadataResponseSchema = z.object({
@@ -547,8 +567,43 @@ export const playlistGeneticResponseSchema = sharedPlaylistGeneticResponseSchema
 export const playlistGeneticInvalidItemSchema = sharedPlaylistGeneticInvalidItemSchema;
 export const playlistGeneticValidationErrorSchema = sharedPlaylistGeneticValidationErrorSchema;
 
-export const trackSearchModeSchema = z.enum(["lexical", "semantic", "hybrid"]);
-export type TrackSearchMode = z.infer<typeof trackSearchModeSchema>;
+
+// Entity and response schemas live in @groovenet/contracts; the app keeps the
+// names routes and internalApi already import, and keeps query-string coercion.
+export type { TrackSearchMode, AlbumTaxonomyOverrides } from "@groovenet/contracts";
+export {
+  albumArtMatchStatusSchema,
+  albumArtSourceSchema,
+  albumArtworkStateSchema,
+  albumDeleteResponseSchema,
+  albumPlayableStructureSideSchema,
+  albumPlayableStructureTrackSchema,
+  albumSearchResponseSchema,
+  genreFilterRefSchema,
+  trackAudioMetadataEmbeddedCoverSchema,
+  trackDeleteResponseSchema,
+  trackExtractEmbeddedCoverResponseSchema,
+  trackGenreSchema,
+  trackPlaylistCountRefSchema,
+  trackPlaylistCountsResponseSchema,
+  trackPlaylistMembershipSchema,
+  trackPlaylistsResponseSchema,
+  trackSearchModeSchema,
+};
+export const albumEntitySchema = albumSchema;
+export const trackEntitySchema = trackSchema;
+export const albumDetailResponseSchema = albumDetailSchema;
+export const albumPlayableStructureResponseSchema = albumPlayableStructureSchema;
+export const trackAudioMetadataResponseSchema = trackAudioMetadataSchema;
+export const trackEssentiaResponseSchema = trackEssentiaSchema;
+export const trackPlaylistCountsBodySchema = trackPlaylistCountsRequestSchema;
+/**
+ * Runtime validation keeps `hits` opaque: search rows are raw SQL results the
+ * contract documents (see `Track`) but the route has never rejected.
+ */
+export const trackSearchGetResponseSchema = trackSearchResponseSchema.extend({
+  hits: z.array(z.unknown()),
+});
 
 /** A repeatable `genre` query parameter: one value, or several. */
 const genreQueryParamSchema = z
@@ -559,12 +614,7 @@ const genreQueryParamSchema = z
   .optional();
 
 /** A genre a widened filter added (#485): the removable "+ Chicha, Porro" chip. */
-export const genreFilterRefSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  slug: z.string(),
-});
-export type GenreFilterRefDto = z.infer<typeof genreFilterRefSchema>;
+export type GenreFilterRefDto = GenreFilterRef;
 
 export const trackSearchGetQuerySchema = z.object({
   q: z.string().optional().default(""),
@@ -593,85 +643,6 @@ export const trackSearchGetQuerySchema = z.object({
   similar_limit: nonNegativeIntFromInputSchema.optional(),
   /** Related-genre ids the UI has removed from the widened set; kept out on this and later requests. */
   similar_exclude: genreQueryParamSchema,
-});
-
-const searchMetaSchema = z.object({
-  estimatedTotalHits: z.number().int(),
-  offset: z.number().int(),
-  limit: z.number().int(),
-  processingTimeMs: z.number().int(),
-});
-
-export const trackSearchGetResponseSchema = searchMetaSchema.extend({
-  hits: z.array(z.unknown()),
-  /** Genres `include_similar` added beyond the plain `genre` filter (#485). */
-  added_genres: z.array(genreFilterRefSchema).optional(),
-  /** The mode that ranked these hits; omitted for a plain lexical request. */
-  mode: trackSearchModeSchema.optional(),
-  /** Hybrid fell back to lexical alone because the semantic leg failed. */
-  degraded: z.boolean().optional(),
-});
-
-export const trackPlaylistCountRefSchema = z.object({
-  track_id: z.string().min(1),
-  friend_id: z.number().int(),
-});
-
-export const trackPlaylistCountsBodySchema = z.object({
-  track_refs: z.array(trackPlaylistCountRefSchema),
-});
-
-export const trackPlaylistCountsResponseSchema = z.record(z.string(), z.number().int());
-
-export const trackPlaylistMembershipSchema = z.object({
-  id: z.number().int(),
-  name: z.string(),
-  position: z.number().int(),
-});
-
-export const trackPlaylistsResponseSchema = z.object({
-  playlists: z.array(trackPlaylistMembershipSchema).optional(),
-});
-
-export const trackAudioMetadataEmbeddedCoverSchema = z
-  .object({
-    index: z.number().int(),
-    codec_name: z.string().optional(),
-    width: z.number().int().optional(),
-    height: z.number().int().optional(),
-    pix_fmt: z.string().optional(),
-  })
-  .passthrough();
-
-export const trackAudioMetadataResponseSchema = z.object({
-  track_id: z.string(),
-  friend_id: z.number().int(),
-  local_audio_url: z.string(),
-  audio_file_album_art_url: z.string().nullable().optional(),
-  has_embedded_cover: z.boolean(),
-  embedded_cover: trackAudioMetadataEmbeddedCoverSchema.nullable().optional(),
-  probe: z.unknown(),
-});
-
-export const trackExtractEmbeddedCoverResponseSchema = z
-  .object({
-    success: z.boolean(),
-    audio_file_album_art_url: z.string(),
-    message: z.string(),
-  })
-  .passthrough();
-
-export const trackEssentiaResponseSchema = z.object({
-  track_id: z.string(),
-  friend_id: z.number().int(),
-  file_path: z.string(),
-  data: z.unknown(),
-});
-
-export const trackDeleteResponseSchema = z.object({
-  success: z.boolean(),
-  track_id: z.string(),
-  friend_id: z.number().int(),
 });
 
 export const embeddingPreviewTypeSchema = z.enum(["identity", "audio_vibe", "context"]);
@@ -1001,51 +972,8 @@ export const albumDiscogsRawResponseSchema = z.object({
 });
 
 /** Omitted: unchanged; null: reset to Discogs; []: deliberately empty. */
-export const albumTaxonomyOverrideFields = z.object({
-  genre_override_ids: z.array(z.string().uuid()).max(100).nullable().optional(),
-  style_override_ids: z.array(z.string().uuid()).max(100).nullable().optional(),
-});
+export const albumTaxonomyOverrideFields = albumTaxonomyOverridesSchema;
 
-export type AlbumTaxonomyOverrides = z.infer<typeof albumTaxonomyOverrideFields>;
-
-export const albumEntitySchema = z
-  .object({
-    ...albumTaxonomyOverrideFields.shape,
-    effective_genres: z.array(z.string()).optional(),
-    effective_styles: z.array(z.string()).optional(),
-    release_id: z.string(),
-    friend_id: z.number().int(),
-    title: z.string(),
-    artist: z.string(),
-    year: z.union([z.string(), z.number()]).nullable().optional(),
-    genres: z.array(z.string()).nullable().optional(),
-    styles: z.array(z.string()).nullable().optional(),
-    album_thumbnail: z.string().nullable().optional(),
-    track_count: z.number().int().optional(),
-    date_added: z.string().nullable().optional(),
-    date_changed: z.string().nullable().optional(),
-    library_identifier: z.string().nullable().optional(),
-  })
-  .passthrough();
-
-export const trackEntitySchema = z
-  .object({
-    album_genres: z.array(z.string()).optional(),
-    album_styles: z.array(z.string()).optional(),
-    track_id: z.string(),
-    friend_id: z.number().int(),
-    title: z.string(),
-    artist: z.string(),
-    album: z.string(),
-    year: z.union([z.string(), z.number()]).nullable().optional(),
-    duration: z.string().optional(),
-    duration_seconds: z.number().nullable().optional(),
-    position: z.union([z.string(), z.number()]).optional(),
-    release_id: z.string().nullable().optional(),
-    library_identifier: z.string().nullable().optional(),
-    hasVectors: z.boolean().optional(),
-  })
-  .passthrough();
 
 export const similarVibeQuerySchema = z.object({
   track_id: z.string().min(1),
@@ -1153,48 +1081,7 @@ export const albumSearchQuerySchema = z.object({
   similar_exclude: genreQueryParamSchema,
 });
 
-export const albumSearchResponseSchema = z.object({
-  hits: z.array(albumEntitySchema),
-  estimatedTotalHits: z.number().int(),
-  offset: z.number().int(),
-  limit: z.number().int(),
-  query: z.string(),
-  sort: z.string(),
-  /** Genres `include_similar` added beyond the plain `genre` filter (#485). */
-  added_genres: z.array(genreFilterRefSchema).optional(),
-});
-
-export const albumDetailResponseSchema = z.object({
-  album: albumEntitySchema,
-  tracks: z.array(trackEntitySchema),
-});
-
-export const albumDeleteResponseSchema = z.object({
-  success: z.boolean(),
-});
-
 // ─── Album artwork (#494) ────────────────────────────────────────────────────
-
-export const albumArtSourceSchema = z.enum(["discogs", "apple_music", "upload"]);
-
-export const albumArtMatchStatusSchema = z.enum([
-  "matched",
-  "mismatch",
-  "no_reference",
-  "no_candidate",
-]);
-
-export const albumArtworkStateSchema = z.object({
-  release_id: z.string(),
-  friend_id: z.number().int(),
-  current_url: z.string().nullable(),
-  source: albumArtSourceSchema.nullable(),
-  discogs_art_url: z.string().nullable(),
-  apple_music_art_url: z.string().nullable(),
-  art_match_status: albumArtMatchStatusSchema.nullable(),
-  art_match_distance: z.number().int().nullable(),
-  has_local_audio: z.boolean(),
-});
 
 export const albumArtworkApplyBodySchema = z.object({
   source: z.enum(["apple_music", "discogs"]),
@@ -1254,29 +1141,6 @@ export const albumArtworkReviewItemSchema = z.object({
 
 export const albumArtworkReviewResponseSchema = z.object({
   albums: z.array(albumArtworkReviewItemSchema),
-});
-
-export const albumPlayableStructureTrackSchema = z
-  .object({
-    track_id: z.string(),
-    friend_id: z.number().int(),
-    position: z.union([z.string(), z.number()]).nullable().optional(),
-    title: z.string(),
-    artist: z.string(),
-  })
-  .passthrough();
-
-export const albumPlayableStructureSideSchema = z.object({
-  side_key: z.string(),
-  side_label: z.string(),
-  ordinal: z.number().int(),
-  track_count: z.number().int(),
-  tracks: z.array(albumPlayableStructureTrackSchema),
-});
-
-export const albumPlayableStructureResponseSchema = z.object({
-  album: albumEntitySchema,
-  sides: z.array(albumPlayableStructureSideSchema),
 });
 
 export const spinTrackRefSchema = z.object({

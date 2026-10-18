@@ -36,37 +36,19 @@ export {
 } from "@groovenet/contracts";
 export type { PlaylistTrackInput } from "@groovenet/contracts";
 
+import { trackSearchModeSchema } from "@groovenet/contracts";
+export {
+  albumPlayableStructureSideSchema,
+  albumPlayableStructureTrackSchema,
+  albumPlayableStructureSchema as albumPlayableStructureResponseSchema,
+  albumSchema as albumEntitySchema,
+  trackGenreSchema,
+  trackSchema as trackEntitySchema,
+  trackSearchModeSchema,
+  trackSearchResponseSchema as trackSearchGetResponseSchema,
+} from "@groovenet/contracts";
+
 /** A taxonomy genre linked to a track (#371). */
-export const trackGenreSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  slug: z.string(),
-  parent_id: z.string().uuid().nullable(),
-  parent_name: z.string().nullable(),
-});
-
-export const trackEntitySchema = z
-  .object({
-    album_genres: z.array(z.string()).optional(),
-    album_styles: z.array(z.string()).optional(),
-    track_id: z.string(),
-    friend_id: z.number().int(),
-    title: z.string(),
-    artist: z.string(),
-    album: z.string(),
-    year: z.union([z.string(), z.number()]).nullable().optional(),
-    duration: z.string().optional(),
-    duration_seconds: z.number().nullable().optional(),
-    position: z.union([z.string(), z.number()]).optional(),
-    release_id: z.string().nullable().optional(),
-    library_identifier: z.string().nullable().optional(),
-    track_genres: z.array(trackGenreSchema).optional(),
-    descriptors: z.array(z.string()).optional(),
-  })
-  .passthrough();
-
-export const trackSearchModeSchema = z.enum(["lexical", "semantic", "hybrid"]);
-
 export const trackSearchGetQuerySchema = z.object({
   q: z.string().optional().default(""),
   limit: nonNegativeIntFromInputSchema.optional().default(20),
@@ -83,16 +65,6 @@ export const trackSearchGetQuerySchema = z.object({
       z.array(z.string().trim().min(1)).max(20)
     )
     .optional(),
-});
-
-export const trackSearchGetResponseSchema = z.object({
-  estimatedTotalHits: z.number().int(),
-  offset: z.number().int(),
-  limit: z.number().int(),
-  processingTimeMs: z.number().int(),
-  hits: z.array(z.unknown()),
-  mode: trackSearchModeSchema.optional(),
-  degraded: z.boolean().optional(),
 });
 
 export const jobInfoSchema = z
@@ -122,63 +94,6 @@ export const localPlaybackControlResponseSchema = z.object({
   success: z.boolean(),
   status: z.unknown().optional(),
   volume: z.number().optional(),
-});
-
-export const albumEntitySchema = z
-  .object({
-    effective_genres: z.array(z.string()).optional(),
-    effective_styles: z.array(z.string()).optional(),
-    genre_override_ids: z.array(z.string().uuid()).nullable().optional(),
-    style_override_ids: z.array(z.string().uuid()).nullable().optional(),
-    release_id: z.string(),
-    friend_id: z.number().int(),
-    username: z.string().optional(),
-    title: z.string(),
-    artist: z.string(),
-    year: z.string().nullable().optional(),
-    genres: z.array(z.string()).nullable().optional(),
-    styles: z.array(z.string()).nullable().optional(),
-    album_thumbnail: z.string().nullable().optional(),
-    audio_file_album_art_url: z.string().optional(),
-    discogs_url: z.string().optional(),
-    date_added: z.string().nullable().optional(),
-    date_changed: z.string().nullable().optional(),
-    track_count: z.number().int(),
-    album_rating: z.number().nullable().optional(),
-    album_notes: z.string().nullable().optional(),
-    purchase_price: z.number().nullable().optional(),
-    condition: z.string().nullable().optional(),
-    label: z.string().nullable().optional(),
-    catalog_number: z.string().nullable().optional(),
-    country: z.string().nullable().optional(),
-    format: z.string().nullable().optional(),
-    created_at: z.string().optional(),
-    updated_at: z.string().optional(),
-    library_identifier: z.string().nullable().optional(),
-  })
-  .passthrough();
-
-export const albumPlayableStructureTrackSchema = z
-  .object({
-    track_id: z.string(),
-    friend_id: z.number().int(),
-    position: z.union([z.string(), z.number()]).nullable().optional(),
-    title: z.string(),
-    artist: z.string(),
-  })
-  .passthrough();
-
-export const albumPlayableStructureSideSchema = z.object({
-  side_key: z.string(),
-  side_label: z.string(),
-  ordinal: z.number().int(),
-  track_count: z.number().int(),
-  tracks: z.array(albumPlayableStructureTrackSchema),
-});
-
-export const albumPlayableStructureResponseSchema = z.object({
-  album: albumEntitySchema,
-  sides: z.array(albumPlayableStructureSideSchema),
 });
 
 export const spinTrackRefSchema = z.object({

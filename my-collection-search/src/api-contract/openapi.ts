@@ -1,5 +1,5 @@
 import { apiContractRoutes, genreTreeNodeSchemaObject } from "@/api-contract/routes";
-import { liveSetJsonSchemas, playlistJsonSchemas } from "@groovenet/contracts";
+import { albumJsonSchemas, liveSetJsonSchemas, playlistJsonSchemas, trackJsonSchemas } from "@groovenet/contracts";
 import fs from "node:fs";
 import path from "node:path";
 import { exampleFromSchema } from "./exampleFromSchema";
@@ -193,7 +193,7 @@ function buildOpenApiDocumentInternal(): OpenApiDocument {
             "Defined for endpoints that use bearer auth. No current documented endpoint requires it.",
         },
       },
-      schemas: { GenreTreeNode: genreTreeNodeSchemaObject, ...liveSetJsonSchemas, ...playlistJsonSchemas },
+      schemas: { GenreTreeNode: genreTreeNodeSchemaObject, ...liveSetJsonSchemas, ...playlistJsonSchemas, ...trackJsonSchemas, ...albumJsonSchemas },
     },
   };
 }

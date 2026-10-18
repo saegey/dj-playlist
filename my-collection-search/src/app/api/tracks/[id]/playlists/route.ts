@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { trackPlaylistsResponseSchema } from "@/api-contract/schemas";
 import { trackRepository } from "@/server/repositories/trackRepository";
 
 export async function GET(
@@ -26,7 +27,7 @@ export async function GET(
 
     const rows = await trackRepository.listPlaylistsForTrack(track_id, friend_id);
 
-    return NextResponse.json({ playlists: rows });
+    return NextResponse.json(trackPlaylistsResponseSchema.parse({ playlists: rows }));
   } catch (error) {
     console.error("Error fetching track playlist memberships:", error);
     return NextResponse.json(

@@ -1,64 +1,38 @@
 import type { DiscogsSimpleArtist, DiscogsVideo } from "@/types/discogs";
-import type { LiveSetSummary } from "@groovenet/contracts";
-export type { LiveSetStatus, LiveSetCollaborator, LiveSetSummary } from "@groovenet/contracts";
+import type { AlbumEntity, LiveSetSummary, TrackEntity } from "@groovenet/contracts";
+export type { LiveSetStatus, LiveSetCollaborator, LiveSetSummary, TrackGenre } from "@groovenet/contracts";
 
-export type Track = {
+/**
+ * The track wire entity from @groovenet/contracts. The wire schema is honest
+ * about nulls and optionals; the UI treats the fields a search hit always
+ * carries as present and never sees null for the link columns, so those are
+ * narrowed here rather than in the contract.
+ */
+type TrackNarrowedKeys =
+  | "id" | "year" | "duration" | "position" | "discogs_url" | "apple_music_url" | "youtube_url"
+  | "spotify_url" | "soundcloud_url" | "album_thumbnail" | "local_audio_url" | "star_rating"
+  | "isrc" | "bpm" | "notes" | "local_tags" | "composer" | "duration_seconds";
+export type Track = Omit<TrackEntity, TrackNarrowedKeys> & {
   id: number;
-  track_id: string;
-  isrc?: string;
-  title: string;
-  artist: string;
-  album: string;
   year: string | number;
-  styles?: string[];
-  genres?: string[];
-  album_genres?: string[];
-  album_styles?: string[];
   duration: string;
-  duration_seconds?: number;
   position: string | number;
   discogs_url: string;
   apple_music_url: string;
   youtube_url?: string;
+  spotify_url?: string;
   soundcloud_url?: string;
   album_thumbnail?: string;
-  /** Raw free-text genres; superseded by track_genres once reconciled (#371). */
-  local_tags?: string | undefined;
-  /** Track-level DJ genres: links to the canonical taxonomy (#371). */
-  track_genres?: TrackGenre[];
-  /** Normalised mood and description words, kept out of genres (#371). */
-  descriptors?: string[];
-  composer?: string | undefined | null;
-  bpm?: string | undefined | null;
-  key?: string | undefined | null;
-  /** Confidence (0-1) of the EDMA key estimate stored in `key` (#524). */
-  key_confidence?: number | null;
-  danceability?: string | null;
-  mood_happy?: number | null;
-  mood_sad?: number | null;
-  mood_relaxed?: number | null;
-  mood_aggressive?: number | null;
-  notes?: string | undefined | null;
   local_audio_url?: string;
-  audio_file_album_art_url?: string | null;
   star_rating?: number;
-  username?: string; // Username of the user who added this track
+  isrc?: string;
+  bpm?: string | null;
+  notes?: string | null;
+  local_tags?: string;
+  composer?: string | null;
+  duration_seconds?: number;
   _semanticScore?: number; // Optional semantic score for AI recommendations
-  friend_id: number;
-  release_id?: string;
-  library_identifier?: string | null; // Alphanumeric library ID (e.g., LP001) for physical organization
   _vectors?: { default?: number[] };
-  hasVectors?: boolean;
-  deleted_at?: string | null;
-};
-
-/** A taxonomy genre as linked to a track, with its parent for display. */
-export type TrackGenre = {
-  id: string;
-  name: string;
-  slug: string;
-  parent_id: string | null;
-  parent_name: string | null;
 };
 
 export type YoutubeVideo = {
@@ -142,42 +116,9 @@ export interface Friend {
   username: string;
 }
 
-export interface Album {
-  release_id: string;
-  friend_id: number;
-  username?: string;
-  title: string;
-  artist: string;
+export type Album = Omit<AlbumEntity, "track_count" | "year" | "audio_file_album_art_url" | "discogs_url"> & {
+  track_count: number;
   year?: string | null;
-  genres?: string[] | null;
-  styles?: string[] | null;
-  /** Display/search values after the per-friend replacement layer. */
-  effective_genres?: string[];
-  effective_styles?: string[];
-  /** null means Discogs; [] means an intentionally empty replacement. */
-  genre_override_ids?: string[] | null;
-  style_override_ids?: string[] | null;
-  album_thumbnail?: string | null;
   audio_file_album_art_url?: string;
   discogs_url?: string;
-  date_added?: string | null;
-  date_changed?: string | null;
-  track_count: number;
-  album_rating?: number | null;
-  album_notes?: string | null;
-  purchase_price?: number | null;
-  condition?: string | null;
-  label?: string | null;
-  catalog_number?: string | null;
-  country?: string | null;
-  format?: string | null;
-  created_at?: string;
-  updated_at?: string;
-  library_identifier?: string | null; // Alphanumeric library ID (e.g., LP001) for physical organization
-  // Artwork provenance (#494); the displayed cover is still audio_file_album_art_url || album_thumbnail.
-  album_art_source?: "discogs" | "apple_music" | "upload" | null;
-  discogs_art_url?: string | null;
-  apple_music_art_url?: string | null;
-  art_match_status?: "matched" | "mismatch" | "no_reference" | "no_candidate" | null;
-  art_match_distance?: number | null;
-}
+};
