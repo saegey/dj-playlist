@@ -174,3 +174,33 @@ describe("TrackActionsMenu desktop dropdown — selecting an item", () => {
     expect(await screen.findByRole("dialog", { name: "Delete track?" })).toBeTruthy();
   });
 });
+
+describe("TrackActionsMenu desktop dropdown — grouping", () => {
+  it("orders primary, audio, destructive (adjacent) and external-link groups", async () => {
+    const { user, menuButton } = setup(trackWithEverything, {
+      onOpenTrackDebug: vi.fn(),
+      onChangeArtwork: vi.fn(),
+    });
+    await user.click(menuButton);
+    await screen.findByRole("menuitem", { name: /^Play$/, hidden: true });
+    const names = screen
+      .getAllByRole("menuitem", { hidden: true })
+      .map((el) => el.textContent?.trim());
+    expect(names).toEqual([
+      "Play",
+      "Add to Queue",
+      "Add to Playlist",
+      "Edit Track",
+      "Enrich Track",
+      "Cover Art...",
+      "Track Debug",
+      "Fetch Audio",
+      "Upload Audio",
+      "Remove Audio",
+      "Delete Track",
+      "Apple Music",
+      "YouTube",
+      "SoundCloud",
+    ]);
+  });
+});

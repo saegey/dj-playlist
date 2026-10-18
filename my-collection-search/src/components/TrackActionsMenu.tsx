@@ -317,6 +317,7 @@ export default function TrackActionsMenu({
                 </Drawer.Header>
                 <Drawer.Body p={0} overflowY="auto">
                   <Stack gap={0}>
+                    {/* Primary */}
                     {hasAudio && (
                       <DrawerItem
                         icon={<FiPlay />}
@@ -325,6 +326,11 @@ export default function TrackActionsMenu({
                       />
                     )}
                     <DrawerItem
+                      icon={<FiPlusSquare />}
+                      label="Add to Queue"
+                      onClick={() => { queueTrack(); setDrawerOpen(false); }}
+                    />
+                    <DrawerItem
                       icon={<FiPlus />}
                       label="Add to Playlist"
                       onClick={() => { openForTrack(track); setDrawerOpen(false); }}
@@ -332,6 +338,11 @@ export default function TrackActionsMenu({
                     {!hideEdit && (
                       <DrawerItem icon={<FiEdit />} label="Edit Track" href={editHref} />
                     )}
+                    <DrawerItem
+                      icon={<FiZap />}
+                      label="Enrich Track"
+                      onClick={() => { handleEnrich(); setDrawerOpen(false); }}
+                    />
                     {onChangeArtwork && (
                       <DrawerItem
                         icon={<FiImage />}
@@ -352,16 +363,7 @@ export default function TrackActionsMenu({
                         }}
                       />
                     )}
-                    <DrawerItem
-                      icon={<FiZap />}
-                      label="Enrich Track"
-                      onClick={() => { handleEnrich(); setDrawerOpen(false); }}
-                    />
-                    <DrawerItem
-                      icon={<FiPlusSquare />}
-                      label="Add to Queue"
-                      onClick={() => { queueTrack(); setDrawerOpen(false); }}
-                    />
+                    {/* Audio management */}
                     {drawerDivider}
                     {hasStreamingLinks && (
                       <DrawerItem
@@ -377,6 +379,8 @@ export default function TrackActionsMenu({
                       disabled={uploadLoading}
                       onClick={() => { handleUploadClick(); setDrawerOpen(false); }}
                     />
+                    {/* Destructive: kept adjacent */}
+                    {drawerDivider}
                     {hasAudio && (
                       <DrawerItem
                         icon={<FiTrash2 />}
@@ -386,13 +390,13 @@ export default function TrackActionsMenu({
                         onClick={() => { setRemoveAudioConfirmOpen(true); setDrawerOpen(false); }}
                       />
                     )}
-                    {drawerDivider}
                     <DrawerItem
                       icon={<FiTrash2 />}
                       label="Delete Track"
                       color="red.500"
                       onClick={() => { setDeleteConfirmOpen(true); setDrawerOpen(false); }}
                     />
+                    {/* External links */}
                     {hasStreamingLinks && (
                       <>
                         {drawerDivider}
@@ -426,11 +430,15 @@ export default function TrackActionsMenu({
           <Portal>
             <Menu.Positioner>
               <Menu.Content>
+                {/* Primary */}
                 {hasAudio && (
                   <Menu.Item onSelect={playTrack} value="play">
                     <FiPlay /> Play
                   </Menu.Item>
                 )}
+                <Menu.Item onSelect={queueTrack} value="queue">
+                  <FiPlusSquare /> Add to Queue
+                </Menu.Item>
                 <Menu.Item onSelect={() => openForTrack(track)} value="add">
                   <FiPlus /> Add to Playlist
                 </Menu.Item>
@@ -441,6 +449,9 @@ export default function TrackActionsMenu({
                     </NextLink>
                   </Menu.Item>
                 )}
+                <Menu.Item onSelect={handleEnrich} value="enrich">
+                  <FiZap /> Enrich Track
+                </Menu.Item>
                 {onChangeArtwork && (
                   <Menu.Item onSelect={onChangeArtwork} value="cover-art">
                     <FiImage /> Cover Art...
@@ -451,12 +462,7 @@ export default function TrackActionsMenu({
                     <FiCode /> Track Debug
                   </Menu.Item>
                 )}
-                <Menu.Item onSelect={handleEnrich} value="enrich">
-                  <FiZap /> Enrich Track
-                </Menu.Item>
-                <Menu.Item onSelect={queueTrack} value="queue">
-                  <FiPlusSquare /> Add to Queue
-                </Menu.Item>
+                {/* Audio management */}
                 {menuDivider}
                 {hasStreamingLinks && (
                   <Menu.Item
@@ -472,6 +478,8 @@ export default function TrackActionsMenu({
                   <FiUpload />
                   {uploadLoading ? "Uploading..." : "Upload Audio"}
                 </Menu.Item>
+                {/* Destructive: kept adjacent */}
+                {menuDivider}
                 {hasAudio && (
                   <Menu.Item
                     onSelect={() => setRemoveAudioConfirmOpen(true)}
@@ -483,10 +491,10 @@ export default function TrackActionsMenu({
                     {removeAudioLoading ? "Removing..." : "Remove Audio"}
                   </Menu.Item>
                 )}
-                {menuDivider}
                 <Menu.Item onSelect={() => setDeleteConfirmOpen(true)} value="delete" color="red.500">
                   <FiTrash2 /> Delete Track
                 </Menu.Item>
+                {/* External links */}
                 {hasStreamingLinks && (
                   <>
                     {menuDivider}
