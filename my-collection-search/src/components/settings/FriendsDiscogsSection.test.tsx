@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   cleanupMutateAsync: vi.fn(),
   deleteMutateAsync: vi.fn(),
   handleRemoveFriend: vi.fn(),
+  defaultFriend: null as { username: string } | null,
 }));
 
 vi.mock("@/hooks/useFriendsQuery", () => ({
@@ -34,6 +35,9 @@ vi.mock("@/hooks/useDiscogsQuery", () => ({
   useCleanupManifests: () => ({ mutateAsync: mocks.cleanupMutateAsync, isPending: false }),
   useDeleteReleases: () => ({ mutateAsync: mocks.deleteMutateAsync, isPending: false }),
 }));
+vi.mock("@/providers/UsernameProvider", () => ({
+  useUsername: () => ({ friend: mocks.defaultFriend }),
+}));
 vi.mock("@/hooks/useFriendsSync", () => ({
   useFriendsSync: () => ({ handleRemoveFriend: mocks.handleRemoveFriend }),
 }));
@@ -44,6 +48,7 @@ describe("FriendsDiscogsSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.friends = [];
+    mocks.defaultFriend = null;
     mocks.friendsLoading = false;
     mocks.addFriendPending = false;
     mocks.removeFriendPending = false;
@@ -139,5 +144,18 @@ describe("FriendsDiscogsSection", () => {
     const buttons = syncButtons();
     expect(buttons.every((b) => b.disabled)).toBe(true);
     expect(buttons.map((b) => b.hasAttribute("data-loading"))).toEqual([false, true, false]);
+  });
+
+  it("badges the friend row that is the default library instead of listing it twice", async () => {
+    mocks.friends = [{ username: "owner" }, { username: "dj-friend" }];
+    mocks.defaultFriend = { username: "owner" };
+    const { user } = renderWithProviders(<FriendsDiscogsSection />);
+
+    expect(screen.queryByText("Default library")).toBeNull();
+    expect(screen.getAllByText("default")).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Remove friend" })).toHaveLength(1);
+
+    await user.click(screen.getAllByRole("button", { name: "Sync collection" })[0]);
+    await waitFor(() => expect(mocks.syncMutate).toHaveBeenCalledWith({ username: "owner" }));
   });
 });
