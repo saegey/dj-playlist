@@ -7,12 +7,9 @@ import {
   Text,
   Link,
   Image,
-  Button,
-  Icon,
   RatingGroup,
 } from "@chakra-ui/react";
 import { useColorModeValue } from "@/components/ui/color-mode";
-import { SiDiscogs } from "react-icons/si";
 import { Album } from "@/types/track";
 import { useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
 import { useAlbum } from "@/hooks/useAlbum";
@@ -35,17 +32,13 @@ function formatDate(dateString?: string): string {
 export type AlbumResultProps = {
   album?: Album;
   albumRef?: { release_id: string; friend_id: number };
-  buttons?: React.ReactNode;
   showEditFields?: boolean;
-  compact?: boolean;
 };
 
 export default function AlbumResult({
   album,
   albumRef,
-  buttons,
   showEditFields = false,
-  compact = false,
 }: AlbumResultProps) {
   const releaseId = albumRef?.release_id ?? album?.release_id ?? "";
   const friendId = albumRef?.friend_id ?? album?.friend_id ?? -1;
@@ -108,63 +101,6 @@ export default function AlbumResult({
       setIsEnriching(false);
     }
   };
-
-  if (compact) {
-    return (
-      <Flex
-        borderBottomWidth="1px"
-        py={2}
-        px={1}
-        gap={2}
-        align="center"
-        width="100%"
-      >
-        <Image
-          src={artworkSrc}
-          alt={resolvedAlbum.title}
-          width="40px"
-          height="40px"
-          objectFit="cover"
-          borderRadius="sm"
-          flexShrink={0}
-        />
-        <Box flex={1} minW={0}>
-          <Text fontSize="sm" fontWeight="bold" lineClamp={1}>
-            <Link
-              as={NextLink}
-              href={`/albums/${resolvedAlbum.release_id}?friend_id=${resolvedAlbum.friend_id}`}
-            >
-              {resolvedAlbum.title}
-            </Link>
-          </Text>
-          <Text fontSize="xs" color={mutedText} lineClamp={1}>
-            {resolvedAlbum.artist}
-            {displayYear ? ` · ${displayYear}` : ""}
-          </Text>
-        </Box>
-        <Flex gap={1} flexShrink={0}>
-          {resolvedAlbum.discogs_url && (
-            <Link href={resolvedAlbum.discogs_url} target="_blank" rel="noopener noreferrer">
-              <Button size="xs" variant="ghost" px={1}>
-                <Icon as={SiDiscogs} />
-              </Button>
-            </Link>
-          )}
-          {showEditFields && (
-            <Button asChild size="xs" variant="outline" px={1}>
-              <Link
-                as={NextLink}
-                href={`/albums/${resolvedAlbum.release_id}/edit?friend_id=${resolvedAlbum.friend_id}`}
-              >
-                Edit
-              </Link>
-            </Button>
-          )}
-          {buttons}
-        </Flex>
-      </Flex>
-    );
-  }
 
   const displayGenres = discogsGenreBadges(resolvedAlbum.effective_genres ?? resolvedAlbum.genres, genreLookup);
   const displayStyles = discogsGenreBadges(resolvedAlbum.effective_styles ?? resolvedAlbum.styles, genreLookup);

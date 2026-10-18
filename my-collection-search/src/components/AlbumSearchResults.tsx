@@ -8,11 +8,9 @@ import { useSearchParams } from "next/navigation";
 import type { GenreFilterRef } from "@/lib/trackFilterSpec";
 
 export default function AlbumSearchResults({
-  viewMode = "card",
   friendId,
   onAddedGenresChange,
 }: {
-  viewMode?: "card" | "table";
   friendId: number;
   /** Genres `include_similar` added (#485), reported up for the page to show as chips. */
   onAddedGenresChange?: (genres: GenreFilterRef[]) => void;
@@ -127,7 +125,6 @@ export default function AlbumSearchResults({
             }}
             album={album}
             showEditFields={true}
-            compact={viewMode === "table"}
           />
         ))}
       </Box>
