@@ -71,6 +71,13 @@ gamdl needs a cookie file. `resolve_gamdl_cookie_file()` checks
 `GAMDL_COOKIE_FILE` first, then two legacy paths under `/app/cookies/`. A file
 with no Apple entries is skipped with a warning rather than passed through.
 
+Analysis is not run inline. After the file is moved and `local_audio_url` is
+written, `enqueue_analyze_job` (`redis_utils.py`) pushes an `analyze-local` job
+on `download_queue`, so an Essentia failure is captured and marks *that* job
+failed. The download job still completes with `analysis_status: 'queued'` and
+`analysis_job_id`; if the enqueue itself fails it is sent to Sentry and the job
+completes with `analysis_status: 'failed'` and `analysis_error`.
+
 Audio quality is one of `best`, `high`, `standard`, `lossless`.
 
 ## Talking to the app

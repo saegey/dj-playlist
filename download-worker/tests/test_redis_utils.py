@@ -72,3 +72,18 @@ def test_append_job_logs_multiple_calls_accumulate(fake_redis):
     append_job_logs("job-9", ["c"])
     items = fake_redis.lrange("job:job-9:logs", 0, -1)
     assert items == ["a", "b", "c"]
+
+
+def test_enqueue_analyze_job_writes_job_and_queues_payload(fake_redis):
+    import json
+
+    from worker.redis_utils import enqueue_analyze_job
+
+    job_id = enqueue_analyze_job("t1", 7, "t1.m4a")
+    assert json.loads(fake_redis.rpop("download_queue")) == {
+        "job_id": job_id, "job_type": "analyze-local",
+        "track_id": "t1", "friend_id": 7, "local_audio_url": "t1.m4a",
+    }
+    job = fake_redis.hgetall(f"job:{job_id}")
+    assert job["status"] == "queued" and job["name"] == "analyze-local-audio"
+    assert fake_redis.ttl(f"job:{job_id}") > 0

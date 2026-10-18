@@ -132,35 +132,32 @@ class TestDownloadAudioSuccess:
 
     # os.makedirs is mocked because /app/* doesn't exist outside Docker
     @patch("worker.jobs.download.os.makedirs")
-    @patch("worker.jobs.download.analyze_audio_file", return_value={"rhythm": {"bpm": 120}})
     @patch("groovenet_client.GroovenetClient.update_track")
     @patch("worker.jobs.download.cleanup_download_directory")
     @patch("worker.jobs.download.shutil.move")
     @patch("worker.jobs.download.download_with_gamdl", return_value="/app/downloads/track-ok.m4a")
-    def test_success_path(self, mock_gamdl, mock_move, mock_cleanup, mock_patch, mock_analyze, mock_makedirs, fake_redis):
+    def test_success_path(self, mock_gamdl, mock_move, mock_cleanup, mock_patch, mock_makedirs, fake_redis):
         from worker.jobs.download import download_audio
         result = download_audio(self._job())
         assert result["success"] is True
         assert result["track_id"] == "track-ok"
 
     @patch("worker.jobs.download.os.makedirs")
-    @patch("worker.jobs.download.analyze_audio_file", return_value={"rhythm": {"bpm": 120}})
     @patch("groovenet_client.GroovenetClient.update_track")
     @patch("worker.jobs.download.cleanup_download_directory")
     @patch("worker.jobs.download.shutil.move")
     @patch("worker.jobs.download.download_with_gamdl", return_value="/app/downloads/track-ok.m4a")
-    def test_success_sets_completed_in_redis(self, mock_gamdl, mock_move, mock_cleanup, mock_patch, mock_analyze, mock_makedirs, fake_redis):
+    def test_success_sets_completed_in_redis(self, mock_gamdl, mock_move, mock_cleanup, mock_patch, mock_makedirs, fake_redis):
         from worker.jobs.download import download_audio
         download_audio(self._job())
         assert fake_redis.hgetall("job:job-dl-ok")["status"] == "completed"
 
     @patch("worker.jobs.download.os.makedirs")
-    @patch("worker.jobs.download.analyze_audio_file", return_value={"rhythm": {"bpm": 120}})
     @patch("groovenet_client.GroovenetClient.update_track")
     @patch("worker.jobs.download.cleanup_download_directory")
     @patch("worker.jobs.download.shutil.move")
     @patch("worker.jobs.download.download_with_gamdl", return_value="/app/downloads/track-ok.m4a")
-    def test_success_reports_outcome_after_completing(self, mock_gamdl, mock_move, mock_cleanup, mock_patch, mock_analyze, mock_makedirs, fake_redis, reported_outcomes):
+    def test_success_reports_outcome_after_completing(self, mock_gamdl, mock_move, mock_cleanup, mock_patch, mock_makedirs, fake_redis, reported_outcomes):
         from worker.jobs.download import download_audio
 
         reported_outcomes.side_effect = lambda job_id: (
@@ -170,17 +167,46 @@ class TestDownloadAudioSuccess:
         reported_outcomes.assert_called_once_with("job-dl-ok")
 
     @patch("worker.jobs.download.os.makedirs")
-    @patch("worker.jobs.download.analyze_audio_file", side_effect=Exception("essentia down"))
     @patch("groovenet_client.GroovenetClient.update_track")
     @patch("worker.jobs.download.cleanup_download_directory")
     @patch("worker.jobs.download.shutil.move")
     @patch("worker.jobs.download.download_with_gamdl", return_value="/app/downloads/track-ok.m4a")
-    def test_analysis_failure_does_not_fail_job(self, mock_gamdl, mock_move, mock_cleanup, mock_patch, mock_analyze, mock_makedirs, fake_redis):
-        """Download succeeds even if Essentia analysis fails."""
+    def test_success_enqueues_analyze_local_job(self, mock_gamdl, mock_move, mock_cleanup, mock_patch, mock_makedirs, fake_redis):
+        import json
+
+        from worker.jobs.download import download_audio
+        result = download_audio(self._job())
+        assert result["analysis_status"] == "queued"
+        analysis_job_id = result["analysis_job_id"]
+        payload = json.loads(fake_redis.rpop("download_queue"))
+        assert payload == {
+            "job_id": analysis_job_id, "job_type": "analyze-local",
+            "track_id": "track-ok", "friend_id": 1, "local_audio_url": "track-ok.m4a",
+        }
+        job = fake_redis.hgetall(f"job:{analysis_job_id}")
+        assert job["status"] == "queued"
+        assert job["job_type"] == "analyze-local"
+        assert fake_redis.zscore("jobs:updated", analysis_job_id) is not None
+        assert "analysis_error" not in fake_redis.hgetall("job:job-dl-ok")
+
+    @patch("worker.jobs.download.os.makedirs")
+    @patch("groovenet_client.GroovenetClient.update_track")
+    @patch("worker.jobs.download.cleanup_download_directory")
+    @patch("worker.jobs.download.shutil.move")
+    @patch("worker.jobs.download.download_with_gamdl", return_value="/app/downloads/track-ok.m4a")
+    @patch("worker.jobs.download.capture_exception")
+    @patch("worker.jobs.download.enqueue_analyze_job", side_effect=RuntimeError("redis down"))
+    def test_enqueue_failure_is_reported_but_download_completes(self, mock_enqueue, mock_capture, mock_gamdl, mock_move, mock_cleanup, mock_patch, mock_makedirs, fake_redis):
         from worker.jobs.download import download_audio
         result = download_audio(self._job())
         assert result["success"] is True
-        assert fake_redis.hgetall("job:job-dl-ok")["status"] == "completed"
+        assert result["analysis_status"] == "failed"
+        assert "analysis_job_id" not in result
+        job = fake_redis.hgetall("job:job-dl-ok")
+        assert job["status"] == "completed"
+        assert job["analysis_error"] == "Failed to enqueue analysis job"
+        mock_capture.assert_called_once()
+        assert any("Failed to enqueue analysis job: redis down" in line for line in fake_redis.lrange("job:job-dl-ok:logs", 0, -1))
 
 
 # ---------------------------------------------------------------------------
@@ -211,13 +237,12 @@ class TestDownloadWithGamdl:
 
 
 @patch("worker.jobs.download.os.makedirs")
-@patch("worker.jobs.download.analyze_audio_file", return_value={"rhythm": {"bpm": 120}})
 @patch("worker.jobs.download.cleanup_download_directory")
 @patch("worker.jobs.download.shutil.move")
 @patch("worker.jobs.download.download_with_gamdl", return_value="/app/downloads/track-ok.m4a")
 @pytest.mark.parametrize("status", [404, 500])
 def test_local_url_write_failure_is_logged_but_download_is_kept(
-    mock_gamdl, mock_move, mock_cleanup, mock_analyze, mock_makedirs, status, fake_redis, caplog,
+    mock_gamdl, mock_move, mock_cleanup, mock_makedirs, status, fake_redis, caplog,
 ):
     import io
 

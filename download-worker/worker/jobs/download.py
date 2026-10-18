@@ -8,9 +8,9 @@ import traceback
 from ..audio_utils import cleanup_download_directory
 from ..config import logger
 from ..observability import capture_exception
-from ..redis_utils import append_job_logs, update_job_status
+from ..redis_utils import append_job_logs, enqueue_analyze_job, update_job_status
 from ..subprocess_utils import run_subprocess
-from ..track_api import analyze_audio_file, get_groovenet_client, report_job_outcome
+from ..track_api import get_groovenet_client, report_job_outcome
 from ..types import JobData, JobResult
 from .analyze import analyze_local_audio
 
@@ -356,19 +356,19 @@ def download_audio(job_data: JobData) -> JobResult:
 
         update_job_status(job_id, 'processing', 80)
 
-        analysis_result = None
-        analysis_error = None
+        # Analysis runs as its own analyze-local job so a failure there is
+        # captured and marked failed on that job instead of being swallowed here.
+        analysis_job_id = None
         try:
-            logger.info(f"Starting audio analysis for {downloaded_file}")
-            analysis_result = analyze_audio_file(downloaded_file, track_id, friend_id, log_sink=log_sink)
-            append_job_logs(job_id, log_sink)
-            log_sink.clear()
+            analysis_job_id = enqueue_analyze_job(track_id, friend_id, os.path.basename(downloaded_file))
+            log_sink.append(f"Queued analysis job {analysis_job_id}")
         except Exception as e:
-            analysis_error = str(e)
-            logger.warning(f"Audio analysis failed (download still succeeded): {e}")
-            log_sink.append(f"Analysis failed (non-fatal): {analysis_error}")
-            append_job_logs(job_id, log_sink)
-            log_sink.clear()
+            capture_exception(e)
+            logger.error(f"Failed to enqueue analysis for job {job_id}: {e}")
+            log_sink.append(f"ERROR: Failed to enqueue analysis job: {e}")
+        append_job_logs(job_id, log_sink)
+        log_sink.clear()
+        analysis_enqueue_error = None if analysis_job_id else 'Failed to enqueue analysis job'
 
         update_job_status(job_id, 'processing', 95)
 
@@ -384,14 +384,14 @@ def download_audio(job_data: JobData) -> JobResult:
             'friend_id': friend_id,
             'downloader': successful_downloader,
             'source_url_key': successful_url_key,
-            'analysis_status': 'failed' if analysis_error else 'ok',
+            'analysis_status': 'failed' if analysis_enqueue_error else 'queued',
         }
-        if analysis_result:
-            result['analysis'] = analysis_result
-        if analysis_error:
-            result['analysis_error'] = analysis_error
+        if analysis_job_id:
+            result['analysis_job_id'] = analysis_job_id
+        if analysis_enqueue_error:
+            result['analysis_error'] = analysis_enqueue_error
 
-        update_job_status(job_id, 'completed', 100, result=result, analysis_error=analysis_error)
+        update_job_status(job_id, 'completed', 100, result=result, analysis_error=analysis_enqueue_error)
         report_job_outcome(job_id)
         logger.info(f"Job {job_id} completed successfully")
         return result
