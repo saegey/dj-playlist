@@ -15,7 +15,7 @@
     "build": "tsc",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.include=src/liveSets.ts --coverage.reporter=lcov"
+    "test:coverage": "vitest run --coverage --coverage.include=src/liveSets.ts --coverage.include=src/playlists.ts --coverage.reporter=lcov"
   },
   "files": ["build/"],
   "publishConfig": {

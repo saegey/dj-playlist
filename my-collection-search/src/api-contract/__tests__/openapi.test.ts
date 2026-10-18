@@ -90,4 +90,32 @@ describe("OpenAPI contract coverage", () => {
     expect(update.requestBody?.content?.["application/json"]?.schema?.$ref)
       .toBe("#/components/schemas/LiveSetUpdate");
   });
+
+  it("references shared playlist components and documents the optimizer modes", () => {
+    const doc = getOpenApiDocument();
+    const schemas = doc.components.schemas as Record<string, { enum?: string[]; required?: string[] }>;
+    expect(schemas.PlaylistOptimizerMode.enum).toEqual(["genetic", "greedy", "cohesive_blocks"]);
+    expect(schemas.Playlist.required).toEqual(["id", "name", "created_at", "tracks"]);
+    expect(schemas.PlaylistSpinsInput).toBeDefined();
+
+    type Content = { content?: { "application/json"?: { schema?: { $ref?: string } } } };
+    const ref = (c?: Content) => c?.content?.["application/json"]?.schema?.$ref;
+    const op = (path: string, method: string) =>
+      getOperation(path, method) as {
+        requestBody?: Content;
+        responses: Record<string, Content>;
+      };
+
+    expect(ref(op("/api/playlists", "post").requestBody)).toBe("#/components/schemas/PlaylistCreate");
+    expect(ref(op("/api/playlists", "post").responses["201"])).toBe("#/components/schemas/Playlist");
+    expect(ref(op("/api/playlists", "patch").requestBody)).toBe("#/components/schemas/PlaylistUpdate");
+    expect(ref(op("/api/playlists", "delete").responses["200"])).toBe("#/components/schemas/PlaylistDeleteResponse");
+    expect(ref(op("/api/playlists/{id}/tracks", "get").responses["200"])).toBe("#/components/schemas/PlaylistDetail");
+    expect(ref(op("/api/playlists/{id}/spins", "post").requestBody)).toBe("#/components/schemas/PlaylistSpinsInput");
+    expect(ref(op("/api/playlists/{id}/spins", "post").responses["200"])).toBe("#/components/schemas/PlaylistSpinsResult");
+    expect(ref(op("/api/playlists/genetic", "post").requestBody)).toBe("#/components/schemas/PlaylistGeneticRequest");
+    expect(ref(op("/api/playlists/genetic", "post").responses["400"])).toBe(
+      "#/components/schemas/PlaylistGeneticValidationError"
+    );
+  });
 });
