@@ -54,10 +54,12 @@ services:
   essentia:
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/essentia-api:${IMAGE_TAG:-latest}
     container_name: groovenet_essentia_api
+    restart: unless-stopped
 
   ga-service:
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/ga-service:${IMAGE_TAG:-latest}
     container_name: groovenet_ga_service
+    restart: unless-stopped
 
   fingerprint-service:
     image: ${REGISTRY:-ghcr.io/public-vinyl-radio}/fingerprint-service:${IMAGE_TAG:-latest}
