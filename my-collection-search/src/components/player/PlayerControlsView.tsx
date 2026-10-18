@@ -257,7 +257,15 @@ export default function PlayerControlsView({
             >
               {primaryText}
             </Text>
-            <Text color="fg.muted" fontSize="xs" maxW="40vw" lineClamp={1} title={secondaryText}>
+            <Text
+              color="fg.muted"
+              fontSize="xs"
+              maxW="40vw"
+              lineClamp={1}
+              title={secondaryText}
+              // Chakra's Link is inline-flex, which defeats the parent's line clamp.
+              css={{ "& > a": { display: "inline" } }}
+            >
               {!isQueueFinished && currentTrack ? (
                 <ArtistLink
                   artist={currentTrack.artist}

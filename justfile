@@ -484,6 +484,21 @@ fingerprint-test:
   {{mise_exec}} npm run migrate --prefix {{app_dir}} -- up
   {{mise_exec}} npm run test:fingerprints --prefix {{app_dir}}
 
+# Browser tests for the floating player (Playwright, #484) against this worktree's running dev stack.
+# Needs `just worktree-up` first; set E2E_BASE_URL to target another app. Installs Chromium on first use.
+player-e2e *args:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [[ -z "${E2E_BASE_URL:-}" ]]; then
+    env_file="$(ls .worktree/*.env 2>/dev/null | head -n1 || true)"
+    port="$( [[ -n "$env_file" ]] && sed -n 's/^APP_PORT=//p' "$env_file" || true )"
+    export E2E_BASE_URL="http://127.0.0.1:${port:-3000}"
+  fi
+  echo "→ player e2e against $E2E_BASE_URL"
+  curl -fsS -o /dev/null "$E2E_BASE_URL/settings" || { echo "app not reachable at $E2E_BASE_URL (is the dev stack up?)"; exit 1; }
+  {{mise_exec}} npx --prefix {{app_dir}} playwright install chromium
+  RUN_E2E_TESTS=1 {{mise_exec}} npm run test:e2e --prefix {{app_dir}} -- {{args}}
+
 # Run the audio ingest schema integration tests against a throwaway pgvector db.
 ingest-test:
   #!/usr/bin/env bash
