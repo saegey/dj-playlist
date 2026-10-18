@@ -19,7 +19,6 @@ const meta: Meta<typeof AlbumResult> = {
   args: {
     album: sampleAlbum,
     showEditFields: false,
-    compact: false,
   },
 };
 
@@ -34,21 +33,6 @@ export const WithHighResArtwork: Story = {
   name: 'With high-res artwork',
   args: {
     album: albumWithArtwork,
-  },
-};
-
-export const Compact: Story = {
-  name: 'Compact (sidebar / inline use)',
-  args: {
-    compact: true,
-  },
-};
-
-export const CompactWithEditButton: Story = {
-  name: 'Compact with edit button',
-  args: {
-    compact: true,
-    showEditFields: true,
   },
 };
 
@@ -70,18 +54,6 @@ export const MultipleInList: Story = {
   name: 'Multiple albums (list view)',
   render: (args) => (
     <Box>
-      <AlbumResult {...args} album={sampleAlbum} />
-      <AlbumResult {...args} album={albumWithArtwork} />
-      <AlbumResult {...args} album={albumMinimal} />
-    </Box>
-  ),
-};
-
-export const CompactList: Story = {
-  name: 'Multiple albums (compact list)',
-  args: { compact: true },
-  render: (args) => (
-    <Box borderWidth="1px" borderRadius="md" overflow="hidden">
       <AlbumResult {...args} album={sampleAlbum} />
       <AlbumResult {...args} album={albumWithArtwork} />
       <AlbumResult {...args} album={albumMinimal} />

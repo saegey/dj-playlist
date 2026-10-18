@@ -202,9 +202,9 @@ export default function GenrePage() {
               No albums in this genre yet.
             </Text>
           ) : (
-            <Grid templateColumns="1fr" gap={2}>
+            <Grid templateColumns="1fr">
               {page.top_albums.map((album) => (
-                <AlbumResult key={`${album.release_id}:${album.friend_id}`} album={album as unknown as Album} compact />
+                <AlbumResult key={`${album.release_id}:${album.friend_id}`} album={album as unknown as Album} />
               ))}
             </Grid>
           )}
