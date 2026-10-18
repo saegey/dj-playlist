@@ -87,7 +87,6 @@ export default function FriendsDiscogsSection() {
       const result = await verifyManifests.mutateAsync();
       if (result.summary.totalManifests === 0) {
         discogsSync.mutate({ username });
-        setPendingSync(null);
         return;
       }
       setVerificationResults(result.results);
@@ -175,6 +174,10 @@ export default function FriendsDiscogsSection() {
   };
 
   const disableAdd = addFriendPending;
+  const syncBusy = discogsSync.isPending || verifyManifests.isPending;
+  // Only the row being synced spins; the others are just disabled.
+  const isSyncing = (username?: string) =>
+    syncBusy && pendingSync !== null && pendingSync.username === username;
 
   return (
     <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
@@ -223,8 +226,8 @@ export default function FriendsDiscogsSection() {
                 size="xs"
                 variant="outline"
                 onClick={() => handleSyncClick(undefined)}
-                loading={discogsSync.isPending || verifyManifests.isPending}
-                disabled={discogsSync.isPending || verifyManifests.isPending}
+                loading={isSyncing(undefined)}
+                disabled={syncBusy}
               >
                 <FiRefreshCcw />
               </IconButton>
@@ -258,12 +261,8 @@ export default function FriendsDiscogsSection() {
                     size="xs"
                     variant="outline"
                     onClick={() => handleSyncClick(friend.username)}
-                    loading={
-                      discogsSync.isPending || verifyManifests.isPending
-                    }
-                    disabled={
-                      discogsSync.isPending || verifyManifests.isPending
-                    }
+                    loading={isSyncing(friend.username)}
+                    disabled={syncBusy}
                   >
                     <FiRefreshCcw />
                   </IconButton>

@@ -123,4 +123,21 @@ describe("FriendsDiscogsSection", () => {
 
     await waitFor(() => expect(mocks.syncMutate).toHaveBeenCalledWith({ username: undefined }));
   });
+
+  it("spins only the row being synced and disables the rest", async () => {
+    mocks.friends = [{ username: "dj-friend" }, { username: "other" }];
+    const { user, rerender } = renderWithProviders(<FriendsDiscogsSection />);
+    const syncButtons = () =>
+      screen.getAllByRole("button", { name: /Sync (collection|default library)/ }) as HTMLButtonElement[];
+
+    // Rows in order: default, dj-friend, other. Sync the middle one.
+    await user.click(syncButtons()[1]);
+    await waitFor(() => expect(mocks.syncMutate).toHaveBeenCalled());
+    mocks.syncIsPending = true;
+    rerender(<FriendsDiscogsSection />);
+
+    const buttons = syncButtons();
+    expect(buttons.every((b) => b.disabled)).toBe(true);
+    expect(buttons.map((b) => b.hasAttribute("data-loading"))).toEqual([false, true, false]);
+  });
 });
