@@ -385,6 +385,7 @@ export class TrackRepository {
       FROM refs r
       LEFT JOIN playlist_tracks pt
         ON pt.track_id = r.track_id AND pt.friend_id = r.friend_id
+        AND EXISTS (SELECT 1 FROM playlists p WHERE p.id = pt.playlist_id)
       GROUP BY r.track_id, r.friend_id
       `,
       params

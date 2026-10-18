@@ -4,7 +4,9 @@ import type { PlaylistTrackInput } from "@/api-contract/schemas";
 const dbQuery = vi.hoisted(() => vi.fn());
 const dbPool = vi.hoisted(() => ({ connect: vi.fn() }));
 
-vi.mock("@/lib/serverDb", () => ({ dbQuery, dbPool }));
+const withDbTransaction = vi.hoisted(() => vi.fn());
+
+vi.mock("@/lib/serverDb", () => ({ dbQuery, dbPool, withDbTransaction }));
 
 import { PlaylistRepository } from "../playlistRepository";
 
@@ -121,11 +123,27 @@ describe("PlaylistRepository — reads", () => {
     await expect(repo().findPlaylistById(5)).resolves.toBeNull();
   });
 
-  it("deletePlaylistById returns the deleted row or null", async () => {
-    dbQuery.mockResolvedValueOnce({ rows: [{ id: 5, name: "gone" }] });
+  it("deletePlaylistById deletes the playlist's tracks then the playlist in one transaction", async () => {
+    const client = { query: vi.fn() };
+    client.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: 5, name: "gone" }] });
+    withDbTransaction.mockImplementation((fn: (c: typeof client) => unknown) => fn(client));
+
     await expect(repo().deletePlaylistById(5)).resolves.toEqual({ id: 5, name: "gone" });
-    const [sql] = dbQuery.mock.calls[0];
-    expect(sql).toMatch(/DELETE FROM playlists WHERE id = \$1 RETURNING/);
+    expect(client.query.mock.calls[0]).toEqual([
+      "DELETE FROM playlist_tracks WHERE playlist_id = $1",
+      [5],
+    ]);
+    expect(client.query.mock.calls[1][0]).toMatch(/DELETE FROM playlists WHERE id = \$1 RETURNING/);
+    expect(client.query.mock.calls[1][1]).toEqual([5]);
+    expect(dbQuery).not.toHaveBeenCalled();
+  });
+
+  it("deletePlaylistById returns null when the playlist does not exist", async () => {
+    const client = { query: vi.fn().mockResolvedValue({ rows: [] }) };
+    withDbTransaction.mockImplementation((fn: (c: typeof client) => unknown) => fn(client));
+    await expect(repo().deletePlaylistById(404)).resolves.toBeNull();
   });
 
   it("lists playlist entries with the snapshots needed for spins", async () => {
