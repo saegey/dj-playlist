@@ -1,4 +1,5 @@
 import { dbQuery } from "@/lib/serverDb";
+import { stripNullBytes } from "@/lib/stripNullBytes";
 import type { DiscogsTrack, Track } from "@/types/track";
 import { hasVectorsSelectSql, trackGenresSelectSql } from "@/server/repositories/trackGenreRepository";
 
@@ -579,7 +580,7 @@ export class TrackRepository {
       } else {
         setClauses.push(`${col} = $${idx}`);
       }
-      values.push(value);
+      values.push(typeof value === "string" ? stripNullBytes(value) : value);
       idx++;
     }
 

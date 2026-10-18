@@ -496,6 +496,20 @@ describe("updateTrackFields()", () => {
     expect(sql).toContain("star_rating");
   });
 
+  it("strips null bytes from string values but leaves other types alone", async () => {
+    dbQuery.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [makeTrack()] });
+
+    await makeRepo().updateTrackFields({
+      track_id: "t1",
+      friend_id: 1,
+      notes: "bad\u0000 note",
+      star_rating: 4,
+    });
+
+    const [, values] = dbQuery.mock.calls[0];
+    expect(values).toEqual(["bad note", 4, "t1", 1]);
+  });
+
   it("includes key_confidence as an updatable field", async () => {
     dbQuery
       .mockResolvedValueOnce({ rows: [] })
