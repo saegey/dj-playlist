@@ -12,13 +12,13 @@ import {
   HStack,
   Skeleton,
 } from "@chakra-ui/react";
-import { FiDownload, FiTrash2 } from "react-icons/fi";
+import { FiBriefcase, FiDownload, FiTrash2 } from "react-icons/fi";
 import { useBackupsQuery } from "@/hooks/useBackupsQuery";
 import { formatBytes } from "@/components/settings/BackupStatusSection";
 import { toaster } from "@/components/ui/toaster";
 
 export default function DatabaseBackups() {
-  const { backups, backupsLoading, removeBackup } = useBackupsQuery();
+  const { backups, backupsLoading, removeBackup, addBackup } = useBackupsQuery();
   const [showAllBackups, setShowAllBackups] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
@@ -36,9 +36,32 @@ export default function DatabaseBackups() {
 
   return (
     <Box mt={{ base: 6, md: 10 }} mb={8} p={4} borderWidth={1} borderRadius="md">
-      <Heading size="md" mb={2}>
-        Database Backups
-      </Heading>
+      <HStack justify="space-between" align="center" mb={2}>
+        <Heading size="md">Database Backups</Heading>
+        <Button
+          size="sm"
+          variant="outline"
+          loading={addBackup.isPending}
+          onClick={() =>
+            addBackup.mutate(undefined, {
+              onSuccess: (res) =>
+                toaster.create({
+                  title: "Backup Complete",
+                  type: "success",
+                  description: res.message,
+                }),
+              onError: (e) =>
+                toaster.create({
+                  title: "Backup Failed",
+                  type: "error",
+                  description: e.message,
+                }),
+            })
+          }
+        >
+          <FiBriefcase /> Backup Database
+        </Button>
+      </HStack>
       {backupsLoading ? (
         <VStack align="stretch" gap={3}>
           {[...Array(5)].map((_, i) => (

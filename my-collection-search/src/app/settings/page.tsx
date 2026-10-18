@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { SettingsDialogsProvider } from "@/providers/SettingsDialogProvider";
 import { SyncStreamsProvider } from "@/providers/SyncStreamsProvider";
-import ActionsGrid from "@/components/settings/ActionsGrid";
 import FriendsDiscogsSection from "@/components/settings/FriendsDiscogsSection";
 import DatabaseBackups from "@/components/settings/DatabaseBackups";
 import DatabaseRestore from "@/components/settings/DatabaseRestore";
@@ -122,9 +121,6 @@ function SettingsPageContent() {
                 <Text color="fg.muted" fontSize={{ base: "sm", md: "md" }}>
                   Configure GrooveNET by area, without the long one-page scroll.
                 </Text>
-              </Box>
-              <Box flexShrink={0} minW={{ base: "auto", md: "220px" }}>
-                <ActionsGrid showTitle={false} />
               </Box>
             </Flex>
 

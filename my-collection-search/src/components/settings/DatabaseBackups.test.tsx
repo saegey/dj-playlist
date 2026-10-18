@@ -107,4 +107,32 @@ describe("DatabaseBackups", () => {
     await user.click(screen.getByRole("button", { name: "Show Less" }));
     expect(screen.queryByText("b6.dump")).toBeNull();
   });
+
+  it("backs up the database from the header button", async () => {
+    serve([]);
+    mocks.backupDatabase.mockResolvedValue({ message: "Backup saved" });
+    const { user } = renderWithProviders(<DatabaseBackups />);
+
+    await user.click(await screen.findByRole("button", { name: /Backup Database/ }));
+
+    await waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Backup Complete", type: "success", description: "Backup saved" })
+      )
+    );
+  });
+
+  it("reports a failed backup", async () => {
+    serve([]);
+    mocks.backupDatabase.mockRejectedValue(new Error("disk full"));
+    const { user } = renderWithProviders(<DatabaseBackups />);
+
+    await user.click(await screen.findByRole("button", { name: /Backup Database/ }));
+
+    await waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Backup Failed", type: "error", description: "disk full" })
+      )
+    );
+  });
 });

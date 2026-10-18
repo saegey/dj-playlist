@@ -22,7 +22,6 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/providers/SettingsDialogProvider", () => passthrough("SettingsDialogsProvider"));
 vi.mock("@/providers/SyncStreamsProvider", () => passthrough("SyncStreamsProvider"));
-vi.mock("@/components/settings/ActionsGrid", () => stub("actions"));
 vi.mock("@/components/settings/FriendsDiscogsSection", () => stub("friends"));
 vi.mock("@/components/settings/DatabaseBackups", () => stub("backups"));
 vi.mock("@/components/settings/DatabaseRestore", () => stub("restore"));
