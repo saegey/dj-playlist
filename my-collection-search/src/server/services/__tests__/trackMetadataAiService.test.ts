@@ -279,6 +279,19 @@ describe("generateTrackMetadata — genres from the taxonomy", () => {
     expect(res).toEqual({ genres: [], descriptors: [], notes: "n" });
   });
 
+  it("strips null bytes from notes and descriptors", async () => {
+    mockCreate.mockResolvedValueOnce(
+      outputText({
+        ...META,
+        descriptors: ["dub\u0000by"],
+        notes: "Warm\u0000 groove.",
+      })
+    );
+    const res = await generateTrackMetadata({ prompt: "p" });
+    expect(res.notes).toBe("Warm groove.");
+    expect(res.descriptors).toEqual(["dubby"]);
+  });
+
   it("returns empty notes when free text has none", async () => {
     mockCreate.mockResolvedValueOnce(
       textContent({ genres: [], descriptors: ["dub"], artist_match_confidence: "high" })

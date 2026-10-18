@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { stripNullBytes } from "@/lib/stripNullBytes";
 import { getTrackMetadataPromptForFriend } from "@/lib/serverPrompts";
 import type { TrackGenre } from "@/types/track";
 import { genreRepository } from "@/server/repositories/genreRepository";
@@ -288,11 +289,13 @@ export async function generateTrackMetadata(args: {
   }
 
   const descriptors = Array.isArray(result.descriptors)
-    ? result.descriptors.filter((value): value is string => typeof value === "string")
+    ? result.descriptors
+        .filter((value): value is string => typeof value === "string")
+        .map(stripNullBytes)
     : [];
   return {
     genres: resolveSuggestedGenres(result.genres, choices),
     descriptors: normalizeDescriptors(descriptors).slice(0, MAX_SUGGESTED_DESCRIPTORS),
-    notes: typeof result.notes === "string" ? result.notes : "",
+    notes: typeof result.notes === "string" ? stripNullBytes(result.notes) : "",
   };
 }
