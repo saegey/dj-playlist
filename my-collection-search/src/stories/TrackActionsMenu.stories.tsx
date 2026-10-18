@@ -53,3 +53,12 @@ export const EditContext: Story = {
     },
   },
 };
+
+export const AllActions: Story = {
+  name: 'All actions (grouping: primary / audio / destructive / links)',
+  args: {
+    track: trackWithAudio,
+    onOpenTrackDebug: () => {},
+    onChangeArtwork: () => {},
+  },
+};
