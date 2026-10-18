@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
 import type { LiveSetSummary, Playlist } from "@/types/track";
-import { dbPool, dbQuery } from "@/lib/serverDb";
+import { dbPool, dbQuery, withDbTransaction } from "@/lib/serverDb";
 import type { PlaylistTrackInput } from "@/api-contract/schemas";
 
 export type Queryable = Pick<PoolClient, "query">;
@@ -204,8 +204,11 @@ export class PlaylistRepository {
   }
 
   async deletePlaylistById(id: number): Promise<Playlist | null> {
-    const res = await dbQuery("DELETE FROM playlists WHERE id = $1 RETURNING *", [id]);
-    return (res.rows[0] as Playlist | undefined) ?? null;
+    return withDbTransaction(async (client) => {
+      await this.deletePlaylistTracks(client, id);
+      const res = await client.query("DELETE FROM playlists WHERE id = $1 RETURNING *", [id]);
+      return (res.rows[0] as Playlist | undefined) ?? null;
+    });
   }
 
   async listTrackRefsForPlaylist(

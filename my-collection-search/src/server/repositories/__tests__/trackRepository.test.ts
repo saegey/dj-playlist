@@ -282,6 +282,16 @@ describe("getPlaylistCountsForTracks()", () => {
     expect(result["t2:1"]).toBe(0);
   });
 
+  it("only counts memberships whose playlist still exists", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().getPlaylistCountsForTracks([{ track_id: "t1", friend_id: 1 }]);
+
+    expect(dbQuery.mock.calls[0][0]).toMatch(
+      /EXISTS \(SELECT 1 FROM playlists p WHERE p\.id = pt\.playlist_id\)/
+    );
+  });
+
   it("fills in 0 for any refs missing from the query result", async () => {
     dbQuery.mockResolvedValue({ rows: [] });
 
