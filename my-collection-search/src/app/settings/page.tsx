@@ -62,8 +62,8 @@ function SettingsPageContent() {
       },
       {
         id: "library",
-        label: "Library Data",
-        description: "friends and Discogs import settings",
+        label: "Discogs",
+        description: "your default library and friends' collections",
         content: <FriendsDiscogsSection />,
       },
       {

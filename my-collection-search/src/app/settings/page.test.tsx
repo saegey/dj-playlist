@@ -59,8 +59,8 @@ describe("SettingsPage", () => {
   it("opens the section named in the URL, with its heading and description", () => {
     mocks.searchParams = new URLSearchParams("section=library");
     renderWithProviders(<SettingsPage />);
-    expect(screen.getByRole("heading", { name: "Library Data" })).toBeTruthy();
-    expect(screen.getByText("friends and Discogs import settings")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Discogs" })).toBeTruthy();
+    expect(screen.getByText("your default library and friends' collections")).toBeTruthy();
     expect(screen.getByText("friends")).toBeTruthy();
   });
 

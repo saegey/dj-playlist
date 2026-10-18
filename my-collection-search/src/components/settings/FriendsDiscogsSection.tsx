@@ -13,6 +13,7 @@ import {
   IconButton,
   Skeleton,
   Dialog,
+  Badge,
 } from "@chakra-ui/react";
 import { FiRefreshCcw, FiTrash } from "react-icons/fi";
 
@@ -37,7 +38,10 @@ export default function FriendsDiscogsSection() {
   const [verificationResults, setVerificationResults] = useState<
     VerificationResult[]
   >([]);
-  const [pendingUsername, setPendingUsername] = useState<string | undefined>();
+  // `undefined` username targets the default library (server-side Discogs config).
+  const [pendingSync, setPendingSync] = useState<{ username?: string } | null>(
+    null
+  );
   const [removedReleasesOpen, setRemovedReleasesOpen] = useState(false);
   const [removedReleases, setRemovedReleases] = useState<string[]>([]);
   const [removedUsername, setRemovedUsername] = useState<string>("");
@@ -77,12 +81,13 @@ export default function FriendsDiscogsSection() {
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  const handleSyncClick = async (username: string) => {
-    setPendingUsername(username);
+  const handleSyncClick = async (username?: string) => {
+    setPendingSync({ username });
     try {
       const result = await verifyManifests.mutateAsync();
       if (result.summary.totalManifests === 0) {
         discogsSync.mutate({ username });
+        setPendingSync(null);
         return;
       }
       setVerificationResults(result.results);
@@ -106,8 +111,8 @@ export default function FriendsDiscogsSection() {
       });
       setVerificationOpen(false);
       // Proceed with sync
-      if (pendingUsername) {
-        discogsSync.mutate({ username: pendingUsername });
+      if (pendingSync) {
+        discogsSync.mutate({ username: pendingSync.username });
       }
     } catch (err) {
       toaster.create({
@@ -120,8 +125,8 @@ export default function FriendsDiscogsSection() {
 
   const handleContinueWithoutCleanup = () => {
     setVerificationOpen(false);
-    if (pendingUsername) {
-      discogsSync.mutate({ username: pendingUsername });
+    if (pendingSync) {
+      discogsSync.mutate({ username: pendingSync.username });
     }
   };
 
@@ -174,11 +179,12 @@ export default function FriendsDiscogsSection() {
   return (
     <Box mt={10} mb={8} p={4} borderWidth={1} borderRadius="md">
       <Heading size="md" mb={2}>
-        Friends&apos; Discogs Collections
+        Discogs Collections
       </Heading>
       <Text mb={2}>
-        Add friends&apos; Discogs usernames to sync or browse their collections
-        for playlist collaboration or borrowing albums.
+        Sync your default library, and add friends&apos; Discogs usernames to
+        sync or browse their collections for playlist collaboration or
+        borrowing albums.
       </Text>
 
       <HStack mb={4}>
@@ -205,6 +211,26 @@ export default function FriendsDiscogsSection() {
       </HStack>
 
       <VStack align="stretch">
+        <HStack width="100%" justifyContent="space-between">
+          <HStack>
+            <Text fontWeight="medium">Default library</Text>
+            <Badge>default</Badge>
+          </HStack>
+          <HStack justifyContent="flex-end" flexGrow={1}>
+            <Tooltip content="Sync default library">
+              <IconButton
+                aria-label="Sync default library"
+                size="xs"
+                variant="outline"
+                onClick={() => handleSyncClick(undefined)}
+                loading={discogsSync.isPending || verifyManifests.isPending}
+                disabled={discogsSync.isPending || verifyManifests.isPending}
+              >
+                <FiRefreshCcw />
+              </IconButton>
+            </Tooltip>
+          </HStack>
+        </HStack>
         {friendsLoading ? (
           [...Array(3)].map((_, i) => (
             <HStack key={i} width="100%" justifyContent="space-between">

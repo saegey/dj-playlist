@@ -97,4 +97,30 @@ describe("FriendsDiscogsSection", () => {
 
     expect(mocks.handleRemoveFriend).toHaveBeenCalledWith("dj-friend");
   });
+
+  it("lists the default library with a badge and sync only, no remove", async () => {
+    mocks.friends = [{ username: "dj-friend" }];
+    const { user } = renderWithProviders(<FriendsDiscogsSection />);
+
+    expect(screen.getByText("Default library")).toBeTruthy();
+    expect(screen.getByText("default")).toBeTruthy();
+    // One remove button: the friend's, not the default library's.
+    expect(screen.getAllByRole("button", { name: "Remove friend" })).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "Sync default library" }));
+    await waitFor(() => expect(mocks.syncMutate).toHaveBeenCalledWith({ username: undefined }));
+  });
+
+  it("syncs the default library after continuing past manifest verification", async () => {
+    mocks.verifyMutateAsync.mockResolvedValue({ summary: { totalManifests: 1 }, results: [] });
+    const { user } = renderWithProviders(<FriendsDiscogsSection />);
+
+    await user.click(screen.getByRole("button", { name: "Sync default library" }));
+    expect(mocks.syncMutate).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole("dialog");
+    const buttons = within(dialog).getAllByRole("button");
+    await user.click(buttons[buttons.length - 1]);
+
+    await waitFor(() => expect(mocks.syncMutate).toHaveBeenCalledWith({ username: undefined }));
+  });
 });
