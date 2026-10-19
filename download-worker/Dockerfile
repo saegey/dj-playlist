@@ -1,7 +1,11 @@
 # syntax=docker/dockerfile:1.7
 # Build context: project root (needed to access packages/groovenet-python)
-# gamdl's pywidevine/protobuf dependency is not yet compatible with Python 3.14.
-FROM python:3.14-slim
+# Keep on Python 3.13. gamdl's pywidevine/protobuf dependency crashes at import
+# on 3.14 ("TypeError: Metaclasses with custom tp_new are not supported"), which
+# fails every Apple Music download. Dependabot must NOT bump this: it is ignored
+# in .github/dependabot.yml, and docker-publish.yml smoke-tests `gamdl --help`
+# in the built image. Revisit once gamdl/pywidevine/protobuf support 3.14.
+FROM python:3.13-slim
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \

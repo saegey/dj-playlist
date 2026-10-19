@@ -424,18 +424,42 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build and push download worker
+      - name: Build download worker
         uses: docker/build-push-action@v7
         with:
           context: .
           file: ./download-worker/Dockerfile
-          push: ${{ env.SHOULD_PUSH == 'true' }}
+          # Loaded locally (not pushed yet) so the smoke test below can run it
+          # before anything reaches the registry; push is a separate step.
+          push: false
+          load: true
           platforms: ${{ env.PLATFORMS }}
           tags: ${{ steps.tags.outputs.tags }}
           provenance: false
           sbom: false
           cache-from: type=gha,scope=download-worker
           cache-to: type=gha,mode=max,scope=download-worker
+
+      # gamdl crashes at import when its pywidevine/protobuf dependency does not
+      # support the image's Python (a 3.14 base-image bump did exactly that and
+      # failed every Apple Music download). Runs on every build, so Dependabot
+      # PRs are covered.
+      - name: Smoke test gamdl runs in the image
+        shell: bash
+        run: |
+          set -euo pipefail
+          img="$(head -n1 <<< "${{ steps.tags.outputs.tags }}")"
+          docker run --rm --entrypoint gamdl "$img" --help >/dev/null
+
+      - name: Push download worker
+        if: env.SHOULD_PUSH == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            [[ -n "$tag" ]] || continue
+            docker push "$tag"
+          done <<< "${{ steps.tags.outputs.tags }}"
 
   build-fingerprint-service:
     needs: [changes, test]
