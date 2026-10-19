@@ -219,55 +219,9 @@ const trackSearchResponseBase: Record<string, unknown> = {
   additionalProperties: true,
 };
 
-const trackGenreSchemaObject: Record<string, unknown> = {
-  type: "object",
-  properties: {
-    id: { type: "string", format: "uuid" },
-    name: { type: "string" },
-    slug: { type: "string" },
-    parent_id: { type: ["string", "null"], format: "uuid" },
-    parent_name: { type: ["string", "null"] },
-  },
-  required: ["id", "name", "slug", "parent_id", "parent_name"],
-};
-
-const trackEntitySchemaObject: Record<string, unknown> = {
-  type: "object",
-  properties: {
-    id: { type: "integer" },
-    track_id: { type: "string" },
-    friend_id: { type: "integer" },
-    title: { type: "string" },
-    artist: { type: "string" },
-    album: { type: "string" },
-    year: { type: ["string", "number", "null"] },
-    genres: { type: "array", items: { type: "string" } },
-    styles: { type: "array", items: { type: "string" } },
-    bpm: { type: ["number", "string", "null"] },
-    key: { type: ["string", "null"] },
-    key_confidence: {
-      type: ["number", "null"],
-      description: "Confidence (0-1) of the EDMA key estimate stored in `key` (#524).",
-    },
-    notes: { type: ["string", "null"] },
-    local_tags: { type: ["string", "null"] },
-    track_genres: {
-      type: "array",
-      description: "Track-level DJ genres, linked to the genre taxonomy.",
-      items: trackGenreSchemaObject,
-    },
-    descriptors: {
-      type: "array",
-      description: "Normalised mood and description words that are not genres.",
-      items: { type: "string" },
-    },
-    local_audio_url: { type: ["string", "null"] },
-    audio_file_album_art_url: { type: ["string", "null"] },
-    library_identifier: { type: ["string", "null"] },
-  },
-  required: ["track_id", "friend_id"],
-  additionalProperties: true,
-};
+const TRACK_REF = { $ref: "#/components/schemas/Track" };
+const TRACK_GENRE_REF = { $ref: "#/components/schemas/TrackGenre" };
+const ALBUM_ARTWORK_STATE_REF = { $ref: "#/components/schemas/AlbumArtworkState" };
 
 const recommendationSettingsSchemaObject: Record<string, unknown> = {
   type: "object",
@@ -542,7 +496,7 @@ const remainingTracksContracts: ApiContractRoute[] = [
             schema: {
               type: "object",
               properties: {
-                tracks: { type: "array", items: trackEntitySchemaObject },
+                tracks: { type: "array", items: TRACK_REF },
                 total: { type: "integer" },
               },
               required: ["tracks", "total"],
@@ -600,7 +554,7 @@ const remainingTracksContracts: ApiContractRoute[] = [
         description: "Updated track",
         content: {
           "application/json": {
-            schema: trackEntitySchemaObject,
+            schema: TRACK_REF,
           },
         },
       },
@@ -750,7 +704,7 @@ const remainingTracksContracts: ApiContractRoute[] = [
           "application/json": {
             schema: {
               type: "array",
-              items: trackEntitySchemaObject,
+              items: TRACK_REF,
             },
           },
         },
@@ -816,7 +770,7 @@ const remainingTracksContracts: ApiContractRoute[] = [
         content: {
           "application/json": {
             schema: {
-              ...trackEntitySchemaObject,
+              ...TRACK_REF,
             },
           },
         },
@@ -4100,37 +4054,7 @@ const trackSearchParameters: Record<string, unknown>[] = [
 
 // ─── Album artwork (#494) ────────────────────────────────────────────────────
 
-const albumArtSourceSchemaObject = {
-  type: ["string", "null"],
-  enum: ["discogs", "apple_music", "upload", null],
-};
 const albumArtMatchStatusValues = ["matched", "mismatch", "no_reference", "no_candidate"];
-
-const albumArtworkStateSchemaObject: Record<string, unknown> = {
-  type: "object",
-  properties: {
-    release_id: { type: "string" },
-    friend_id: { type: "integer" },
-    current_url: { type: ["string", "null"] },
-    source: albumArtSourceSchemaObject,
-    discogs_art_url: { type: ["string", "null"] },
-    apple_music_art_url: { type: ["string", "null"] },
-    art_match_status: { type: ["string", "null"], enum: [...albumArtMatchStatusValues, null] },
-    art_match_distance: { type: ["integer", "null"] },
-    has_local_audio: { type: "boolean" },
-  },
-  required: [
-    "release_id",
-    "friend_id",
-    "current_url",
-    "source",
-    "discogs_art_url",
-    "apple_music_art_url",
-    "art_match_status",
-    "art_match_distance",
-    "has_local_audio",
-  ],
-};
 
 const albumArtworkPathParams = [
   { name: "releaseId", in: "path", required: true, schema: { type: "string" } },
@@ -4158,7 +4082,7 @@ const albumArtworkContracts: ApiContractRoute[] = [
       responses: {
         "200": jsonOk(
           "current_url is what views display. source is null until art is chosen (by a person or the bulk matcher).",
-          albumArtworkStateSchemaObject
+          ALBUM_ARTWORK_STATE_REF
         ),
         "400": jsonError("Missing friend_id"),
         "404": jsonError("Album not found"),
@@ -4195,7 +4119,7 @@ const albumArtworkContracts: ApiContractRoute[] = [
       responses: {
         "200": jsonOk(
           "Applied to the album and its tracks. The image is cached locally under /uploads/album-covers.",
-          albumArtworkStateSchemaObject
+          ALBUM_ARTWORK_STATE_REF
         ),
         "400": jsonError("Invalid source"),
         "404": jsonError("Album not found, no embedded art, or no Discogs art to restore"),
@@ -4258,7 +4182,7 @@ const albumArtworkContracts: ApiContractRoute[] = [
         },
       },
       responses: {
-        "200": jsonOk("Uploaded and applied", albumArtworkStateSchemaObject),
+        "200": jsonOk("Uploaded and applied", ALBUM_ARTWORK_STATE_REF),
         "400": jsonError("Missing, too large or unsupported image"),
         "404": jsonError("Album not found"),
         "500": jsonError("Server error"),
@@ -6009,7 +5933,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
                 ...trackSearchResponseBase,
                 properties: {
                   ...(trackSearchResponseBase.properties as Record<string, unknown>),
-                  hits: { type: "array", items: trackEntitySchemaObject },
+                  hits: { type: "array", items: TRACK_REF },
                   mode: {
                     type: "string",
                     enum: ["lexical", "semantic", "hybrid"],
@@ -6838,7 +6762,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
                     type: "array",
                     description:
                       "Up to 3 suggested track genres. Always taxonomy entries: the model chooses from an enum of the taxonomy, and anything else is dropped.",
-                    items: trackGenreSchemaObject,
+                    items: TRACK_GENRE_REF,
                   },
                   descriptors: {
                     type: "array",

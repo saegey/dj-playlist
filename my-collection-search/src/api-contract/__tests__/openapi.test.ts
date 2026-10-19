@@ -118,4 +118,35 @@ describe("OpenAPI contract coverage", () => {
       "#/components/schemas/PlaylistGeneticValidationError"
     );
   });
+
+  it("references shared track and album components", () => {
+    const doc = getOpenApiDocument();
+    const schemas = doc.components.schemas as Record<
+      string,
+      { enum?: string[]; required?: string[]; additionalProperties?: unknown }
+    >;
+    expect(schemas.TrackSearchMode.enum).toEqual(["lexical", "semantic", "hybrid"]);
+    expect(schemas.AlbumArtSource.enum).toEqual(["discogs", "apple_music", "upload"]);
+    expect(schemas.AlbumArtMatchStatus.enum).toEqual(["matched", "mismatch", "no_reference", "no_candidate"]);
+    expect(schemas.Track.required).toEqual(["track_id", "friend_id", "title", "artist", "album"]);
+    expect(schemas.Album.required).toEqual(["release_id", "friend_id", "title", "artist"]);
+    expect(schemas.TrackSearchResponse).toBeDefined();
+    expect(schemas.AlbumPlayableStructure).toBeDefined();
+
+    type Content = { content?: { "application/json"?: { schema?: { $ref?: string; items?: { $ref?: string } } } } };
+    const op = (path: string, method: string) =>
+      getOperation(path, method) as { responses: Record<string, Content> };
+    const schemaOf = (c?: Content) => c?.content?.["application/json"]?.schema;
+
+    expect(schemaOf(op("/api/tracks/{id}", "get").responses["200"])).toMatchObject({
+      $ref: "#/components/schemas/Track",
+    });
+    expect(schemaOf(op("/api/albums/{releaseId}/artwork", "get").responses["200"])?.$ref).toBe(
+      "#/components/schemas/AlbumArtworkState"
+    );
+    const search = schemaOf(op("/api/tracks/search", "get").responses["200"]) as unknown as {
+      properties?: { hits?: { items?: { $ref?: string } } };
+    };
+    expect(search?.properties?.hits?.items?.$ref).toBe("#/components/schemas/Track");
+  });
 });

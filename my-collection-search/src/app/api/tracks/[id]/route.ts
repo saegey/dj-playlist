@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { trackDeleteResponseSchema } from "@/api-contract/schemas";
 import { trackRepository } from "@/server/repositories/trackRepository";
 
 export async function DELETE(
@@ -27,7 +28,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Track not found or already deleted" }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, track_id, friend_id });
+    return NextResponse.json(
+      trackDeleteResponseSchema.parse({ success: true, track_id, friend_id })
+    );
   } catch (error) {
     console.error("Error soft-deleting track:", error);
     return NextResponse.json(

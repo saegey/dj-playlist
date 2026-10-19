@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { trackEssentiaResponseSchema } from "@/api-contract/schemas";
 import { readEssentiaAnalysis } from "@/lib/essentia-storage";
 
 export async function GET(
@@ -24,12 +25,14 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({
-      track_id: trackId,
-      friend_id: friendId,
-      file_path: result.file_path,
-      data: result.payload,
-    });
+    return NextResponse.json(
+      trackEssentiaResponseSchema.parse({
+        track_id: trackId,
+        friend_id: friendId,
+        file_path: result.file_path,
+        data: result.payload,
+      })
+    );
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },

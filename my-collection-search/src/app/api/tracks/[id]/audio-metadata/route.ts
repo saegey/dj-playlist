@@ -1,3 +1,4 @@
+import { trackExtractEmbeddedCoverResponseSchema } from "@/api-contract/schemas";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
@@ -150,13 +151,15 @@ export async function POST(
       await trackRepository.updateTrackAudioFileAlbumArtUrl(trackId, friendId, publicUrl);
     }
 
-    return NextResponse.json({
-      success: true,
-      audio_file_album_art_url: publicUrl,
-      message: releaseId
-        ? "Extracted embedded cover and updated all tracks on the album."
-        : "Extracted embedded cover and saved to track.",
-    });
+    return NextResponse.json(
+      trackExtractEmbeddedCoverResponseSchema.parse({
+        success: true,
+        audio_file_album_art_url: publicUrl,
+        message: releaseId
+          ? "Extracted embedded cover and updated all tracks on the album."
+          : "Extracted embedded cover and saved to track.",
+      })
+    );
   } catch (error) {
     console.error("Error extracting embedded audio cover:", error);
     return NextResponse.json(

@@ -1,7 +1,18 @@
 // Core domain types for the Groovenet DJ collection system.
-// Copied from my-collection-search/src/types/track.ts — Next.js app is the source of truth.
+// Track and album entities are re-exported from @groovenet/contracts.
+
+import type { AlbumEntity, TrackEntity, TrackSearchMode } from "@groovenet/contracts";
+
+export type { AlbumEntity as Album, TrackEntity as Track, TrackSearchMode };
 
 export type {
+  AlbumDeleteResponse,
+  AlbumDetail,
+  AlbumPlayableStructure,
+  AlbumPlayableStructureSide,
+  AlbumPlayableStructureTrack,
+  AlbumSearchResponse,
+  TrackGenre,
   LiveSet,
   LiveSetDeleteResponse,
   LiveSetMediaType,
@@ -18,57 +29,6 @@ export type {
   PlaylistSpinsResult,
   PlaylistTrackRef,
 } from "@groovenet/contracts";
-
-export type Track = {
-  id: number;
-  track_id: string;
-  isrc?: string;
-  title: string;
-  artist: string;
-  album: string;
-  year: string | number;
-  styles?: string[];
-  genres?: string[];
-  album_genres?: string[];
-  album_styles?: string[];
-  duration: string;
-  duration_seconds?: number;
-  position: string | number;
-  discogs_url: string;
-  apple_music_url: string;
-  youtube_url?: string;
-  spotify_url?: string;
-  soundcloud_url?: string;
-  album_thumbnail?: string;
-  /** Raw free-text genres; superseded by track_genres once reconciled (#371). */
-  local_tags?: string | undefined;
-  /** Track-level DJ genres: links to the canonical taxonomy (#371). */
-  track_genres?: TrackGenre[];
-  /** Normalised mood and description words, kept out of genres (#371). */
-  descriptors?: string[];
-  composer?: string | undefined | null;
-  bpm?: string | undefined | null;
-  key?: string | undefined | null;
-  /** Confidence (0-1) of the EDMA key estimate stored in `key` (#524). */
-  key_confidence?: number | null;
-  danceability?: string | null;
-  mood_happy?: number | null;
-  mood_sad?: number | null;
-  mood_relaxed?: number | null;
-  mood_aggressive?: number | null;
-  notes?: string | undefined | null;
-  local_audio_url?: string;
-  audio_file_album_art_url?: string | null;
-  star_rating?: number;
-  username?: string;
-  _semanticScore?: number;
-  friend_id: number;
-  release_id?: string;
-  library_identifier?: string | null;
-  _vectors?: { default?: number[] };
-  hasVectors?: boolean;
-};
-
 
 export interface Friend {
   id: number;
@@ -274,38 +234,6 @@ export interface GenreReconciliationCoverage {
   };
 }
 
-export interface Album {
-  release_id: string;
-  friend_id: number;
-  username?: string;
-  title: string;
-  artist: string;
-  year?: string;
-  genres?: string[];
-  styles?: string[];
-  effective_genres?: string[];
-  effective_styles?: string[];
-  genre_override_ids?: string[] | null;
-  style_override_ids?: string[] | null;
-  album_thumbnail?: string;
-  audio_file_album_art_url?: string;
-  discogs_url?: string;
-  date_added?: string;
-  date_changed?: string;
-  track_count: number;
-  album_rating?: number;
-  album_notes?: string;
-  purchase_price?: number;
-  condition?: string;
-  label?: string;
-  catalog_number?: string;
-  country?: string;
-  format?: string;
-  created_at?: string;
-  updated_at?: string;
-  library_identifier?: string | null;
-}
-
 export interface YoutubeVideo {
   id: string;
   title: string;
@@ -323,8 +251,6 @@ export interface AppleMusicResult {
   url: string;
   duration?: number;
 }
-
-export type TrackSearchMode = "lexical" | "semantic" | "hybrid";
 
 export interface TrackSearchQuery {
   query?: string;
@@ -355,7 +281,7 @@ export interface TrackSearchQuery {
 }
 
 export interface TrackSearchResponse {
-  tracks: Track[];
+  tracks: TrackEntity[];
   estimatedTotalHits: number;
   offset: number;
   limit: number;
@@ -365,15 +291,6 @@ export interface TrackSearchResponse {
   /** Hybrid fell back to lexical results because the semantic leg failed. */
   degraded?: boolean;
 }
-
-/** A taxonomy genre as linked to a track, with its parent for display. */
-export type TrackGenre = {
-  id: string;
-  name: string;
-  slug: string;
-  parent_id: string | null;
-  parent_name: string | null;
-};
 
 export interface TrackUpdate {
   star_rating?: number;
@@ -402,41 +319,6 @@ export interface AlbumSearchQuery {
   genre?: string[];
 }
 
-export interface AlbumSearchResponse {
-  hits: Album[];
-  estimatedTotalHits: number;
-  offset: number;
-  limit: number;
-  query: string;
-  sort: string;
-}
-
-export interface AlbumDetail {
-  album: Album;
-  tracks: Track[];
-}
-
-export interface AlbumPlayableStructureTrack {
-  track_id: string;
-  friend_id: number;
-  position?: string | number | null;
-  title: string;
-  artist: string;
-}
-
-export interface AlbumPlayableStructureSide {
-  side_key: string;
-  side_label: string;
-  ordinal: number;
-  track_count: number;
-  tracks: AlbumPlayableStructureTrack[];
-}
-
-export interface AlbumPlayableStructure {
-  album: Album;
-  sides: AlbumPlayableStructureSide[];
-}
-
 export interface AlbumUpdate {
   genre_override_ids?: string[] | null;
   style_override_ids?: string[] | null;
@@ -452,10 +334,6 @@ export interface AlbumDownloadResult {
   message: string;
   jobIds: string[];
   tracksQueued: number;
-}
-
-export interface AlbumDeleteResponse {
-  success: boolean;
 }
 
 export interface SpinTrackRef {
