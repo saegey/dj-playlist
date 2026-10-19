@@ -38,6 +38,15 @@ updates:
     directory: /download-worker
     schedule:
       interval: weekly
+    ignore:
+      # gamdl's pywidevine/protobuf dependency crashes at import on Python 3.14
+      # (PR #571 broke every Apple Music download, GROOVENET-NEXTJS-2J). Hold the
+      # base image on 3.13 until gamdl, pywidevine and protobuf support 3.14,
+      # then drop this entry.
+      - dependency-name: python
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
     labels:
       - dependencies
       - docker
