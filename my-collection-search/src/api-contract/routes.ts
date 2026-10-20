@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { playlistDeleteResponseSchema } from "@groovenet/contracts";
-import { exampleFromSchema } from "./exampleFromSchema";
 import {
   aiPromptSettingsGetResponseSchema,
   aiPromptSettingsPutBodySchema,
@@ -220,6 +219,7 @@ const trackSearchResponseBase: Record<string, unknown> = {
 };
 
 const TRACK_REF = { $ref: "#/components/schemas/Track" };
+const componentRef = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 const TRACK_GENRE_REF = { $ref: "#/components/schemas/TrackGenre" };
 const ALBUM_ARTWORK_STATE_REF = { $ref: "#/components/schemas/AlbumArtworkState" };
 
@@ -408,29 +408,6 @@ type TrackRouteOptions = {
   responses?: Record<string, unknown>;
 };
 
-
-function withExamples(responses: Record<string, unknown>): Record<string, unknown> {
-  const cloned = structuredClone(responses);
-  for (const response of Object.values(cloned)) {
-    if (!response || typeof response !== "object") continue;
-    const responseObj = response as Record<string, unknown>;
-    const content =
-      responseObj.content && typeof responseObj.content === "object"
-        ? (responseObj.content as Record<string, unknown>)
-        : undefined;
-    if (!content) continue;
-
-    const appJson = content["application/json"];
-    if (!appJson || typeof appJson !== "object") continue;
-
-    const media = appJson as Record<string, unknown>;
-    if (media.example !== undefined || media.examples !== undefined) continue;
-    if (!media.schema) continue;
-    media.example = exampleFromSchema(media.schema);
-  }
-  return cloned;
-}
-
 function makeTrackRoute(
   method: HttpMethod,
   path: string,
@@ -476,7 +453,8 @@ function makeTrackRoute(
     openapi: {
       parameters: options.parameters ?? buildPathParameters(path),
       requestBody: options.requestBody,
-      responses: withExamples(responses),
+      // Examples are added for every operation by openapi.ts, once components exist.
+      responses: structuredClone(responses),
     },
   };
 }
@@ -4537,25 +4515,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
         "200": {
           description: "Friends list",
           content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  results: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        id: { type: "integer" },
-                        username: { type: "string" },
-                      },
-                      required: ["id", "username"],
-                    },
-                  },
-                },
-                required: ["results"],
-              },
-            },
+            "application/json": { schema: componentRef("FriendListResponse") },
           },
         },
         "500": {
@@ -4578,31 +4538,14 @@ export const apiContractRoutes: ApiContractRoute[] = [
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                username: { type: "string" },
-              },
-              required: ["username"],
-              additionalProperties: false,
-            },
-          },
+          "application/json": { schema: componentRef("FriendCreate") },
         },
       },
       responses: {
         "200": {
           description: "Friend added",
           content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  message: { type: "string" },
-                },
-                required: ["message"],
-              },
-            },
+            "application/json": { schema: componentRef("FriendCreateResponse") },
           },
         },
         "400": {
@@ -6243,15 +6186,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
         "200": {
           description: "Default library setting",
           content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  friend_id: { type: ["integer", "null"] },
-                },
-                required: ["friend_id"],
-              },
-            },
+            "application/json": { schema: componentRef("DefaultLibrarySettings") },
           },
         },
         "500": {
@@ -6276,31 +6211,14 @@ export const apiContractRoutes: ApiContractRoute[] = [
       requestBody: {
         required: true,
         content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                friend_id: { type: "integer" },
-              },
-              required: ["friend_id"],
-              additionalProperties: false,
-            },
-          },
+          "application/json": { schema: componentRef("DefaultLibrarySettingsUpdate") },
         },
       },
       responses: {
         "200": {
           description: "Default library updated",
           content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  friend_id: { type: "integer" },
-                },
-                required: ["friend_id"],
-              },
-            },
+            "application/json": { schema: componentRef("DefaultLibrarySettingsUpdateResponse") },
           },
         },
         "400": {

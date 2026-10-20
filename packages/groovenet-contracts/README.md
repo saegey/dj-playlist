@@ -2,8 +2,11 @@
 
 Shared runtime schemas and TypeScript types for Groovenet API resources. It is
 the source of truth for the wire enums, entities, and request/response payloads
-of live sets (`liveSets.ts`), playlists (`playlists.ts`), tracks (`tracks.ts`)
-and albums (`albums.ts`).
+of live sets (`liveSets.ts`), playlists (`playlists.ts`), tracks (`tracks.ts`),
+albums (`albums.ts`) and friends with the default-library setting (`friends.ts`).
+
+[`INVENTORY.md`](INVENTORY.md) lists every published API operation with its
+family and migration status, and the order the remaining families follow.
 
 ## Adding or migrating a contract
 
@@ -18,8 +21,8 @@ and albums (`albums.ts`).
    components from the route contract. Add an OpenAPI test for the resource's
    shape and enum values.
 
-Migrate one resource family at a time: live sets, playlists, tracks and albums are
-done; the remaining API resources are next. Preserve permissive response fields where
+Migrate one resource family at a time: live sets, playlists, tracks, albums and
+friends are done; `INVENTORY.md` orders the rest. Preserve permissive response fields where
 the database returns additional wire fields; make request schemas strict only
 when the endpoint already rejects unknown fields.
 
@@ -77,3 +80,33 @@ the smaller resources did not need:
   fixed object (`essentia`, `playlists`, `DELETE`, extract-cover) parse their
   response with the shared schema; lenient request handling (e.g.
   `playlist_counts` silently dropping malformed refs) is preserved.
+
+## Pattern for the remaining families (#552)
+
+Friends and the default-library setting were the first of #552's slices, and
+fixed the conventions the rest follow:
+
+- **Update `INVENTORY.md` in the same PR.** `contractInventory.test.ts` in the
+  app fails when an OpenAPI operation has no row, a row names an operation that
+  no longer exists, an `exception` has no reason, or a row marked `contracts`
+  references no shared component. Add the family's `*JsonSchemas` to that test's
+  `SHARED_COMPONENTS` when you register them in `openapi.ts`.
+- **Request bodies publish their input shape.** A plain `z.object` strips
+  unknown keys at runtime, but its default (output) JSON Schema says
+  `additionalProperties: false`, which tells clients the server rejects them.
+  Publish request bodies with `{ io: "input" }` unless the route really rejects
+  unknown fields (`.strict()`).
+- **Keep the route's own coercion when the app helper would change it.**
+  `intFromInputSchema` uses `parseInt`, so it accepts `"3abc"`; the
+  default-library `PUT` has always coerced with `Number()` and rejected that.
+  The route keeps `Number()` and validates the result with the shared wire
+  schema, so only already-broken input changes (`2.5` is now a 400, where it
+  used to reach Postgres and come back a 500).
+- **Reference components with `componentRef(name)`** in `routes.ts`.
+  `openapi.ts` inlines `$ref`s before generating response examples, so a
+  migrated response keeps a realistic example instead of the literal
+  `"example"`, which every `$ref`'d response produced until this fix.
+- **Streams and binaries are exceptions, not gaps.** An operation whose body is
+  not JSON (the friend-removal progress stream, audio and dump downloads, SSE)
+  stays `exception` in the inventory with its reason, even when its query is
+  validated with a shared schema.

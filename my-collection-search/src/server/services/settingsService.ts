@@ -1,3 +1,7 @@
+import type {
+  DefaultLibrarySettings,
+  DefaultLibrarySettingsUpdateResponse,
+} from "@groovenet/contracts";
 import { getDefaultTrackMetadataPrompt } from "@/lib/serverPrompts";
 import { friendRepository } from "@/server/repositories/friendRepository";
 import type { GamdlSettings, GamdlSettingsUpdate } from "@/types/gamdl";
@@ -8,14 +12,14 @@ import {
 } from "@/types/recommendations";
 
 export class SettingsService {
-  async getDefaultLibrary(): Promise<{ friend_id: number | null }> {
+  async getDefaultLibrary(): Promise<DefaultLibrarySettings> {
     const friend_id = await settingsRepository.findDefaultLibraryFriendId();
     return { friend_id };
   }
 
   async updateDefaultLibrary(
     friendId: number
-  ): Promise<{ friend_id: number }> {
+  ): Promise<DefaultLibrarySettingsUpdateResponse> {
     const friend = await friendRepository.findById(friendId);
     if (!friend) {
       throw new Error(`Library ${friendId} does not exist`);

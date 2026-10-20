@@ -1,20 +1,16 @@
+import type { Friend } from "@groovenet/contracts";
 import { dbQuery } from "@/lib/serverDb";
 
-export type FriendRow = {
-  id: number;
-  username: string;
-};
-
 export class FriendRepository {
-  async listFriends(): Promise<FriendRow[]> {
-    const result = await dbQuery<FriendRow>(
+  async listFriends(): Promise<Friend[]> {
+    const result = await dbQuery<Friend>(
       "SELECT id, username FROM friends ORDER BY added_at DESC"
     );
     return result.rows;
   }
 
-  async findById(id: number): Promise<FriendRow | null> {
-    const result = await dbQuery<FriendRow>(
+  async findById(id: number): Promise<Friend | null> {
+    const result = await dbQuery<Friend>(
       "SELECT id, username FROM friends WHERE id = $1 LIMIT 1",
       [id]
     );
@@ -50,9 +46,9 @@ export class FriendRepository {
     );
   }
 
-  async listByUsernames(usernames: string[]): Promise<FriendRow[]> {
+  async listByUsernames(usernames: string[]): Promise<Friend[]> {
     if (usernames.length === 0) return [];
-    const result = await dbQuery<FriendRow>(
+    const result = await dbQuery<Friend>(
       "SELECT id, username FROM friends WHERE username = ANY($1::text[])",
       [usernames]
     );
