@@ -1,6 +1,6 @@
 import type { DiscogsSimpleArtist, DiscogsVideo } from "@/types/discogs";
 import type { AlbumEntity, LiveSetSummary, TrackEntity } from "@groovenet/contracts";
-export type { LiveSetStatus, LiveSetCollaborator, LiveSetSummary, TrackGenre } from "@groovenet/contracts";
+export type { Friend, LiveSetStatus, LiveSetCollaborator, LiveSetSummary, TrackGenre } from "@groovenet/contracts";
 
 /**
  * The track wire entity from @groovenet/contracts. The wire schema is honest
@@ -109,11 +109,6 @@ export interface ProcessedTrack {
   youtube_url?: string | null;
   soundcloud_url?: string | null;
   local_audio_url?: string | null;
-}
-
-export interface Friend {
-  id: number;
-  username: string;
 }
 
 export type Album = Omit<AlbumEntity, "track_count" | "year" | "audio_file_album_art_url" | "discogs_url"> & {

@@ -1,5 +1,11 @@
 import { apiContractRoutes, genreTreeNodeSchemaObject } from "@/api-contract/routes";
-import { albumJsonSchemas, liveSetJsonSchemas, playlistJsonSchemas, trackJsonSchemas } from "@groovenet/contracts";
+import {
+  albumJsonSchemas,
+  friendJsonSchemas,
+  liveSetJsonSchemas,
+  playlistJsonSchemas,
+  trackJsonSchemas,
+} from "@groovenet/contracts";
 import fs from "node:fs";
 import path from "node:path";
 import { exampleFromSchema } from "./exampleFromSchema";
@@ -34,8 +40,37 @@ const MOBILE_OPENAPI_PATHS = new Set([
   "/api/discogs/verify-manifests",
 ]);
 
+const COMPONENT_REF = /^#\/components\/schemas\/(.+)$/;
 
-function addExamplesToOpenApiDocument(paths: Record<string, Record<string, unknown>>): void {
+/**
+ * Inlines `#/components/schemas/*` references so `exampleFromSchema`, which
+ * knows nothing of `$ref`, sees the shared component's properties. A component
+ * that refers to itself (`GenreTreeNode.children`) stops at an empty object.
+ */
+export function inlineComponentRefs(
+  schema: unknown,
+  components: Record<string, unknown>,
+  resolving: ReadonlySet<string> = new Set()
+): unknown {
+  if (Array.isArray(schema)) {
+    return schema.map((item) => inlineComponentRefs(item, components, resolving));
+  }
+  if (!schema || typeof schema !== "object") return schema;
+  const s = schema as Record<string, unknown>;
+  const name = typeof s.$ref === "string" ? COMPONENT_REF.exec(s.$ref)?.[1] : undefined;
+  if (name !== undefined) {
+    if (resolving.has(name) || !(name in components)) return { type: "object" };
+    return inlineComponentRefs(components[name], components, new Set([...resolving, name]));
+  }
+  return Object.fromEntries(
+    Object.entries(s).map(([key, value]) => [key, inlineComponentRefs(value, components, resolving)])
+  );
+}
+
+function addExamplesToOpenApiDocument(
+  paths: Record<string, Record<string, unknown>>,
+  components: Record<string, unknown>
+): void {
   for (const pathItem of Object.values(paths)) {
     for (const operation of Object.values(pathItem)) {
       if (!operation || typeof operation !== "object") continue;
@@ -59,7 +94,7 @@ function addExamplesToOpenApiDocument(paths: Record<string, Record<string, unkno
         const media = appJson as Record<string, unknown>;
         if (media.example !== undefined || media.examples !== undefined) continue;
         if (!media.schema) continue;
-        media.example = exampleFromSchema(media.schema);
+        media.example = exampleFromSchema(inlineComponentRefs(media.schema, components));
       }
     }
   }
@@ -171,7 +206,15 @@ function buildOpenApiDocumentInternal(): OpenApiDocument {
     };
   }
   addDiscoveredRoutes(paths);
-  addExamplesToOpenApiDocument(paths);
+  const schemas = {
+    GenreTreeNode: genreTreeNodeSchemaObject,
+    ...liveSetJsonSchemas,
+    ...playlistJsonSchemas,
+    ...trackJsonSchemas,
+    ...albumJsonSchemas,
+    ...friendJsonSchemas,
+  };
+  addExamplesToOpenApiDocument(paths, schemas);
 
   return {
     openapi: "3.1.0",
@@ -193,7 +236,7 @@ function buildOpenApiDocumentInternal(): OpenApiDocument {
             "Defined for endpoints that use bearer auth. No current documented endpoint requires it.",
         },
       },
-      schemas: { GenreTreeNode: genreTreeNodeSchemaObject, ...liveSetJsonSchemas, ...playlistJsonSchemas, ...trackJsonSchemas, ...albumJsonSchemas },
+      schemas,
     },
   };
 }

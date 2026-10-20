@@ -12,6 +12,7 @@ import type {
   LiveSetMutationResponse,
   LiveSetUpdate,
   Friend,
+  FriendListResponse,
   GenreTreeResponse,
   GenreSimilarResponse, GenreSimilarQuery,
   Genre, GenreCreateInput, GenreUpdateInput, GenreAliasResponse, GenreMergeResponse,
@@ -533,7 +534,8 @@ export class GroovenetClient {
   }
 
   async getFriends(): Promise<Friend[]> {
-    const result = await this.request<{ friends?: string[]; results?: Friend[] }>(
+    // Servers before the `results` shape returned bare usernames.
+    const result = await this.request<Partial<FriendListResponse> & { friends?: string[] }>(
       "GET",
       "/friends"
     );

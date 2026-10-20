@@ -1,5 +1,5 @@
 // Core domain types for the Groovenet DJ collection system.
-// Track and album entities are re-exported from @groovenet/contracts.
+// Track, album and friend entities are re-exported from @groovenet/contracts.
 
 import type { AlbumEntity, TrackEntity, TrackSearchMode } from "@groovenet/contracts";
 
@@ -28,12 +28,9 @@ export type {
   PlaylistSpinsInput,
   PlaylistSpinsResult,
   PlaylistTrackRef,
+  Friend,
+  FriendListResponse,
 } from "@groovenet/contracts";
-
-export interface Friend {
-  id: number;
-  username: string;
-}
 
 export type GenreSource = "discogs" | "custom";
 

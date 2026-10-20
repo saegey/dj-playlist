@@ -32,6 +32,21 @@ describe("listFriends()", () => {
 
 // ─── findIdByUsername ─────────────────────────────────────────────────────────
 
+describe("findById()", () => {
+  it("returns the friend when the id exists", async () => {
+    dbQuery.mockResolvedValue({ rows: [{ id: 3, username: "cat" }] });
+
+    expect(await makeRepo().findById(3)).toEqual({ id: 3, username: "cat" });
+    expect(dbQuery).toHaveBeenCalledWith(expect.stringContaining("WHERE id = $1"), [3]);
+  });
+
+  it("returns null when the id is not found", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    expect(await makeRepo().findById(99)).toBeNull();
+  });
+});
+
 describe("findIdByUsername()", () => {
   it("returns id when the username exists", async () => {
     dbQuery.mockResolvedValue({ rows: [{ id: 7 }] });

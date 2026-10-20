@@ -47,6 +47,13 @@ import {
   playlistTrackInputSchema as sharedPlaylistTrackInputSchema,
   playlistTrackRefSchema as sharedPlaylistTrackRefSchema,
   playlistUpdateSchema,
+  defaultLibrarySettingsSchema,
+  defaultLibrarySettingsUpdateResponseSchema,
+  defaultLibrarySettingsUpdateSchema,
+  friendCreateResponseSchema,
+  friendCreateSchema,
+  friendListResponseSchema,
+  friendSchema as sharedFriendSchema,
 } from "@groovenet/contracts";
 import {
   CLEANING_METHODS,
@@ -379,17 +386,12 @@ export const backupStatusGetResponseSchema = z.object({
   metrics: backupMetricsSchema.optional(),
 });
 
-export const defaultLibrarySettingsGetResponseSchema = z.object({
-  friend_id: z.number().int().nullable(),
-});
+export const defaultLibrarySettingsGetResponseSchema = defaultLibrarySettingsSchema;
 
-export const defaultLibrarySettingsPutBodySchema = z.object({
-  friend_id: intFromInputSchema,
-});
+// The route coerces with Number() itself, as it always has, then validates this.
+export const defaultLibrarySettingsPutBodySchema = defaultLibrarySettingsUpdateSchema;
 
-export const defaultLibrarySettingsPutResponseSchema = z.object({
-  friend_id: z.number().int(),
-});
+export const defaultLibrarySettingsPutResponseSchema = defaultLibrarySettingsUpdateResponseSchema;
 
 export const backupCreateResponseSchema = z.object({
   message: z.string(),
@@ -503,10 +505,7 @@ export const jobDetailsResponseSchema = jobInfoSchema.extend({
   logs: z.array(z.unknown()).optional(),
 });
 
-export const friendSchema = z.object({
-  id: z.number().int(),
-  username: z.string(),
-});
+export const friendSchema = sharedFriendSchema;
 
 export const friendsListQuerySchema = z.object({
   showCurrentUser: z
@@ -514,17 +513,11 @@ export const friendsListQuerySchema = z.object({
     .optional(),
 });
 
-export const friendsListResponseSchema = z.object({
-  results: z.array(friendSchema),
-});
+export const friendsListResponseSchema = friendListResponseSchema;
 
-export const friendMutationBodySchema = z.object({
-  username: z.string().min(1),
-});
+export const friendMutationBodySchema = friendCreateSchema;
 
-export const friendMutationResponseSchema = z.object({
-  message: z.string(),
-});
+export const friendMutationResponseSchema = friendCreateResponseSchema;
 
 export const friendDeleteQuerySchema = z.object({
   username: z.string().min(1),
