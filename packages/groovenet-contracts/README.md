@@ -3,7 +3,8 @@
 Shared runtime schemas and TypeScript types for Groovenet API resources. It is
 the source of truth for the wire enums, entities, and request/response payloads
 of live sets (`liveSets.ts`), playlists (`playlists.ts`), tracks (`tracks.ts`),
-albums (`albums.ts`) and friends with the default-library setting (`friends.ts`).
+albums (`albums.ts`), friends with the default-library setting (`friends.ts`)
+and physical-copy record care (`recordCare.ts`).
 
 [`INVENTORY.md`](INVENTORY.md) lists every published API operation with its
 family and migration status, and the order the remaining families follow.
@@ -21,8 +22,8 @@ family and migration status, and the order the remaining families follow.
    components from the route contract. Add an OpenAPI test for the resource's
    shape and enum values.
 
-Migrate one resource family at a time: live sets, playlists, tracks, albums and
-friends are done; `INVENTORY.md` orders the rest. Preserve permissive response fields where
+Migrate one resource family at a time: live sets, playlists, tracks, albums,
+friends and record care are done; `INVENTORY.md` orders the rest. Preserve permissive response fields where
 the database returns additional wire fields; make request schemas strict only
 when the endpoint already rejects unknown fields.
 
@@ -110,3 +111,21 @@ fixed the conventions the rest follow:
   not JSON (the friend-removal progress stream, audio and dump downloads, SSE)
   stays `exception` in the inventory with its reason, even when its query is
   validated with a shared schema.
+- **Refined request bodies export their object and their refinement.** Zod
+  will not `.extend()` an object that carries a `.refine`/`.superRefine`, and
+  the app must swap ids for its coercing versions. Export the plain
+  `*ObjectSchema`, the refinement (`requireLabelOrNotes`,
+  `refineRecordActionCreate`) and the refined wire schema; the app rebuilds
+  `object.extend({...coercion}).superRefine(refinement)`. Where the refinement
+  enforces "exactly one of", export a TypeScript union for callers
+  (`RecordActionCreate`) built from the inferred base type.
+- **Documentation travels with the schema.** Put OpenAPI descriptions,
+  examples and `format: "date-time"` on the field with `.meta({...})`, which
+  `z.toJSONSchema` copies through, instead of keeping them in a hand-written
+  schema object in `routes.ts`. Use `format` rather than `z.iso.datetime()` on
+  responses, so the parser stays as lenient as it was.
+- **Enum tuples come from the schema.** Export `SLEEVE_TYPES =
+  sleeveTypeSchema.options` and have app modules (`lib/recordCare.ts`)
+  re-export it, so UI, SQL helpers and analytics share one list. Database row
+  types that differ only in timestamp types derive from the wire type with
+  `Omit<> & {...}` rather than repeating every column.

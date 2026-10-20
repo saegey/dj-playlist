@@ -4,6 +4,7 @@ import {
   friendJsonSchemas,
   liveSetJsonSchemas,
   playlistJsonSchemas,
+  recordCareJsonSchemas,
   trackJsonSchemas,
 } from "@groovenet/contracts";
 import fs from "node:fs";
@@ -213,6 +214,7 @@ function buildOpenApiDocumentInternal(): OpenApiDocument {
     ...trackJsonSchemas,
     ...albumJsonSchemas,
     ...friendJsonSchemas,
+    ...recordCareJsonSchemas,
   };
   addExamplesToOpenApiDocument(paths, schemas);
 

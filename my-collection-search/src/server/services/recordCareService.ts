@@ -1,3 +1,11 @@
+import type {
+  RecordAction,
+  RecordActionDetails,
+  RecordCareItem,
+  RecordCareSummary,
+  RecordCopy,
+  RecordCopyListItem,
+} from "@groovenet/contracts";
 import { withDbTransaction } from "@/lib/serverDb";
 import {
   DEFAULT_TARGET_SLEEVE,
@@ -10,7 +18,6 @@ import {
 import { albumRepository } from "@/server/repositories/albumRepository";
 import {
   recordActionRepository,
-  type RecordActionDetails,
   type RecordActionRow,
 } from "@/server/repositories/recordActionRepository";
 import {
@@ -26,32 +33,8 @@ export const RECORD_COPY_NOT_FOUND = "Record copy not found";
 export const DEFAULT_COPY_HAS_SIBLINGS =
   "The default copy cannot be deleted while the release has other copies";
 
-export type RecordCopy = Omit<
-  RecordCopyRow,
-  "last_cleaned_at" | "deleted_at" | "created_at" | "updated_at"
-> & {
-  last_cleaned_at: string | null;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-/** A copy as listed: a real one, or a release's implicit default (`id: null`). */
-export type RecordCopyListItem = Omit<RecordCopy, "id" | "created_at" | "updated_at"> & {
-  id: number | null;
-  created_at: string | null;
-  updated_at: string | null;
-};
-
-export type RecordAction = Omit<RecordActionRow, "occurred_at" | "voided_at" | "created_at"> & {
-  occurred_at: string;
-  voided_at: string | null;
-  created_at: string;
-};
-
-export type RecordCareItem = Omit<RecordCareRow, "last_cleaned_at"> & {
-  last_cleaned_at: string | null;
-};
+// Wire shapes, defined in @groovenet/contracts.
+export type { RecordAction, RecordCareItem, RecordCopy, RecordCopyListItem, RecordCareSummary };
 
 export type LogRecordActionInput = {
   friend_id: number;
@@ -61,12 +44,6 @@ export type LogRecordActionInput = {
   sleeve_type?: SleeveType | null;
   details?: RecordActionDetails;
 } & ({ copy_id: number; release_id?: never } | { copy_id?: never; release_id: string });
-
-export type RecordCareSummary = RecordCareCounts & {
-  by_sleeve_type: Record<SleeveType | "unknown", number>;
-  overdue_days: number;
-  needs_sleeve_type: SleeveType;
-};
 
 function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
