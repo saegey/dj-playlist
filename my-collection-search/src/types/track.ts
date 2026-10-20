@@ -1,5 +1,5 @@
 import type { DiscogsSimpleArtist, DiscogsVideo } from "@/types/discogs";
-import type { AlbumEntity, LiveSetSummary, TrackEntity } from "@groovenet/contracts";
+import type { AlbumEntity, TrackEntity } from "@groovenet/contracts";
 export type { Friend, LiveSetStatus, LiveSetCollaborator, LiveSetSummary, TrackGenre } from "@groovenet/contracts";
 
 /**
