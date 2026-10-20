@@ -1,9 +1,10 @@
-import { friendRepository, type FriendRow } from "@/server/repositories/friendRepository";
+import type { Friend } from "@groovenet/contracts";
+import { friendRepository } from "@/server/repositories/friendRepository";
 
 type ProgressFn = (line: string) => void;
 
 export class FriendService {
-  async listFriends(): Promise<FriendRow[]> {
+  async listFriends(): Promise<Friend[]> {
     return friendRepository.listFriends();
   }
 

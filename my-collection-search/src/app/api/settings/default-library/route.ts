@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import {
+  defaultLibrarySettingsGetResponseSchema,
+  defaultLibrarySettingsPutBodySchema,
+  defaultLibrarySettingsPutResponseSchema,
+} from "@/api-contract/schemas";
 import { settingsService } from "@/server/services/settingsService";
 
 type PgLikeError = Error & {
@@ -9,7 +14,7 @@ type PgLikeError = Error & {
 export async function GET() {
   try {
     const result = await settingsService.getDefaultLibrary();
-    return NextResponse.json(result);
+    return NextResponse.json(defaultLibrarySettingsGetResponseSchema.parse(result));
   } catch (err) {
     console.error("Failed to load default library settings:", err);
 
@@ -34,17 +39,19 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const friendId = Number(body?.friend_id);
+    const parsed = defaultLibrarySettingsPutBodySchema.safeParse({
+      friend_id: Number(body?.friend_id),
+    });
 
-    if (!friendId || Number.isNaN(friendId)) {
+    if (!parsed.success || parsed.data.friend_id === 0) {
       return NextResponse.json(
         { error: "friend_id is required" },
         { status: 400 }
       );
     }
 
-    const result = await settingsService.updateDefaultLibrary(friendId);
-    return NextResponse.json(result);
+    const result = await settingsService.updateDefaultLibrary(parsed.data.friend_id);
+    return NextResponse.json(defaultLibrarySettingsPutResponseSchema.parse(result));
   } catch (err) {
     console.error("Failed to update default library settings:", err);
 

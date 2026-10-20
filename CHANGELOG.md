@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.5](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.4...v0.3.5) (2026-10-19)
+
+
+### Features
+
+* **recommendations:** count similar genres as partial overlap ([#593](https://github.com/Public-Vinyl-Radio/groovenet/issues/593)) ([e9ac912](https://github.com/Public-Vinyl-Radio/groovenet/commit/e9ac91226440508f5f491e38968ab5e11e7a41b8))
+
+
+### Bug Fixes
+
+* **app:** bump Next to 16.4.2 to fix Gzip drain listener leak ([#588](https://github.com/Public-Vinyl-Radio/groovenet/issues/588)) ([acad398](https://github.com/Public-Vinyl-Radio/groovenet/commit/acad3983c1126819327b09780fb07ece9bce4730))
+* **worker:** pin download-worker to Python 3.13 and smoke-test gamdl ([#599](https://github.com/Public-Vinyl-Radio/groovenet/issues/599)) ([0a347fa](https://github.com/Public-Vinyl-Radio/groovenet/commit/0a347fa0679987e5c2204c3fa15cd75da1ee2e8f))
+
 ## [0.3.4](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.3...v0.3.4) (2026-10-18)
 
 

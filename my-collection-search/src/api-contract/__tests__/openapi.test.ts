@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getOpenApiDocument } from "../openapi";
+import { getOpenApiDocument, inlineComponentRefs } from "../openapi";
 
 type Operation = { tags?: string[]; summary?: string };
 
@@ -148,5 +148,99 @@ describe("OpenAPI contract coverage", () => {
       properties?: { hits?: { items?: { $ref?: string } } };
     };
     expect(search?.properties?.hits?.items?.$ref).toBe("#/components/schemas/Track");
+  });
+
+  it("references shared friend and default-library components", () => {
+    const doc = getOpenApiDocument();
+    const schemas = doc.components.schemas as Record<
+      string,
+      { required?: string[]; additionalProperties?: unknown }
+    >;
+    expect(schemas.Friend.required).toEqual(["id", "username"]);
+    // Request bodies strip unknown fields; the spec must not claim they are rejected.
+    expect(schemas.FriendCreate.additionalProperties).toBeUndefined();
+    expect(schemas.DefaultLibrarySettingsUpdate.additionalProperties).toBeUndefined();
+
+    type Content = { content?: { "application/json"?: { schema?: { $ref?: string } } } };
+    const ref = (c?: Content) => c?.content?.["application/json"]?.schema?.$ref;
+    const op = (path: string, method: string) =>
+      getOperation(path, method) as { requestBody?: Content; responses: Record<string, Content> };
+
+    expect(ref(op("/api/friends", "get").responses["200"])).toBe("#/components/schemas/FriendListResponse");
+    expect(ref(op("/api/friends", "post").requestBody)).toBe("#/components/schemas/FriendCreate");
+    expect(ref(op("/api/friends", "post").responses["200"])).toBe("#/components/schemas/FriendCreateResponse");
+    expect(ref(op("/api/settings/default-library", "get").responses["200"])).toBe(
+      "#/components/schemas/DefaultLibrarySettings"
+    );
+    expect(ref(op("/api/settings/default-library", "put").requestBody)).toBe(
+      "#/components/schemas/DefaultLibrarySettingsUpdate"
+    );
+    expect(ref(op("/api/settings/default-library", "put").responses["200"])).toBe(
+      "#/components/schemas/DefaultLibrarySettingsUpdateResponse"
+    );
+  });
+
+  it("references shared record-care components and documents their enums", () => {
+    const doc = getOpenApiDocument();
+    const schemas = doc.components.schemas as Record<string, { enum?: string[]; required?: string[] }>;
+    expect(schemas.SleeveType.enum).toEqual(["original", "paper", "poly-rice-paper-poly", "poly"]);
+    expect(schemas.RecordActionType.enum).toEqual(["cleaned", "sleeved", "inspected", "repaired"]);
+    expect(schemas.CleaningMethod.enum).toEqual(["dry-brush", "wet-manual", "vacuum", "ultrasonic", "other"]);
+    expect(schemas.RecordCareStatus.enum).toEqual(["never_cleaned", "overdue", "needs_sleeve"]);
+    expect(schemas.RecordActionCreate.required).toEqual(["friend_id", "action_type"]);
+
+    type Content = { content?: { "application/json"?: { schema?: { $ref?: string } } } };
+    const ref = (c?: Content) => c?.content?.["application/json"]?.schema?.$ref?.replace("#/components/schemas/", "");
+    const op = (path: string, method: string) =>
+      getOperation(path, method) as {
+        requestBody?: Content;
+        responses: Record<string, Content>;
+        parameters?: Array<{ name: string; schema?: { $ref?: string } }>;
+      };
+
+    expect(ref(op("/api/record-copies", "get").responses["200"])).toBe("RecordCopyListResponse");
+    expect(ref(op("/api/record-copies", "post").requestBody)).toBe("RecordCopyCreate");
+    expect(ref(op("/api/record-copies", "post").responses["201"])).toBe("RecordCopyResponse");
+    expect(ref(op("/api/record-copies/default", "patch").requestBody)).toBe("RecordCopyDefaultUpdate");
+    expect(ref(op("/api/record-copies/{id}", "patch").requestBody)).toBe("RecordCopyUpdate");
+    expect(ref(op("/api/record-copies/{id}", "delete").responses["200"])).toBe("RecordCopyDeleteResponse");
+    expect(ref(op("/api/record-copies/{id}/actions", "get").responses["200"])).toBe("RecordActionListResponse");
+    expect(ref(op("/api/record-copies/care", "get").responses["200"])).toBe("RecordCareResponse");
+    expect(ref(op("/api/record-copies/care/summary", "get").responses["200"])).toBe("RecordCareSummary");
+    expect(ref(op("/api/record-actions", "post").requestBody)).toBe("RecordActionCreate");
+    expect(ref(op("/api/record-actions", "post").responses["201"])).toBe("RecordActionMutationResponse");
+    expect(ref(op("/api/record-actions/{id}", "delete").responses["200"])).toBe("RecordActionVoidResponse");
+
+    const param = (path: string, name: string) =>
+      op(path, "get").parameters?.find((p) => p.name === name)?.schema?.$ref;
+    expect(param("/api/record-copies/care", "status")).toBe("#/components/schemas/RecordCareStatus");
+    expect(param("/api/record-copies/{id}/actions", "action_type")).toBe("#/components/schemas/RecordActionType");
+  });
+
+  it("builds response examples from the shared component a $ref points at", () => {
+    type Example = { content?: { "application/json"?: { example?: unknown } } };
+    const example = (path: string, method: string) =>
+      (getOperation(path, method) as { responses: Record<string, Example> }).responses["200"]?.content?.[
+        "application/json"
+      ]?.example;
+
+    expect(example("/api/friends", "get")).toEqual({ results: [expect.objectContaining({ username: expect.any(String) })] });
+    expect(example("/api/playlists", "delete")).toEqual(expect.objectContaining({ success: expect.anything() }));
+    expect(example("/api/tracks/{id}", "get")).toEqual(expect.objectContaining({ track_id: expect.any(String) }));
+  });
+
+  it("stops inlining at a self-referencing or unknown component", () => {
+    const components = {
+      Node: { type: "object", properties: { children: { type: "array", items: { $ref: "#/components/schemas/Node" } } } },
+    };
+    expect(inlineComponentRefs({ $ref: "#/components/schemas/Node" }, components)).toEqual({
+      type: "object",
+      properties: { children: { type: "array", items: { type: "object" } } },
+    });
+    expect(inlineComponentRefs({ $ref: "#/components/schemas/Missing" }, components)).toEqual({ type: "object" });
+    expect(inlineComponentRefs([{ $ref: "https://elsewhere/x" }, 3], components)).toEqual([
+      { $ref: "https://elsewhere/x" },
+      3,
+    ]);
   });
 });

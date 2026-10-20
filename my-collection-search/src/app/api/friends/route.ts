@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { TextEncoder } from "util";
+import {
+  friendDeleteQuerySchema,
+  friendMutationBodySchema,
+  friendMutationResponseSchema,
+  friendsListResponseSchema,
+} from "@/api-contract/schemas";
 import { analytics } from "@/lib/analytics/server";
 import { friendService } from "@/server/services/friendService";
 
 export async function GET() {
   try {
     const results = await friendService.listFriends();
-    return NextResponse.json({ results });
+    return NextResponse.json(friendsListResponseSchema.parse({ results }));
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : String(error) },
@@ -17,20 +23,22 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const username = body?.username;
-    if (!username || typeof username !== "string") {
+    const parsed = friendMutationBodySchema.safeParse(await request.json());
+    if (!parsed.success) {
       return NextResponse.json(
         { error: "Missing or invalid username" },
         { status: 400 }
       );
     }
+    const { username } = parsed.data;
 
     await friendService.addFriend(username);
 
     analytics.track("friend_added", {}, { request });
 
-    return NextResponse.json({ message: `Friend '${username}' added.` });
+    return NextResponse.json(
+      friendMutationResponseSchema.parse({ message: `Friend '${username}' added.` })
+    );
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : String(error) },
@@ -49,12 +57,15 @@ export async function DELETE(request: Request) {
 
       try {
         const url = new URL(request.url);
-        const username = url.searchParams.get("username");
-        if (!username || typeof username !== "string") {
+        const parsed = friendDeleteQuerySchema.safeParse({
+          username: url.searchParams.get("username") ?? undefined,
+        });
+        if (!parsed.success) {
           send("Missing or invalid username");
           controller.close();
           return;
         }
+        const { username } = parsed.data;
 
         await friendService.removeFriend(username, send);
 

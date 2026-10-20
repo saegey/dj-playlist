@@ -1,17 +1,15 @@
 import { dbQuery } from "@/lib/serverDb";
+import type { RecordCareItem, RecordCareSummary, RecordCopy } from "@groovenet/contracts";
 import type { RecordCareStatus, SleeveType } from "@/lib/recordCare";
 import type { PoolClient } from "pg";
 
 export type Queryable = Pick<PoolClient, "query">;
 
-export type RecordCopyRow = {
-  id: number;
-  friend_id: number;
-  release_id: string;
-  is_default: boolean;
-  label: string | null;
-  notes: string | null;
-  inner_sleeve_type: SleeveType | null;
+/** A `RecordCopy` before its timestamps are normalised: pg returns Dates. */
+export type RecordCopyRow = Omit<
+  RecordCopy,
+  "last_cleaned_at" | "deleted_at" | "created_at" | "updated_at"
+> & {
   last_cleaned_at: Date | string | null;
   deleted_at: Date | string | null;
   created_at: Date | string;
@@ -34,16 +32,7 @@ export type UpdateRecordCopyInput = {
  * One row of the care views: a live copy, or — for an album with no copy rows
  * yet — its implicit default copy, with `copy_id` null.
  */
-export type RecordCareRow = {
-  friend_id: number;
-  release_id: string;
-  album_title: string;
-  album_artist: string;
-  album_thumbnail: string | null;
-  copy_id: number | null;
-  is_default: boolean;
-  label: string | null;
-  inner_sleeve_type: SleeveType | null;
+export type RecordCareRow = Omit<RecordCareItem, "last_cleaned_at"> & {
   last_cleaned_at: Date | string | null;
 };
 
@@ -58,12 +47,10 @@ export type ListRecordCareFilters = {
   offset?: number;
 };
 
-export type RecordCareCounts = {
-  total: number;
-  never_cleaned: number;
-  overdue: number;
-  needs_sleeve: number;
-};
+export type RecordCareCounts = Pick<
+  RecordCareSummary,
+  "total" | "never_cleaned" | "overdue" | "needs_sleeve"
+>;
 
 // Every album the friend owns, joined to its live copies. An album with none
 // still yields one row, all copy columns null: its implicit default copy,

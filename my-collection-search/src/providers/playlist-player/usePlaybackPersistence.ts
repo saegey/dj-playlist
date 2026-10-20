@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { Track } from "@/types/track";
@@ -41,6 +41,13 @@ export function usePlaybackPersistence({
   setVolumeState,
 }: UsePlaybackPersistenceArgs) {
   const lastSavedSecondRef = useRef<number | null>(null);
+  // Persisting is held back until the restore has been applied. Otherwise the
+  // persist effects, which run in the same commit as the restore effect with
+  // the still-empty initial state in their closure, overwrite the stored queue
+  // before it is read again (StrictMode re-runs effects in dev) or before the
+  // restored state has rendered. State, not a ref, so the restored values and
+  // the flag land in the same render and the first write carries them.
+  const [restored, setRestored] = useState(false);
 
   useEffect(() => {
     try {
@@ -78,6 +85,8 @@ export function usePlaybackPersistence({
       }
     } catch {
       // ignore storage errors
+    } finally {
+      setRestored(true);
     }
   }, [
     audioRef,
@@ -93,6 +102,7 @@ export function usePlaybackPersistence({
 
   const persistState = useCallback(
     (override?: Partial<{ currentTime: number }>) => {
+      if (!restored) return;
       try {
         const payload = {
           playlist,
@@ -106,7 +116,15 @@ export function usePlaybackPersistence({
         // ignore storage errors
       }
     },
-    [currentTime, currentTrackIndex, isPlaying, playlist, storageKey, volume]
+    [
+      currentTime,
+      currentTrackIndex,
+      isPlaying,
+      playlist,
+      restored,
+      storageKey,
+      volume,
+    ]
   );
 
   useEffect(() => {
@@ -114,9 +132,10 @@ export function usePlaybackPersistence({
   }, [plVersion, currentTrackIndex, isPlaying, volume, persistState]);
 
   useEffect(() => {
+    if (!restored) return;
     const sec = Math.floor(currentTime || 0);
     if (lastSavedSecondRef.current === sec) return;
     lastSavedSecondRef.current = sec;
     persistState({ currentTime });
-  }, [currentTime, persistState]);
+  }, [currentTime, persistState, restored]);
 }
