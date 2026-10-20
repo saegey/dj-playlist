@@ -108,16 +108,13 @@ async function openPlayer(
     volume: 1,
     currentTime: 0,
   };
-  // Serve the seed from getItem instead of writing it once: under React
-  // StrictMode (dev) the provider's persist effect overwrites storage with the
-  // empty initial queue between its two restore passes, so a one-time write
-  // would be lost. Only the restore effect reads this key.
+  // Seed once per tab: the init script runs again on a reload, which must not
+  // overwrite the state the player has saved since.
   await page.addInitScript(
     ([key, value]) => {
-      const realGetItem = Storage.prototype.getItem;
-      Storage.prototype.getItem = function (k: string) {
-        return k === key ? value : realGetItem.call(this, k);
-      };
+      if (sessionStorage.getItem("e2e-seeded")) return;
+      sessionStorage.setItem("e2e-seeded", "1");
+      localStorage.setItem(key, value);
     },
     [STORAGE_KEY, JSON.stringify(state)] as const
   );

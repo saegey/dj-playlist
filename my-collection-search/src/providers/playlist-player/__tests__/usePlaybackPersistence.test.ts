@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { StrictMode, useCallback, useRef, useState } from "react";
+import { act, renderHook } from "@testing-library/react";
 import { usePlaybackPersistence } from "@/providers/playlist-player/usePlaybackPersistence";
 import type { Track } from "@/types/track";
 
@@ -208,5 +209,119 @@ describe("persist on state change", () => {
 
     const saved = JSON.parse(window.localStorage.getItem(KEY)!);
     expect(saved.currentTime).toBe(5);
+  });
+});
+
+// ─── restore-then-persist ordering (#592) ────────────────────────────────────
+
+// The provider's real wiring: state lives in React, so a restore only takes
+// effect on the next render. The mocked-setter suites above cannot see the
+// race between the restore effect and the persist effects.
+function useWiredPersistence() {
+  const [playlist, setPlaylistState] = useState<Track[]>([]);
+  const playlistRef = useRef<Track[]>([]);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolumeState] = useState(0.8);
+  const [plVersion, setPlVersion] = useState(0);
+  const pendingSeekRef = useRef<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const setPlaylist = useCallback((next: Track[]) => setPlaylistState(next), []);
+
+  usePlaybackPersistence({
+    storageKey: KEY,
+    playlist,
+    playlistRef,
+    currentTrackIndex,
+    isPlaying,
+    volume,
+    currentTime: 0,
+    plVersion,
+    pendingSeekRef,
+    audioRef,
+    setPlaylist,
+    setPlVersion,
+    setCurrentTrackIndex,
+    setIsPlaying,
+    setVolumeState,
+  });
+  return { playlist, currentTrackIndex, volume, setPlaylist, setCurrentTrackIndex };
+}
+
+function stored() {
+  return JSON.parse(window.localStorage.getItem(KEY)!);
+}
+
+describe("restore then persist", () => {
+  const seed = {
+    playlist: [makeTrack("a"), makeTrack("b")],
+    currentTrackIndex: 1,
+    isPlaying: false,
+    volume: 0.3,
+    currentTime: 0,
+  };
+
+  it.each([
+    ["without StrictMode", undefined],
+    ["under StrictMode", StrictMode],
+  ])("restores the stored queue and keeps it stored %s", (_label, wrapper) => {
+    window.localStorage.setItem(KEY, JSON.stringify(seed));
+
+    const { result } = renderHook(() => useWiredPersistence(), { wrapper });
+
+    expect(result.current.playlist).toEqual(seed.playlist);
+    expect(result.current.currentTrackIndex).toBe(1);
+    expect(result.current.volume).toBe(0.3);
+    expect(stored()).toMatchObject({ playlist: seed.playlist, currentTrackIndex: 1 });
+  });
+
+  it("never writes the empty initial queue over a stored one", () => {
+    window.localStorage.setItem(KEY, JSON.stringify(seed));
+    const writes: number[] = [];
+    const setItem = window.localStorage.setItem.bind(window.localStorage);
+    window.localStorage.setItem = (k: string, v: string) => {
+      writes.push(JSON.parse(v).playlist.length);
+      setItem(k, v);
+    };
+
+    renderHook(() => useWiredPersistence(), { wrapper: StrictMode });
+
+    window.localStorage.setItem = setItem;
+    expect(writes.length).toBeGreaterThan(0);
+    expect(writes).not.toContain(0);
+  });
+
+  it.each([
+    ["missing", null],
+    ["corrupt", "not-valid-json{{{"],
+  ])("starts persisting after a %s stored value", (_label, raw) => {
+    if (raw !== null) window.localStorage.setItem(KEY, raw);
+
+    renderHook(() => useWiredPersistence(), { wrapper: StrictMode });
+
+    expect(stored()).toMatchObject({ playlist: [], currentTrackIndex: null });
+  });
+
+  it("persists later changes after the restore", () => {
+    window.localStorage.setItem(KEY, JSON.stringify(seed));
+    const { result } = renderHook(() => useWiredPersistence(), { wrapper: StrictMode });
+
+    act(() => result.current.setCurrentTrackIndex(0));
+
+    expect(stored().currentTrackIndex).toBe(0);
+    expect(stored().playlist).toEqual(seed.playlist);
+  });
+
+  it("persists a deliberate clear instead of restoring the old queue", () => {
+    window.localStorage.setItem(KEY, JSON.stringify(seed));
+    const { result } = renderHook(() => useWiredPersistence(), { wrapper: StrictMode });
+    expect(result.current.playlist).toHaveLength(2);
+
+    act(() => {
+      result.current.setPlaylist([]);
+      result.current.setCurrentTrackIndex(null);
+    });
+
+    expect(stored()).toMatchObject({ playlist: [], currentTrackIndex: null });
   });
 });
