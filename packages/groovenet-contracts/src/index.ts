@@ -3,3 +3,4 @@ export * from "./playlists.js";
 export * from "./tracks.js";
 export * from "./albums.js";
 export * from "./friends.js";
+export * from "./recordCare.js";

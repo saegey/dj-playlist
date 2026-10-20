@@ -918,164 +918,30 @@ export interface SetDerivationViewQuery {
 
 // ── Record copies and care (#262) ────────────────────────────────────────────
 
-export type SleeveType = "original" | "paper" | "poly-rice-paper-poly" | "poly";
-export type RecordActionType = "cleaned" | "sleeved" | "inspected" | "repaired";
-export type CleaningMethod = "dry-brush" | "wet-manual" | "vacuum" | "ultrasonic" | "other";
-export type RecordCareStatus = "never_cleaned" | "overdue" | "needs_sleeve";
-
-/** One physical copy of a release. */
-export interface RecordCopy {
-  id: number;
-  friend_id: number;
-  release_id: string;
-  /** The copy an action logged against the release lands on. */
-  is_default: boolean;
-  label: string | null;
-  notes: string | null;
-  /** From the latest sleeved action; null when none is logged. */
-  inner_sleeve_type: SleeveType | null;
-  /** From the latest cleaned action; null when never cleaned. */
-  last_cleaned_at: string | null;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * A copy as listed. Asked about one release that has no copy rows, the list
- * holds its implicit default copy, with `id`, `created_at` and `updated_at`
- * null; label it with `updateDefaultRecordCopy`, which makes it real.
- */
-export type RecordCopyListItem = Omit<RecordCopy, "id" | "created_at" | "updated_at"> & {
-  id: number | null;
-  created_at: string | null;
-  updated_at: string | null;
-};
-
-export interface RecordAction {
-  id: number;
-  copy_id: number;
-  friend_id: number;
-  action_type: RecordActionType;
-  occurred_at: string;
-  notes: string | null;
-  sleeve_type: SleeveType | null;
-  details: { method?: CleaningMethod };
-  /** Set once voided; a voided action stays in the history. */
-  voided_at: string | null;
-  created_at: string;
-}
-
-export interface RecordCopyCreateInput {
-  friend_id: number;
-  release_id: string;
-  label?: string | null;
-  notes?: string | null;
-}
-
-/** Label or annotate a release's default copy, real or still implicit. */
-export interface RecordCopyDefaultUpdateInput {
-  friend_id: number;
-  release_id: string;
-  label?: string | null;
-  notes?: string | null;
-}
-
-/** The sleeve is not editable here: log a `sleeved` action. */
-export interface RecordCopyUpdateInput {
-  friend_id: number;
-  label?: string | null;
-  notes?: string | null;
-}
-
-interface RecordActionInputBase {
-  friend_id: number;
-  action_type: RecordActionType;
-  /** Defaults to now; may be backdated. */
-  occurred_at?: string;
-  notes?: string | null;
-  /** Required for `sleeved`, and only for `sleeved`. */
-  sleeve_type?: SleeveType;
-  /** `method` only for `cleaned`. */
-  details?: { method?: CleaningMethod };
-}
-
-/**
- * Against a copy, or against a release — which lands on its default copy,
- * created if it has none.
- */
-export type RecordActionInput =
-  | (RecordActionInputBase & { copy_id: number; release_id?: never })
-  | (RecordActionInputBase & { copy_id?: never; release_id: string });
-
-export interface RecordActionResult {
-  action: RecordAction;
-  /** The copy with its care state after the change. */
-  copy: RecordCopy;
-}
-
-export interface RecordActionListQuery {
-  friend_id: number;
-  action_type?: RecordActionType;
-  include_voided?: boolean;
-  limit?: number;
-  offset?: number;
-}
-
-export interface RecordActionListResponse {
-  items: RecordAction[];
-  limit: number;
-  offset: number;
-}
-
-export interface RecordCareQuery {
-  friend_id: number;
-  status?: RecordCareStatus;
-  /** Defaults to the server's RECORD_CLEANING_OVERDUE_DAYS (365). */
-  overdue_days?: number;
-  /** Defaults to poly-rice-paper-poly. */
-  needs_sleeve?: SleeveType;
-  /** "unknown" for copies with no sleeve logged. */
-  sleeve_type?: SleeveType | "unknown";
-  limit?: number;
-  offset?: number;
-}
-
-export interface RecordCareItem {
-  friend_id: number;
-  release_id: string;
-  album_title: string;
-  album_artist: string;
-  album_thumbnail: string | null;
-  /** Null for an album with no copy rows: its implicit default copy. */
-  copy_id: number | null;
-  is_default: boolean;
-  label: string | null;
-  inner_sleeve_type: SleeveType | null;
-  last_cleaned_at: string | null;
-}
-
-export interface RecordCareResponse {
-  items: RecordCareItem[];
-  total: number;
-  limit: number;
-  offset: number;
-  overdue_days: number;
-  needs_sleeve_type: SleeveType;
-}
-
-export interface RecordCareSummaryQuery {
-  friend_id: number;
-  overdue_days?: number;
-  needs_sleeve?: SleeveType;
-}
-
-export interface RecordCareSummary {
-  total: number;
-  never_cleaned: number;
-  overdue: number;
-  needs_sleeve: number;
-  by_sleeve_type: Record<SleeveType | "unknown", number>;
-  overdue_days: number;
-  needs_sleeve_type: SleeveType;
-}
+// Physical-copy care (#262), defined in @groovenet/contracts. The client keeps
+// its historical names for the request and result types.
+export type {
+  CleaningMethod,
+  RecordAction,
+  RecordActionListQuery,
+  RecordActionListResponse,
+  RecordActionType,
+  RecordCareItem,
+  RecordCareQuery,
+  RecordCareResponse,
+  RecordCareStatus,
+  RecordCareSummary,
+  RecordCareSummaryQuery,
+  RecordActionVoidResponse,
+  RecordCopy,
+  RecordCopyDeleteResponse,
+  RecordCopyListItem,
+  RecordCopyListResponse,
+  RecordCopyResponse,
+  SleeveType,
+  RecordActionCreate as RecordActionInput,
+  RecordActionMutationResponse as RecordActionResult,
+  RecordCopyCreate as RecordCopyCreateInput,
+  RecordCopyDefaultUpdate as RecordCopyDefaultUpdateInput,
+  RecordCopyUpdate as RecordCopyUpdateInput,
+} from "@groovenet/contracts";

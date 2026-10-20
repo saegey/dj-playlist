@@ -24,7 +24,7 @@ counts are as of this inventory; the table below is authoritative.
 | Order | Family | Ops | Why this order |
 | --- | --- | --- | --- |
 | done | friends & library settings | 4 | Flat shapes, no enums; established the inventory. |
-| 1 | record care | 10 | Self-contained, enum-heavy (sleeve, action, cleaning method, care status). |
+| done | record care | 10 | Self-contained, enum-heavy (sleeve, action, cleaning method, care status). |
 | 2 | spins | 6 | Client and CLI already declare `SpinSession` and friends by hand. |
 | 3 | settings (AI prompt, recommendations, gamdl) | 8 | Flat settings documents. |
 | 4 | backups | 10 | Settings + status payloads; one binary download stays an exception. |
@@ -133,16 +133,16 @@ is closed, so they need a follow-up issue as their owner.
 | POST | `/api/providers/youtube/music-search` | providers & Discogs | #552 |  |
 | GET | `/api/recommendations/candidates` | recommendations | #552 |  |
 | POST | `/api/recommendations/candidates` | recommendations | #552 |  |
-| POST | `/api/record-actions` | record care | #552 |  |
-| DELETE | `/api/record-actions/{id}` | record care | #552 |  |
-| GET | `/api/record-copies` | record care | #552 |  |
-| POST | `/api/record-copies` | record care | #552 |  |
-| DELETE | `/api/record-copies/{id}` | record care | #552 |  |
-| PATCH | `/api/record-copies/{id}` | record care | #552 |  |
-| GET | `/api/record-copies/{id}/actions` | record care | #552 |  |
-| GET | `/api/record-copies/care` | record care | #552 |  |
-| GET | `/api/record-copies/care/summary` | record care | #552 |  |
-| PATCH | `/api/record-copies/default` | record care | #552 |  |
+| POST | `/api/record-actions` | record care | contracts |  |
+| DELETE | `/api/record-actions/{id}` | record care | contracts |  |
+| GET | `/api/record-copies` | record care | contracts |  |
+| POST | `/api/record-copies` | record care | contracts |  |
+| DELETE | `/api/record-copies/{id}` | record care | contracts |  |
+| PATCH | `/api/record-copies/{id}` | record care | contracts |  |
+| GET | `/api/record-copies/{id}/actions` | record care | contracts |  |
+| GET | `/api/record-copies/care` | record care | contracts |  |
+| GET | `/api/record-copies/care/summary` | record care | contracts |  |
+| PATCH | `/api/record-copies/default` | record care | contracts |  |
 | POST | `/api/restore` | backups | #552 |  |
 | POST | `/api/set-derivations` | set derivation | #552 |  |
 | GET | `/api/set-derivations/{id}` | set derivation | #552 |  |

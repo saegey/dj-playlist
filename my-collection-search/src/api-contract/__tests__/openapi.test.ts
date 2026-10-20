@@ -180,6 +180,43 @@ describe("OpenAPI contract coverage", () => {
     );
   });
 
+  it("references shared record-care components and documents their enums", () => {
+    const doc = getOpenApiDocument();
+    const schemas = doc.components.schemas as Record<string, { enum?: string[]; required?: string[] }>;
+    expect(schemas.SleeveType.enum).toEqual(["original", "paper", "poly-rice-paper-poly", "poly"]);
+    expect(schemas.RecordActionType.enum).toEqual(["cleaned", "sleeved", "inspected", "repaired"]);
+    expect(schemas.CleaningMethod.enum).toEqual(["dry-brush", "wet-manual", "vacuum", "ultrasonic", "other"]);
+    expect(schemas.RecordCareStatus.enum).toEqual(["never_cleaned", "overdue", "needs_sleeve"]);
+    expect(schemas.RecordActionCreate.required).toEqual(["friend_id", "action_type"]);
+
+    type Content = { content?: { "application/json"?: { schema?: { $ref?: string } } } };
+    const ref = (c?: Content) => c?.content?.["application/json"]?.schema?.$ref?.replace("#/components/schemas/", "");
+    const op = (path: string, method: string) =>
+      getOperation(path, method) as {
+        requestBody?: Content;
+        responses: Record<string, Content>;
+        parameters?: Array<{ name: string; schema?: { $ref?: string } }>;
+      };
+
+    expect(ref(op("/api/record-copies", "get").responses["200"])).toBe("RecordCopyListResponse");
+    expect(ref(op("/api/record-copies", "post").requestBody)).toBe("RecordCopyCreate");
+    expect(ref(op("/api/record-copies", "post").responses["201"])).toBe("RecordCopyResponse");
+    expect(ref(op("/api/record-copies/default", "patch").requestBody)).toBe("RecordCopyDefaultUpdate");
+    expect(ref(op("/api/record-copies/{id}", "patch").requestBody)).toBe("RecordCopyUpdate");
+    expect(ref(op("/api/record-copies/{id}", "delete").responses["200"])).toBe("RecordCopyDeleteResponse");
+    expect(ref(op("/api/record-copies/{id}/actions", "get").responses["200"])).toBe("RecordActionListResponse");
+    expect(ref(op("/api/record-copies/care", "get").responses["200"])).toBe("RecordCareResponse");
+    expect(ref(op("/api/record-copies/care/summary", "get").responses["200"])).toBe("RecordCareSummary");
+    expect(ref(op("/api/record-actions", "post").requestBody)).toBe("RecordActionCreate");
+    expect(ref(op("/api/record-actions", "post").responses["201"])).toBe("RecordActionMutationResponse");
+    expect(ref(op("/api/record-actions/{id}", "delete").responses["200"])).toBe("RecordActionVoidResponse");
+
+    const param = (path: string, name: string) =>
+      op(path, "get").parameters?.find((p) => p.name === name)?.schema?.$ref;
+    expect(param("/api/record-copies/care", "status")).toBe("#/components/schemas/RecordCareStatus");
+    expect(param("/api/record-copies/{id}/actions", "action_type")).toBe("#/components/schemas/RecordActionType");
+  });
+
   it("builds response examples from the shared component a $ref points at", () => {
     type Example = { content?: { "application/json"?: { example?: unknown } } };
     const example = (path: string, method: string) =>

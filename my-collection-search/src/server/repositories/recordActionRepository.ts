@@ -1,20 +1,11 @@
 import { dbQuery } from "@/lib/serverDb";
-import type { CleaningMethod, RecordActionType, SleeveType } from "@/lib/recordCare";
+import type { RecordAction, RecordActionDetails } from "@groovenet/contracts";
+import type { RecordActionType, SleeveType } from "@/lib/recordCare";
 import type { Queryable } from "./recordCopyRepository";
 
-export type RecordActionDetails = {
-  method?: CleaningMethod;
-};
-
-export type RecordActionRow = {
-  id: number;
-  copy_id: number;
-  friend_id: number;
-  action_type: RecordActionType;
+/** A `RecordAction` before its timestamps are normalised: pg returns Dates. */
+export type RecordActionRow = Omit<RecordAction, "occurred_at" | "voided_at" | "created_at"> & {
   occurred_at: Date | string;
-  notes: string | null;
-  sleeve_type: SleeveType | null;
-  details: RecordActionDetails;
   voided_at: Date | string | null;
   created_at: Date | string;
 };

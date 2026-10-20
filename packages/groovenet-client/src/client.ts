@@ -72,10 +72,14 @@ import type {
   RecordCareResponse,
   RecordCareSummary,
   RecordCareSummaryQuery,
+  RecordActionVoidResponse,
   RecordCopy,
   RecordCopyCreateInput,
   RecordCopyDefaultUpdateInput,
+  RecordCopyDeleteResponse,
   RecordCopyListItem,
+  RecordCopyListResponse,
+  RecordCopyResponse,
   RecordCopyUpdateInput,
 } from "./types.js";
 
@@ -873,7 +877,7 @@ export class GroovenetClient {
    * rows lists its implicit default copy, `id: null`.
    */
   async listRecordCopies(friendId: number, releaseId?: string): Promise<RecordCopyListItem[]> {
-    const { items } = await this.request<{ items: RecordCopyListItem[] }>(
+    const { items } = await this.request<RecordCopyListResponse>(
       "GET",
       "/record-copies",
       undefined,
@@ -887,13 +891,13 @@ export class GroovenetClient {
    * its implicit default made real first, so this always adds a copy.
    */
   async createRecordCopy(input: RecordCopyCreateInput): Promise<RecordCopy> {
-    const { copy } = await this.request<{ copy: RecordCopy }>("POST", "/record-copies", input);
+    const { copy } = await this.request<RecordCopyResponse>("POST", "/record-copies", input);
     return copy;
   }
 
   /** Label or annotate a release's default copy, making it real if implicit. */
   async updateDefaultRecordCopy(input: RecordCopyDefaultUpdateInput): Promise<RecordCopy> {
-    const { copy } = await this.request<{ copy: RecordCopy }>(
+    const { copy } = await this.request<RecordCopyResponse>(
       "PATCH",
       "/record-copies/default",
       input
@@ -902,7 +906,7 @@ export class GroovenetClient {
   }
 
   async updateRecordCopy(id: number, input: RecordCopyUpdateInput): Promise<RecordCopy> {
-    const { copy } = await this.request<{ copy: RecordCopy }>(
+    const { copy } = await this.request<RecordCopyResponse>(
       "PATCH",
       `/record-copies/${id}`,
       input
@@ -915,7 +919,7 @@ export class GroovenetClient {
    * the release has other copies.
    */
   async deleteRecordCopy(id: number, friendId: number): Promise<RecordCopy> {
-    const { copy } = await this.request<{ copy: RecordCopy }>(
+    const { copy } = await this.request<RecordCopyDeleteResponse>(
       "DELETE",
       `/record-copies/${id}`,
       undefined,
@@ -953,7 +957,7 @@ export class GroovenetClient {
 
   /** Void a mistaken action. It stays in the history; care state is recomputed. */
   async voidRecordAction(id: number, friendId: number): Promise<RecordActionResult> {
-    const { action, copy } = await this.request<RecordActionResult & { success: boolean }>(
+    const { action, copy } = await this.request<RecordActionVoidResponse>(
       "DELETE",
       `/record-actions/${id}`,
       undefined,

@@ -2497,8 +2497,6 @@ const setDerivationContracts: ApiContractRoute[] = [
 
 // ─── Record copies and care actions (#262) ───────────────────────────────────
 
-const SLEEVE_TYPE_ENUM = ["original", "paper", "poly-rice-paper-poly", "poly"];
-const nullableSleeveType = { type: ["string", "null"], enum: [...SLEEVE_TYPE_ENUM, null] };
 const integerIdParam = { name: "id", in: "path", required: true, schema: { type: "integer" } };
 const friendIdQueryParam = {
   name: "friend_id",
@@ -2522,106 +2520,7 @@ const needsSleeveParam = {
   in: "query",
   required: false,
   description: "The sleeve every copy should be in. Default poly-rice-paper-poly.",
-  schema: { type: "string", enum: SLEEVE_TYPE_ENUM },
-};
-
-const recordCopySchemaObject: Record<string, unknown> = {
-  type: "object",
-  properties: {
-    id: { type: "integer" },
-    friend_id: { type: "integer" },
-    release_id: { type: "string" },
-    is_default: {
-      type: "boolean",
-      description: "The copy an action logged against the release lands on",
-    },
-    label: { type: ["string", "null"], example: "DJ copy" },
-    notes: { type: ["string", "null"], example: "Light hairline on B2, plays through." },
-    inner_sleeve_type: {
-      ...nullableSleeveType,
-      description: "From the latest sleeved action; null when none is logged",
-    },
-    last_cleaned_at: {
-      type: ["string", "null"],
-      format: "date-time",
-      description: "From the latest cleaned action; null when never cleaned",
-    },
-    deleted_at: { type: ["string", "null"], format: "date-time", example: null },
-    created_at: { type: "string", format: "date-time" },
-    updated_at: { type: "string", format: "date-time" },
-  },
-  required: [
-    "id", "friend_id", "release_id", "is_default", "label", "notes", "inner_sleeve_type",
-    "last_cleaned_at", "deleted_at", "created_at", "updated_at",
-  ],
-};
-
-const recordCopyListItemSchemaObject: Record<string, unknown> = {
-  ...recordCopySchemaObject,
-  properties: {
-    ...(recordCopySchemaObject.properties as Record<string, unknown>),
-    id: { type: ["integer", "null"], description: "Null for a release's implicit default copy" },
-    created_at: { type: ["string", "null"], format: "date-time" },
-    updated_at: { type: ["string", "null"], format: "date-time" },
-  },
-};
-
-const recordActionSchemaObject: Record<string, unknown> = {
-  type: "object",
-  properties: {
-    id: { type: "integer" },
-    copy_id: { type: "integer" },
-    friend_id: { type: "integer" },
-    action_type: { type: "string", enum: ["cleaned", "sleeved", "inspected", "repaired"] },
-    occurred_at: { type: "string", format: "date-time" },
-    notes: { type: ["string", "null"], example: "Two passes, air dried overnight." },
-    sleeve_type: { ...nullableSleeveType, description: "Set only on a sleeved action" },
-    details: {
-      type: "object",
-      properties: {
-        method: {
-          type: "string",
-          enum: ["dry-brush", "wet-manual", "vacuum", "ultrasonic", "other"],
-        },
-      },
-      additionalProperties: false,
-    },
-    voided_at: { type: ["string", "null"], format: "date-time", example: null },
-    created_at: { type: "string", format: "date-time" },
-  },
-  required: [
-    "id", "copy_id", "friend_id", "action_type", "occurred_at", "notes", "sleeve_type",
-    "details", "voided_at", "created_at",
-  ],
-};
-
-const recordActionMutationSchemaObject: Record<string, unknown> = {
-  type: "object",
-  properties: { action: recordActionSchemaObject, copy: recordCopySchemaObject },
-  required: ["action", "copy"],
-};
-
-const recordCareItemSchemaObject: Record<string, unknown> = {
-  type: "object",
-  properties: {
-    friend_id: { type: "integer" },
-    release_id: { type: "string" },
-    album_title: { type: "string" },
-    album_artist: { type: "string" },
-    album_thumbnail: { type: ["string", "null"] },
-    copy_id: {
-      type: ["integer", "null"],
-      description: "Null for an album with no copy rows: its implicit default copy",
-    },
-    is_default: { type: "boolean" },
-    label: { type: ["string", "null"], example: null },
-    inner_sleeve_type: nullableSleeveType,
-    last_cleaned_at: { type: ["string", "null"], format: "date-time" },
-  },
-  required: [
-    "friend_id", "release_id", "album_title", "album_artist", "album_thumbnail", "copy_id",
-    "is_default", "label", "inner_sleeve_type", "last_cleaned_at",
-  ],
+  schema: componentRef("SleeveType"),
 };
 
 const recordCareContracts: ApiContractRoute[] = [
@@ -2645,14 +2544,7 @@ const recordCareContracts: ApiContractRoute[] = [
             "Live copies. With release_id, a release that has no copy rows lists its implicit default copy, with id, created_at and updated_at null. overdue_days is the cleaning threshold (RECORD_CLEANING_OVERDUE_DAYS).",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  items: { type: "array", items: recordCopyListItemSchemaObject },
-                  overdue_days: { type: "integer" },
-                },
-                required: ["items", "overdue_days"],
-              },
+              schema: componentRef("RecordCopyListResponse"),
             },
           },
         },
@@ -2675,16 +2567,7 @@ const recordCareContracts: ApiContractRoute[] = [
         required: true,
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                friend_id: { type: "integer" },
-                release_id: { type: "string" },
-                label: { type: ["string", "null"], maxLength: 100 },
-                notes: { type: ["string", "null"] },
-              },
-              required: ["friend_id", "release_id"],
-            },
+            schema: componentRef("RecordCopyCreate"),
             example: { friend_id: 1, release_id: "rel_4471", label: "Copy 2" },
           },
         },
@@ -2695,11 +2578,7 @@ const recordCareContracts: ApiContractRoute[] = [
             "Created, as an extra copy. A release with no copy rows has its implicit default copy made real first, so this is always one copy more.",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: { copy: recordCopySchemaObject },
-                required: ["copy"],
-              },
+              schema: componentRef("RecordCopyResponse"),
             },
           },
         },
@@ -2723,16 +2602,7 @@ const recordCareContracts: ApiContractRoute[] = [
         required: true,
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                friend_id: { type: "integer" },
-                release_id: { type: "string" },
-                label: { type: ["string", "null"], maxLength: 100 },
-                notes: { type: ["string", "null"] },
-              },
-              required: ["friend_id", "release_id"],
-            },
+            schema: componentRef("RecordCopyDefaultUpdate"),
             example: { friend_id: 1, release_id: "rel_4471", label: "DJ copy" },
           },
         },
@@ -2742,11 +2612,7 @@ const recordCareContracts: ApiContractRoute[] = [
           description: "The default copy, updated",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: { copy: recordCopySchemaObject },
-                required: ["copy"],
-              },
+              schema: componentRef("RecordCopyResponse"),
             },
           },
         },
@@ -2772,17 +2638,7 @@ const recordCareContracts: ApiContractRoute[] = [
         required: true,
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              description:
-                "The sleeve is not set here: log a sleeved action, so it stays derivable from history.",
-              properties: {
-                friend_id: { type: "integer" },
-                label: { type: ["string", "null"], maxLength: 100 },
-                notes: { type: ["string", "null"] },
-              },
-              required: ["friend_id"],
-            },
+            schema: componentRef("RecordCopyUpdate"),
             example: { friend_id: 1, label: "DJ copy" },
           },
         },
@@ -2792,11 +2648,7 @@ const recordCareContracts: ApiContractRoute[] = [
           description: "Updated copy",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: { copy: recordCopySchemaObject },
-                required: ["copy"],
-              },
+              schema: componentRef("RecordCopyResponse"),
             },
           },
         },
@@ -2823,11 +2675,7 @@ const recordCareContracts: ApiContractRoute[] = [
           description: "Deleted copy",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: { success: { type: "boolean" }, copy: recordCopySchemaObject },
-                required: ["success", "copy"],
-              },
+              schema: componentRef("RecordCopyDeleteResponse"),
             },
           },
         },
@@ -2856,7 +2704,7 @@ const recordCareContracts: ApiContractRoute[] = [
           name: "action_type",
           in: "query",
           required: false,
-          schema: { type: "string", enum: ["cleaned", "sleeved", "inspected", "repaired"] },
+          schema: componentRef("RecordActionType"),
         },
         {
           name: "include_voided",
@@ -2871,15 +2719,7 @@ const recordCareContracts: ApiContractRoute[] = [
           description: "Actions",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  items: { type: "array", items: recordActionSchemaObject },
-                  limit: { type: "integer" },
-                  offset: { type: "integer" },
-                },
-                required: ["items", "limit", "offset"],
-              },
+              schema: componentRef("RecordActionListResponse"),
             },
           },
         },
@@ -2906,7 +2746,7 @@ const recordCareContracts: ApiContractRoute[] = [
           in: "query",
           required: false,
           description: "Omit for every copy",
-          schema: { type: "string", enum: ["never_cleaned", "overdue", "needs_sleeve"] },
+          schema: componentRef("RecordCareStatus"),
         },
         overdueDaysParam,
         needsSleeveParam,
@@ -2915,7 +2755,7 @@ const recordCareContracts: ApiContractRoute[] = [
           in: "query",
           required: false,
           description: "Only copies in this sleeve; unknown for none logged",
-          schema: { type: "string", enum: [...SLEEVE_TYPE_ENUM, "unknown"] },
+          schema: { anyOf: [componentRef("SleeveType"), { type: "string", const: "unknown" }] },
         },
         ...pagingParams,
       ],
@@ -2925,18 +2765,7 @@ const recordCareContracts: ApiContractRoute[] = [
             "Copies, least recently cleaned first. An album with no copy rows appears once, as its implicit default copy (copy_id null).",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  items: { type: "array", items: recordCareItemSchemaObject },
-                  total: { type: "integer" },
-                  limit: { type: "integer" },
-                  offset: { type: "integer" },
-                  overdue_days: { type: "integer", example: 365 },
-                  needs_sleeve_type: { type: "string", enum: ["poly-rice-paper-poly", "original", "paper", "poly"] },
-                },
-                required: ["items", "total", "limit", "offset", "overdue_days", "needs_sleeve_type"],
-              },
+              schema: componentRef("RecordCareResponse"),
             },
           },
         },
@@ -2961,32 +2790,7 @@ const recordCareContracts: ApiContractRoute[] = [
           description: "Counts, with albums without copy rows counted as one copy each",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  total: { type: "integer", example: 812 },
-                  never_cleaned: { type: "integer", example: 640 },
-                  overdue: { type: "integer", example: 41 },
-                  needs_sleeve: { type: "integer", example: 755 },
-                  by_sleeve_type: {
-                    type: "object",
-                    properties: {
-                      original: { type: "integer", example: 30 },
-                      paper: { type: "integer", example: 12 },
-                      "poly-rice-paper-poly": { type: "integer", example: 57 },
-                      poly: { type: "integer", example: 8 },
-                      unknown: { type: "integer", example: 705 },
-                    },
-                    required: ["original", "paper", "poly-rice-paper-poly", "poly", "unknown"],
-                  },
-                  overdue_days: { type: "integer", example: 365 },
-                  needs_sleeve_type: { type: "string", enum: ["poly-rice-paper-poly", "original", "paper", "poly"] },
-                },
-                required: [
-                  "total", "never_cleaned", "overdue", "needs_sleeve", "by_sleeve_type",
-                  "overdue_days", "needs_sleeve_type",
-                ],
-              },
+              schema: componentRef("RecordCareSummary"),
             },
           },
         },
@@ -3009,43 +2813,7 @@ const recordCareContracts: ApiContractRoute[] = [
         required: true,
         content: {
           "application/json": {
-            schema: {
-              type: "object",
-              description:
-                "Exactly one of copy_id or release_id. A release_id lands on the release's default copy, created if it has none.",
-              properties: {
-                friend_id: { type: "integer" },
-                copy_id: { type: "integer" },
-                release_id: { type: "string" },
-                action_type: {
-                  type: "string",
-                  enum: ["cleaned", "sleeved", "inspected", "repaired"],
-                },
-                occurred_at: {
-                  type: "string",
-                  format: "date-time",
-                  description: "Default now. May be backdated.",
-                },
-                notes: { type: ["string", "null"] },
-                sleeve_type: {
-                  type: "string",
-                  enum: SLEEVE_TYPE_ENUM,
-                  description: "Required for sleeved, and only for sleeved",
-                },
-                details: {
-                  type: "object",
-                  properties: {
-                    method: {
-                      type: "string",
-                      enum: ["dry-brush", "wet-manual", "vacuum", "ultrasonic", "other"],
-                      description: "Only for cleaned",
-                    },
-                  },
-                  additionalProperties: false,
-                },
-              },
-              required: ["friend_id", "action_type"],
-            },
+            schema: componentRef("RecordActionCreate"),
             example: {
               friend_id: 1,
               release_id: "rel_4471",
@@ -3060,7 +2828,7 @@ const recordCareContracts: ApiContractRoute[] = [
       responses: {
         "201": {
           description: "Logged, with the copy's updated care state",
-          content: { "application/json": { schema: recordActionMutationSchemaObject } },
+          content: { "application/json": { schema: componentRef("RecordActionMutationResponse") } },
         },
         "400": jsonError("Invalid payload"),
         "404": jsonError("Album not found, or record copy not found"),
@@ -3085,15 +2853,7 @@ const recordCareContracts: ApiContractRoute[] = [
           description: "Voided, with the copy's recomputed care state. Voiding twice is a no-op.",
           content: {
             "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  success: { type: "boolean" },
-                  action: recordActionSchemaObject,
-                  copy: recordCopySchemaObject,
-                },
-                required: ["success", "action", "copy"],
-              },
+              schema: componentRef("RecordActionVoidResponse"),
             },
           },
         },
