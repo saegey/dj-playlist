@@ -186,6 +186,7 @@ const tools = [
       properties: {
         name: { type: "string", description: "Playlist name" },
         tracks: { type: "array", items: { type: "string" }, description: "Array of track IDs to add to playlist" },
+        friend_id: { type: "number", description: "Friend whose tracks these are (defaults to the configured default friend)" },
       },
       required: ["name"],
     },
@@ -700,7 +701,7 @@ ${track.soundcloud_url ? `- SoundCloud: ${track.soundcloud_url}` : ""}
     }
 
     case "create_playlist": {
-      await client.createPlaylist(args.name!, args.tracks ?? []);
+      await client.createPlaylist(args.name!, args.tracks ?? [], args.friend_id ?? DEFAULT_FRIEND_ID);
       return {
         content: [{
           type: "text",

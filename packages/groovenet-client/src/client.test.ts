@@ -702,8 +702,36 @@ describe("GroovenetClient playlist endpoints", () => {
     await client.createPlaylist("Set", ["t1", "t2"]);
 
     expect(requestMock).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { name: "Set", tracks: ["t1", "t2"] } })
+      expect.objectContaining({
+        data: { name: "Set", tracks: [{ track_id: "t1" }, { track_id: "t2" }] },
+      })
     );
+  });
+
+  it("createPlaylist wraps bare ids with the default friend and keeps explicit friends", async () => {
+    const client = clientReturning({ id: 1, name: "Set" });
+
+    await client.createPlaylist("Set", ["t1", { track_id: "t2", friend_id: 9 }, { track_id: "t3" }], 6);
+
+    expect(requestMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: {
+          name: "Set",
+          tracks: [
+            { track_id: "t1", friend_id: 6 },
+            { track_id: "t2", friend_id: 9 },
+            { track_id: "t3", friend_id: 6 },
+          ],
+        },
+      })
+    );
+  });
+
+  it("createPlaylist surfaces API validation errors", async () => {
+    requestMock.mockRejectedValueOnce(new Error("Invalid playlist payload"));
+    const client = clientReturning({});
+
+    await expect(client.createPlaylist("Set", ["t1"], 6)).rejects.toThrow(/Invalid playlist payload/);
   });
 
   it("generatePlaylist returns an array result as-is", async () => {
