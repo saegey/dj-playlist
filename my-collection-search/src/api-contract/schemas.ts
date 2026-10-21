@@ -78,6 +78,28 @@ import {
   refineRecordActionCreate,
   requireLabelOrNotes,
   sleeveTypeSchema as sharedSleeveTypeSchema,
+  refineSpinCreate,
+  refineSpinUpdate,
+  spinAggregateRequestSchema,
+  spinAggregateResultSchema,
+  spinAggregateSourceResultSchema as sharedSpinAggregateSourceResultSchema,
+  spinAlbumSummarySchema as sharedSpinAlbumSummarySchema,
+  spinCreateObjectSchema,
+  spinCreateResponseSchema as sharedSpinCreateResponseSchema,
+  spinDeleteResponseSchema as sharedSpinDeleteResponseSchema,
+  spinDerivedSchema as sharedSpinDerivedSchema,
+  spinListQuerySchema as sharedSpinListQuerySchema,
+  spinListResponseSchema as sharedSpinListResponseSchema,
+  spinSelectionSchema as sharedSpinSelectionSchema,
+  spinSessionDetailSchema,
+  spinSessionSchema as sharedSpinSessionSchema,
+  spinTopTrackSchema,
+  spinTopTracksQuerySchema as sharedSpinTopTracksQuerySchema,
+  spinTopTracksResponseSchema as sharedSpinTopTracksResponseSchema,
+  spinTrackRefSchema as sharedSpinTrackRefSchema,
+  spinUpdateObjectSchema,
+  spinUpdateResponseSchema as sharedSpinUpdateResponseSchema,
+  trackSpinEventSchema as sharedTrackSpinEventSchema,
 } from "@groovenet/contracts";
 import { RECOMMENDATION_SCOPES } from "@/types/recommendations";
 
@@ -1154,192 +1176,43 @@ export const albumArtworkReviewResponseSchema = z.object({
   albums: z.array(albumArtworkReviewItemSchema),
 });
 
-export const spinTrackRefSchema = z.object({
-  track_id: z.string().min(1),
-  friend_id: z.number().int(),
-});
+// Shapes live in @groovenet/contracts; these add the app's text coercion for
+// ids and paging, and keep the names routes already import.
+export const spinTrackRefSchema = sharedSpinTrackRefSchema;
+export const spinSessionSchema = sharedSpinSessionSchema;
+export const spinSelectionSchema = sharedSpinSelectionSchema;
+export const trackSpinEventSchema = sharedTrackSpinEventSchema;
+export const spinDerivedSchema = sharedSpinDerivedSchema;
+export const spinAlbumSummarySchema = sharedSpinAlbumSummarySchema;
+export const spinListItemSchema = spinSessionDetailSchema;
 
-export const spinSessionSchema = z.object({
-  id: z.number().int(),
-  friend_id: z.number().int(),
-  release_id: z.string(),
-  medium: z.literal("vinyl"),
-  selection_mode: z.enum(["sides", "tracks", "automatic", "playlist"]),
-  played_at: z.string(),
-  note: z.string().nullable().optional(),
-  context_type: z.string().nullable().optional(),
-  provenance: z.enum(["manual", "automatic", "playlist"]).optional(),
-  source_id: z.string().nullable().optional(),
-  confidence: z.number().nullable().optional(),
-  playlist_id: z.number().int().nullable().optional(),
-  live_set_performance_id: z.number().int().nullable().optional(),
-  playlist_played_at: z.string().nullable().optional(),
-  playlist_position: z.number().int().nullable().optional(),
-  corrected_at: z.string().nullable().optional(),
-  created_at: z.string(),
-  updated_at: z.string(),
-});
+export const spinCreateBodySchema = spinCreateObjectSchema
+  .extend({ friend_id: intFromInputSchema })
+  .superRefine(refineSpinCreate);
 
-export const spinSelectionSchema = z.object({
-  id: z.number().int().optional(),
-  session_id: z.number().int().optional(),
-  ordinal: z.number().int(),
-  selection_type: z.enum(["side", "track"]),
-  side_key: z.string().nullable().optional(),
-  track_id: z.string().nullable().optional(),
-  friend_id: z.number().int().nullable().optional(),
-  position_snapshot: z.string().nullable().optional(),
-  created_at: z.string().optional(),
-});
+export const spinCreateResponseSchema = sharedSpinCreateResponseSchema;
 
-export const trackSpinEventSchema = z.object({
-  id: z.number().int().optional(),
-  session_id: z.number().int().optional(),
-  friend_id: z.number().int(),
-  release_id: z.string(),
-  track_id: z.string(),
-  played_at: z.string(),
-  ordinal: z.number().int(),
-  side_key: z.string().nullable().optional(),
-  position_snapshot: z.string().nullable().optional(),
-  title_snapshot: z.string().optional(),
-  artist_snapshot: z.string().optional(),
-  album_snapshot: z.string().optional(),
-  created_at: z.string().optional(),
-});
-
-export const spinDerivedSchema = z.object({
-  is_full_album_spin: z.boolean(),
-  selected_side_count: z.number().int(),
-  album_side_count: z.number().int(),
-  track_count: z.number().int(),
-});
-
-export const spinCreateBodySchema = z
-  .object({
-    friend_id: intFromInputSchema,
-    release_id: z.string().min(1),
-    played_at: z.string().min(1),
-    note: z.string().nullable().optional(),
-    context_type: z.string().nullable().optional(),
-    side_keys: z.array(z.string().min(1)).optional(),
-    track_refs: z.array(spinTrackRefSchema).optional(),
-  })
-  .superRefine((value, ctx) => {
-    const hasSides = Array.isArray(value.side_keys) && value.side_keys.length > 0;
-    const hasTracks = Array.isArray(value.track_refs) && value.track_refs.length > 0;
-
-    if (hasSides === hasTracks) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Provide exactly one of side_keys or track_refs",
-      });
-    }
-  });
-
-export const spinCreateResponseSchema = z.object({
-  session: spinSessionSchema,
-  selections: z.array(spinSelectionSchema),
-  track_events: z.array(trackSpinEventSchema).optional(),
-  expanded_tracks: z.array(trackSpinEventSchema),
-  derived: spinDerivedSchema,
-});
-
-export const spinListQuerySchema = z.object({
+export const spinListQuerySchema = sharedSpinListQuerySchema.extend({
   friend_id: intFromInputSchema,
-  release_id: z.string().optional(),
-  track_id: z.string().optional(),
-  from: z.string().optional(),
-  to: z.string().optional(),
   limit: nonNegativeIntFromInputSchema.optional().default(50),
   offset: nonNegativeIntFromInputSchema.optional().default(0),
 });
 
-export const spinAlbumSummarySchema = z.object({
-  title: z.string().nullable(),
-  artist: z.string().nullable(),
-  thumbnail: z.string().nullable(),
-});
+export const spinUpdateBodySchema = spinUpdateObjectSchema
+  .extend({ friend_id: intFromInputSchema })
+  .superRefine(refineSpinUpdate);
 
-export const spinListItemSchema = z.object({
-  session: spinSessionSchema,
-  selections: z.array(spinSelectionSchema),
-  track_events: z.array(trackSpinEventSchema),
-  derived: spinDerivedSchema,
-  album: spinAlbumSummarySchema.nullable().optional(),
-});
+export const spinUpdateResponseSchema = sharedSpinUpdateResponseSchema;
+export const spinListResponseSchema = sharedSpinListResponseSchema;
 
-export const spinUpdateBodySchema = z
-  .object({
-    friend_id: intFromInputSchema,
-    played_at: z.string().min(1).optional(),
-    note: z.string().nullable().optional(),
-    context_type: z.string().nullable().optional(),
-    side_keys: z.array(z.string().min(1)).min(1).optional(),
-    track_refs: z.array(spinTrackRefSchema).min(1).optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.side_keys && value.track_refs) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Provide at most one of side_keys or track_refs",
-      });
-    }
-    const changes = [
-      value.played_at,
-      value.note,
-      value.context_type,
-      value.side_keys,
-      value.track_refs,
-    ];
-    if (changes.every((change) => change === undefined)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Nothing to update" });
-    }
-  });
-
-export const spinUpdateResponseSchema = spinListItemSchema;
-
-export const spinListResponseSchema = z.object({
-  items: z.array(spinListItemSchema),
-  limit: z.number().int(),
-  offset: z.number().int(),
-});
-
-export const spinTopTracksQuerySchema = z.object({
+export const spinTopTracksQuerySchema = sharedSpinTopTracksQuerySchema.extend({
   friend_id: intFromInputSchema,
-  release_id: z.string().optional(),
   limit: nonNegativeIntFromInputSchema.optional().default(20),
   offset: nonNegativeIntFromInputSchema.optional().default(0),
 });
 
-export const spinTopTrackItemSchema = z.object({
-  friend_id: z.number().int(),
-  release_id: z.string(),
-  track_id: z.string(),
-  play_count: z.number().int(),
-  last_played_at: z.string(),
-  title_snapshot: z.string(),
-  artist_snapshot: z.string(),
-  album_snapshot: z.string(),
-  side_key: z.string().nullable().optional(),
-  position_snapshot: z.string().nullable().optional(),
-  album_thumbnail: z.string().nullable().optional(),
-  audio_file_album_art_url: z.string().nullable().optional(),
-  local_audio_url: z.string().nullable().optional(),
-  bpm: z.union([z.number(), z.string()]).nullable().optional(),
-  key: z.string().nullable().optional(),
-  star_rating: z.number().nullable().optional(),
-  styles: z.array(z.string()).optional(),
-  library_identifier: z.string().nullable().optional(),
-  hasVectors: z.boolean().optional(),
-  track_genres: z.array(trackGenreSchema).optional(),
-});
-
-export const spinTopTracksResponseSchema = z.object({
-  items: z.array(spinTopTrackItemSchema),
-  limit: z.number().int(),
-  offset: z.number().int(),
-});
+export const spinTopTrackItemSchema = spinTopTrackSchema;
+export const spinTopTracksResponseSchema = sharedSpinTopTracksResponseSchema;
 
 export const spinSessionParamsSchema = z.object({
   id: intFromInputSchema,
@@ -1352,32 +1225,15 @@ export const spinSessionParamsSchema = z.object({
 // (default 60), so a backlog older than that is never picked up on its own.
 // This is the manual escape hatch: an explicit `since`, run once.
 
-export const spinAggregateBodySchema = z.object({
-  since: z.string().min(1),
-  source_id: z.string().min(1).optional(),
-});
-
-export const spinAggregateSourceResultSchema = z.object({
-  source_id: z.string(),
-  created: z.number().int(),
-  skipped: z.number().int(),
-});
-
-export const spinAggregateResponseSchema = z.object({
-  since: z.string(),
-  created: z.number().int(),
-  skipped: z.number().int(),
-  sources: z.array(spinAggregateSourceResultSchema),
-});
+export const spinAggregateBodySchema = spinAggregateRequestSchema;
+export const spinAggregateSourceResultSchema = sharedSpinAggregateSourceResultSchema;
+export const spinAggregateResponseSchema = spinAggregateResultSchema;
 
 export const spinDeleteQuerySchema = z.object({
   friend_id: intFromInputSchema,
 });
 
-export const spinDeleteResponseSchema = z.object({
-  success: z.boolean(),
-  session: spinSessionSchema,
-});
+export const spinDeleteResponseSchema = sharedSpinDeleteResponseSchema;
 
 // ─── Record copies and care actions (#262) ────────────────────────────────────
 //

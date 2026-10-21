@@ -217,6 +217,62 @@ describe("OpenAPI contract coverage", () => {
     expect(param("/api/record-copies/{id}/actions", "action_type")).toBe("#/components/schemas/RecordActionType");
   });
 
+  it("references shared spin components and documents their enums", () => {
+    const doc = getOpenApiDocument();
+    const schemas = doc.components.schemas as Record<
+      string,
+      {
+        enum?: string[];
+        required?: string[];
+        additionalProperties?: unknown;
+        properties?: Record<string, { $ref?: string; enum?: string[]; format?: string }>;
+      }
+    >;
+    expect(schemas.SpinSelectionMode.enum).toEqual(["sides", "tracks", "automatic", "playlist"]);
+    expect(schemas.SpinProvenance.enum).toEqual(["manual", "automatic", "playlist"]);
+    expect(schemas.SpinSelectionType.enum).toEqual(["side", "track"]);
+    expect(schemas.SpinSession.properties?.selection_mode.enum).toEqual([
+      "sides",
+      "tracks",
+      "automatic",
+      "playlist",
+    ]);
+    expect(schemas.SpinSession.properties?.played_at.format).toBe("date-time");
+    expect(schemas.SpinCreateInput.required).toEqual(["friend_id", "release_id", "played_at"]);
+    expect(schemas.SpinUpdateInput.required).toEqual(["friend_id"]);
+    // Request bodies strip unknown fields; the spec must not claim they are rejected.
+    expect(schemas.SpinCreateInput.additionalProperties).toBeUndefined();
+    expect(schemas.SpinUpdateInput.additionalProperties).toBeUndefined();
+    expect(schemas.SpinAggregateRequest.additionalProperties).toBeUndefined();
+
+    type Content = { content?: { "application/json"?: { schema?: { $ref?: string } } } };
+    const ref = (c?: Content) =>
+      c?.content?.["application/json"]?.schema?.$ref?.replace("#/components/schemas/", "");
+    const op = (path: string, method: string) =>
+      getOperation(path, method) as { requestBody?: Content; responses: Record<string, Content> };
+
+    expect(ref(op("/api/spins", "get").responses["200"])).toBe("SpinListResponse");
+    expect(ref(op("/api/spins", "post").requestBody)).toBe("SpinCreateInput");
+    expect(ref(op("/api/spins", "post").responses["200"])).toBe("SpinCreateResponse");
+    expect(ref(op("/api/spins/aggregate", "post").requestBody)).toBe("SpinAggregateRequest");
+    expect(ref(op("/api/spins/aggregate", "post").responses["200"])).toBe("SpinAggregateResult");
+    expect(ref(op("/api/spins/top-tracks", "get").responses["200"])).toBe("SpinTopTracksResponse");
+    expect(ref(op("/api/spins/{id}", "patch").requestBody)).toBe("SpinUpdateInput");
+    expect(ref(op("/api/spins/{id}", "patch").responses["200"])).toBe("SpinSessionDetail");
+    expect(ref(op("/api/spins/{id}", "delete").responses["200"])).toBe("SpinDeleteResponse");
+    for (const [method, path] of [
+      ["get", "/api/spins"],
+      ["post", "/api/spins"],
+      ["post", "/api/spins/aggregate"],
+      ["get", "/api/spins/top-tracks"],
+      ["patch", "/api/spins/{id}"],
+      ["delete", "/api/spins/{id}"],
+    ]) {
+      expect(ref(op(path, method).responses["400"]), `${method} ${path} 400`).toBeUndefined();
+      expect(Object.keys(op(path, method).responses)).toContain("400");
+    }
+  });
+
   it("builds response examples from the shared component a $ref points at", () => {
     type Example = { content?: { "application/json"?: { example?: unknown } } };
     const example = (path: string, method: string) =>

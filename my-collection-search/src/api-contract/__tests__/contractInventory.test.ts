@@ -7,6 +7,7 @@ import {
   liveSetJsonSchemas,
   playlistJsonSchemas,
   recordCareJsonSchemas,
+  spinJsonSchemas,
   trackJsonSchemas,
 } from "@groovenet/contracts";
 import { getOpenApiDocument } from "../openapi";
@@ -57,6 +58,7 @@ const SHARED_COMPONENTS = new Set(
     ...albumJsonSchemas,
     ...friendJsonSchemas,
     ...recordCareJsonSchemas,
+    ...spinJsonSchemas,
   })
 );
 

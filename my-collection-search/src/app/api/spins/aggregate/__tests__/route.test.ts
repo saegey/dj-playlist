@@ -107,6 +107,15 @@ describe("POST /api/spins/aggregate", () => {
     expect((await res.json()).error).toBe("db exploded");
   });
 
+  it("500s with a generic message when the error has none", async () => {
+    detections.listActiveSourceIds.mockRejectedValue(new Error(""));
+
+    const res = await POST(post({ since: "2026-08-01T00:00:00Z" }));
+
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Failed to aggregate detections");
+  });
+
   it("500s a rejection that is not an Error", async () => {
     detections.listActiveSourceIds.mockRejectedValue("boom");
 

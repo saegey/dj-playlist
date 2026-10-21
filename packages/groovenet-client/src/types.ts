@@ -30,6 +30,29 @@ export type {
   PlaylistTrackRef,
   Friend,
   FriendListResponse,
+  SpinAggregateRequest,
+  SpinAggregateResult,
+  SpinAggregateSourceResult,
+  SpinAlbumSummary,
+  SpinCreateInput,
+  SpinCreateResponse,
+  SpinDeleteResponse,
+  SpinDerived,
+  SpinListQuery,
+  SpinListResponse,
+  SpinProvenance,
+  SpinSelection,
+  SpinSelectionMode,
+  SpinSelectionType,
+  SpinSession,
+  SpinSessionDetail,
+  SpinTopTrack,
+  SpinTopTracksQuery,
+  SpinTopTracksResponse,
+  SpinTrackRef,
+  SpinUpdateInput,
+  SpinUpdateResponse,
+  TrackSpinEvent,
 } from "@groovenet/contracts";
 
 export type GenreSource = "discogs" | "custom";
@@ -333,168 +356,6 @@ export interface AlbumDownloadResult {
   tracksQueued: number;
 }
 
-export interface SpinTrackRef {
-  track_id: string;
-  friend_id: number;
-}
-
-export interface SpinSession {
-  id: number;
-  friend_id: number;
-  release_id: string;
-  medium: "vinyl";
-  selection_mode: "sides" | "tracks" | "automatic" | "playlist";
-  played_at: string;
-  note?: string | null;
-  context_type?: string | null;
-  /** "automatic" when the listener detected the spin. */
-  provenance?: "manual" | "automatic" | "playlist";
-  source_id?: string | null;
-  confidence?: number | null;
-  playlist_id?: number | null;
-  live_set_performance_id?: number | null;
-  playlist_played_at?: string | null;
-  playlist_position?: number | null;
-  /** When a detected spin was corrected by hand; null otherwise. */
-  corrected_at?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SpinSelection {
-  id?: number;
-  session_id?: number;
-  ordinal: number;
-  selection_type: "side" | "track";
-  side_key?: string | null;
-  track_id?: string | null;
-  friend_id?: number | null;
-  position_snapshot?: string | null;
-  created_at?: string;
-}
-
-export interface TrackSpinEvent {
-  id?: number;
-  session_id?: number;
-  friend_id: number;
-  release_id: string;
-  track_id: string;
-  played_at: string;
-  ordinal: number;
-  side_key?: string | null;
-  position_snapshot?: string | null;
-  title_snapshot?: string;
-  artist_snapshot?: string;
-  album_snapshot?: string;
-  created_at?: string;
-}
-
-export interface SpinDerived {
-  is_full_album_spin: boolean;
-  selected_side_count: number;
-  album_side_count: number;
-  track_count: number;
-}
-
-export interface SpinCreateBodyBase {
-  friend_id: number;
-  release_id: string;
-  played_at: string;
-  note?: string | null;
-  context_type?: string | null;
-}
-
-export type SpinCreateInput =
-  | (SpinCreateBodyBase & {
-      side_keys: string[];
-      track_refs?: never;
-    })
-  | (SpinCreateBodyBase & {
-      side_keys?: never;
-      track_refs: SpinTrackRef[];
-    });
-
-export interface SpinAlbumSummary {
-  title: string | null;
-  artist: string | null;
-  thumbnail: string | null;
-}
-
-export interface SpinSessionDetail {
-  session: SpinSession;
-  selections: SpinSelection[];
-  track_events: TrackSpinEvent[];
-  derived: SpinDerived;
-  /** Present on list responses; null when the album is no longer in the collection. */
-  album?: SpinAlbumSummary | null;
-}
-
-/** Edit a spin. A new selection (sides or tracks) replaces the old one. */
-export interface SpinUpdateInput {
-  friend_id: number;
-  played_at?: string;
-  note?: string | null;
-  context_type?: string | null;
-  side_keys?: string[];
-  track_refs?: SpinTrackRef[];
-}
-
-export type SpinUpdateResponse = SpinSessionDetail;
-
-export interface SpinCreateResponse {
-  session: SpinSession;
-  selections: SpinSelection[];
-  expanded_tracks: TrackSpinEvent[];
-  derived: SpinDerived;
-}
-
-export interface SpinListQuery {
-  friend_id: number;
-  release_id?: string;
-  track_id?: string;
-  from?: string;
-  to?: string;
-  limit?: number;
-  offset?: number;
-}
-
-export interface SpinListResponse {
-  items: SpinSessionDetail[];
-  limit: number;
-  offset: number;
-}
-
-export interface SpinDeleteResponse {
-  success: boolean;
-  session: SpinSession;
-}
-
-export interface SpinTopTracksQuery {
-  friend_id: number;
-  release_id?: string;
-  limit?: number;
-  offset?: number;
-}
-
-export interface SpinTopTrack {
-  friend_id: number;
-  release_id: string;
-  track_id: string;
-  play_count: number;
-  last_played_at: string;
-  title_snapshot: string;
-  artist_snapshot: string;
-  album_snapshot: string;
-  side_key?: string | null;
-  position_snapshot?: string | null;
-}
-
-export interface SpinTopTracksResponse {
-  items: SpinTopTrack[];
-  limit: number;
-  offset: number;
-}
-
 export interface SimilarTrack extends Record<string, unknown> {
   track_id: string;
   friend_id: number;
@@ -793,26 +654,6 @@ export interface DetectionQuery {
   since?: string;
   limit?: number;
   offset?: number;
-}
-
-// ─── Manual aggregation backfill (#304) ───────────────────────────────────────
-
-export interface SpinAggregateRequest {
-  since: string;
-  source_id?: string;
-}
-
-export interface SpinAggregateSourceResult {
-  source_id: string;
-  created: number;
-  skipped: number;
-}
-
-export interface SpinAggregateResult {
-  since: string;
-  created: number;
-  skipped: number;
-  sources: SpinAggregateSourceResult[];
 }
 
 // ─── Set derivation (#282) ────────────────────────────────────────────────────

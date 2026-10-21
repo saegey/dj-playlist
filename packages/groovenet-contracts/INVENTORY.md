@@ -25,7 +25,7 @@ counts are as of this inventory; the table below is authoritative.
 | --- | --- | --- | --- |
 | done | friends & library settings | 4 | Flat shapes, no enums; established the inventory. |
 | done | record care | 10 | Self-contained, enum-heavy (sleeve, action, cleaning method, care status). |
-| 2 | spins | 6 | Client and CLI already declare `SpinSession` and friends by hand. |
+| done | spins | 6 | Client and CLI already declared `SpinSession` and friends by hand. |
 | 3 | settings (AI prompt, recommendations, gamdl) | 8 | Flat settings documents. |
 | 4 | backups | 10 | Settings + status payloads; one binary download stays an exception. |
 | 5 | background jobs | 5 | Job entity also shapes the SSE events. |
@@ -167,12 +167,12 @@ is closed, so they need a follow-up issue as their owner.
 | POST | `/api/settings/gamdl/actions` | settings | #552 |  |
 | GET | `/api/settings/recommendations` | settings | #552 |  |
 | PUT | `/api/settings/recommendations` | settings | #552 |  |
-| GET | `/api/spins` | spins | #552 |  |
-| POST | `/api/spins` | spins | #552 |  |
-| DELETE | `/api/spins/{id}` | spins | #552 |  |
-| PATCH | `/api/spins/{id}` | spins | #552 |  |
-| POST | `/api/spins/aggregate` | spins | #552 |  |
-| GET | `/api/spins/top-tracks` | spins | #552 |  |
+| GET | `/api/spins` | spins | contracts |  |
+| POST | `/api/spins` | spins | contracts |  |
+| DELETE | `/api/spins/{id}` | spins | contracts |  |
+| PATCH | `/api/spins/{id}` | spins | contracts |  |
+| POST | `/api/spins/aggregate` | spins | contracts |  |
+| GET | `/api/spins/top-tracks` | spins | contracts |  |
 | GET | `/api/status` | system | #552 | Auto-discovered only; no contract entry yet. |
 | PATCH | `/api/tracks` | tracks | contracts |  |
 | DELETE | `/api/tracks/{id}` | tracks | #551 | Inline OpenAPI; left by #594 (see its deferred list). |

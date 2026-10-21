@@ -1,3 +1,4 @@
+import type { SpinProvenance, SpinSelectionMode, SpinSelectionType } from "@groovenet/contracts";
 import { dbQuery } from "@/lib/serverDb";
 import type { PoolClient } from "pg";
 
@@ -8,11 +9,11 @@ export type SpinSessionRow = {
   friend_id: number;
   release_id: string;
   medium: "vinyl";
-  selection_mode: "sides" | "tracks" | "automatic" | "playlist";
+  selection_mode: SpinSelectionMode;
   played_at: Date | string;
   note: string | null;
   context_type: string | null;
-  provenance: "manual" | "automatic" | "playlist";
+  provenance: SpinProvenance;
   source_id: string | null;
   detection_id: string | null;
   confidence: number | null;
@@ -29,7 +30,7 @@ export type SpinSessionSelectionRow = {
   id: number;
   session_id: number;
   ordinal: number;
-  selection_type: "side" | "track";
+  selection_type: SpinSelectionType;
   side_key: string | null;
   track_id: string | null;
   friend_id: number | null;
@@ -41,11 +42,11 @@ export type CreateSpinSessionInput = {
   friend_id: number;
   release_id: string;
   medium?: "vinyl";
-  selection_mode: "sides" | "tracks" | "automatic" | "playlist";
+  selection_mode: SpinSelectionMode;
   played_at: string | Date;
   note?: string | null;
   context_type?: string | null;
-  provenance?: "manual" | "automatic" | "playlist";
+  provenance?: SpinProvenance;
   source_id?: string | null;
   detection_id?: string | null;
   confidence?: number | null;
@@ -57,7 +58,7 @@ export type CreateSpinSessionInput = {
 
 export type CreateSpinSessionSelectionInput = {
   ordinal: number;
-  selection_type: "side" | "track";
+  selection_type: SpinSelectionType;
   side_key?: string | null;
   track_id?: string | null;
   friend_id?: number | null;
