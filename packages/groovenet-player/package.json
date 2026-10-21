@@ -11,6 +11,10 @@
       "import": "./build/index.js",
       "types": "./build/index.d.ts"
     },
+    "./protocol": {
+      "import": "./build/protocol.js",
+      "types": "./build/protocol.d.ts"
+    },
     "./testing": {
       "import": "./build/testing.js",
       "types": "./build/testing.d.ts"

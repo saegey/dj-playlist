@@ -42,6 +42,7 @@
   "dependencies": {
     "@groovenet/contracts": "1.0.0",
     "@groovenet/client": "^3.2.1",
+    "@groovenet/player": "0.1.0",
     "chalk": "^6.0.1",
     "cli-table3": "^0.6",
     "commander": "^15"

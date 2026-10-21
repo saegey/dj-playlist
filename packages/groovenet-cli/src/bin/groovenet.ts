@@ -12,6 +12,7 @@ import { addVinylCommands } from "../commands/vinyl.js";
 import { addSetsCommands } from "../commands/sets.js";
 import { addRecordsCommands } from "../commands/records.js";
 import { addGenresCommands } from "../commands/genres.js";
+import { addPlayerCommands } from "../commands/player.js";
 
 const require = createRequire(import.meta.url);
 const { version } = require("../../package.json") as { version: string };
@@ -34,6 +35,7 @@ addVinylCommands(program);
 addSetsCommands(program);
 addRecordsCommands(program);
 addGenresCommands(program);
+addPlayerCommands(program);
 
 program.parseAsync(process.argv).catch((err: unknown) => {
   process.stderr.write(

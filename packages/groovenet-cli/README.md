@@ -29,6 +29,9 @@ groovenet albums search "kind of blue"    # browse albums
 groovenet playlists list                  # list playlists
 groovenet playlists log-spins 176         # log the latest performance as spins
 groovenet friends list                    # manage the friends system
+groovenet player start --detach           # start local headless audio playback
+groovenet player queue add "miles davis"  # search and queue downloaded tracks
+groovenet player play                     # start or resume playback
 groovenet play <track-id>                 # play a track via MPD on the server
 groovenet fingerprint-library             # index reference audio for matching
 groovenet sets derive set.mp3 --playlist 176  # tracklist + diff from a set recording
@@ -54,6 +57,28 @@ Run `groovenet --help` (or `groovenet <command> --help`) for the full command re
 | `genres` | Find similar genres and reconcile track tags onto the taxonomy |
 | `fingerprint-library` | Build the reference fingerprint index used to recognise vinyl as it plays |
 | `sets` | Derive a corrected tracklist from a recording of a set, and diff it against the plan |
+| `player` | Start, control, and stop local headless playback through the player daemon |
+
+### Local player
+
+The local player uses mpv and plays downloaded audio through the configured
+Groovenet API. Start it in the foreground with `groovenet player start`, or
+detach it and stop it later with `groovenet player stop`:
+
+```bash
+groovenet player start --detach
+groovenet player queue add "miles davis"
+groovenet player play
+groovenet player status --json
+groovenet player queue list
+groovenet player devices
+groovenet player stop
+```
+
+`queue add --playlist <id>` adds a playlist instead of a search. The daemon
+stores its pidfile and Unix socket under `~/.groovenet/player/`. See the
+[@groovenet/player protocol document](../groovenet-player/PROTOCOL.md) for the
+versioned local control protocol.
 
 ### genres similar
 
