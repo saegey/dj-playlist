@@ -96,12 +96,13 @@ const ENHARMONIC: Record<string, string> = {
  * bare note with no mode, which would be a guess.
  */
 export function toCamelot(key: string | null | undefined): string | null {
-  const text = key?.trim();
+  // Collapse whitespace runs first so the patterns below need at most one optional space.
+  const text = key?.trim().replace(/\s+/g, " ");
   if (!text) return null;
-  const camelot = /^(1[0-2]|[1-9])\s*([AB])$/i.exec(text);
+  const camelot = /^(1[0-2]|[1-9]) ?([AB])$/i.exec(text);
   if (camelot) return `${Number(camelot[1])}${camelot[2]!.toUpperCase()}`;
 
-  const match = /^([A-G])\s*([#b♯♭]?)\s*(major|minor|maj|min|m)$/i.exec(text);
+  const match = /^([A-G])([#b♯♭]?) ?(major|minor|maj|min|m)$/i.exec(text);
   if (!match) return null;
   const accidental = match[2] === "♯" ? "#" : match[2] === "♭" ? "b" : match[2]!;
   const spelled = `${match[1]!.toUpperCase()}${accidental === "b" ? "B" : accidental}`;
