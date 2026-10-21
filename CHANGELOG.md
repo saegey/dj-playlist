@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.6](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.5...v0.3.6) (2026-10-21)
+
+
+### Features
+
+* **cli:** add local player daemon and TUI ([#628](https://github.com/Public-Vinyl-Radio/groovenet/issues/628)) ([2adaaa2](https://github.com/Public-Vinyl-Radio/groovenet/commit/2adaaa28c0ee6493be255f8068a2cef42251db7d))
+
+
+### Bug Fixes
+
+* **essentia:** store BPM confidence from the beat histogram ([#607](https://github.com/Public-Vinyl-Radio/groovenet/issues/607)) ([356ba4b](https://github.com/Public-Vinyl-Radio/groovenet/commit/356ba4b8ef369253272290bed33e913c1538156d))
+* **mcp:** send track objects when creating a playlist ([#629](https://github.com/Public-Vinyl-Radio/groovenet/issues/629)) ([ae4003f](https://github.com/Public-Vinyl-Radio/groovenet/commit/ae4003f40144c216a125cd1010f519efdea91f19))
+* **player:** don't persist the player queue before restore completes ([#602](https://github.com/Public-Vinyl-Radio/groovenet/issues/602)) ([f901b90](https://github.com/Public-Vinyl-Radio/groovenet/commit/f901b9051128d347c0406e7ed100280e4fe7d905))
+
 ## [0.3.5](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.4...v0.3.5) (2026-10-19)
 
 
