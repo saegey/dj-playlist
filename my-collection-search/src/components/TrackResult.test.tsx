@@ -196,6 +196,33 @@ describe("TrackResult layout", () => {
     expect(screen.queryByRole("button", { name: "Key confidence" })).toBeNull();
   });
 
+  it("flags a contested BPM with an '!' that opens a popover (#531)", async () => {
+    const { user } = renderWithProviders(
+      <TrackResult track={{ ...track, bpm: "103", bpm_confidence: 0.02 }} />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Uncertain BPM" }));
+
+    expect(await screen.findByText(/Uncertain BPM — .* only 2% confident/)).toBeTruthy();
+  });
+
+  it("does not flag a clear BPM, but still shows its confidence on click (#531)", async () => {
+    const { user } = renderWithProviders(
+      <TrackResult track={{ ...track, bpm: "103", bpm_confidence: 0.26 }} />
+    );
+
+    expect(screen.queryByRole("button", { name: "Uncertain BPM" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "BPM confidence" }));
+    expect(await screen.findByText(/26% confident in this BPM/)).toBeTruthy();
+  });
+
+  it("shows nothing clickable for a BPM with no confidence on record (#531)", () => {
+    renderWithProviders(<TrackResult track={{ ...track, bpm: "103", bpm_confidence: null }} />);
+
+    expect(screen.queryByRole("button", { name: "Uncertain BPM" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "BPM confidence" })).toBeNull();
+  });
+
   it("shows a static image with no Play button when the track has no local audio", () => {
     renderWithProviders(<TrackResult track={{ ...track, local_audio_url: undefined }} />);
 

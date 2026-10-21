@@ -9,6 +9,7 @@ from groovenet_client.types import TrackUpdate
 from .app_api import get_groovenet_client
 from .audio_utils import get_audio_metadata_year
 from .config import ESSENTIA_DATA_DIR, logger
+from .essentia_bpm import extract_bpm_confidence
 from .essentia_key import extract_key_analysis, log_key_profile_disagreement
 from .subprocess_utils import run_subprocess
 
@@ -54,6 +55,7 @@ def update_track_analysis(
 ) -> None:
     try:
         bpm = None
+        bpm_confidence = None
         key = None
         key_confidence = None
         danceability = None
@@ -67,6 +69,7 @@ def update_track_analysis(
             rhythm = analysis_data['rhythm']
             if 'bpm' in rhythm and isinstance(rhythm['bpm'], (int, float)):
                 bpm = int(round(rhythm['bpm']))
+                bpm_confidence = extract_bpm_confidence(rhythm)
             if 'danceability' in rhythm and isinstance(rhythm['danceability'], (int, float)):
                 danceability = round(rhythm['danceability'], 3)
 
@@ -92,6 +95,8 @@ def update_track_analysis(
         body: TrackUpdate = {"track_id": track_id, "friend_id": friend_id}
         if bpm is not None:
             body["bpm"] = bpm
+        if bpm_confidence is not None:
+            body["bpm_confidence"] = bpm_confidence
         if key:
             body["key"] = key
         if key_confidence is not None:

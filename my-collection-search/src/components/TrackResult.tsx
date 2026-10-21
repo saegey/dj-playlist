@@ -21,6 +21,7 @@ import { Track } from "@/types/track";
 import { FaPlay } from "react-icons/fa";
 import { FiFileText, FiPlus } from "react-icons/fi";
 import { keyToCamelot } from "@/lib/playlistOrder";
+import { formatBpmConfidencePercent, isBpmConfidenceLow } from "@/lib/essentiaBpm";
 import { formatKeyConfidencePercent, isKeyConfidenceLow } from "@/lib/essentiaKey";
 import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import {
@@ -169,14 +170,20 @@ function KeyChip({
 }
 
 /**
- * Trigger on the key chip that always reveals the confidence on click — an
- * orange "!" + "Uncertain key" below the low threshold, a neutral "i"
- * above it. Showing the number is the point: a confident key used to look
- * identical to a dubious one with nothing to click at all (#524).
+ * Trigger that always reveals a confidence on click — an orange "!" below the
+ * low threshold, a neutral "i" above it. Showing the number is the point: a
+ * confident estimate used to look identical to a dubious one with nothing to
+ * click at all (#524, #531). `subject` is "key" or "BPM".
  */
-function KeyConfidenceIndicator({ keyConfidence }: { keyConfidence: number }) {
-  const low = isKeyConfidenceLow(keyConfidence);
-  const percent = formatKeyConfidencePercent(keyConfidence);
+function ConfidenceIndicator({
+  subject,
+  low,
+  percent,
+}: {
+  subject: "key" | "BPM";
+  low: boolean;
+  percent: number | null;
+}) {
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
@@ -187,7 +194,7 @@ function KeyConfidenceIndicator({ keyConfidence }: { keyConfidence: number }) {
           flexShrink={0}
           color={low ? "orange.400" : "fg.subtle"}
           _hover={{ color: low ? "orange.300" : "fg.muted" }}
-          aria-label={low ? "Uncertain key" : "Key confidence"}
+          aria-label={low ? `Uncertain ${subject}` : `${subject === "key" ? "Key" : "BPM"} confidence`}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
           onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
         >
@@ -201,8 +208,8 @@ function KeyConfidenceIndicator({ keyConfidence }: { keyConfidence: number }) {
           <Popover.Body>
             <Text fontSize="sm">
               {low
-                ? `Uncertain key — Essentia's estimate is only ${percent}% confident. Worth a listen before trusting it.`
-                : `${percent}% confident in this key.`}
+                ? `Uncertain ${subject} — Essentia's estimate is only ${percent}% confident. Worth a listen before trusting it.`
+                : `${percent}% confident in this ${subject}.`}
             </Text>
           </Popover.Body>
         </Popover.Content>
@@ -211,8 +218,26 @@ function KeyConfidenceIndicator({ keyConfidence }: { keyConfidence: number }) {
   );
 }
 
+function KeyConfidenceIndicator({ keyConfidence }: { keyConfidence: number }) {
+  return (
+    <ConfidenceIndicator
+      subject="key"
+      low={isKeyConfidenceLow(keyConfidence)}
+      percent={formatKeyConfidencePercent(keyConfidence)}
+    />
+  );
+}
+
 /** Bold, tabular-nums BPM; an orange "No BPM" badge when there's none. */
-function BpmValue({ bpm, align = "right" }: { bpm?: string | number | null; align?: "left" | "right" }) {
+function BpmValue({
+  bpm,
+  bpmConfidence,
+  align = "right",
+}: {
+  bpm?: string | number | null;
+  bpmConfidence?: number | null;
+  align?: "left" | "right";
+}) {
   const num = typeof bpm === "number" ? bpm : parseFloat(bpm ?? "");
   const hasBpm = Number.isFinite(num) && num > 0;
   if (!hasBpm) {
@@ -223,9 +248,23 @@ function BpmValue({ bpm, align = "right" }: { bpm?: string | number | null; alig
     );
   }
   return (
-    <Text fontSize="sm" fontWeight="semibold" fontVariantNumeric="tabular-nums" textAlign={align}>
-      {num}
-    </Text>
+    <Flex
+      display="inline-flex"
+      alignItems="center"
+      gap={1}
+      justifyContent={align === "right" ? "flex-end" : "flex-start"}
+    >
+      <Text fontSize="sm" fontWeight="semibold" fontVariantNumeric="tabular-nums" textAlign={align}>
+        {num}
+      </Text>
+      {typeof bpmConfidence === "number" && (
+        <ConfidenceIndicator
+          subject="BPM"
+          low={isBpmConfidenceLow(bpmConfidence)}
+          percent={formatBpmConfidencePercent(bpmConfidence)}
+        />
+      )}
+    </Flex>
   );
 }
 
@@ -828,7 +867,7 @@ export default function TrackResult({
 
           {showDetails ? (
             <Flex justifyContent="flex-end">
-              <BpmValue bpm={track.bpm} />
+              <BpmValue bpm={track.bpm} bpmConfidence={track.bpm_confidence} />
             </Flex>
           ) : (
             <Box />
@@ -945,7 +984,7 @@ export default function TrackResult({
 
         {showDetails && (
           <Flex alignItems="center" gap={2} flexWrap="wrap">
-            <BpmValue bpm={track.bpm} align="left" />
+            <BpmValue bpm={track.bpm} bpmConfidence={track.bpm_confidence} align="left" />
             <KeyChip keyName={track.key} camelot={camelot} keyConfidence={track.key_confidence} />
             {durationSeconds && (
               <Text fontSize="xs" color="fg.muted" fontVariantNumeric="tabular-nums">

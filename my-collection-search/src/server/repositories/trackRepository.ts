@@ -13,6 +13,11 @@ export type TrackKeyConfidenceBackfillRow = Pick<
   "track_id" | "friend_id" | "key" | "key_confidence"
 >;
 
+export type TrackBpmConfidenceBackfillRow = Pick<
+  Track,
+  "track_id" | "friend_id" | "bpm" | "bpm_confidence"
+>;
+
 export type TrackEssentiaBackfillRow = TrackLocalAudioRow &
   Pick<
     Track,
@@ -51,6 +56,7 @@ type UpdatableTrackFields = Partial<
     | "bpm"
     | "key"
     | "key_confidence"
+    | "bpm_confidence"
     | "danceability"
     | "mood_happy"
     | "mood_sad"
@@ -92,6 +98,7 @@ export type TrackAnalysisBulkUpdate = Pick<Track, "local_audio_url"> & {
   bpm?: number | null;
   key?: string | null;
   key_confidence?: number | null;
+  bpm_confidence?: number | null;
   danceability?: number | null;
   duration_seconds?: number | null;
 };
@@ -122,6 +129,7 @@ const UPDATABLE_COLUMNS = {
   bpm: "bpm",
   key: "key",
   key_confidence: "key_confidence",
+  bpm_confidence: "bpm_confidence",
   danceability: "danceability",
   mood_happy: "mood_happy",
   mood_sad: "mood_sad",
@@ -558,6 +566,29 @@ export class TrackRepository {
     return rows;
   }
 
+  /** Every track with a stored BPM, to fill bpm_confidence from the saved analysis JSON (#531). */
+  async findTracksWithBpmForConfidence(
+    friendId: number | null,
+    limit?: number
+  ): Promise<TrackBpmConfidenceBackfillRow[]> {
+    const params: number[] = [];
+    if (friendId !== null) params.push(friendId);
+    if (limit) params.push(limit);
+    const { rows } = await dbQuery<TrackBpmConfidenceBackfillRow>(
+      `
+      SELECT track_id, friend_id, bpm, bpm_confidence
+      FROM tracks
+      WHERE bpm IS NOT NULL
+        AND bpm_confidence IS NULL
+        ${friendId !== null ? "AND friend_id = $1" : ""}
+      ORDER BY friend_id, track_id
+      ${limit ? `LIMIT $${params.length}` : ""}
+    `,
+      params
+    );
+    return rows;
+  }
+
   async updateTrackFields(
     data: UpdateTrackInput
   ): Promise<TrackWithLibraryIdentifierRow | null> {
@@ -686,6 +717,13 @@ export class TrackRepository {
       vals.push(updates.bpm);
     } else if (updates.bpm === null) {
       sets.push(`bpm = $${i++}`);
+      vals.push(null);
+    }
+    if (typeof updates.bpm_confidence === "number") {
+      sets.push(`bpm_confidence = $${i++}`);
+      vals.push(updates.bpm_confidence);
+    } else if (updates.bpm_confidence === null) {
+      sets.push(`bpm_confidence = $${i++}`);
       vals.push(null);
     }
     if (typeof updates.key === "string") {

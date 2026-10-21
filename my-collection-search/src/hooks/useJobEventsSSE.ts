@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTrackStore } from "@/stores/trackStore";
 import type { Track } from "@/types/track";
+import { extractBpmConfidence, type EssentiaRhythm } from "@/lib/essentiaBpm";
 import { extractKeyAnalysis, logKeyProfileDisagreement, type EssentiaTonal } from "@/lib/essentiaKey";
 
 interface JobCompletedEvent {
@@ -15,7 +16,7 @@ interface JobCompletedEvent {
     local_audio_url?: string;
     duration_seconds?: number;
     analysis?: {
-      rhythm?: { bpm?: number; danceability?: number };
+      rhythm?: EssentiaRhythm;
       tonal?: EssentiaTonal;
       metadata?: { audio_properties?: { length?: number } };
       highlevel?: Record<string, { all?: Record<string, number> } | undefined>;
@@ -82,6 +83,8 @@ export function useJobEventsSSE(enabled: boolean = true) {
           }
           if (analysis?.rhythm?.bpm && typeof analysis.rhythm.bpm === "number") {
             updates.bpm = String(Math.round(analysis.rhythm.bpm));
+            const bpm_confidence = extractBpmConfidence(analysis.rhythm);
+            if (bpm_confidence !== null) updates.bpm_confidence = bpm_confidence;
           }
           if (analysis?.rhythm?.danceability && typeof analysis.rhythm.danceability === "number") {
             updates.danceability = analysis.rhythm.danceability.toFixed(3);

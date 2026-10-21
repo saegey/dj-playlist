@@ -29,6 +29,7 @@ class TestUpdateTrackAnalysis:
 
         body = mock_patch.call_args.args[0]
         assert body["bpm"] == 124
+        assert "bpm_confidence" not in body
         assert body["key"] == "C major"
         assert body["key_confidence"] == 0.618
         assert body["danceability"] == 0.812
@@ -38,6 +39,41 @@ class TestUpdateTrackAnalysis:
         assert body["mood_relaxed"] == 0.346
         assert body["mood_aggressive"] == 0.457
         assert body["year"] == "1999"
+
+    @patch("groovenet_client.GroovenetClient.update_track")
+    def test_sends_bpm_confidence_from_the_beat_histogram(self, mock_patch):
+        """#531: the histogram was discarded, so a contested tempo looked as sure as a clear one."""
+        from worker.track_api import update_track_analysis
+
+        update_track_analysis(
+            "track-1",
+            7,
+            {
+                "rhythm": {
+                    "bpm": 103.483299255,
+                    "bpm_histogram_first_peak_weight": 0.282122910023,
+                    "bpm_histogram_second_peak_weight": 0.0241286866367,
+                },
+            },
+        )
+
+        body = mock_patch.call_args.args[0]
+        assert body["bpm"] == 103
+        assert body["bpm_confidence"] == 0.258
+
+    @patch("groovenet_client.GroovenetClient.update_track")
+    def test_omits_bpm_confidence_when_there_is_no_bpm(self, mock_patch):
+        from worker.track_api import update_track_analysis
+
+        update_track_analysis(
+            "track-1",
+            7,
+            {"rhythm": {"danceability": 0.5, "bpm_histogram_first_peak_weight": 0.4}},
+        )
+
+        body = mock_patch.call_args.args[0]
+        assert "bpm" not in body
+        assert "bpm_confidence" not in body
 
     @patch("groovenet_client.GroovenetClient.update_track")
     def test_consensus_overrides_a_minority_edma_and_logs_its_disagreement(self, mock_patch, caplog):

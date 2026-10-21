@@ -116,3 +116,34 @@ describe("useJobEventsSSE key extraction (#524)", () => {
     expect(updated?.key_confidence).toBeUndefined();
   });
 });
+
+describe("useJobEventsSSE bpm confidence (#531)", () => {
+  it("stores the beat-histogram margin alongside the bpm", async () => {
+    renderHook(() => useJobEventsSSE(true), { wrapper });
+
+    emitJobCompleted({
+      rhythm: {
+        bpm: 103.48,
+        bpm_histogram_first_peak_weight: 0.282,
+        bpm_histogram_second_peak_weight: 0.024,
+      },
+    });
+
+    await waitFor(() => {
+      const updated = useTrackStore.getState().getTrack("t1", 1);
+      expect(updated?.bpm).toBe("103");
+      expect(updated?.bpm_confidence).toBe(0.258);
+    });
+  });
+
+  it("leaves bpm_confidence untouched when the histogram is missing", async () => {
+    renderHook(() => useJobEventsSSE(true), { wrapper });
+
+    emitJobCompleted({ rhythm: { bpm: 120 } });
+
+    await waitFor(() => {
+      expect(useTrackStore.getState().getTrack("t1", 1)?.bpm).toBe("120");
+    });
+    expect(useTrackStore.getState().getTrack("t1", 1)?.bpm_confidence).toBeUndefined();
+  });
+});

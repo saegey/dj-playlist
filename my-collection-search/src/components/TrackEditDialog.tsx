@@ -62,6 +62,7 @@ export default function TrackEditDialog({
       notes: data.notes,
       bpm: toNumberOrNull(data.bpm),
       key: data.key,
+      bpm_confidence: toNumberOrNull(data.bpm_confidence),
       key_confidence: toNumberOrNull(data.key_confidence),
       danceability: toNumberOrNull(data.danceability),
       apple_music_url: data.apple_music_url,

@@ -7,6 +7,7 @@ import LabeledTextarea from "@/components/form/LabeledTextarea";
 import GenrePicker from "@/components/GenrePicker";
 import type { TrackEditFormState } from "@/components/track-edit/types";
 import type { TrackGenre } from "@/types/track";
+import { formatBpmConfidencePercent, isBpmConfidenceLow } from "@/lib/essentiaBpm";
 import { formatKeyConfidencePercent, isKeyConfidenceLow } from "@/lib/essentiaKey";
 
 type TrackEditFormFieldsProps = {
@@ -64,6 +65,16 @@ export default function TrackEditFormFields({
               onChange={onChange}
               type="number"
             />
+            {formatBpmConfidencePercent(values.bpm_confidence) !== null &&
+              (isBpmConfidenceLow(values.bpm_confidence) ? (
+                <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
+                  Uncertain BPM — {formatBpmConfidencePercent(values.bpm_confidence)}% confident
+                </Badge>
+              ) : (
+                <Text fontSize="xs" color="fg.muted" mt={1}>
+                  {formatBpmConfidencePercent(values.bpm_confidence)}% confident
+                </Text>
+              ))}
           </Box>
           <Box flex={{ base: "1 1 calc(50% - 4px)", md: "1" }}>
             <LabeledInput

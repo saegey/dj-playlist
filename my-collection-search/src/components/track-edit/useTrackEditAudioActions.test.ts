@@ -32,6 +32,7 @@ function baseForm(): TrackEditFormState {
     notes: "",
     bpm: "",
     key: "",
+    bpm_confidence: null,
     key_confidence: null,
     danceability: "",
     apple_music_url: "",
@@ -101,5 +102,47 @@ describe("useTrackEditAudioActions key staging (#524)", () => {
     expect(mockToast).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Upload Failed", type: "error" })
     );
+  });
+});
+
+describe("useTrackEditAudioActions bpm confidence staging (#531)", () => {
+  it("applies the bpm and its histogram margin from the upload response", async () => {
+    mockUpload.mockResolvedValue({
+      analysis: {
+        rhythm: {
+          bpm: 103.48,
+          bpm_histogram_first_peak_weight: 0.3,
+          bpm_histogram_second_peak_weight: 0.28,
+        },
+      },
+    });
+    const setForm = vi.fn();
+    const form = baseForm();
+    const { result } = renderHook(() =>
+      useTrackEditAudioActions({ form, setForm, onSave: vi.fn() })
+    );
+
+    await act(async () => {
+      await result.current.handleFileUpload(new File([], "song.mp3"));
+    });
+
+    const next = applyStagedUpdate(setForm, form);
+    expect(next.bpm).toBe("103");
+    expect(next.bpm_confidence).toBe(0.02);
+  });
+
+  it("keeps the previous confidence when the upload has no histogram", async () => {
+    mockUpload.mockResolvedValue({ analysis: {} });
+    const setForm = vi.fn();
+    const form = { ...baseForm(), bpm: "120", bpm_confidence: 0.4 };
+    const { result } = renderHook(() =>
+      useTrackEditAudioActions({ form, setForm, onSave: vi.fn() })
+    );
+
+    await act(async () => {
+      await result.current.handleFileUpload(new File([], "song.mp3"));
+    });
+
+    expect(applyStagedUpdate(setForm, form).bpm_confidence).toBe(0.4);
   });
 });

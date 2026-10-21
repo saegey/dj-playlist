@@ -78,7 +78,12 @@ function essentiaResponse(tonal: unknown) {
   return {
     ok: true,
     json: async () => ({
-      rhythm: { bpm: 123.6, danceability: 0.8 },
+      rhythm: {
+        bpm: 123.6,
+        danceability: 0.8,
+        bpm_histogram_first_peak_weight: 0.282,
+        bpm_histogram_second_peak_weight: 0.024,
+      },
       tonal,
       metadata: { audio_properties: { length: 245.2 } },
     }),
@@ -119,6 +124,36 @@ describe("POST /api/tracks/upload", () => {
     expect(mockUpdateTrackAnalysis).toHaveBeenCalledWith(
       "t1",
       expect.objectContaining({ key: "C major", key_confidence: 0.565 })
+    );
+  });
+
+  it("stores the beat-histogram margin as bpm_confidence (#531)", async () => {
+    await POST(makeRequest());
+
+    expect(mockUpdateTrackAnalysis).toHaveBeenCalledWith(
+      "t1",
+      expect.objectContaining({ bpm: 124, bpm_confidence: 0.258 })
+    );
+  });
+
+  it("stores a null bpm_confidence when Essentia returns no BPM (#531)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          rhythm: { bpm_histogram_first_peak_weight: 0.5 },
+          tonal: {},
+          metadata: { audio_properties: { length: 245.2 } },
+        }),
+      })
+    );
+
+    await POST(makeRequest());
+
+    expect(mockUpdateTrackAnalysis).toHaveBeenCalledWith(
+      "t1",
+      expect.objectContaining({ bpm: null, bpm_confidence: null })
     );
   });
 
