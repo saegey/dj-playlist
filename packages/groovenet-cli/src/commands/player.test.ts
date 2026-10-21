@@ -35,7 +35,7 @@ describe("player CLI commands", () => {
       { id: "entry-1", track: { title: "Blue Train", artist: "John Coltrane" } },
     ]);
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
-    await makeProgram().parseAsync(["node", "test", "player", "queue", "add", "--playlist", "18"]);
+    await makeProgram().parseAsync(["node", "test", "player", "queue", "add", "--playlist-id", "18"]);
     expect(request).toHaveBeenCalledWith("queue.add", { playlistId: "18" });
     expect(log).toHaveBeenCalledWith("1. Blue Train — John Coltrane [entry-1]");
   });
@@ -157,5 +157,23 @@ describe("player CLI commands", () => {
     expect(start).toHaveBeenCalledOnce();
     process.emit("SIGTERM");
     expect(stop).toHaveBeenCalledOnce();
+  });
+
+  it("explains that the interactive player requires a TTY", async () => {
+    const stdinDescriptor = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
+    const stdoutDescriptor = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
+    Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: false });
+    Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: false });
+    const error = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    try {
+      await makeProgram().parseAsync(["node", "test", "player", "--search", "jazz"]);
+      expect(error).toHaveBeenCalledWith(expect.stringContaining("interactive player requires a TTY"));
+      expect(process.exitCode).toBe(1);
+    } finally {
+      if (stdinDescriptor) Object.defineProperty(process.stdin, "isTTY", stdinDescriptor);
+      else Reflect.deleteProperty(process.stdin, "isTTY");
+      if (stdoutDescriptor) Object.defineProperty(process.stdout, "isTTY", stdoutDescriptor);
+      else Reflect.deleteProperty(process.stdout, "isTTY");
+    }
   });
 });

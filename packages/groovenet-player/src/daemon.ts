@@ -2,6 +2,7 @@ import { createConnection, createServer, type Server, type Socket } from "node:n
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { PlayerCore } from "./player.js";
+import type { Track } from "@groovenet/client";
 import { encodeRpcEvent, encodeRpcResponse, PLAYER_PROTOCOL_VERSION, type PlayerRpcRequest } from "./protocol.js";
 
 export interface PlayerDaemonPaths {
@@ -183,10 +184,19 @@ export class PlayerDaemon {
         return removed;
       }
       case "devices": return player.listDevices();
+      case "devices.select": {
+        if (typeof params.id !== "string" || !params.id) throw new Error("Device selection requires an id.");
+        await player.setOutputDevice(params.id);
+        return player.listDevices();
+      }
       case "queue.add": {
         if (typeof params.playlistId === "string" || typeof params.playlistId === "number") return player.enqueuePlaylist(params.playlistId);
         if (typeof params.query !== "string" || !params.query.trim()) throw new Error("Queue add requires a search query or playlist id.");
         return player.enqueueSearch(params.query);
+      }
+      case "queue.addTrack": {
+        if (typeof params.track !== "object" || params.track === null || Array.isArray(params.track)) throw new Error("Queue add requires a track object.");
+        return player.add([params.track as Track]);
       }
       case "shutdown": {
         setImmediate(() => { void this.stop(); });

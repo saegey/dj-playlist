@@ -30,6 +30,9 @@ groovenet playlists list                  # list playlists
 groovenet playlists log-spins 176         # log the latest performance as spins
 groovenet friends list                    # manage the friends system
 groovenet player start --detach           # start local headless audio playback
+groovenet player                         # open the interactive player (TTY)
+groovenet player --search "bpm:120"       # start the TUI with search results
+groovenet player --playlist 176          # start the TUI with a playlist queued
 groovenet player queue add "miles davis"  # search and queue downloaded tracks
 groovenet player play                     # start or resume playback
 groovenet play <track-id>                 # play a track via MPD on the server
@@ -75,10 +78,20 @@ groovenet player devices
 groovenet player stop
 ```
 
-`queue add --playlist <id>` adds a playlist instead of a search. The daemon
+`queue add --playlist-id <id>` adds a playlist instead of a search. The daemon
 stores its pidfile and Unix socket under `~/.groovenet/player/`. See the
 [@groovenet/player protocol document](../groovenet-player/PROTOCOL.md) for the
 versioned local control protocol.
+
+The TUI requires mpv on `PATH` and a terminal. mpv audio outputs are available
+on macOS, Linux and Windows. macOS AirPlay speakers appear as CoreAudio devices;
+Linux AirPlay routing depends on PipeWire RAOP support, with AirPlay 2 support
+varying by receiver. Windows has no native AirPlay route. AirPlay playback adds
+about two seconds of latency, so it is suitable for auditioning rather than
+beatmatching. The help line in the TUI lists the keyboard shortcuts: arrows or
+`j`/`k` select, Enter adds or plays, Space pauses, `n`/`p` skip, left/right seek,
+`+`/`-` change volume, `/` searches, `l` opens playlists, `u` opens the queue,
+`d` selects an output, `r` starts playback, and `q` quits.
 
 ### genres similar
 

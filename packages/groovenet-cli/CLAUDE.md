@@ -31,6 +31,7 @@ records             clean | sleeve | log | copies (add | label | remove)
 genres              similar | reconcile | review | apply | proposals | coverage
 player              start | stop | play | pause | next | prev | seek | volume
                     status | queue (add | remove | list) | devices
+                    (bare `player` opens the lazy-loaded Ink TUI)
 ```
 
 **Every command takes `--json`.** Use it for anything programmatic — the default
