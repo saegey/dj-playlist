@@ -23,6 +23,41 @@ describe("GET /api/spins/top-tracks", () => {
     expect(res.status).toBe(400);
   });
 
+  it("applies the default page when limit and offset are omitted", async () => {
+    mockListTopTracks.mockResolvedValueOnce([]);
+
+    const res = await GET(
+      new Request("http://localhost/api/spins/top-tracks?friend_id=1&release_id=rel-1") as never
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ items: [], limit: 20, offset: 0 });
+    expect(mockListTopTracks).toHaveBeenCalledWith({
+      friend_id: 1,
+      release_id: "rel-1",
+      limit: 20,
+      offset: 0,
+    });
+  });
+
+  it("returns 500 with the service's message when the query fails", async () => {
+    mockListTopTracks.mockRejectedValueOnce(new Error("db down"));
+
+    const res = await GET(new Request("http://localhost/api/spins/top-tracks?friend_id=1") as never);
+
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("db down");
+  });
+
+  it("returns 500 with a generic message for a non-Error rejection", async () => {
+    mockListTopTracks.mockRejectedValueOnce("boom");
+
+    const res = await GET(new Request("http://localhost/api/spins/top-tracks?friend_id=1") as never);
+
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Failed to list top spin tracks");
+  });
+
   it("returns top tracks payload", async () => {
     mockListTopTracks.mockResolvedValueOnce([
       {

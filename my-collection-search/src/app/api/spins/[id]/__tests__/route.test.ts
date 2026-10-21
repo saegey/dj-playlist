@@ -63,6 +63,30 @@ describe("DELETE /api/spins/{id}", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns 500 with the service's message when the delete fails", async () => {
+    mockDeleteSpinSession.mockRejectedValueOnce(new Error("db down"));
+
+    const res = await DELETE(
+      new Request("http://localhost/api/spins/10?friend_id=1", { method: "DELETE" }) as never,
+      { params: Promise.resolve({ id: "10" }) }
+    );
+
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("db down");
+  });
+
+  it("returns 500 with a generic message for a non-Error rejection", async () => {
+    mockDeleteSpinSession.mockRejectedValueOnce("boom");
+
+    const res = await DELETE(
+      new Request("http://localhost/api/spins/10?friend_id=1", { method: "DELETE" }) as never,
+      { params: Promise.resolve({ id: "10" }) }
+    );
+
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Failed to delete spin session");
+  });
+
   it("returns deleted session payload on success", async () => {
     mockDeleteSpinSession.mockResolvedValueOnce({
       id: 10,

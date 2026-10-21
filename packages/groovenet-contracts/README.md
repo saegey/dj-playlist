@@ -23,7 +23,7 @@ family and migration status, and the order the remaining families follow.
    shape and enum values.
 
 Migrate one resource family at a time: live sets, playlists, tracks, albums,
-friends and record care are done; `INVENTORY.md` orders the rest. Preserve permissive response fields where
+friends, record care and spins are done; `INVENTORY.md` orders the rest. Preserve permissive response fields where
 the database returns additional wire fields; make request schemas strict only
 when the endpoint already rejects unknown fields.
 
@@ -129,3 +129,12 @@ fixed the conventions the rest follow:
   re-export it, so UI, SQL helpers and analytics share one list. Database row
   types that differ only in timestamp types derive from the wire type with
   `Omit<> & {...}` rather than repeating every column.
+- **The client's own Zod copy is replaced, not kept.** `groovenet-client`
+  exports Zod schemas from `schemas.ts` as well as types. When a family has
+  both, re-export the shared shapes there and rebuild only the coercing
+  bodies and queries with the same `.extend()` + exported refinement the app
+  uses (spins). A hand-copied enum can lag the database: the client's spin
+  schema had no `playlist` selection mode or provenance until it was replaced.
+- **Wire queries omit defaults.** Shared query schemas describe what a client
+  may send (`limit?: number`); the app adds `.default(50)` after coercion and
+  the OpenAPI `parameters` list documents the default.

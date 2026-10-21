@@ -85,6 +85,24 @@ describe("GET /api/spins", () => {
     expect(body.error).toMatch(/invalid spin list query/i);
   });
 
+  it("returns 500 with the service's message when listing fails", async () => {
+    mockListSpinSessions.mockRejectedValueOnce(new Error("db down"));
+
+    const res = await GET(new Request("http://localhost/api/spins?friend_id=1") as never);
+
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("db down");
+  });
+
+  it("returns 500 with a generic message when listing rejects with a non-Error", async () => {
+    mockListSpinSessions.mockRejectedValueOnce("boom");
+
+    const res = await GET(new Request("http://localhost/api/spins?friend_id=1") as never);
+
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("Failed to list spin sessions");
+  });
+
   it("returns list response with items", async () => {
     mockListSpinSessions.mockResolvedValueOnce([makeSpinSessionDetail()]);
 
@@ -154,6 +172,76 @@ describe("POST /api/spins", () => {
     expect(body.expanded_tracks).toHaveLength(1);
     expect(body.expanded_tracks[0].track_id).toBe("trk-a1");
     expect(body.track_events).toBeUndefined();
+  });
+
+  it("rejects a selection given both ways, with the refinement's message", async () => {
+    const req = new Request("http://localhost/api/spins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        friend_id: 1,
+        release_id: "rel-1",
+        played_at: "2026-06-24T01:00:00.000Z",
+        side_keys: ["A"],
+        track_refs: [{ track_id: "trk-a1", friend_id: 1 }],
+      }),
+    });
+
+    const res = await POST(req as never);
+
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe("Invalid spin payload");
+    expect(body.details.formErrors).toEqual(["Provide exactly one of side_keys or track_refs"]);
+    expect(mockCreateSpinSession).not.toHaveBeenCalled();
+  });
+
+  it("coerces a text friend_id and passes track refs to the service", async () => {
+    mockCreateSpinSession.mockResolvedValueOnce(makeSpinSessionDetail());
+
+    const req = new Request("http://localhost/api/spins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        friend_id: "1",
+        release_id: "rel-1",
+        played_at: "2026-06-24T01:00:00.000Z",
+        note: null,
+        track_refs: [{ track_id: "trk-a1", friend_id: 1 }],
+      }),
+    });
+
+    const res = await POST(req as never);
+
+    expect(res.status).toBe(200);
+    expect(mockCreateSpinSession).toHaveBeenCalledWith({
+      friend_id: 1,
+      release_id: "rel-1",
+      played_at: "2026-06-24T01:00:00.000Z",
+      note: null,
+      context_type: undefined,
+      track_refs: [{ track_id: "trk-a1", friend_id: 1 }],
+    });
+  });
+
+  it("returns 500 for an unexpected service failure", async () => {
+    mockCreateSpinSession.mockRejectedValueOnce(new Error("db down"));
+
+    const req = new Request("http://localhost/api/spins", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        friend_id: 1,
+        release_id: "rel-1",
+        played_at: "2026-06-24T01:00:00.000Z",
+        side_keys: ["A"],
+      }),
+    });
+
+    const res = await POST(req as never);
+
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBe("db down");
   });
 
   it("returns 404 when album is not found", async () => {

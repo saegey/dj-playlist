@@ -1,3 +1,4 @@
+import type { SpinDerived, SpinProvenance, SpinTrackRef } from "@groovenet/contracts";
 import {
   compareTrackPositions,
   normalizeAlbumTrackSides,
@@ -18,18 +19,13 @@ import {
 } from "@/server/repositories/trackSpinEventRepository";
 import type { Album, Track } from "@/types/track";
 
-export type SpinTrackRef = {
-  track_id: string;
-  friend_id: number;
-};
-
 export type CreateSpinSessionInput = {
   friend_id: number;
   release_id: string;
   played_at: string | Date;
   note?: string | null;
   context_type?: string | null;
-  provenance?: "manual" | "automatic";
+  provenance?: Exclude<SpinProvenance, "playlist">;
   source_id?: string | null;
   detection_id?: string | null;
   confidence?: number | null;
@@ -57,12 +53,7 @@ export type SpinSessionDetail = {
   session: SpinSessionRow;
   selections: SpinSessionSelectionRow[];
   track_events: TrackSpinEventRow[];
-  derived: {
-    is_full_album_spin: boolean;
-    selected_side_count: number;
-    album_side_count: number;
-    track_count: number;
-  };
+  derived: SpinDerived;
 };
 
 export type SpinTopTrackSummary = Omit<TopTrackSpinEventRow, "last_played_at"> & {

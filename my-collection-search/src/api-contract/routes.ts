@@ -7173,42 +7173,20 @@ export const apiContractRoutes: ApiContractRoute[] = [
     errorSchema: apiErrorSchema,
     openapi: {
       parameters: [
-        { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
+        friendIdQueryParam,
         { name: "release_id", in: "query", required: false, schema: { type: "string" } },
         { name: "track_id", in: "query", required: false, schema: { type: "string" } },
         { name: "from", in: "query", required: false, schema: { type: "string", format: "date-time" } },
         { name: "to", in: "query", required: false, schema: { type: "string", format: "date-time" } },
-        { name: "limit", in: "query", required: false, schema: { type: "integer", default: 50 } },
-        { name: "offset", in: "query", required: false, schema: { type: "integer", default: 0 } },
+        ...pagingParams,
       ],
       responses: {
         "200": {
           description: "Spin session list",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  items: {
-                    type: "array",
-                    items: { type: "object", additionalProperties: true },
-                  },
-                  limit: { type: "integer" },
-                  offset: { type: "integer" },
-                },
-                required: ["items", "limit", "offset"],
-              },
-            },
-          },
+          content: { "application/json": { schema: componentRef("SpinListResponse") } },
         },
-        "400": {
-          description: "Invalid query",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Server error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
+        "400": jsonError("Invalid query"),
+        "500": jsonError("Server error"),
       },
     },
   },
@@ -7224,88 +7202,17 @@ export const apiContractRoutes: ApiContractRoute[] = [
     openapi: {
       requestBody: {
         required: true,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                friend_id: { type: "integer" },
-                release_id: { type: "string" },
-                played_at: { type: "string", format: "date-time" },
-                note: { type: ["string", "null"] },
-                context_type: { type: ["string", "null"] },
-                side_keys: {
-                  type: "array",
-                  items: { type: "string" },
-                },
-                track_refs: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      track_id: { type: "string" },
-                      friend_id: { type: "integer" },
-                    },
-                    required: ["track_id", "friend_id"],
-                  },
-                },
-              },
-              required: ["friend_id", "release_id", "played_at"],
-              additionalProperties: false,
-            },
-          },
-        },
+        description: "Provide exactly one of side_keys or track_refs, and not an empty list.",
+        content: { "application/json": { schema: componentRef("SpinCreateInput") } },
       },
       responses: {
         "200": {
           description: "Spin session created",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  session: { type: "object", additionalProperties: true },
-                  selections: {
-                    type: "array",
-                    items: { type: "object", additionalProperties: true },
-                  },
-                  expanded_tracks: {
-                    type: "array",
-                    items: { type: "object", additionalProperties: true },
-                  },
-                  derived: {
-                    type: "object",
-                    properties: {
-                      is_full_album_spin: { type: "boolean" },
-                      selected_side_count: { type: "integer" },
-                      album_side_count: { type: "integer" },
-                      track_count: { type: "integer" },
-                    },
-                    required: [
-                      "is_full_album_spin",
-                      "selected_side_count",
-                      "album_side_count",
-                      "track_count",
-                    ],
-                  },
-                },
-                required: ["session", "selections", "expanded_tracks", "derived"],
-              },
-            },
-          },
+          content: { "application/json": { schema: componentRef("SpinCreateResponse") } },
         },
-        "400": {
-          description: "Invalid payload",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "404": {
-          description: "Album not found",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Server error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
+        "400": jsonError("Invalid payload"),
+        "404": jsonError("Album not found"),
+        "500": jsonError("Server error"),
       },
     },
   },
@@ -7321,67 +7228,15 @@ export const apiContractRoutes: ApiContractRoute[] = [
     openapi: {
       requestBody: {
         required: true,
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                since: {
-                  type: "string",
-                  format: "date-time",
-                  description:
-                    "Both automatic triggers only look back " +
-                    "PLAY_AGGREGATION_LOOKBACK_MINUTES (default 60), so this is " +
-                    "the manual escape hatch for anything older.",
-                },
-                source_id: {
-                  type: "string",
-                  description: "Omit to aggregate every source active since `since`.",
-                },
-              },
-              required: ["since"],
-              additionalProperties: false,
-            },
-          },
-        },
+        content: { "application/json": { schema: componentRef("SpinAggregateRequest") } },
       },
       responses: {
         "200": {
           description: "Totals across every source aggregated, per source and overall",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  since: { type: "string" },
-                  created: { type: "integer" },
-                  skipped: { type: "integer" },
-                  sources: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        source_id: { type: "string" },
-                        created: { type: "integer" },
-                        skipped: { type: "integer" },
-                      },
-                      required: ["source_id", "created", "skipped"],
-                    },
-                  },
-                },
-                required: ["since", "created", "skipped", "sources"],
-              },
-            },
-          },
+          content: { "application/json": { schema: componentRef("SpinAggregateResult") } },
         },
-        "400": {
-          description: "Invalid payload",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Server error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
+        "400": jsonError("Invalid payload"),
+        "500": jsonError("Server error"),
       },
     },
   },
@@ -7396,7 +7251,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
     errorSchema: apiErrorSchema,
     openapi: {
       parameters: [
-        { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
+        friendIdQueryParam,
         { name: "release_id", in: "query", required: false, schema: { type: "string" } },
         { name: "limit", in: "query", required: false, schema: { type: "integer", default: 20 } },
         { name: "offset", in: "query", required: false, schema: { type: "integer", default: 0 } },
@@ -7404,31 +7259,10 @@ export const apiContractRoutes: ApiContractRoute[] = [
       responses: {
         "200": {
           description: "Most-played vinyl tracks",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  items: {
-                    type: "array",
-                    items: { type: "object", additionalProperties: true },
-                  },
-                  limit: { type: "integer" },
-                  offset: { type: "integer" },
-                },
-                required: ["items", "limit", "offset"],
-              },
-            },
-          },
+          content: { "application/json": { schema: componentRef("SpinTopTracksResponse") } },
         },
-        "400": {
-          description: "Invalid query",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Server error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
+        "400": jsonError("Invalid query"),
+        "500": jsonError("Server error"),
       },
     },
   },
@@ -7443,70 +7277,21 @@ export const apiContractRoutes: ApiContractRoute[] = [
     successSchema: spinUpdateResponseSchema,
     errorSchema: apiErrorSchema,
     openapi: {
-      parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+      parameters: [integerIdParam],
       requestBody: {
         required: true,
         description:
-          "Change when a spin was played, its note or context, or what was played. A new selection (side_keys or track_refs) replaces the old one and its track events. Editing a spin the listener detected keeps its provenance and sets corrected_at.",
-        content: {
-          "application/json": {
-            schema: {
-              type: "object",
-              properties: {
-                friend_id: { type: "integer" },
-                played_at: { type: "string", format: "date-time" },
-                note: { type: ["string", "null"] },
-                context_type: { type: ["string", "null"] },
-                side_keys: { type: "array", items: { type: "string" }, minItems: 1 },
-                track_refs: {
-                  type: "array",
-                  minItems: 1,
-                  items: {
-                    type: "object",
-                    properties: {
-                      track_id: { type: "string" },
-                      friend_id: { type: "integer" },
-                    },
-                    required: ["track_id", "friend_id"],
-                  },
-                },
-              },
-              required: ["friend_id"],
-              additionalProperties: false,
-            },
-          },
-        },
+          "Change when a spin was played, its note or context, or what was played. A new selection (side_keys or track_refs) replaces the old one and its track events. Provide at most one of side_keys or track_refs, and at least one change besides friend_id. Editing a spin the listener detected keeps its provenance and sets corrected_at.",
+        content: { "application/json": { schema: componentRef("SpinUpdateInput") } },
       },
       responses: {
         "200": {
           description: "The edited spin session",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  session: { type: "object", additionalProperties: true },
-                  selections: { type: "array", items: { type: "object", additionalProperties: true } },
-                  track_events: { type: "array", items: { type: "object", additionalProperties: true } },
-                  derived: { type: "object", additionalProperties: true },
-                },
-                required: ["session", "selections", "track_events", "derived"],
-              },
-            },
-          },
+          content: { "application/json": { schema: componentRef("SpinSessionDetail") } },
         },
-        "400": {
-          description: "Invalid request, or a selection that does not fit the album",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "404": {
-          description: "Session or album not found",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Server error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
+        "400": jsonError("Invalid request, or a selection that does not fit the album"),
+        "404": jsonError("Session or album not found"),
+        "500": jsonError("Server error"),
       },
     },
   },
@@ -7521,38 +7306,15 @@ export const apiContractRoutes: ApiContractRoute[] = [
     successSchema: spinDeleteResponseSchema,
     errorSchema: apiErrorSchema,
     openapi: {
-      parameters: [
-        { name: "id", in: "path", required: true, schema: { type: "integer" } },
-        { name: "friend_id", in: "query", required: true, schema: { type: "integer" } },
-      ],
+      parameters: [integerIdParam, friendIdQueryParam],
       responses: {
         "200": {
           description: "Spin session deleted",
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  success: { type: "boolean" },
-                  session: { type: "object", additionalProperties: true },
-                },
-                required: ["success", "session"],
-              },
-            },
-          },
+          content: { "application/json": { schema: componentRef("SpinDeleteResponse") } },
         },
-        "400": {
-          description: "Invalid request",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "404": {
-          description: "Session not found",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
-        "500": {
-          description: "Server error",
-          content: { "application/json": { schema: errorResponseSchemaObject } },
-        },
+        "400": jsonError("Invalid request"),
+        "404": jsonError("Session not found"),
+        "500": jsonError("Server error"),
       },
     },
   },
