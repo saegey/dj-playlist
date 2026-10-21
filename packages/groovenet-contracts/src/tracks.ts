@@ -55,6 +55,8 @@ const trackShape = z.object({
     key: z.string().nullable().optional(),
     /** Confidence (0-1) of the EDMA key estimate stored in `key` (#524). */
     key_confidence: z.number().nullable().optional(),
+    /** Margin (0-1) between the first and second beat-histogram peaks behind `bpm` (#531). */
+    bpm_confidence: z.number().nullable().optional(),
     danceability: z.union([z.number(), z.string()]).nullable().optional(),
     mood_happy: z.number().nullable().optional(),
     mood_sad: z.number().nullable().optional(),

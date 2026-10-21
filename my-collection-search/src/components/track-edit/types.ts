@@ -22,6 +22,8 @@ export interface TrackEditFormProps {
   descriptors?: string[];
   notes?: string | undefined | null;
   bpm?: number | null;
+  /** Margin (0-1) between the first and second beat-histogram peaks behind `bpm` (#531). */
+  bpm_confidence?: number | null;
   key?: string | undefined | null;
   /** Confidence (0-1) of the EDMA key estimate stored in `key` (#524). */
   key_confidence?: number | null;
@@ -44,6 +46,7 @@ export type TrackEditFormState = {
   track_genres: TrackGenre[];
   notes: string;
   bpm: string;
+  bpm_confidence?: number | null;
   key: string;
   key_confidence?: number | null;
   danceability: string;
@@ -72,6 +75,7 @@ export function toTrackEditFormState(
     notes: (track?.notes as string | undefined) || "",
     bpm: (track?.bpm as string | undefined) || "",
     key: (track?.key as string | undefined) || "",
+    bpm_confidence: track?.bpm_confidence ?? null,
     key_confidence: track?.key_confidence ?? null,
     danceability: (track?.danceability as string | undefined) || "",
     apple_music_url: track?.apple_music_url || "",

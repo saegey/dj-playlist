@@ -69,6 +69,7 @@ const BY_NAME: Record<string, Candidates> = {
   bpm: 122,
   key: "8A",
   key_confidence: 0.82,
+  bpm_confidence: 0.26,
   camelot: "8A",
   danceability: 0.62,
   energy: 0.48,

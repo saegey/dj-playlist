@@ -4,6 +4,7 @@ import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { writeEssentiaAnalysis } from "@/lib/essentia-storage";
+import { extractBpmConfidence, type EssentiaRhythm } from "@/lib/essentiaBpm";
 import { extractKeyAnalysis, logKeyProfileDisagreement, type EssentiaTonal } from "@/lib/essentiaKey";
 import { trackRepository } from "@/server/repositories/trackRepository";
 import { embeddingQueueService } from "@/server/services/embeddingQueueService";
@@ -13,7 +14,7 @@ export const runtime = "nodejs"; // Ensure Node.js runtime for file system acces
 const execAsync = promisify(exec);
 
 type AnalysisResult = {
-  rhythm?: { bpm?: number; danceability?: number };
+  rhythm?: EssentiaRhythm;
   tonal?: EssentiaTonal;
   metadata?: { audio_properties?: { length?: number } };
 };
@@ -28,6 +29,7 @@ async function processAudioFile(
   const bpm = analysisResult?.rhythm?.bpm
     ? Math.round(analysisResult.rhythm.bpm)
     : null;
+  const bpm_confidence = bpm === null ? null : extractBpmConfidence(analysisResult?.rhythm);
   const { key, key_confidence } = extractKeyAnalysis(analysisResult?.tonal);
   if (friend_id !== null) {
     logKeyProfileDisagreement(analysisResult?.tonal, { track_id, friend_id });
@@ -43,6 +45,7 @@ async function processAudioFile(
   await trackRepository.updateTrackAnalysisByTrackId(track_id, {
     local_audio_url,
     bpm,
+    bpm_confidence,
     key,
     key_confidence,
     danceability,

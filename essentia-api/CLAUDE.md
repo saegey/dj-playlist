@@ -44,6 +44,29 @@ C major. Checking only the three profiles would have stayed silent on
 exactly the track that motivated this — which is why `chords_key` is
 checked too.
 
+### BPM confidence (#531)
+
+`rhythm.bpm` ships with a beat histogram (`bpm_histogram_first_peak_weight`,
+`bpm_histogram_second_peak_weight`, and the matching `_bpm`/`_spread` fields).
+Stored as `tracks.bpm_confidence`: the **margin** `first_peak_weight -
+second_peak_weight` (second defaults to 0, clamped at 0). The raw first weight
+is the share of beat intervals behind a tempo, so it reads low on busy tracks
+even when nothing competes (0.282 vs 0.024 is a clear win); the margin is small
+exactly when the tempo is contested (0.30 vs 0.28) or the histogram is diffuse.
+Below 0.1 the UI flags "Uncertain BPM"; that cut-off is a heuristic, tune it
+in `my-collection-search/src/lib/essentiaBpm.ts`.
+
+`bpm_histogram_second_peak_bpm` is deliberately not stored: unlike `chords_key`
+(#530) it is not an independent signal, and in the #531 example (103 vs 96) it
+is a nearby tempo, not a half/double. The margin already says the estimate is
+contested, and the full histogram stays in the saved analysis JSON. Revisit if
+half/double-time errors turn out to matter for playlist ordering.
+
+Existing tracks have NULL `bpm_confidence` (the UI shows nothing for NULL, never
+a confident badge). `npm run backfill-bpm-confidence` fills it from the JSON
+saved under `ESSENTIA_DATA_DIR`; tracks with no saved file stay NULL until
+re-analysed.
+
 ### profile.yaml
 
 `/etc/essentia/profile.yaml`, baked into the `ghcr.io/mgoltzsche/essentia` base

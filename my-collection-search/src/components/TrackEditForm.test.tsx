@@ -91,3 +91,30 @@ describe("TrackEditForm key confidence (#524)", () => {
     expect(screen.queryByText(/% confident/)).toBeNull();
   });
 });
+
+describe("TrackEditForm bpm confidence (#531)", () => {
+  beforeEach(() => {
+    fetchGenreTree.mockReset();
+    fetchGenreTree.mockResolvedValue([]);
+  });
+
+  it("flags a low-confidence BPM as uncertain, with the percentage", () => {
+    renderForm(vi.fn(), { ...TRACK, bpm: 103, bpm_confidence: 0.02 });
+
+    expect(screen.getByText(/Uncertain BPM — 2% confident/)).toBeTruthy();
+  });
+
+  it("shows the plain percentage for a confident BPM, not the uncertain flag", () => {
+    renderForm(vi.fn(), { ...TRACK, bpm: 103, bpm_confidence: 0.26 });
+
+    expect(screen.queryByText(/Uncertain BPM/)).toBeNull();
+    expect(screen.getByText("26% confident")).toBeTruthy();
+  });
+
+  it("shows nothing for a BPM with no confidence on record", () => {
+    renderForm(vi.fn(), { ...TRACK, bpm: 103 });
+
+    expect(screen.queryByText(/Uncertain BPM/)).toBeNull();
+    expect(screen.queryByText(/% confident/)).toBeNull();
+  });
+});

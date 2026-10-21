@@ -102,3 +102,43 @@ describe("TrackEditPage key confidence (#524)", () => {
     expect(screen.getByText("90% confident")).toBeTruthy();
   });
 });
+
+describe("TrackEditPage bpm confidence (#531)", () => {
+  beforeEach(() => {
+    mocks.fetchGenreTree.mockReset().mockResolvedValue([]);
+    mocks.saveTrack.mockReset().mockResolvedValue(undefined);
+  });
+
+  const baseTrack = {
+    track_id: "t1",
+    friend_id: 1,
+    title: "Cumbia del Sol",
+    artist: "Los Destellos",
+    bpm: "103",
+  };
+
+  it("flags a low-confidence BPM as uncertain, with the percentage", () => {
+    mocks.track = { ...baseTrack, bpm_confidence: 0.02 } as Partial<Track>;
+
+    renderWithProviders(<TrackEditPage />);
+
+    expect(screen.getByText(/Uncertain BPM — 2% confident/)).toBeTruthy();
+  });
+
+  it("shows the plain percentage for a confident BPM, not the uncertain flag", () => {
+    mocks.track = { ...baseTrack, bpm_confidence: 0.26 } as Partial<Track>;
+
+    renderWithProviders(<TrackEditPage />);
+
+    expect(screen.queryByText(/Uncertain BPM/)).toBeNull();
+    expect(screen.getByText("26% confident")).toBeTruthy();
+  });
+
+  it("shows nothing for a BPM with no confidence on record", () => {
+    mocks.track = baseTrack as Partial<Track>;
+
+    renderWithProviders(<TrackEditPage />);
+
+    expect(screen.queryByText(/% confident/)).toBeNull();
+  });
+});

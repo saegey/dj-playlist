@@ -29,6 +29,7 @@ import GenrePicker from "@/components/GenrePicker";
 import { useTrackByIdQuery } from "@/hooks/useTrackByIdQuery";
 import { useTracksQuery } from "@/hooks/useTracksQuery";
 import { cleanSoundcloudUrl } from "@/lib/url";
+import { formatBpmConfidencePercent, isBpmConfidenceLow } from "@/lib/essentiaBpm";
 import { formatKeyConfidencePercent, isKeyConfidenceLow } from "@/lib/essentiaKey";
 import { toaster } from "@/components/ui/toaster";
 
@@ -202,13 +203,25 @@ export default function TrackEditPage() {
             {/* Audio Metadata */}
             <SectionCard title="Audio Metadata">
               <Grid templateColumns={{ base: "1fr 1fr", md: "repeat(4, 1fr)" }} gap={3}>
-                <LabeledInput
-                  label="BPM"
-                  name="bpm"
-                  value={form.bpm}
-                  onChange={handleChange}
-                  type="number"
-                />
+                <Box>
+                  <LabeledInput
+                    label="BPM"
+                    name="bpm"
+                    value={form.bpm}
+                    onChange={handleChange}
+                    type="number"
+                  />
+                  {formatBpmConfidencePercent(form.bpm_confidence) !== null &&
+                    (isBpmConfidenceLow(form.bpm_confidence) ? (
+                      <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
+                        Uncertain BPM — {formatBpmConfidencePercent(form.bpm_confidence)}% confident
+                      </Badge>
+                    ) : (
+                      <Text fontSize="xs" color="fg.muted" mt={1}>
+                        {formatBpmConfidencePercent(form.bpm_confidence)}% confident
+                      </Text>
+                    ))}
+                </Box>
                 <Box>
                   <LabeledInput
                     label="Key"

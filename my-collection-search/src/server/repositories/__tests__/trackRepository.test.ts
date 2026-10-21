@@ -222,6 +222,51 @@ describe("findTracksWithKeyForRecompute() (#524)", () => {
   });
 });
 
+// ─── findTracksWithBpmForConfidence ───────────────────────────────────────────
+
+describe("findTracksWithBpmForConfidence() (#531)", () => {
+  it("selects only tracks with a BPM and no confidence yet", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().findTracksWithBpmForConfidence(null);
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(sql).toContain("bpm IS NOT NULL");
+    expect(sql).toContain("bpm_confidence IS NULL");
+    expect(params).toEqual([]);
+  });
+
+  it("passes [friendId] when only friendId is provided", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().findTracksWithBpmForConfidence(5);
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(params).toEqual([5]);
+    expect(sql).toContain("friend_id = $1");
+  });
+
+  it("passes [limit] when only limit is provided", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().findTracksWithBpmForConfidence(null, 50);
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(params).toEqual([50]);
+    expect(sql).toContain("LIMIT $1");
+  });
+
+  it("passes [friendId, limit] when both are provided", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().findTracksWithBpmForConfidence(3, 25);
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(params).toEqual([3, 25]);
+    expect(sql).toContain("LIMIT $2");
+  });
+});
+
 // ─── findCoverArtBackfillCandidates ───────────────────────────────────────────
 
 describe("findCoverArtBackfillCandidates()", () => {
@@ -613,6 +658,26 @@ describe("updateTrackAnalysisByTrackId()", () => {
 
     const [sql, params] = dbQuery.mock.calls[0];
     expect(sql).toContain("key_confidence");
+    expect(params).toContain(null);
+  });
+
+  it("sets bpm_confidence when provided as a number (#531)", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().updateTrackAnalysisByTrackId("t1", { bpm_confidence: 0.258 });
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(sql).toContain("bpm_confidence");
+    expect(params).toContain(0.258);
+  });
+
+  it("sets bpm_confidence = null when explicitly null (#531)", async () => {
+    dbQuery.mockResolvedValue({ rows: [] });
+
+    await makeRepo().updateTrackAnalysisByTrackId("t1", { bpm_confidence: null });
+
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(sql).toContain("bpm_confidence");
     expect(params).toContain(null);
   });
 
