@@ -178,6 +178,7 @@ window that already has spins creates nothing twice.
 
 ```bash
 npm run build --workspace=packages/groovenet-client   # first
+npm run build --workspace=packages/groovenet-player
 npm run build --workspace=packages/groovenet-cli
 node build/bin/groovenet.js --help
 ```

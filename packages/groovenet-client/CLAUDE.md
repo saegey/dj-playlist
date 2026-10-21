@@ -38,7 +38,7 @@ types here so client and CLI consumers share the declaration.
    `packages/groovenet-python`; add a thin method and exact-request/contract tests
    there only if a worker consumes the endpoint (see its `CLAUDE.md`).
 3. Wire it into the CLI and/or the MCP server.
-4. Build in order: client → cli → mcp-server (`just build-packages`).
+4. Build in order: client → player → cli → mcp-server (`just build-packages`).
 
 ## Tests
 

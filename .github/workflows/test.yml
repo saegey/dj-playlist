@@ -45,6 +45,7 @@ jobs:
         run: |
           npm run lint --workspace=@groovenet/contracts
           npm run lint --workspace=@groovenet/client
+          npm run lint --workspace=@groovenet/player
           npm run lint --workspace=@groovenet/cli
           npm run lint --workspace=mcp-server
 
@@ -227,6 +228,7 @@ jobs:
         run: |
           npm --workspace @groovenet/contracts run build
           npm --workspace @groovenet/client run build
+          npm --workspace @groovenet/player run build
 
       - name: Run CLI tests with coverage
         run: npm --workspace @groovenet/cli run test:coverage

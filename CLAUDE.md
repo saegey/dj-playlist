@@ -157,7 +157,7 @@ is failing.
 - **Track types live in `my-collection-search/src/types/track.ts`.** Other
   packages still copy those types; migrated API contracts such as live sets
   live in `packages/groovenet-contracts/` and are imported by each consumer.
-- **Build order for the packages:** client → cli → mcp-server
+- **Build order for the packages:** client → player → cli → mcp-server
   (`just build-packages`).
 - **Integration tests are gated** behind `RUN_*_TESTS` env vars and run against
   throwaway containers (`just migrate-test`, `just redis-test`,

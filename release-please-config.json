@@ -29,6 +29,12 @@
       "include-component-in-tag": true,
       "changelog-path": "CHANGELOG.md"
     },
+    "packages/groovenet-player": {
+      "package-name": "@groovenet/player",
+      "component": "groovenet-player",
+      "include-component-in-tag": true,
+      "changelog-path": "CHANGELOG.md"
+    },
     "packages/groovenet-cli": {
       "package-name": "@groovenet/cli",
       "component": "groovenet-cli",
