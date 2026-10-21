@@ -229,6 +229,34 @@ describe("MpvBackend", () => {
     await backend.close();
   });
 
+  it("ignores nonnumeric observations and normal end-file reasons", async () => {
+    const { backend, child, sockets } = makeBackend();
+    const position = vi.fn();
+    const error = vi.fn();
+    backend.on("position", position);
+    backend.on("error", error);
+    await backend.listDevices();
+    sockets[0]!.emit("data", Buffer.from([
+      JSON.stringify({ event: "property-change", name: "duration", data: "unknown" }),
+      JSON.stringify({ event: "property-change", name: "time-pos", data: "unknown" }),
+      JSON.stringify({ event: "end-file", reason: "stop" }),
+    ].join("\n") + "\n"));
+    expect(position).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    child.signalCode = "SIGTERM";
+    child.emit("exit", null, "SIGTERM");
+    expect(error).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining("SIGTERM") }));
+    await backend.close();
+  });
+
+  it("rejects commands after the IPC socket has closed", async () => {
+    const { backend, sockets } = makeBackend();
+    await backend.listDevices();
+    sockets[0]!.destroy();
+    await expect(backend.seek(1)).rejects.toMatchObject({ code: "MPV_IPC", message: "mpv is not connected." });
+    await backend.close();
+  });
+
   it("reports failed IPC writes and times out commands that receive no response", async () => {
     const writeFailure = makeBackend({ writeError: true, startupTimeoutMs: 50 });
     await expect(writeFailure.backend.load({ url: "https://server.test/audio" })).rejects.toMatchObject({ code: "MPV_IPC" });

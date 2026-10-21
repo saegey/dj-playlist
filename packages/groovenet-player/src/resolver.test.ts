@@ -58,4 +58,16 @@ describe("TrackResolver", () => {
     expect(await resolver.playlist(1)).toEqual([]);
     expect(client.batchGetTracks).not.toHaveBeenCalled();
   });
+
+  it("drops unresolved playlist references", async () => {
+    const client = {
+      getPlaylistTracks: vi.fn(async () => ({ track_refs: [
+        { track_id: "available", friend_id: 1, position: 0 },
+        { track_id: "missing", friend_id: 2, position: 1 },
+      ] })),
+      batchGetTracks: vi.fn(async () => [track("available", "available.mp3")]),
+    } as unknown as GroovenetClient;
+    const resolver = new TrackResolver(client, { apiBase: "http://host/api" });
+    expect((await resolver.playlist(1)).map(({ track_id }) => track_id)).toEqual(["available"]);
+  });
 });

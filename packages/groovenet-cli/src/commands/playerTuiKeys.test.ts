@@ -13,6 +13,15 @@ describe("player TUI key mapping", () => {
     expect(playerTuiAction("j", {}, false)).toEqual({ type: "move", amount: 1 });
     expect(playerTuiAction("", { leftArrow: true }, false)).toEqual({ type: "seek-backward" });
     expect(playerTuiAction("q", {}, false)).toEqual({ type: "quit" });
+    expect(playerTuiAction("k", {}, false)).toEqual({ type: "move", amount: -1 });
+    expect(playerTuiAction("", { upArrow: true }, false)).toEqual({ type: "move", amount: -1 });
+    expect(playerTuiAction("", { downArrow: true }, false)).toEqual({ type: "move", amount: 1 });
+    expect(playerTuiAction("", { return: true }, false)).toEqual({ type: "select" });
+    expect(playerTuiAction("", { backspace: true }, false)).toEqual({ type: "remove" });
+    expect(playerTuiAction("=", {}, false)).toEqual({ type: "volume-up" });
+    expect(playerTuiAction("", { rightArrow: true }, false)).toEqual({ type: "seek-forward" });
+    expect(playerTuiAction("?", {}, false)).toEqual({ type: "help" });
+    expect(playerTuiAction("z", {}, false)).toBeNull();
   });
 
   it("edits a search query and handles submit/cancel keys", () => {

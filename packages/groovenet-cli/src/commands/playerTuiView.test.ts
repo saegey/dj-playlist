@@ -21,4 +21,16 @@ describe("player TUI state rendering", () => {
     ]);
     expect(formatTime(-1)).toBe("0:00");
   });
+
+  it("omits track metadata when BPM and key are absent", () => {
+    const snapshot = {
+      status: "paused", position: 0, duration: 0, volume: 100, error: null,
+      current: { id: "q1", track: { title: "Untitled", artist: "Unknown", bpm: null, key: "" } }, queue: [],
+    } as unknown as PlaybackSnapshot;
+    expect(formatPlayback(snapshot)).toEqual([
+      "Unknown — Untitled",
+      "",
+      expect.stringContaining("0:00 / 0:00 · paused · 100%"),
+    ]);
+  });
 });

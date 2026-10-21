@@ -114,6 +114,18 @@ describe("PlayerTui", () => {
     expect(app.lastFrame()).toContain("daemon unavailable");
   });
 
+  it("shows empty search results and uses the fallback for events without messages", async () => {
+    const props = makeProps();
+    props.api.searchTracks = vi.fn(async () => ({ tracks: [] })) as unknown as GroovenetClient["searchTracks"];
+    const app = render(<PlayerTui {...props} options={{ search: "missing track" }} />);
+    await act(async () => { await new Promise((resolve) => setImmediate(resolve)); });
+    expect(app.lastFrame()).toContain("No tracks found.");
+    await act(async () => {
+      (props.control as unknown as EventEmitter).emit("event", { event: "error", data: { error: {} } });
+    });
+    expect(app.lastFrame()).toContain("A track could not be played.");
+  });
+
   it("reports playlist loading errors and supports cancelling search", async () => {
     const props = makeProps();
     props.api.listPlaylists = vi.fn(async () => { throw new Error("Could not load playlists"); }) as unknown as GroovenetClient["listPlaylists"];
@@ -139,6 +151,31 @@ describe("PlayerTui", () => {
     expect(request).toHaveBeenCalledWith("devices.select", { id: "airplay" });
     await act(async () => { app.stdin.write("u"); app.stdin.write("x"); await new Promise((resolve) => setImmediate(resolve)); });
     expect(request).toHaveBeenCalledWith("queue.remove", { id: "q1" });
+  });
+
+  it("renders unselected items, handles empty selections, and respects playback boundaries", async () => {
+    const props = makeProps([{ id: "q1", track }, { id: "q2", track: { ...track, title: "Second track" } as Track }]);
+    const request = (props.control as unknown as { request: ReturnType<typeof vi.fn> }).request;
+    const app = render(<PlayerTui {...props} options={{}} />);
+    await act(async () => { await new Promise((resolve) => setImmediate(resolve)); });
+    expect(app.lastFrame()).toContain("Second track");
+    await act(async () => { app.stdin.write("j"); });
+    await act(async () => { app.stdin.write("x"); await new Promise((resolve) => setImmediate(resolve)); });
+    expect(request).toHaveBeenCalledWith("queue.remove", { id: "q2" });
+    request.mockResolvedValueOnce([]);
+    await act(async () => { app.stdin.write("d"); await new Promise((resolve) => setImmediate(resolve)); });
+    await act(async () => { app.stdin.write("\r"); });
+    expect(request).not.toHaveBeenCalledWith("devices.select", expect.anything());
+    request.mockResolvedValueOnce({ not: "a device list" });
+    await act(async () => { app.stdin.write("d"); await new Promise((resolve) => setImmediate(resolve)); });
+  });
+
+  it("adds a startup playlist to the queue", async () => {
+    const props = makeProps();
+    render(<PlayerTui {...props} options={{ playlist: "28" }} />);
+    await act(async () => { await new Promise((resolve) => setImmediate(resolve)); });
+    const request = (props.control as unknown as { request: ReturnType<typeof vi.fn> }).request;
+    expect(request).toHaveBeenCalledWith("queue.add", { playlistId: "28" });
   });
 
   it("attaches to an existing daemon and restores its client on exit", async () => {

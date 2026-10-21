@@ -69,6 +69,29 @@ describe("player control protocol", () => {
     await client.close();
   });
 
+  it("ignores unknown response ids and rejects requests on a non-writable connection", async () => {
+    const socket = new FakeSocket();
+    const write = socket.write.bind(socket);
+    socket.write = (data: string, callback?: (error?: Error | null) => void) => {
+      const request = JSON.parse(data) as { id: number; version: number };
+      socket.emit("data", Buffer.from(JSON.stringify({ jsonrpc: "2.0", version: request.version, id: request.id + 100, result: "stale" }) + "\n"));
+      return write(data, callback);
+    };
+    const client = new PlayerControlClient("fake.sock", 100, (() => {
+      queueMicrotask(() => socket.emit("connect"));
+      return socket as unknown as Socket;
+    }));
+    await expect(client.request("status")).resolves.toBe("ok");
+    await client.close();
+
+    const closedSocket = new FakeSocket();
+    const closedClient = new PlayerControlClient("fake.sock", 100, (() => {
+      queueMicrotask(() => { closedSocket.writable = false; closedSocket.emit("connect"); });
+      return closedSocket as unknown as Socket;
+    }));
+    await expect(closedClient.request("status")).rejects.toMatchObject({ code: "DAEMON_UNAVAILABLE" });
+  });
+
   it("reports connection, write, and request timeout failures", async () => {
     const unavailable = new FakeSocket();
     const unavailableClient = new PlayerControlClient("fake.sock", 10, (() => {

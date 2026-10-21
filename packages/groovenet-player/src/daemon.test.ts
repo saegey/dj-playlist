@@ -166,4 +166,50 @@ describe("PlayerDaemon", () => {
       await daemon.stop();
     } finally { await rm(dir, { recursive: true, force: true }); }
   });
+
+  it("ignores requests without an integer id and validates malformed dispatch parameters", async () => {
+    const { dir, daemon, server } = await makeDaemon();
+    const socket = new FakeSocket();
+    const request = (id: number, method: string, params?: Record<string, unknown>) => ({ jsonrpc: "2.0", version: 1, id, method, params });
+    try {
+      await daemon.start();
+      server.accept?.(socket as unknown as Socket);
+      socket.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", version: 1, id: "bad", method: "status" })}\n`));
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(socket.responses).toHaveLength(0);
+      for (const [id, method, params] of [
+        [1, "queue.remove", {}],
+        [2, "devices.select", { id: "" }],
+        [3, "queue.add", { query: "  " }],
+        [4, "queue.addTrack", { track: [] }],
+        [5, "seek", { seconds: "soon" }],
+        [6, "volume", { volume: Number.NaN }],
+      ] as Array<[number, string, Record<string, unknown>]>) {
+        const result = await send(socket, request(id, method, params));
+        expect(result.error).toBeDefined();
+      }
+      expect(socket.responses).toHaveLength(6);
+    } finally { await daemon.stop(); await rm(dir, { recursive: true, force: true }); }
+  });
+
+  it("does not write broadcasts to disconnected clients and can stop before starting", async () => {
+    const backend = new TestPlaybackBackend();
+    const { dir, daemon, player } = await makeDaemon(makePlayer(undefined, backend));
+    const neverStarted = await makeDaemon();
+    const socket = new FakeSocket();
+    try {
+      await neverStarted.daemon.stop();
+      await daemon.start();
+      const server = (daemon as unknown as { server: FakeServer }).server;
+      server.accept?.(socket as unknown as Socket);
+      socket.writable = false;
+      player.add([{ track_id: "a", friend_id: 1, title: "a" } as Track]);
+      expect(socket.responses).toHaveLength(0);
+    } finally {
+      await daemon.stop();
+      await daemon.stop();
+      await rm(neverStarted.dir, { recursive: true, force: true });
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });

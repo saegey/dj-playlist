@@ -63,7 +63,7 @@ export function PlayerTui({ control, api, initialSnapshot, options }: {
 }) {
   const { exit } = useApp();
   const [snapshot, setSnapshot] = useState(initialSnapshot);
-  const [view, setView] = useState<View>(options.search ? "search" : options.playlist ? "queue" : "queue");
+  const [view, setView] = useState<View>(options.search ? "search" : "queue");
   const [query, setQuery] = useState(options.search ?? "");
   const [editingSearch, setEditingSearch] = useState(false);
   const [searchResults, setSearchResults] = useState<Track[]>([]);

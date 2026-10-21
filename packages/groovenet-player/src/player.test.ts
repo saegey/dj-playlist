@@ -135,6 +135,43 @@ describe("PlayerCore", () => {
     expect(player.snapshot.status).toBe("error");
   });
 
+  it("preserves typed backend errors and handles an ended event without a current track", async () => {
+    const { player, backend } = makePlayer();
+    backend.load = vi.fn(async () => { throw new PlayerError("DEVICE_UNAVAILABLE", "output disappeared"); });
+    player.add([track("unreachable", "remote.mp3")]);
+    await expect(player.play(0)).rejects.toMatchObject({ code: "DEVICE_UNAVAILABLE", message: "output disappeared" });
+
+    const ended = vi.fn();
+    player.on("track-ended", ended);
+    await player.close();
+    player.remove(0);
+    backend.finish();
+    await vi.waitFor(() => expect(player.snapshot.status).toBe("ended"));
+    expect(ended).not.toHaveBeenCalled();
+  });
+
+  it("rejects previous on an empty queue and safely stays on the first track", async () => {
+    const { player } = makePlayer();
+    await expect(player.previous()).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });
+    player.add([track("first", "first.mp3")]);
+    await player.play();
+    await player.previous();
+    expect(player.snapshot.current?.track.track_id).toBe("first");
+  });
+
+  it("supports explicit queue selection and next without a current track", async () => {
+    const { player } = makePlayer();
+    player.add([track("first", "first.mp3"), track("second", "second.mp3")]);
+    await player.play(1);
+    expect(player.snapshot.current?.track.track_id).toBe("second");
+    await player.next();
+    expect(player.snapshot.status).toBe("ended");
+
+    await player.close();
+    await player.next();
+    expect(player.snapshot.current?.track.track_id).toBe("first");
+  });
+
   it("rejects play on an empty queue and handles queue movement", async () => {
     const { player } = makePlayer();
     await expect(player.play()).rejects.toMatchObject({ code: "INVALID_ARGUMENT" });

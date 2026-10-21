@@ -3,9 +3,11 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PlayerControlClient } from "@groovenet/player";
 import { PlayerDaemon } from "@groovenet/player";
+import { runPlayerTui } from "./playerTui.js";
 import { addPlayerCommands } from "./player.js";
 
 vi.mock("node:child_process", () => ({ spawn: vi.fn(() => ({ unref: vi.fn(), once: vi.fn() })) }));
+vi.mock("./playerTui.js", () => ({ runPlayerTui: vi.fn() }));
 
 function makeProgram() {
   const program = new Command();
@@ -28,6 +30,29 @@ describe("player CLI commands", () => {
     expect(request).toHaveBeenCalledWith("status");
     expect(write).toHaveBeenCalledWith('{\n  "status": "playing"\n}\n');
     expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("renders sparse queue, device, and status results with safe defaults", async () => {
+    const request = vi.spyOn(PlayerControlClient.prototype, "request")
+      .mockResolvedValueOnce([
+        { id: "entry-1", track: { title: "Unknown artist" } },
+        { track: {} },
+        { id: "device-1", name: "Built in" },
+        {},
+      ])
+      .mockResolvedValueOnce({ status: "stopped", position: 4, duration: null })
+      .mockResolvedValueOnce({ result: "ignored" });
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    await makeProgram().parseAsync(["node", "test", "player", "queue", "list"]);
+    await makeProgram().parseAsync(["node", "test", "player", "status"]);
+    await makeProgram().parseAsync(["node", "test", "player", "status", "--json"]);
+    expect(request).toHaveBeenCalledTimes(3);
+    expect(log).toHaveBeenCalledWith("1. Unknown artist — Unknown artist [entry-1]");
+    expect(log).toHaveBeenCalledWith("2. Unknown track — Unknown artist []");
+    expect(log).toHaveBeenCalledWith("3. Built in [device-1]");
+    expect(log).toHaveBeenCalledWith("4. Unknown device []");
+    expect(log).toHaveBeenCalledWith("Status: stopped");
+    expect(log).toHaveBeenCalledWith("Position: 4s");
   });
 
   it("uses playlist queue options and renders queue entries", async () => {
@@ -90,6 +115,17 @@ describe("player CLI commands", () => {
     expect(log).toHaveBeenCalledWith("No entries.");
     expect(log).toHaveBeenCalledWith("1. Living room — AirPlay [airplay]");
     expect(success).toHaveBeenCalledWith(expect.stringContaining("Player daemon stopped."));
+  });
+
+  it("pauses when the current status is not paused and reports non-Error failures", async () => {
+    vi.spyOn(PlayerControlClient.prototype, "request")
+      .mockResolvedValueOnce({ status: "playing" })
+      .mockRejectedValueOnce("wire failure");
+    const error = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    await makeProgram().parseAsync(["node", "test", "player", "pause"]);
+    await makeProgram().parseAsync(["node", "test", "player", "next"]);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("wire failure"));
+    expect(process.exitCode).toBe(1);
   });
 
   it("starts a detached daemon and prints the JSON result", async () => {
@@ -170,6 +206,31 @@ describe("player CLI commands", () => {
       expect(error).toHaveBeenCalledWith(expect.stringContaining("interactive player requires a TTY"));
       expect(process.exitCode).toBe(1);
     } finally {
+      if (stdinDescriptor) Object.defineProperty(process.stdin, "isTTY", stdinDescriptor);
+      else Reflect.deleteProperty(process.stdin, "isTTY");
+      if (stdoutDescriptor) Object.defineProperty(process.stdout, "isTTY", stdoutDescriptor);
+      else Reflect.deleteProperty(process.stdout, "isTTY");
+    }
+  });
+
+  it("starts the interactive TUI in a TTY and reports startup failures", async () => {
+    const stdinDescriptor = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
+    const stdoutDescriptor = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
+    Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: true });
+    Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: true });
+    const error = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const runTui = vi.mocked(runPlayerTui);
+    try {
+      runTui.mockResolvedValueOnce();
+      await makeProgram().parseAsync(["node", "test", "player", "--search", "jazz"]);
+      expect(runTui).toHaveBeenCalledWith({ search: "jazz" });
+
+      runTui.mockRejectedValueOnce("terminal failed");
+      await makeProgram().parseAsync(["node", "test", "player", "--playlist", "18"]);
+      expect(error).toHaveBeenCalledWith(expect.stringContaining("terminal failed"));
+      expect(process.exitCode).toBe(1);
+    } finally {
+      runTui.mockReset();
       if (stdinDescriptor) Object.defineProperty(process.stdin, "isTTY", stdinDescriptor);
       else Reflect.deleteProperty(process.stdin, "isTTY");
       if (stdoutDescriptor) Object.defineProperty(process.stdout, "isTTY", stdoutDescriptor);
