@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { createConnection, type Socket } from "node:net";
 import { unlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { AudioDevice, PlaybackBackend, PlaybackBackendEvents, PlaybackSource } from "./types.js";
 import { PlayerError } from "./types.js";
 
@@ -11,6 +13,9 @@ export interface MpvBackendOptions {
   insecureTls?: boolean;
   startupTimeoutMs?: number;
   commandTimeoutMs?: number;
+  /** Injectable process and IPC transport for deterministic backend tests. */
+  spawnProcess?: (executable: string, args: string[]) => ChildProcess;
+  connectSocket?: (path: string) => Socket;
 }
 
 interface IpcMessage {
@@ -28,7 +33,7 @@ interface IpcMessage {
 export class MpvBackend extends EventEmitter implements PlaybackBackend {
   private process: ChildProcess | null = null;
   private socket: Socket | null = null;
-  private socketPath = `/tmp/groovenet-mpv-${process.pid}-${randomUUID()}.sock`;
+  private socketPath = join(tmpdir(), `gn-mpv-${process.pid}-${randomUUID().slice(0, 12)}.sock`);
   private buffer = "";
   private nextId = 1;
   private pending = new Map<number, { resolve: (data: unknown) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }>();
@@ -38,6 +43,8 @@ export class MpvBackend extends EventEmitter implements PlaybackBackend {
   private readonly executable: string;
   private readonly startupTimeoutMs: number;
   private readonly commandTimeoutMs: number;
+  private readonly spawnProcess: NonNullable<MpvBackendOptions["spawnProcess"]>;
+  private readonly connectSocket: NonNullable<MpvBackendOptions["connectSocket"]>;
   private duration: number | null = null;
 
   constructor(options: MpvBackendOptions = {}) {
@@ -45,6 +52,8 @@ export class MpvBackend extends EventEmitter implements PlaybackBackend {
     this.executable = options.executable ?? "mpv";
     this.startupTimeoutMs = options.startupTimeoutMs ?? 5000;
     this.commandTimeoutMs = options.commandTimeoutMs ?? 5000;
+    this.spawnProcess = options.spawnProcess ?? ((executable, args) => spawn(executable, args, { stdio: "ignore" }));
+    this.connectSocket = options.connectSocket ?? createConnection;
     this.insecureTls = options.insecureTls ?? false;
   }
 
@@ -156,7 +165,7 @@ export class MpvBackend extends EventEmitter implements PlaybackBackend {
     const args = ["--idle=yes", "--no-terminal", `--input-ipc-server=${this.socketPath}`];
     if (this.insecureTls) args.push("--tls-verify=no");
     try {
-      this.process = spawn(this.executable, args, { stdio: "ignore" });
+      this.process = this.spawnProcess(this.executable, args);
     } catch (error) {
       throw new PlayerError("MPV_NOT_FOUND", "Could not start mpv. Install mpv and ensure it is on PATH.", { cause: error });
     }
@@ -185,8 +194,11 @@ export class MpvBackend extends EventEmitter implements PlaybackBackend {
       }
       try {
         await this.connect();
+        if (this.spawnError) throw this.spawnError;
         await this.command("observe_property", 1, "time-pos");
+        if (this.spawnError) throw this.spawnError;
         await this.command("observe_property", 2, "duration");
+        if (this.spawnError) throw this.spawnError;
         return;
       } catch {
         this.socket?.destroy();
@@ -199,7 +211,7 @@ export class MpvBackend extends EventEmitter implements PlaybackBackend {
 
   private connect(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const socket = createConnection(this.socketPath);
+      const socket = this.connectSocket(this.socketPath);
       const failed = (error: Error) => { socket.destroy(); reject(error); };
       socket.once("error", failed);
       socket.once("connect", () => {

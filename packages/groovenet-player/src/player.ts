@@ -144,8 +144,15 @@ export class PlayerCore extends EventEmitter {
   }
 
   async previous(): Promise<void> {
+    if (!this.queue.length) throw new PlayerError("INVALID_ARGUMENT", "The playback queue is empty");
     const index = this.current ? this.queue.items.findIndex((entry) => entry.id === this.current!.id) : this.currentIndex;
-    await this.play(Math.max(0, index - 1));
+    let target = Math.max(0, index - 1);
+    while (target >= 0 && !this.resolver.source(this.queue.items[target]!.track)) {
+      const skipped = this.queue.items[target]!;
+      this.emit("track-skipped", skipped, new PlayerError("NO_AUDIO", `No downloaded audio is available for “${skipped.track.title}”.`));
+      target--;
+    }
+    if (target >= 0) await this.play(target);
   }
 
   async seek(seconds: number): Promise<void> {

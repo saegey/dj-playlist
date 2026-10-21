@@ -77,6 +77,7 @@ test-packages:
   # The CLI imports @groovenet/client by its build output, so build it first.
   {{mise_exec}} npm run build --workspace=packages/groovenet-client
   {{mise_exec}} npm run build --workspace=packages/groovenet-player
+  {{mise_exec}} npm run test --workspace=packages/groovenet-player
   {{mise_exec}} npm run test --workspace=packages/groovenet-cli
   {{mise_exec}} npm run test --workspace=mcp-server
 
