@@ -1,5 +1,7 @@
 import { Command } from "commander";
-import { GroovenetClient, loadConfig } from "@groovenet/client";
+import chalk from "chalk";
+import Table from "cli-table3";
+import { GroovenetClient, formatDurationHms, loadConfig, type PlaylistCheck } from "@groovenet/client";
 import type { LiveSet } from "@groovenet/contracts";
 import { printPlaylists, printTracks, printJson, printSuccess, printError } from "../output.js";
 import { boundedIntOption } from "../options.js";
@@ -7,6 +9,53 @@ import { boundedIntOption } from "../options.js";
 function makeClient(): GroovenetClient {
   const cfg = loadConfig();
   return new GroovenetClient({ baseUrl: cfg.api_base, apiKey: cfg.api_key, insecureTls: cfg.insecure_tls, clientName: "cli" });
+}
+
+type PlaylistCheckResult = PlaylistCheck & { unresolved_track_ids: string[] };
+
+/** Renders a playlist check as sections; each problem is listed under its heading. */
+export function formatPlaylistCheck(check: PlaylistCheckResult): string[] {
+  const lines: string[] = [];
+  const heading = (text: string, count: number) =>
+    lines.push("", count === 0 ? chalk.green(`✓ ${text}`) : chalk.yellow(`⚠ ${text} (${count})`));
+  const note = (text: string, positions: number[]) => {
+    if (positions.length > 0) lines.push(chalk.gray(`  ${text}: ${positions.map((p) => `#${p}`).join(", ")}`));
+  };
+
+  lines.push(chalk.bold(`${check.track_count} tracks · ${formatDurationHms(check.total_duration_seconds)}`));
+  note("no duration (not counted)", check.missing_duration);
+  if (check.unresolved_track_ids.length > 0) {
+    lines.push(chalk.red(`  Not found, skipped: ${check.unresolved_track_ids.join(", ")}`));
+  }
+
+  const jumpAt = new Map(check.bpm.jumps.map((j) => [j.to_position, j.delta]));
+  heading(`BPM jumps above ${check.bpm.threshold}`, check.bpm.jumps.length);
+  if (check.bpm.curve.length > 0) {
+    const table = new Table({ head: [chalk.cyan("#"), chalk.cyan("Track"), chalk.cyan("BPM"), chalk.cyan("Δ")] });
+    for (const p of check.bpm.curve) {
+      const delta = jumpAt.get(p.position);
+      table.push([p.position, p.track_id, p.bpm ?? "-", delta === undefined ? "" : chalk.yellow(`${delta > 0 ? "+" : ""}${delta}`)]);
+    }
+    lines.push(table.toString());
+  }
+  note("no BPM", check.bpm.missing);
+
+  heading("Key clashes", check.keys.clashes.length);
+  for (const c of check.keys.clashes) {
+    lines.push(`  #${c.from_position} → #${c.to_position}  ${c.from_key} (${c.from_camelot}) → ${c.to_key} (${c.to_camelot})`);
+  }
+  note("no usable key", check.keys.missing);
+
+  heading("Repeated releases", check.repeated_releases.length);
+  for (const r of check.repeated_releases) {
+    lines.push(`  release ${r.release} at ${r.positions.map((p) => `#${p}`).join(", ")}  (${r.track_ids.join(", ")})`);
+  }
+
+  heading("Side-order violations", check.side_order_violations.length);
+  for (const v of check.side_order_violations) {
+    lines.push(`  #${v.position} ${v.track_id}: ${v.reason}`);
+  }
+  return lines;
 }
 
 export function addPlaylistsCommands(program: Command): void {
@@ -64,6 +113,22 @@ export function addPlaylistsCommands(program: Command): void {
           console.log(`Playlist tracks (${tracks.length}):`);
           printTracks(tracks, false);
         }
+      } catch (err: unknown) {
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+    });
+
+  playlists
+    .command("check <id>")
+    .description("Check a playlist for BPM jumps, key clashes, repeated releases and vinyl side-order mistakes")
+    .option("--bpm-threshold <n>", "Flag adjacent BPM changes above this many BPM", boundedIntOption(0), 8)
+    .option("--json", "Output as JSON")
+    .action(async (id: string, opts: { bpmThreshold: number; json?: boolean }) => {
+      try {
+        const check = await makeClient().checkPlaylist(id, { bpmJumpThreshold: opts.bpmThreshold });
+        if (opts.json) printJson(check);
+        else for (const line of formatPlaylistCheck(check)) console.log(line);
       } catch (err: unknown) {
         printError(err instanceof Error ? err.message : String(err));
         process.exit(1);

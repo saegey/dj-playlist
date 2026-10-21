@@ -214,6 +214,18 @@ const tools = [
     },
   },
   {
+    name: "check_playlist",
+    description: "Review a playlist for mixing and vinyl-handling problems. Returns total duration, the BPM curve with jumps between adjacent tracks above a threshold, key clashes between adjacent tracks (not the same Camelot key, a neighbour, or the relative major/minor), releases that appear more than once, and vinyl side-order violations (tracks from one release that are not in side-and-position order). Positions are 1-based. Tracks missing a BPM, key or duration are listed, not guessed; `ok` is true when nothing was flagged.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        playlist_id: { type: "string", description: "The playlist ID" },
+        bpm_jump_threshold: { type: "number", minimum: 0, description: "Flag adjacent BPM changes above this many BPM (default 8)" },
+      },
+      required: ["playlist_id"],
+    },
+  },
+  {
     name: "get_friends",
     description: "List all friends and their shared collections",
     inputSchema: {
@@ -363,6 +375,7 @@ interface ToolArgs {
   star_rating?: number;
   genre?: string[];
   limit?: number;
+  bpm_jump_threshold?: number;
   track_id?: string;
   username?: string;
   notes?: string;
@@ -726,6 +739,16 @@ ${track.soundcloud_url ? `- SoundCloud: ${track.soundcloud_url}` : ""}
       return {
         content: [{ type: "text", text: `Playlist track IDs:\n${track_refs.map((r) => r.track_id).join("\n")}` }],
       };
+    }
+
+    case "check_playlist": {
+      if (typeof args.playlist_id !== "string" || args.playlist_id.trim().length === 0) {
+        throw new Error("playlist_id is required and must be a nonempty string");
+      }
+      if (args.bpm_jump_threshold !== undefined && (typeof args.bpm_jump_threshold !== "number" || !Number.isFinite(args.bpm_jump_threshold) || args.bpm_jump_threshold < 0)) {
+        throw new Error("bpm_jump_threshold must be a non-negative number");
+      }
+      return jsonResult(await client.checkPlaylist(args.playlist_id, { bpmJumpThreshold: args.bpm_jump_threshold }));
     }
 
     case "get_friends": {

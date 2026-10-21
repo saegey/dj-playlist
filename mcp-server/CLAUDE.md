@@ -31,7 +31,7 @@ Tools, grouped:
   `get_missing_apple_music`
 - **albums** — `search_albums`, `get_album`, `update_album`, `download_album`
 - **playlists** — `list_playlists`, `get_playlist`, `get_playlist_tracks`,
-  `create_playlist`, `generate_ai_playlist`
+  `check_playlist`, `create_playlist`, `generate_ai_playlist`
 - **friends** — `get_friends`, `add_friend`
 - **discovery** — `get_recommendations`, `find_similar_identity`,
   `find_similar_vibe`, `get_similar_genres`
