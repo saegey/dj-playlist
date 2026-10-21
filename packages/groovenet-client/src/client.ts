@@ -394,8 +394,23 @@ export class GroovenetClient {
     };
   }
 
-  async createPlaylist(name: string, tracks: string[] = []): Promise<Playlist> {
-    return this.request<Playlist>("POST", "/playlists", { name, tracks });
+  /**
+   * Create a playlist. The API only accepts track objects (`{ track_id,
+   * friend_id? }`), so bare track id strings are wrapped here; `defaultFriendId`
+   * is the friend they belong to, and an object that names its own friend keeps it.
+   */
+  async createPlaylist(
+    name: string,
+    tracks: Array<string | { track_id: string; friend_id?: number }> = [],
+    defaultFriendId?: number
+  ): Promise<Playlist> {
+    const refs = tracks.map((track) => {
+      const ref = typeof track === "string" ? { track_id: track } : track;
+      return defaultFriendId === undefined || ref.friend_id !== undefined
+        ? ref
+        : { ...ref, friend_id: defaultFriendId };
+    });
+    return this.request<Playlist>("POST", "/playlists", { name, tracks: refs });
   }
 
   /**
