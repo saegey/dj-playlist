@@ -5,6 +5,7 @@ import { GroovenetClient, formatDurationHms, loadConfig, type PlaylistCheck } fr
 import type { LiveSet } from "@groovenet/contracts";
 import { printPlaylists, printTracks, printJson, printSuccess, printError } from "../output.js";
 import { boundedIntOption } from "../options.js";
+import { parseTrackRefs, readTracksSource } from "./playlistTrackRefs.js";
 
 function makeClient(): GroovenetClient {
   const cfg = loadConfig();
@@ -58,6 +59,21 @@ export function formatPlaylistCheck(check: PlaylistCheckResult): string[] {
   return lines;
 }
 
+export async function showPlaylist(client: GroovenetClient, id: string, json: boolean): Promise<void> {
+  const { track_refs } = await client.getPlaylistTracks(id);
+  if (track_refs.length === 0) {
+    console.log("Playlist is empty.");
+    return;
+  }
+  const tracks = await client.batchGetTracks(track_refs);
+  if (json) {
+    printJson(tracks);
+  } else {
+    console.log(`Playlist tracks (${tracks.length}):`);
+    printTracks(tracks, false);
+  }
+}
+
 export function addPlaylistsCommands(program: Command): void {
   const playlists = program.command("playlists").description("Manage playlists");
   const sets = playlists.command("set").description("Manage a playlist's optional set record");
@@ -100,19 +116,26 @@ export function addPlaylistsCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .action(async (id: string, opts: { json?: boolean }) => {
       try {
+        await showPlaylist(makeClient(), id, opts.json ?? false);
+      } catch (err: unknown) {
+        printError(err instanceof Error ? err.message : String(err));
+        process.exit(1);
+      }
+    });
+
+  playlists
+    .command("set-tracks <id>")
+    .description("Replace a playlist's tracks from a file of refs (track_id or track_id,friend_id per line)")
+    .requiredOption("--tracks-file <path>", "File of track refs, one per line; - reads stdin")
+    .option("--json", "Output as JSON")
+    .action(async (id: string, opts: { tracksFile: string; json?: boolean }) => {
+      try {
+        const playlistId = Number(id);
+        if (!Number.isInteger(playlistId) || playlistId < 1) throw new Error(`Invalid playlist id: ${id}`);
+        const refs = parseTrackRefs(readTracksSource(opts.tracksFile), loadConfig().default_friend_id);
         const client = makeClient();
-        const { track_refs } = await client.getPlaylistTracks(id);
-        if (track_refs.length === 0) {
-          console.log("Playlist is empty.");
-          return;
-        }
-        const tracks = await client.batchGetTracks(track_refs);
-        if (opts.json) {
-          printJson(tracks);
-        } else {
-          console.log(`Playlist tracks (${tracks.length}):`);
-          printTracks(tracks, false);
-        }
+        await client.setPlaylistTracks(playlistId, refs);
+        await showPlaylist(client, id, opts.json ?? false);
       } catch (err: unknown) {
         printError(err instanceof Error ? err.message : String(err));
         process.exit(1);

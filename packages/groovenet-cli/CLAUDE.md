@@ -21,7 +21,7 @@ config              set | show
 tracks              search | show | update | missing-apple-music | deleted
                     restore | recommend | similar-identity | similar-vibe
 albums              list | show | update | download | delete
-playlists           list | show | check | create | generate | log-spins
+playlists           list | show | check | create | set-tracks | generate | log-spins
 friends             list | add
 fingerprint-library (no subcommands — scope flags)
 vinyl               status | detections | ingests | aggregate
@@ -302,6 +302,16 @@ side-order violations. The analysis is `checkPlaylist` in `@groovenet/client`
 (shared with the MCP `check_playlist` tool); the CLI only renders it
 (`formatPlaylistCheck`). `--json` is the full result. The exit code is 0 even
 when problems are flagged.
+
+## playlists set-tracks
+
+`groovenet playlists set-tracks <id> --tracks-file refs.txt` replaces a
+playlist's tracks (`setPlaylistTracks`, `PATCH /api/playlists`) and prints the
+result like `playlists show`. One ref per line, in order: `track_id` or
+`track_id,friend_id` (bare ids use `default_friend_id`); blank lines and `#`
+lines are ignored; `-` reads stdin. Every line is validated before any request,
+and all bad lines are reported together. Named `set-tracks` so it does not
+collide with `playlists set`, which manages the set record.
 
 ## playlists log-spins
 
