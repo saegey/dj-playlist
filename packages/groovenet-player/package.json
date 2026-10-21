@@ -1,0 +1,45 @@
+{
+  "name": "@groovenet/player",
+  "version": "0.1.0",
+  "description": "Headless playback core and mpv backend for Groovenet",
+  "type": "module",
+  "engines": { "node": ">=22.12.0" },
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./build/index.js",
+      "types": "./build/index.d.ts"
+    },
+    "./protocol": {
+      "import": "./build/protocol.js",
+      "types": "./build/protocol.d.ts"
+    },
+    "./testing": {
+      "import": "./build/testing.js",
+      "types": "./build/testing.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "files": ["build/"],
+  "dependencies": {
+    "@groovenet/client": "^3.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@vitest/coverage-v8": "^5.0.3",
+    "typescript": "^7.0",
+    "vitest": "^5.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Public-Vinyl-Radio/groovenet.git",
+    "directory": "packages/groovenet-player"
+  }
+}

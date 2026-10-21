@@ -29,6 +29,12 @@ groovenet albums search "kind of blue"    # browse albums
 groovenet playlists list                  # list playlists
 groovenet playlists log-spins 176         # log the latest performance as spins
 groovenet friends list                    # manage the friends system
+groovenet player start --detach           # start local headless audio playback
+groovenet player                         # open the interactive player (TTY)
+groovenet player --search "bpm:120"       # start the TUI with search results
+groovenet player --playlist 176          # start the TUI with a playlist queued
+groovenet player queue add "miles davis"  # search and queue downloaded tracks
+groovenet player play                     # start or resume playback
 groovenet play <track-id>                 # play a track via MPD on the server
 groovenet fingerprint-library             # index reference audio for matching
 groovenet sets derive set.mp3 --playlist 176  # tracklist + diff from a set recording
@@ -54,6 +60,38 @@ Run `groovenet --help` (or `groovenet <command> --help`) for the full command re
 | `genres` | Find similar genres and reconcile track tags onto the taxonomy |
 | `fingerprint-library` | Build the reference fingerprint index used to recognise vinyl as it plays |
 | `sets` | Derive a corrected tracklist from a recording of a set, and diff it against the plan |
+| `player` | Start, control, and stop local headless playback through the player daemon |
+
+### Local player
+
+The local player uses mpv and plays downloaded audio through the configured
+Groovenet API. Start it in the foreground with `groovenet player start`, or
+detach it and stop it later with `groovenet player stop`:
+
+```bash
+groovenet player start --detach
+groovenet player queue add "miles davis"
+groovenet player play
+groovenet player status --json
+groovenet player queue list
+groovenet player devices
+groovenet player stop
+```
+
+`queue add --playlist-id <id>` adds a playlist instead of a search. The daemon
+stores its pidfile and Unix socket under `~/.groovenet/player/`. See the
+[@groovenet/player protocol document](../groovenet-player/PROTOCOL.md) for the
+versioned local control protocol.
+
+The TUI requires mpv on `PATH` and a terminal. mpv audio outputs are available
+on macOS, Linux and Windows. macOS AirPlay speakers appear as CoreAudio devices;
+Linux AirPlay routing depends on PipeWire RAOP support, with AirPlay 2 support
+varying by receiver. Windows has no native AirPlay route. AirPlay playback adds
+about two seconds of latency, so it is suitable for auditioning rather than
+beatmatching. The help line in the TUI lists the keyboard shortcuts: arrows or
+`j`/`k` select, Enter adds or plays, Space pauses, `n`/`p` skip, left/right seek,
+`+`/`-` change volume, `/` searches, `l` opens playlists, `u` opens the queue,
+`d` selects an output, `r` starts playback, and `q` quits.
 
 ### genres similar
 

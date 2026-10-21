@@ -29,6 +29,9 @@ sets                derive | review | show
 records             clean | sleeve | log | copies (add | label | remove)
                     history | void | care [--summary]
 genres              similar | reconcile | review | apply | proposals | coverage
+player              start | stop | play | pause | next | prev | seek | volume
+                    status | queue (add | remove | list) | devices
+                    (bare `player` opens the lazy-loaded Ink TUI)
 ```
 
 **Every command takes `--json`.** Use it for anything programmatic — the default
@@ -178,6 +181,7 @@ window that already has spins creates nothing twice.
 
 ```bash
 npm run build --workspace=packages/groovenet-client   # first
+npm run build --workspace=packages/groovenet-player
 npm run build --workspace=packages/groovenet-cli
 node build/bin/groovenet.js --help
 ```

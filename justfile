@@ -76,6 +76,8 @@ test-packages:
   {{mise_exec}} npm run test --workspace=packages/groovenet-client
   # The CLI imports @groovenet/client by its build output, so build it first.
   {{mise_exec}} npm run build --workspace=packages/groovenet-client
+  {{mise_exec}} npm run build --workspace=packages/groovenet-player
+  {{mise_exec}} npm run test --workspace=packages/groovenet-player
   {{mise_exec}} npm run test --workspace=packages/groovenet-cli
   {{mise_exec}} npm run test --workspace=mcp-server
 
@@ -83,6 +85,7 @@ lint:
   {{mise_exec}} npm run lint --prefix my-collection-search
   {{mise_exec}} npm run lint --workspace=@groovenet/contracts
   {{mise_exec}} npm run lint --workspace=@groovenet/client
+  {{mise_exec}} npm run lint --workspace=@groovenet/player
   {{mise_exec}} npm run lint --workspace=@groovenet/cli
   {{mise_exec}} npm run lint --workspace=mcp-server
 
@@ -90,6 +93,7 @@ typecheck:
   {{mise_exec}} npm run build --workspace=@groovenet/contracts
   {{mise_exec}} npm run typecheck --prefix my-collection-search
   {{mise_exec}} npm run build --workspace=packages/groovenet-client
+  {{mise_exec}} npm run build --workspace=packages/groovenet-player
   {{mise_exec}} npm run build --workspace=packages/groovenet-cli
   {{mise_exec}} npm run build --workspace=mcp-server
 
@@ -230,6 +234,7 @@ build-all: build-app build-essentia build-ga-service build-download-worker build
 build-packages:
   {{mise_exec}} npm run build --workspace=packages/groovenet-contracts
   {{mise_exec}} npm run build --workspace=packages/groovenet-client
+  {{mise_exec}} npm run build --workspace=packages/groovenet-player
   {{mise_exec}} npm run build --workspace=packages/groovenet-cli
   {{mise_exec}} npm run build --workspace=mcp-server
 
