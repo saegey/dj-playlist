@@ -1,9 +1,11 @@
 {
   "name": "@groovenet/player",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Headless playback core and mpv backend for Groovenet",
   "type": "module",
-  "engines": { "node": ">=22.12.0" },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "exports": {
@@ -26,9 +28,11 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
-  "files": ["build/"],
+  "files": [
+    "build/"
+  ],
   "dependencies": {
-    "@groovenet/client": "^3.2.1"
+    "@groovenet/client": "^3.3.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",

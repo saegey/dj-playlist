@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-contracts-v1.0.0...groovenet-contracts-v1.0.1) (2026-10-21)
+
+
+### Bug Fixes
+
+* **essentia:** store BPM confidence from the beat histogram ([#607](https://github.com/Public-Vinyl-Radio/groovenet/issues/607)) ([356ba4b](https://github.com/Public-Vinyl-Radio/groovenet/commit/356ba4b8ef369253272290bed33e913c1538156d))
+
 ## 1.0.0 (2026-10-18)
 
 

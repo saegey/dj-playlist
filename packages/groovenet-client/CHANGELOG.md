@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.3.0](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-client-v3.2.1...groovenet-client-v3.3.0) (2026-10-21)
+
+
+### Features
+
+* **cli:** add local player daemon and TUI ([#628](https://github.com/Public-Vinyl-Radio/groovenet/issues/628)) ([2adaaa2](https://github.com/Public-Vinyl-Radio/groovenet/commit/2adaaa28c0ee6493be255f8068a2cef42251db7d))
+
+
+### Bug Fixes
+
+* **mcp:** send track objects when creating a playlist ([#629](https://github.com/Public-Vinyl-Radio/groovenet/issues/629)) ([ae4003f](https://github.com/Public-Vinyl-Radio/groovenet/commit/ae4003f40144c216a125cd1010f519efdea91f19))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @groovenet/contracts bumped from 1.0.0 to 1.0.1
+
 ## [3.2.1](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-client-v3.2.0...groovenet-client-v3.2.1) (2026-10-18)
 
 
