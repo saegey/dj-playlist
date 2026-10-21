@@ -11,7 +11,8 @@ src/
   types.ts     domain types (Track, Album, Playlist, Friend, …)
   schemas.ts   Zod schemas
   config.ts    ~/.groovenet/config.json load/save
-  index.ts     re-exports all four
+  playlistCheck.ts  pure playlist analysis (BPM, keys, releases, vinyl sides)
+  index.ts     re-exports all of the above
 ```
 
 ```ts
@@ -51,6 +52,15 @@ issues. Coverage is 100%.
 
 ## Gotchas
 
+- `checkPlaylist(id, { bpmJumpThreshold })` composes `getPlaylistTracks` and
+  `batchGetTracks` (which does not promise playlist order, so it re-sorts by
+  ref) and runs the pure `checkPlaylist(tracks)` from `playlistCheck.ts`. Refs
+  the lookup cannot resolve come back in `unresolved_track_ids`. A vinyl side
+  violation is any track whose side is lower, or whose position is lower on the
+  same side, than the last well-placed track of its release; a violation does
+  not move that marker, so one misplaced track is one finding. Keys are
+  converted to Camelot; a missing or unrecognised key/BPM is listed, never
+  guessed, and does not fail the check.
 - `searchTracks` maps the API's `hits` to `tracks`; the wire shape and the
   returned shape differ.
 - `generatePlaylist` tolerates the optimiser returning either an array or a

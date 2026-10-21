@@ -670,6 +670,45 @@ describe("GroovenetClient playlist endpoints", () => {
     });
   });
 
+  it("checkPlaylist returns the check in playlist order and lists unresolved refs", async () => {
+    const track = (track_id: string, friend_id: number, bpm: number) => ({ track_id, friend_id, bpm, key: "A minor", duration_seconds: 100 });
+    requestMock
+      .mockResolvedValueOnce({ data: { playlist_id: 9, tracks: [
+        { track_id: "1-A1", friend_id: 4, position: 0 },
+        { track_id: "ghost", friend_id: 4, position: 1 },
+        { track_id: "1-A2", friend_id: 4, position: 2 },
+      ] } })
+      // Returned out of playlist order on purpose.
+      .mockResolvedValueOnce({ data: [track("1-A2", 4, 150), track("1-A1", 4, 120)] });
+    const client = new GroovenetClient({ baseUrl: "https://example.test" });
+
+    const result = await client.checkPlaylist(9, { bpmJumpThreshold: 10 });
+
+    expect(result.unresolved_track_ids).toEqual(["ghost"]);
+    expect(result.track_count).toBe(2);
+    expect(result.total_duration_seconds).toBe(200);
+    expect(result.bpm.jumps).toHaveLength(1);
+    expect(result.bpm.curve.map((p) => p.track_id)).toEqual(["1-A1", "1-A2"]);
+    expect(requestMock).toHaveBeenLastCalledWith({
+      method: "POST",
+      url: "/tracks/batch",
+      data: { tracks: [
+        { track_id: "1-A1", friend_id: 4, position: 0 },
+        { track_id: "ghost", friend_id: 4, position: 1 },
+        { track_id: "1-A2", friend_id: 4, position: 2 },
+      ] },
+      params: undefined,
+    });
+  });
+
+  it("checkPlaylist skips the track lookup for an empty playlist", async () => {
+    requestMock.mockClear();
+    const client = clientReturning({ playlist_id: 9, tracks: [] });
+    const result = await client.checkPlaylist("9");
+    expect(result).toMatchObject({ track_count: 0, ok: true, unresolved_track_ids: [] });
+    expect(requestMock).toHaveBeenCalledTimes(1);
+  });
+
   it("logs playlist spins with performance and derivation context", async () => {
     const result = { playlist_id: 9, performance_id: 4, performed_at: "2026-10-01T20:00:00Z", created: 2, skipped: 0 };
     const client = clientReturning(result);

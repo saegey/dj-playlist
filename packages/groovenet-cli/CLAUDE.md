@@ -21,7 +21,7 @@ config              set | show
 tracks              search | show | update | missing-apple-music | deleted
                     restore | recommend | similar-identity | similar-vibe
 albums              list | show | update | download | delete
-playlists           list | show | create | generate | log-spins
+playlists           list | show | check | create | generate | log-spins
 friends             list | add
 fingerprint-library (no subcommands — scope flags)
 vinyl               status | detections | ingests | aggregate
@@ -288,6 +288,16 @@ overwrites a track's metadata with values actually sent.
 
 Review is interactive only — it refuses without a TTY, and with `--json` or
 `--no-wait` on `derive`.
+
+## playlists check
+
+`groovenet playlists check <id> [--bpm-threshold 8] [--json]` reports total
+duration, the BPM curve with jumps above the threshold, Camelot key clashes
+between adjacent tracks, releases that appear more than once, and vinyl
+side-order violations. The analysis is `checkPlaylist` in `@groovenet/client`
+(shared with the MCP `check_playlist` tool); the CLI only renders it
+(`formatPlaylistCheck`). `--json` is the full result. The exit code is 0 even
+when problems are flagged.
 
 ## playlists log-spins
 

@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from "axios";
 import { Agent as HttpsAgent } from "https";
+import { checkPlaylist, type PlaylistCheck, type PlaylistCheckOptions } from "./playlistCheck.js";
 import type {
   Track,
   Playlist,
@@ -392,6 +393,28 @@ export class GroovenetClient {
         position: t.position,
       })),
     };
+  }
+
+  /**
+   * Fetches a playlist's tracks in playlist order and runs the playlist check
+   * over them. References the batch lookup could not resolve are listed in
+   * `unresolved_track_ids` rather than silently shortening the playlist.
+   */
+  async checkPlaylist(
+    playlistId: number | string,
+    options?: PlaylistCheckOptions
+  ): Promise<PlaylistCheck & { unresolved_track_ids: string[] }> {
+    const { track_refs } = await this.getPlaylistTracks(playlistId);
+    const found = track_refs.length > 0 ? await this.batchGetTracks(track_refs) : [];
+    const byRef = new Map(found.map((t) => [`${t.friend_id}:${t.track_id}`, t]));
+    const tracks: Track[] = [];
+    const unresolved: string[] = [];
+    for (const ref of track_refs) {
+      const track = byRef.get(`${ref.friend_id}:${ref.track_id}`);
+      if (track) tracks.push(track);
+      else unresolved.push(ref.track_id);
+    }
+    return { ...checkPlaylist(tracks, options), unresolved_track_ids: unresolved };
   }
 
   /**
