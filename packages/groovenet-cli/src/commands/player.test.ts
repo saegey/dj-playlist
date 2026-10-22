@@ -196,6 +196,29 @@ describe("player CLI commands", () => {
     expect(stop).toHaveBeenCalledOnce();
   });
 
+  it("reports foreground shutdown failures and sets a non-zero exit code", async () => {
+    vi.spyOn(PlayerDaemon.prototype, "start").mockResolvedValue();
+    const stop = vi.spyOn(PlayerDaemon.prototype, "stop").mockRejectedValue(new Error("foreground close failed"));
+    const error = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    setImmediate(() => process.emit("SIGINT"));
+    await makeProgram().parseAsync(["node", "test", "player", "start"]);
+    expect(stop).toHaveBeenCalledOnce();
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("foreground close failed"));
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("reports detached shutdown failures that are not Error objects", async () => {
+    vi.spyOn(PlayerDaemon.prototype, "start").mockResolvedValue();
+    const stop = vi.spyOn(PlayerDaemon.prototype, "stop").mockRejectedValue("detached close failed");
+    const error = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    await makeProgram().parseAsync(["node", "test", "player", "_daemon"]);
+    process.emit("SIGTERM");
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(stop).toHaveBeenCalledOnce();
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("detached close failed"));
+    expect(process.exitCode).toBe(1);
+  });
+
   it("explains that the interactive player requires a TTY", async () => {
     const stdinDescriptor = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
     const stdoutDescriptor = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");

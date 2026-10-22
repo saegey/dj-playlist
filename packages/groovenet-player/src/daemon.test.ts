@@ -109,6 +109,26 @@ describe("PlayerDaemon", () => {
     } finally { processKill.mockRestore(); await rm(dir, { recursive: true, force: true }); }
   });
 
+  it("does not replace an active socket when its pidfile points to a stale process", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "groovenet-daemon-"));
+    const paths = { socketPath: join(dir, "player.sock"), pidPath: join(dir, "player.pid") };
+    await writeFile(paths.pidPath, "123\n");
+    await writeFile(paths.socketPath, "active socket placeholder");
+    const daemon = new PlayerDaemon({
+      player: makePlayer(), paths, isProcessAlive: () => false,
+      connectSocket: (() => {
+        const socket = new FakeSocket();
+        setImmediate(() => socket.emit("connect"));
+        return socket as unknown as Socket;
+      }),
+    });
+    try {
+      await expect(daemon.start()).rejects.toThrow("already appears to be running.");
+      expect(await readFile(paths.pidPath, "utf8")).toBe("123\n");
+      expect(await readFile(paths.socketPath, "utf8")).toBe("active socket placeholder");
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
   it("returns a clear error for a mismatched protocol version", async () => {
     const dir = await mkdtemp(join(tmpdir(), "groovenet-daemon-"));
     const paths = { socketPath: join(dir, "player.sock"), pidPath: join(dir, "player.pid") };
