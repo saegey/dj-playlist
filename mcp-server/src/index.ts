@@ -5,7 +5,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { GroovenetClient, type Track, type RecordActionInput, type RecordCareStatus, type SleeveType, type CleaningMethod, type TrackSearchMode, type TrackSearchQuery } from "@groovenet/client";
+import { GroovenetClient, type Track, type RecordActionInput, type RecordCareStatus, type SleeveType, type CleaningMethod, type TrackSearchMode, type TrackSearchQuery, type PlaylistOptimizerMode } from "@groovenet/client";
 import dotenv from "dotenv";
 import { captureException, initSentry } from "./observability.js";
 
@@ -18,6 +18,8 @@ const API_KEY = process.env.API_KEY;
 const DEFAULT_FRIEND_ID = process.env.DEFAULT_FRIEND_ID ? parseInt(process.env.DEFAULT_FRIEND_ID, 10) : 1;
 
 const client = new GroovenetClient({ baseUrl: API_BASE, apiKey: API_KEY, clientName: "mcp" });
+
+const PLAYLIST_MODES: readonly PlaylistOptimizerMode[] = ["genetic", "greedy", "cohesive_blocks"];
 
 // Define tool schemas
 const tools = [
@@ -193,11 +195,29 @@ const tools = [
   },
   {
     name: "generate_ai_playlist",
-    description: "Generate an optimized DJ playlist using genetic algorithm based on seed tracks. Creates smooth transitions based on BPM, key compatibility, and mood progression.",
+    description: "Reorder a set of tracks into an optimized DJ playlist with smooth transitions in BPM, key and mood. Pass track references only: each item needs `track_id` (the string track ID from search_tracks, NOT the numeric `id`) and optionally `friend_id`; title, BPM, key and mood data are looked up for you. Every track needs a BPM and an audio-vibe embedding, otherwise the request is rejected and the offending track IDs are listed in the error.",
     inputSchema: {
       type: "object",
       properties: {
-        playlist: { type: "array", items: { type: "object" }, description: "Array of seed track objects" },
+        playlist: {
+          type: "array",
+          minItems: 1,
+          description: "Tracks to order, as references",
+          items: {
+            type: "object",
+            properties: {
+              track_id: { type: "string", minLength: 1, description: "The track ID (string, e.g. '33416876-D2')" },
+              friend_id: { type: "number", description: "Friend who owns the track (defaults to the configured default friend)" },
+              bpm: { type: "number", description: "Optional BPM override; otherwise the stored BPM is used" },
+            },
+            required: ["track_id"],
+          },
+        },
+        mode: {
+          type: "string",
+          enum: [...PLAYLIST_MODES],
+          description: "Optimizer to use (server default: genetic)",
+        },
       },
       required: ["playlist"],
     },
@@ -399,7 +419,7 @@ interface ToolArgs {
   playlist_id?: string;
   name?: string;
   tracks?: string[];
-  playlist?: Track[];
+  playlist?: Array<Record<string, unknown>>;
   // ai search
   title?: string;
   artist?: string;
@@ -444,6 +464,40 @@ async function recordHistory(copyId: number, friendId: number, includeVoided?: b
 
 function formatDuration(seconds: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Resolve the `playlist` argument of generate_ai_playlist to full tracks. The
+ * route reads BPM from the request body, so a bare `{ track_id, friend_id }` is
+ * hydrated here; fields the caller sent override the stored ones.
+ */
+async function hydratePlaylistSeeds(items: Array<Record<string, unknown>>): Promise<Track[]> {
+  if (items.length === 0) {
+    throw new Error("playlist must contain at least one track: [{ track_id, friend_id? }]");
+  }
+  const refs = items.map((item, i) => {
+    if (typeof item?.track_id !== "string" || item.track_id === "") {
+      const hint = item && "id" in item
+        ? " `id` is the numeric database ID, not the track ID; use the string `track_id` from search_tracks."
+        : "";
+      throw new Error(`playlist[${i}] is missing \`track_id\` (non-empty string).${hint}`);
+    }
+    const friend_id = typeof item.friend_id === "number" ? item.friend_id : DEFAULT_FRIEND_ID;
+    return { track_id: item.track_id, friend_id };
+  });
+  const found = await client.batchGetTracks(refs);
+  const byRef = new Map(found.map((t) => [`${t.friend_id}:${t.track_id}`, t]));
+  const missing = refs.filter((r) => !byRef.has(`${r.friend_id}:${r.track_id}`));
+  if (missing.length > 0) {
+    throw new Error(
+      `Tracks not found: ${missing.map((r) => `${r.track_id} (friend_id ${r.friend_id})`).join(", ")}. Check track_id and friend_id.`
+    );
+  }
+  return items.map((item, i) => ({
+    ...byRef.get(`${refs[i].friend_id}:${refs[i].track_id}`)!,
+    ...item,
+    ...refs[i],
+  })) as Track[];
 }
 
 async function handleToolCall(name: string, args: ToolArgs) {
@@ -724,7 +778,12 @@ ${track.soundcloud_url ? `- SoundCloud: ${track.soundcloud_url}` : ""}
     }
 
     case "generate_ai_playlist": {
-      const tracks = await client.generatePlaylist(args.playlist ?? []);
+      const seeds = await hydratePlaylistSeeds(args.playlist ?? []);
+      const mode = args.mode as string | undefined;
+      if (mode !== undefined && !PLAYLIST_MODES.includes(mode as PlaylistOptimizerMode)) {
+        throw new Error(`mode must be one of ${PLAYLIST_MODES.join(", ")}`);
+      }
+      const tracks = await client.generatePlaylist(seeds, mode as PlaylistOptimizerMode | undefined);
       const list = tracks
         .map((t, i) => `${i + 1}. ${t.title} - ${t.artist} (${t.bpm ?? "?"} BPM, ${t.key ?? "?"})`)
         .join("\n");

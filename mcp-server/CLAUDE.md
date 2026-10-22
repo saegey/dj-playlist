@@ -40,6 +40,12 @@ Tools, grouped:
   `get_record_care_summary`, `get_record_copies` (with history),
   `void_record_action`
 
+`generate_ai_playlist` takes refs (`{ track_id, friend_id? }`), not track
+objects: the handler hydrates them with `batchGetTracks` because the route reads
+BPM from the request body. An item with `id` but no `track_id` is rejected,
+never mapped — `id` is the numeric database ID, not the track ID. Server
+`details`/`invalid` come through in the error via `GroovenetClient`.
+
 ## Build
 
 ```bash

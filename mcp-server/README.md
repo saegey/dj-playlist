@@ -28,7 +28,7 @@ Uses the shared [`@groovenet/client`](../packages/groovenet-client) typed API cl
 | `list_playlists` | List all playlists |
 | `get_playlist` | Playlist tracks with full metadata |
 | `create_playlist` | Create a new playlist |
-| `generate_ai_playlist` | Optimized DJ playlist via genetic algorithm |
+| `generate_ai_playlist` | Reorder tracks for smooth BPM/key/mood transitions. Takes `playlist: [{ track_id, friend_id? }]` (string `track_id`, not the numeric `id`) and optional `mode` (`genetic`, `greedy`, `cohesive_blocks`); BPM and other track data are looked up. Tracks need a BPM and audio-vibe embedding or the error lists them |
 | `get_playlist_tracks` | Raw track IDs for a playlist |
 
 ### Friends
