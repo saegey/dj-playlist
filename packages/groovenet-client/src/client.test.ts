@@ -111,6 +111,25 @@ describe("GroovenetClient error handling", () => {
     await expect(client.listPlaylists()).rejects.toThrow("API Error: no such track");
   });
 
+  it("appends validation `details` and `invalid` to the message", async () => {
+    isAxiosErrorMock.mockReturnValue(true);
+    const client = new GroovenetClient({ baseUrl: "https://example.test" });
+
+    requestMock.mockRejectedValueOnce({
+      response: { data: { error: "Invalid playlist payload", details: { fieldErrors: { playlist: ["Required"] } } } },
+      message: "Request failed",
+    });
+    await expect(client.listPlaylists()).rejects.toThrow(
+      'API Error: Invalid playlist payload {"fieldErrors":{"playlist":["Required"]}}'
+    );
+
+    requestMock.mockRejectedValueOnce({
+      response: { data: { error: "Some tracks are missing", invalid: [{ track_id: "t1", reason: "missing_bpm" }] } },
+      message: "Request failed",
+    });
+    await expect(client.listPlaylists()).rejects.toThrow('[{"track_id":"t1","reason":"missing_bpm"}]');
+  });
+
   it("falls back to the response `message` field", async () => {
     isAxiosErrorMock.mockReturnValue(true);
     requestMock.mockRejectedValue({ response: { data: { message: "bad request" } }, message: "Request failed" });
@@ -782,6 +801,18 @@ describe("GroovenetClient playlist endpoints", () => {
       method: "POST",
       url: "/playlists/genetic",
       data: { playlist: [] },
+      params: undefined,
+    });
+  });
+
+  it("generatePlaylist sends the optimizer mode when given", async () => {
+    const client = clientReturning({ result: [] });
+
+    await client.generatePlaylist([], "greedy");
+    expect(requestMock).toHaveBeenCalledWith({
+      method: "POST",
+      url: "/playlists/genetic",
+      data: { playlist: [], mode: "greedy" },
       params: undefined,
     });
   });

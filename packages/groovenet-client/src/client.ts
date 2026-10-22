@@ -82,6 +82,7 @@ import type {
   RecordCopyListResponse,
   RecordCopyResponse,
   RecordCopyUpdateInput,
+  PlaylistOptimizerMode,
 } from "./types.js";
 
 export interface GroovenetClientConfig {
@@ -137,11 +138,11 @@ export class GroovenetClient {
       return { status: res.status, data: res.data };
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        const msg =
-          (error.response?.data as Record<string, string>)?.error ||
-          (error.response?.data as Record<string, string>)?.message ||
-          error.message;
-        throw new Error(`API Error: ${msg}`);
+        const body = error.response?.data as Record<string, unknown> | undefined;
+        const msg = body?.error || body?.message || error.message;
+        // Validation failures carry the fix in `details` / `invalid`; keep it.
+        const extra = body?.details ?? body?.invalid;
+        throw new Error(`API Error: ${msg}${extra ? ` ${JSON.stringify(extra)}` : ""}`);
       }
       throw error;
     }
@@ -471,11 +472,11 @@ export class GroovenetClient {
     await this.request<LiveSetDeleteResponse>("DELETE", `/playlists/${playlistId}/set`);
   }
 
-  async generatePlaylist(tracks: Track[]): Promise<Track[]> {
+  async generatePlaylist(tracks: Track[], mode?: PlaylistOptimizerMode): Promise<Track[]> {
     const result = await this.request<{ result: Track[] | Record<string, Track> }>(
       "POST",
       "/playlists/genetic",
-      { playlist: tracks }
+      { playlist: tracks, ...(mode ? { mode } : {}) }
     );
     const raw = result.result;
     if (Array.isArray(raw)) return raw;
