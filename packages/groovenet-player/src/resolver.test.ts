@@ -49,6 +49,19 @@ describe("TrackResolver", () => {
     ]);
   });
 
+  it("keeps API order when playlist refs have no positions", async () => {
+    const tracks = [track("a", "a.mp3"), track("b", "b.mp3")];
+    const client = {
+      getPlaylistTracks: vi.fn(async () => ({ track_refs: [
+        { track_id: "a", friend_id: 1 },
+        { track_id: "b", friend_id: 1 },
+      ] })),
+      batchGetTracks: vi.fn(async () => tracks),
+    } as unknown as GroovenetClient;
+    const resolver = new TrackResolver(client, { apiBase: "http://host/api" });
+    expect((await resolver.playlist(1)).map(({ track_id }) => track_id)).toEqual(["a", "b"]);
+  });
+
   it("returns an empty playlist without making a batch request", async () => {
     const client = {
       getPlaylistTracks: vi.fn(async () => ({ track_refs: [] })),
