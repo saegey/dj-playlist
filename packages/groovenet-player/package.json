@@ -1,6 +1,6 @@
 {
   "name": "@groovenet/player",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Headless playback core and mpv backend for Groovenet",
   "type": "module",
   "engines": {
