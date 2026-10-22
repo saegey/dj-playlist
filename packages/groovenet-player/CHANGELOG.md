@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-player-v0.1.1...groovenet-player-v0.1.2) (2026-10-22)
+
+
+### Bug Fixes
+
+* **player:** handle optional playlist ref positions and publish publicly ([#632](https://github.com/Public-Vinyl-Radio/groovenet/issues/632)) ([c81c0e0](https://github.com/Public-Vinyl-Radio/groovenet/commit/c81c0e09db8f63605fcdd3254459d8299145e01a))
+
 ## [0.1.1](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-player-v0.1.0...groovenet-player-v0.1.1) (2026-10-21)
 
 

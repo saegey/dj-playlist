@@ -1,6 +1,6 @@
 {
   "name": "@groovenet/cli",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "CLI for managing your Groovenet DJ collection",
   "type": "module",
   "engines": {
@@ -42,7 +42,7 @@
   "dependencies": {
     "@groovenet/client": "^3.3.0",
     "@groovenet/contracts": "1.0.1",
-    "@groovenet/player": "0.1.1",
+    "@groovenet/player": "0.1.2",
     "chalk": "^6.0.1",
     "cli-table3": "^0.6",
     "commander": "^15",

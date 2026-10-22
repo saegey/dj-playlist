@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.7](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.6...v0.3.7) (2026-10-22)
+
+
+### Features
+
+* **cli:** set playlist tracks from a file ([#631](https://github.com/Public-Vinyl-Radio/groovenet/issues/631)) ([3714aa0](https://github.com/Public-Vinyl-Radio/groovenet/commit/3714aa04a7dd72362a89baa280f957e75dfcc9d8))
+
+
+### Bug Fixes
+
+* **player:** handle optional playlist ref positions and publish publicly ([#632](https://github.com/Public-Vinyl-Radio/groovenet/issues/632)) ([c81c0e0](https://github.com/Public-Vinyl-Radio/groovenet/commit/c81c0e09db8f63605fcdd3254459d8299145e01a))
+
 ## [0.3.6](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.5...v0.3.6) (2026-10-21)
 
 

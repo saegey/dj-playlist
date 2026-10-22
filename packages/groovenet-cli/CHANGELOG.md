@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.4.0](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-cli-v3.3.0...groovenet-cli-v3.4.0) (2026-10-22)
+
+
+### Features
+
+* **cli:** set playlist tracks from a file ([#631](https://github.com/Public-Vinyl-Radio/groovenet/issues/631)) ([3714aa0](https://github.com/Public-Vinyl-Radio/groovenet/commit/3714aa04a7dd72362a89baa280f957e75dfcc9d8))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @groovenet/player bumped from 0.1.1 to 0.1.2
+
 ## [3.3.0](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-cli-v3.2.1...groovenet-cli-v3.3.0) (2026-10-21)
 
 
