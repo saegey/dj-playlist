@@ -32,7 +32,7 @@ export class TrackResolver {
 
   async playlist(playlistId: number | string): Promise<Track[]> {
     const { track_refs } = await this.client.getPlaylistTracks(playlistId);
-    const refs = track_refs.slice().sort((a, b) => a.position - b.position);
+    const refs = track_refs.slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     if (!refs.length) return [];
     const tracks = await this.client.batchGetTracks(refs);
     const byRef = new Map(tracks.map((track) => [`${track.friend_id}:${track.track_id}`, track]));
