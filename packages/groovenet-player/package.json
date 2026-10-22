@@ -31,6 +31,9 @@
   "files": [
     "build/"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@groovenet/client": "^3.3.0"
   },
