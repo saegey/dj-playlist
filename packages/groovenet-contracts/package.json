@@ -31,5 +31,10 @@
     "typescript": "^7.0",
     "vitest": "^5.0.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Public-Vinyl-Radio/groovenet.git",
+    "directory": "packages/groovenet-contracts"
+  }
 }
