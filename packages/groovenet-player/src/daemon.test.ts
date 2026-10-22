@@ -89,6 +89,46 @@ describe("PlayerDaemon", () => {
     } finally { processKill.mockRestore(); await rm(dir, { recursive: true, force: true }); }
   });
 
+  it("does not remove an active socket when the pidfile is missing", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "groovenet-daemon-"));
+    const paths = { socketPath: join(dir, "player.sock"), pidPath: join(dir, "player.pid") };
+    await writeFile(paths.socketPath, "active socket placeholder");
+    const processKill = vi.spyOn(process, "kill");
+    const daemon = new PlayerDaemon({
+      player: makePlayer(), paths,
+      connectSocket: (() => {
+        const socket = new FakeSocket();
+        setImmediate(() => socket.emit("connect"));
+        return socket as unknown as Socket;
+      }),
+    });
+    try {
+      await expect(daemon.start()).rejects.toThrow("already appears to be running");
+      expect(processKill).not.toHaveBeenCalled();
+      expect(await readFile(paths.socketPath, "utf8")).toBe("active socket placeholder");
+    } finally { processKill.mockRestore(); await rm(dir, { recursive: true, force: true }); }
+  });
+
+  it("does not replace an active socket when its pidfile points to a stale process", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "groovenet-daemon-"));
+    const paths = { socketPath: join(dir, "player.sock"), pidPath: join(dir, "player.pid") };
+    await writeFile(paths.pidPath, "123\n");
+    await writeFile(paths.socketPath, "active socket placeholder");
+    const daemon = new PlayerDaemon({
+      player: makePlayer(), paths, isProcessAlive: () => false,
+      connectSocket: (() => {
+        const socket = new FakeSocket();
+        setImmediate(() => socket.emit("connect"));
+        return socket as unknown as Socket;
+      }),
+    });
+    try {
+      await expect(daemon.start()).rejects.toThrow("already appears to be running.");
+      expect(await readFile(paths.pidPath, "utf8")).toBe("123\n");
+      expect(await readFile(paths.socketPath, "utf8")).toBe("active socket placeholder");
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
   it("returns a clear error for a mismatched protocol version", async () => {
     const dir = await mkdtemp(join(tmpdir(), "groovenet-daemon-"));
     const paths = { socketPath: join(dir, "player.sock"), pidPath: join(dir, "player.pid") };
@@ -167,16 +207,27 @@ describe("PlayerDaemon", () => {
     } finally { await rm(dir, { recursive: true, force: true }); }
   });
 
-  it("ignores requests without an integer id and validates malformed dispatch parameters", async () => {
+  it("removes its runtime files even when backend shutdown fails", async () => {
+    const { dir, paths, daemon, player } = await makeDaemon();
+    vi.spyOn(player, "close").mockRejectedValue(new Error("backend close failed"));
+    try {
+      await daemon.start();
+      await expect(daemon.stop()).rejects.toThrow("backend close failed");
+      await expect(readFile(paths.pidPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(readFile(paths.socketPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+
+  it("rejects malformed request envelopes and dispatch parameters", async () => {
     const { dir, daemon, server } = await makeDaemon();
     const socket = new FakeSocket();
     const request = (id: number, method: string, params?: Record<string, unknown>) => ({ jsonrpc: "2.0", version: 1, id, method, params });
     try {
       await daemon.start();
       server.accept?.(socket as unknown as Socket);
-      socket.emit("data", Buffer.from(`${JSON.stringify({ jsonrpc: "2.0", version: 1, id: "bad", method: "status" })}\n`));
-      await new Promise((resolve) => setImmediate(resolve));
-      expect(socket.responses).toHaveLength(0);
+      for (const envelope of [null, [], { jsonrpc: "2.0", version: 1, id: "bad", method: "status" }, { jsonrpc: "2.0", version: 1, id: 22, method: "status", params: [] }]) {
+        expect((await send(socket, envelope)).error).toBeDefined();
+      }
       for (const [id, method, params] of [
         [1, "queue.remove", {}],
         [2, "devices.select", { id: "" }],
@@ -188,7 +239,7 @@ describe("PlayerDaemon", () => {
         const result = await send(socket, request(id, method, params));
         expect(result.error).toBeDefined();
       }
-      expect(socket.responses).toHaveLength(6);
+      expect(socket.responses).toHaveLength(10);
     } finally { await daemon.stop(); await rm(dir, { recursive: true, force: true }); }
   });
 
