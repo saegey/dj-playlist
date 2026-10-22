@@ -37,7 +37,7 @@ const tools = [
   },
   {
     name: "search_tracks",
-    description: "Search for tracks in your collection by title, artist, album, genre, or tags — or, with mode 'semantic' or 'hybrid', by a natural-language description of the sound (e.g. 'dusty 70s cumbia with brass'). Supports filtering by genre (including subgenres), BPM range, key, and star rating. The query may be empty to list by filters alone.",
+    description: "Search for tracks in your collection by title, artist, album, genre, or tags — or, with mode 'semantic' or 'hybrid', by a natural-language description of the sound (e.g. 'dusty 70s cumbia with brass'). Supports filtering by genre (including subgenres), BPM range, key, and star rating. The query may be empty to list by filters alone. Each result line ends with refs in the form `| track_id=… friend_id=… [duration=m:ss] [release_id=…]`: pass `track_id` (and `friend_id` for a friend's track) to create_playlist, get_track_details and generate_ai_playlist.",
     inputSchema: {
       type: "object",
       properties: {
@@ -467,6 +467,23 @@ function formatDuration(seconds: number): string {
 }
 
 /**
+ * One search_tracks result: the human summary, then ` | ` and space-separated
+ * `key=value` refs in a fixed order (track_id, friend_id, duration, release_id).
+ * Optional fields are omitted when absent, so a missing key means "unknown".
+ */
+function formatTrackSearchLine(t: Track): string {
+  const summary = `• ${t.title} - ${t.artist}${t.bpm ? ` (${t.bpm} BPM)` : ""}${t.key ? `, ${t.key}` : ""}${t.star_rating != null ? ` [★${t.star_rating}]` : ""}`;
+  const duration = t.duration_seconds ? formatDuration(t.duration_seconds) : t.duration;
+  const refs = [
+    `track_id=${t.track_id}`,
+    `friend_id=${t.friend_id}`,
+    duration ? `duration=${duration}` : "",
+    t.release_id ? `release_id=${t.release_id}` : "",
+  ].filter(Boolean);
+  return `${summary} | ${refs.join(" ")}`;
+}
+
+/**
  * Resolve the `playlist` argument of generate_ai_playlist to full tracks. The
  * route reads BPM from the request body, so a bare `{ track_id, friend_id }` is
  * hydrated here; fields the caller sent override the stored ones.
@@ -572,7 +589,7 @@ async function handleToolCall(name: string, args: ToolArgs) {
       }
 
       const list = result.tracks
-        .map((t) => `• ${t.title} - ${t.artist}${t.bpm ? ` (${t.bpm} BPM)` : ""}${t.key ? `, ${t.key}` : ""}${t.star_rating != null ? ` [★${t.star_rating}]` : ""}`)
+        .map(formatTrackSearchLine)
         .join("\n");
 
       return {
