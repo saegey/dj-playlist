@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   loadConfig: vi.fn(),
-  client: { logPlaylistSpins: vi.fn(), getLiveSet: vi.fn(), checkPlaylist: vi.fn() },
+  client: { logPlaylistSpins: vi.fn(), getLiveSet: vi.fn(), checkPlaylist: vi.fn(),
+    setPlaylistTracks: vi.fn(), getPlaylistTracks: vi.fn(), batchGetTracks: vi.fn(),
+  },
+  printTracks: vi.fn(),
+  readTracksSource: vi.fn(),
   Client: vi.fn(),
   printJson: vi.fn(),
   printSuccess: vi.fn(),
@@ -16,10 +20,15 @@ vi.mock("@groovenet/client", async (importOriginal) => ({
 }));
 vi.mock("../output.js", () => ({
   printPlaylists: vi.fn(),
-  printTracks: vi.fn(),
+  printTracks: mocks.printTracks,
   printJson: mocks.printJson,
   printSuccess: mocks.printSuccess,
   printError: mocks.printError,
+}));
+
+vi.mock("./playlistTrackRefs.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./playlistTrackRefs.js")>()),
+  readTracksSource: mocks.readTracksSource,
 }));
 
 import { Command } from "commander";
@@ -243,6 +252,83 @@ describe("playlists check", () => {
     mocks.client.checkPlaylist.mockRejectedValue("boom");
     await run("1");
     expect(mocks.printError).toHaveBeenCalledWith("boom");
+    exit.mockRestore();
+  });
+});
+
+describe("playlists set-tracks", () => {
+  const run = (...args: string[]) => {
+    const program = new Command().exitOverride();
+    addPlaylistsCommands(program);
+    return program.parseAsync(["node", "test", "playlists", "set-tracks", ...args]);
+  };
+  let exit: ReturnType<typeof vi.spyOn>;
+  let log: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    exit = vi.spyOn(process, "exit").mockImplementation((() => { throw new Error("exit"); }) as never);
+    log = vi.spyOn(console, "log").mockImplementation(() => {});
+    mocks.loadConfig.mockReturnValue({ api_base: "http://example.test/api", default_friend_id: 3 });
+    mocks.readTracksSource.mockReturnValue("1-A1\n# note\n2-B1,9\n");
+    mocks.client.setPlaylistTracks.mockResolvedValue({ id: 176 });
+    mocks.client.getPlaylistTracks.mockResolvedValue({ track_refs: [{ track_id: "1-A1", friend_id: 3 }] });
+    mocks.client.batchGetTracks.mockResolvedValue([{ track_id: "1-A1" }]);
+  });
+  afterEach(() => { exit.mockRestore(); log.mockRestore(); });
+
+  it("sets the ordered refs and shows the resulting playlist", async () => {
+    await run("176", "--tracks-file", "refs.txt");
+    expect(mocks.readTracksSource).toHaveBeenCalledWith("refs.txt");
+    expect(mocks.client.setPlaylistTracks).toHaveBeenCalledWith(176, [
+      { track_id: "1-A1", friend_id: 3 },
+      { track_id: "2-B1", friend_id: 9 },
+    ]);
+    expect(log).toHaveBeenCalledWith("Playlist tracks (1):");
+    expect(mocks.printTracks).toHaveBeenCalledWith([{ track_id: "1-A1" }], false);
+  });
+
+  it("supports stdin and JSON output", async () => {
+    await run("176", "--tracks-file", "-", "--json");
+    expect(mocks.readTracksSource).toHaveBeenCalledWith("-");
+    expect(mocks.printJson).toHaveBeenCalledWith([{ track_id: "1-A1" }]);
+  });
+
+  it("reports an empty resulting playlist", async () => {
+    mocks.client.getPlaylistTracks.mockResolvedValue({ track_refs: [] });
+    await run("176", "--tracks-file", "refs.txt");
+    expect(log).toHaveBeenCalledWith("Playlist is empty.");
+    expect(mocks.client.batchGetTracks).not.toHaveBeenCalled();
+  });
+
+  it("makes no request when a line is invalid", async () => {
+    mocks.readTracksSource.mockReturnValue("1-A1\n2-B1,x\n");
+    await expect(run("176", "--tracks-file", "refs.txt")).rejects.toThrow("exit");
+    expect(mocks.printError).toHaveBeenCalledWith(expect.stringContaining("line 2"));
+    expect(mocks.client.setPlaylistTracks).not.toHaveBeenCalled();
+    expect(mocks.Client).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-numeric playlist id before reading the file", async () => {
+    await expect(run("abc", "--tracks-file", "refs.txt")).rejects.toThrow("exit");
+    expect(mocks.printError).toHaveBeenCalledWith("Invalid playlist id: abc");
+    expect(mocks.readTracksSource).not.toHaveBeenCalled();
+  });
+
+  it("prints API failures, including non-Errors", async () => {
+    mocks.client.setPlaylistTracks.mockRejectedValue("boom");
+    await expect(run("176", "--tracks-file", "refs.txt")).rejects.toThrow("exit");
+    expect(mocks.printError).toHaveBeenCalledWith("boom");
+  });
+});
+
+describe("playlists show", () => {
+  it.each([[new Error("nope"), "nope"], ["plain", "plain"]])("prints failure %s and exits 1", async (failure, message) => {
+    const exit = vi.spyOn(process, "exit").mockImplementation((() => { throw new Error("exit"); }) as never);
+    mocks.client.getPlaylistTracks.mockRejectedValue(failure);
+    const program = new Command().exitOverride();
+    addPlaylistsCommands(program);
+    await expect(program.parseAsync(["node", "test", "playlists", "show", "1"])).rejects.toThrow("exit");
+    expect(mocks.printError).toHaveBeenCalledWith(message);
     exit.mockRestore();
   });
 });
