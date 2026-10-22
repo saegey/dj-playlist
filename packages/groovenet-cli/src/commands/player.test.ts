@@ -207,6 +207,16 @@ describe("player CLI commands", () => {
     expect(process.exitCode).toBe(1);
   });
 
+  it("formats non-Error foreground shutdown failures", async () => {
+    vi.spyOn(PlayerDaemon.prototype, "start").mockResolvedValue();
+    vi.spyOn(PlayerDaemon.prototype, "stop").mockRejectedValue("foreground close failed");
+    const error = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    setImmediate(() => process.emit("SIGTERM"));
+    await makeProgram().parseAsync(["node", "test", "player", "start"]);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("foreground close failed"));
+    expect(process.exitCode).toBe(1);
+  });
+
   it("reports detached shutdown failures that are not Error objects", async () => {
     vi.spyOn(PlayerDaemon.prototype, "start").mockResolvedValue();
     const stop = vi.spyOn(PlayerDaemon.prototype, "stop").mockRejectedValue("detached close failed");
@@ -215,6 +225,17 @@ describe("player CLI commands", () => {
     process.emit("SIGTERM");
     await new Promise((resolve) => setImmediate(resolve));
     expect(stop).toHaveBeenCalledOnce();
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("detached close failed"));
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("formats Error objects from detached shutdown failures", async () => {
+    vi.spyOn(PlayerDaemon.prototype, "start").mockResolvedValue();
+    vi.spyOn(PlayerDaemon.prototype, "stop").mockRejectedValue(new Error("detached close failed"));
+    const error = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    await makeProgram().parseAsync(["node", "test", "player", "_daemon"]);
+    process.emit("SIGTERM");
+    await new Promise((resolve) => setImmediate(resolve));
     expect(error).toHaveBeenCalledWith(expect.stringContaining("detached close failed"));
     expect(process.exitCode).toBe(1);
   });
