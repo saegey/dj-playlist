@@ -37,7 +37,10 @@ export class PlayerDaemon {
   };
   private readonly broadcastTrackStart = (entry: unknown) => this.broadcast("track-change", entry);
   private readonly broadcastTrackEnd = (entry: unknown) => this.broadcast("track-ended", entry);
-  private readonly broadcastTrackSkip = (entry: unknown, error: unknown) => this.broadcast("error", { entry, error });
+  private readonly broadcastTrackSkip = (entry: unknown, error: unknown) => {
+    const playerError = error as { code?: unknown; message?: unknown };
+    this.broadcast("error", { entry, error: { code: playerError.code, message: playerError.message } });
+  };
 
   constructor(private readonly options: PlayerDaemonOptions) {
     this.createServer = options.createServer ?? createServer;
@@ -79,11 +82,14 @@ export class PlayerDaemon {
       await new Promise<void>((resolve) => this.server!.close(() => resolve()));
     }
     this.server = null;
-    await this.options.player.close();
-    await Promise.all([
-      unlink(this.options.paths.socketPath).catch(() => undefined),
-      unlink(this.options.paths.pidPath).catch(() => undefined),
-    ]);
+    try {
+      await this.options.player.close();
+    } finally {
+      await Promise.all([
+        unlink(this.options.paths.socketPath).catch(() => undefined),
+        unlink(this.options.paths.pidPath).catch(() => undefined),
+      ]);
+    }
   }
 
   private async recoverStaleFiles(): Promise<void> {
@@ -92,8 +98,11 @@ export class PlayerDaemon {
       const parsed = Number.parseInt(await readFile(this.options.paths.pidPath, "utf8"), 10);
       if (Number.isInteger(parsed) && parsed > 0) pid = parsed;
     } catch { /* no pidfile */ }
-    if (pid !== null && this.isProcessAlive(pid) && await this.socketIsActive()) {
-      throw new Error(`Player daemon already appears to be running (pid ${pid}).`);
+    // The socket is authoritative. A missing, malformed, or stale pidfile must
+    // never cause us to unlink a live daemon's socket.
+    if (await this.socketIsActive()) {
+      const owner = pid !== null && this.isProcessAlive(pid) ? ` (pid ${pid})` : "";
+      throw new Error(`Player daemon already appears to be running${owner}.`);
     }
     await Promise.all([
       unlink(this.options.paths.pidPath).catch(() => undefined),
@@ -134,27 +143,41 @@ export class PlayerDaemon {
   }
 
   private async handleLine(socket: Socket, line: string): Promise<void> {
-    let request: PlayerRpcRequest;
-    try { request = JSON.parse(line) as PlayerRpcRequest; } catch {
+    let value: unknown;
+    try { value = JSON.parse(line) as unknown; } catch {
       socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id: 0, error: { code: "INVALID_REQUEST", message: "Request must be a JSON object." } }));
       return;
     }
-    if (!Number.isInteger(request.id)) return;
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id: 0, error: { code: "INVALID_REQUEST", message: "Request must be a JSON object." } }));
+      return;
+    }
+    const request = value as Partial<PlayerRpcRequest>;
+    const id = Number.isInteger(request.id) ? request.id as number : 0;
     if (request.jsonrpc !== "2.0") {
-      socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id: request.id, error: { code: "INVALID_REQUEST", message: "Expected JSON-RPC version 2.0." } }));
+      socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id, error: { code: "INVALID_REQUEST", message: "Expected JSON-RPC version 2.0." } }));
       return;
     }
     if (request.version !== PLAYER_PROTOCOL_VERSION) {
-      socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id: request.id, error: { code: "VERSION_MISMATCH", message: `Unsupported player protocol version ${request.version}; this daemon supports version ${PLAYER_PROTOCOL_VERSION}.` } }));
+      socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id, error: { code: "VERSION_MISMATCH", message: `Unsupported player protocol version ${request.version}; this daemon supports version ${PLAYER_PROTOCOL_VERSION}.` } }));
+      return;
+    }
+    if (!Number.isInteger(request.id) || typeof request.method !== "string" || !request.method) {
+      socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id, error: { code: "INVALID_REQUEST", message: "Request requires an integer id and a non-empty method." } }));
+      return;
+    }
+    const params = request.params === undefined ? {} : request.params;
+    if (typeof params !== "object" || params === null || Array.isArray(params)) {
+      socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id, error: { code: "INVALID_REQUEST", message: "Request params must be a JSON object." } }));
       return;
     }
     try {
-      const result = await this.dispatch(request.method, request.params ?? {});
-      socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id: request.id, result }));
+      const result = await this.dispatch(request.method, params);
+      socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id, result }));
     } catch (error) {
       const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "PLAYER_ERROR";
       const message = error instanceof Error ? error.message : String(error);
-      socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id: request.id, error: { code, message } }));
+      socket.write(encodeRpcResponse({ version: PLAYER_PROTOCOL_VERSION, id, error: { code, message } }));
     }
   }
 

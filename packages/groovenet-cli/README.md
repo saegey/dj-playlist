@@ -75,11 +75,13 @@ groovenet player play
 groovenet player status --json
 groovenet player queue list
 groovenet player devices
+groovenet player devices select <id>
 groovenet player stop
 ```
 
 `queue add --playlist-id <id>` adds a playlist instead of a search. The daemon
-stores its pidfile and Unix socket under `~/.groovenet/player/`. See the
+stores its pidfile and Unix socket under `~/.groovenet/player/`. `devices`
+continues to list outputs; `devices list` is an explicit alias. See the
 [@groovenet/player protocol document](../groovenet-player/PROTOCOL.md) for the
 versioned local control protocol.
 

@@ -107,7 +107,10 @@ export function addPlayerCommands(program: Command): void {
         const shutdown = () => {
           process.off("SIGINT", shutdown);
           process.off("SIGTERM", shutdown);
-          void daemon.stop().finally(resolve);
+          void daemon.stop().catch((error: unknown) => {
+            printError(error instanceof Error ? error.message : String(error));
+            process.exitCode = 1;
+          }).finally(resolve);
         };
         process.once("SIGINT", shutdown);
         process.once("SIGTERM", shutdown);
@@ -122,7 +125,10 @@ export function addPlayerCommands(program: Command): void {
       const shutdown = () => {
         process.off("SIGINT", shutdown);
         process.off("SIGTERM", shutdown);
-        void daemon.stop();
+        void daemon.stop().catch((error: unknown) => {
+          printError(error instanceof Error ? error.message : String(error));
+          process.exitCode = 1;
+        });
       };
       process.once("SIGINT", shutdown);
       process.once("SIGTERM", shutdown);
@@ -170,6 +176,12 @@ export function addPlayerCommands(program: Command): void {
     .action(async (value: string, options: { json?: boolean }) => reportFailure(() => withClient((client) => client.request("queue.remove", /^\d+$/.test(value) ? { index: Number(value) } : { id: value })), options.json ?? false));
   queue.command("list").description("Show the playback queue").option("--json", "print machine-readable output")
     .action(async (options: { json?: boolean }) => reportFailure(() => withClient((client) => client.request("queue.list")), options.json ?? false));
-  player.command("devices").description("List available audio outputs").option("--json", "print machine-readable output")
+  const devices = player.command("devices").description("List or select audio outputs");
+  devices.command("list").description("List available audio outputs").option("--json", "print machine-readable output")
     .action(async (options: { json?: boolean }) => reportFailure(() => withClient((client) => client.request("devices")), options.json ?? false));
+  // Preserve the original bare command as the list operation.
+  devices.option("--json", "print machine-readable output")
+    .action(async (options: { json?: boolean }) => reportFailure(() => withClient((client) => client.request("devices")), options.json ?? false));
+  devices.command("select <id>").description("Select an audio output device").option("--json", "print machine-readable output")
+    .action(async (id: string, options: { json?: boolean }) => reportFailure(() => withClient((client) => client.request("devices.select", { id })), options.json ?? false));
 }
