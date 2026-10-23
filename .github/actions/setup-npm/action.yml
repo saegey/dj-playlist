@@ -1,6 +1,9 @@
 name: Set up repository npm toolchain
 description: Install the exact npm pin and reject drift before installing dependencies.
 inputs:
+  node-version:
+    description: Node version to install; empty keeps the image's Node
+    default: "26"
   cache-dependency-path:
     description: Lockfile used for the npm cache
     default: package-lock.json
@@ -12,7 +15,7 @@ runs:
   steps:
     - uses: actions/setup-node@v7
       with:
-        node-version: 26
+        node-version: ${{ inputs.node-version }}
         cache: npm
         cache-dependency-path: ${{ inputs.cache-dependency-path }}
         registry-url: ${{ inputs.registry-url }}
@@ -21,7 +24,11 @@ runs:
     - name: Install pinned npm
       shell: bash
       working-directory: ${{ github.workspace }}
-      run: npm install -g "npm@$(node -p "require('./package.json').engines.npm")"
+      run: |
+        pin=$(node -p "require('./package.json').engines.npm")
+        if [[ "$(npm --version)" != "$pin" ]]; then
+          npm install -g "npm@$pin"
+        fi
 
     - name: Verify npm toolchain
       shell: bash
