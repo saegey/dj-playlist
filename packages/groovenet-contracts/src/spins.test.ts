@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SPIN_MEDIA,
   SPIN_PROVENANCES,
   SPIN_SELECTION_MODES,
   SPIN_SELECTION_TYPES,
@@ -53,7 +54,11 @@ describe("spin contracts", () => {
     expect(SPIN_SELECTION_TYPES).toEqual(["side", "track"]);
     expect(spinSessionSchema.safeParse({ ...session, selection_mode: "shuffle" }).success).toBe(false);
     expect(spinSessionSchema.safeParse({ ...session, provenance: "imported" }).success).toBe(false);
-    expect(spinSessionSchema.safeParse({ ...session, medium: "digital" }).success).toBe(false);
+    expect(SPIN_MEDIA).toEqual(["vinyl", "digital"]);
+    expect(spinSessionSchema.safeParse({ ...session, medium: "digital" }).success).toBe(true);
+    expect(spinSessionSchema.safeParse({ ...session, medium: "cassette" }).success).toBe(false);
+    expect(spinCreateSchema.safeParse({ ...create, medium: "digital", side_keys: ["A"] }).success).toBe(true);
+    expect(spinCreateSchema.safeParse({ ...create, medium: "cassette", side_keys: ["A"] }).success).toBe(false);
   });
 
   it("accepts playlist-made sessions and nullable optional fields", () => {
