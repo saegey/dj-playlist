@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.8](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.7...v0.3.8) (2026-10-23)
+
+
+### Features
+
+* **mcp:** add player tools for status, transport, queue and devices ([#654](https://github.com/Public-Vinyl-Radio/groovenet/issues/654)) ([370668d](https://github.com/Public-Vinyl-Radio/groovenet/commit/370668dbcab5c0f9dc379bbda2c078da99eb80dc))
+* **mcp:** return track refs, duration and release in search_tracks ([#640](https://github.com/Public-Vinyl-Radio/groovenet/issues/640)) ([4f267d0](https://github.com/Public-Vinyl-Radio/groovenet/commit/4f267d0535e6f85ac15c974c987fccb9f9fc62a3))
+* **player:** complete daemon controls for [#610](https://github.com/Public-Vinyl-Radio/groovenet/issues/610) ([#635](https://github.com/Public-Vinyl-Radio/groovenet/issues/635)) ([b7b1ca3](https://github.com/Public-Vinyl-Radio/groovenet/commit/b7b1ca3b69a6ac5f7fbd981d34433ee86303553a))
+* **player:** hide the cover-art window by default, add player_artwork option ([#648](https://github.com/Public-Vinyl-Radio/groovenet/issues/648)) ([acb2a4c](https://github.com/Public-Vinyl-Radio/groovenet/commit/acb2a4c7312c437809b3b67d8c83651cf39a0dfe))
+* **player:** log plays from track-change events ([#658](https://github.com/Public-Vinyl-Radio/groovenet/issues/658)) ([df14f14](https://github.com/Public-Vinyl-Radio/groovenet/commit/df14f1422d0884f7a176304583adcb0064a9f572))
+
+
+### Bug Fixes
+
+* **contracts:** add repository field so npm provenance publishing succeeds ([#636](https://github.com/Public-Vinyl-Radio/groovenet/issues/636)) ([cc3838a](https://github.com/Public-Vinyl-Radio/groovenet/commit/cc3838a85b4780fafed4d6bb675510260df3e70e))
+* **mcp:** document and validate generate_ai_playlist payload ([#638](https://github.com/Public-Vinyl-Radio/groovenet/issues/638)) ([bea4942](https://github.com/Public-Vinyl-Radio/groovenet/commit/bea4942e5ad2caefca0f6d5635fbc966d66a1069))
+* **upload:** save the raw Essentia analysis for UI audio uploads ([#643](https://github.com/Public-Vinyl-Radio/groovenet/issues/643)) ([f54b777](https://github.com/Public-Vinyl-Radio/groovenet/commit/f54b7770d62bb2dd0f435cab0ef7a182ba024bed))
+
+
+### Performance Improvements
+
+* **docker:** cache dev installs and separate web build layers ([#646](https://github.com/Public-Vinyl-Radio/groovenet/issues/646)) ([f05f053](https://github.com/Public-Vinyl-Radio/groovenet/commit/f05f053b79eba3a3c3821bcc5c29a7bcdfdba0fa))
+
 ## [0.3.7](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.6...v0.3.7) (2026-10-22)
 
 
