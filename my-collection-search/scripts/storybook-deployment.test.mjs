@@ -74,6 +74,9 @@ test('an explicitly empty URL still hides the card in development', { skip: !com
 
 test('development uses the separate server without a stale Storybook mount', { skip: !composeAvailable }, () => {
   const app = compose(['docker-compose.dev.yml', 'docker-compose.worktree.yml', 'docker-compose.mac.yml']);
+  assert.equal(app.build.target, 'dev');
+  assert.match(app.command.join(' '), /node scripts\/ensure-dev-deps\.mjs/);
+  assert.match(app.command.join(' '), /rm -rf \/packages\/groovenet-contracts\/node_modules && ln -sfn \/app\/node_modules/);
   assert.equal(app.environment.STORYBOOK_URL, 'http://localhost:6006');
   assert.ok(app.volumes.some((volume) => volume.target === '/app' && volume.type === 'bind'));
   assert.ok(!app.volumes.some((volume) => volume.target === '/app/public/storybook'));

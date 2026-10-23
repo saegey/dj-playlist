@@ -136,6 +136,14 @@ configuration does not force its npm version: its PRs must pass actual installs
 under our pin. Pinning cannot repair dependency/lockfile inconsistencies; fix
 those separately under the pinned npm without unrelated dependency updates.
 
+The dev Compose override builds the `dev` image target, skipping production
+Next.js and Storybook builds. On startup it installs into `dev_node_modules`
+only when the app manifest, lockfile, contracts manifest, or Node/npm toolchain
+changes. A fresh volume always installs; failed installs retry on the next
+start. Contracts are rebuilt and their `node_modules` symlink repaired on every
+start. To force a reinstall, remove `/app/node_modules/.groovenet-install` in
+the app container and restart it.
+
 `just bootstrap` installs a git pre-commit hook that runs file hygiene checks,
 [ruff](https://docs.astral.sh/ruff/) over the Python services and Python client,
 and ESLint over changed web and Node package files. The same hooks run in CI,
@@ -155,13 +163,16 @@ Worktree setup, deployment, releases, and operator-specific overrides are mainta
 
 ### Storybook
 
-Every app image builds and verifies a fresh static Storybook bundle from its
+Every production app image builds and verifies a static Storybook bundle from its
 checkout before building Next.js, then packages it in `public/storybook`.
 With `ENABLE_DEVELOPER_TOOLS=true`, the Developer Tools card opens
 `/storybook/index.html` on the running app. CI candidates, promoted releases,
 self-hosted builds and local deployment builds use the same Dockerfile; none
 needs a separate host build. This adds a Storybook build and about 10 MB of
 static assets to app images; the migrator target does not build Storybook.
+Storybook has a separate build stage, so backend changes reuse its verified
+bundle. Shared frontend or story changes rebuild it. Dev containers use the
+separate Storybook server described below.
 
 For component development, run `just storybook` in a separate terminal. It uses
 the pinned toolchain, serves at `http://localhost:6006`, and needs no Compose
