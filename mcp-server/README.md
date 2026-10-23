@@ -9,7 +9,7 @@ Uses the shared [`@groovenet/client`](../packages/groovenet-client) typed API cl
 ### Tracks
 | Tool | Description |
 |---|---|
-| `search_tracks` | Search by title, artist, genre, BPM, key, or rating |
+| `search_tracks` | Search by title, artist, genre, BPM, key, or rating; each result carries `track_id`, `friend_id`, duration and `release_id` refs for `create_playlist`, `get_track_details` and `generate_ai_playlist` |
 | `get_track_details` | Full track info including audio analysis and mood scores |
 | `update_track` | Update rating, notes, tags, or platform URLs |
 | `get_missing_apple_music` | Find tracks without Apple Music URLs |
