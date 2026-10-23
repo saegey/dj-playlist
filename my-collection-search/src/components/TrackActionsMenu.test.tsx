@@ -206,12 +206,18 @@ describe("TrackActionsMenu desktop dropdown — grouping", () => {
 });
 
 describe("TrackActionsMenu desktop dropdown — optional items", () => {
-  it("opens cover art and track debug from their items", async () => {
+  // One menu opening per test: reopening straight after a selection races the
+  // closing menu's focus restore, and flaked on a loaded CI runner.
+  it("opens cover art from its item", async () => {
     const onChangeArtwork = vi.fn();
-    const onOpenTrackDebug = vi.fn();
-    const { user, menuButton } = setup(trackWithEverything, { onChangeArtwork, onOpenTrackDebug });
+    const { user, menuButton } = setup(trackWithEverything, { onChangeArtwork, onOpenTrackDebug: vi.fn() });
     await chooseMenuItem(user, menuButton, /Cover Art/);
     expect(onChangeArtwork).toHaveBeenCalled();
+  });
+
+  it("opens track debug from its item", async () => {
+    const onOpenTrackDebug = vi.fn();
+    const { user, menuButton } = setup(trackWithEverything, { onChangeArtwork: vi.fn(), onOpenTrackDebug });
     await chooseMenuItem(user, menuButton, /Track Debug/);
     expect(onOpenTrackDebug).toHaveBeenCalled();
   });
