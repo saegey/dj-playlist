@@ -8,6 +8,7 @@ import {
 import { GroovenetClient, type Track, type RecordActionInput, type RecordCareStatus, type SleeveType, type CleaningMethod, type TrackSearchMode, type TrackSearchQuery, type PlaylistOptimizerMode } from "@groovenet/client";
 import dotenv from "dotenv";
 import { captureException, initSentry } from "./observability.js";
+import { PLAYER_TOOL_NAMES, handlePlayerTool, playerTools } from "./player.js";
 
 // Stdio is the MCP protocol channel; dotenv's startup banner must stay off it.
 dotenv.config({ quiet: true });
@@ -383,6 +384,7 @@ const tools = [
       friend_id: { type: "integer", description: "Collection owner (default from server configuration)" },
     }, required: ["action_id"] },
   },
+  ...playerTools,
 ];
 
 interface ToolArgs {
@@ -484,20 +486,21 @@ function formatTrackSearchLine(t: Track): string {
 }
 
 /**
- * Resolve the `playlist` argument of generate_ai_playlist to full tracks. The
- * route reads BPM from the request body, so a bare `{ track_id, friend_id }` is
- * hydrated here; fields the caller sent override the stored ones.
+ * Resolve track refs (`argName` is the tool argument they came from, for error
+ * messages) to full tracks. The playlist route reads BPM from the request body,
+ * so a bare `{ track_id, friend_id }` is hydrated here; fields the caller sent
+ * override the stored ones.
  */
-async function hydratePlaylistSeeds(items: Array<Record<string, unknown>>): Promise<Track[]> {
+async function hydrateTrackRefs(items: Array<Record<string, unknown>>, argName: string): Promise<Track[]> {
   if (items.length === 0) {
-    throw new Error("playlist must contain at least one track: [{ track_id, friend_id? }]");
+    throw new Error(`${argName} must contain at least one track: [{ track_id, friend_id? }]`);
   }
   const refs = items.map((item, i) => {
     if (typeof item?.track_id !== "string" || item.track_id === "") {
       const hint = item && "id" in item
         ? " `id` is the numeric database ID, not the track ID; use the string `track_id` from search_tracks."
         : "";
-      throw new Error(`playlist[${i}] is missing \`track_id\` (non-empty string).${hint}`);
+      throw new Error(`${argName}[${i}] is missing \`track_id\` (non-empty string).${hint}`);
     }
     const friend_id = typeof item.friend_id === "number" ? item.friend_id : DEFAULT_FRIEND_ID;
     return { track_id: item.track_id, friend_id };
@@ -518,6 +521,9 @@ async function hydratePlaylistSeeds(items: Array<Record<string, unknown>>): Prom
 }
 
 async function handleToolCall(name: string, args: ToolArgs) {
+  if (PLAYER_TOOL_NAMES.includes(name)) {
+    return handlePlayerTool(name, args as Record<string, unknown>, { resolveTracks: hydrateTrackRefs });
+  }
   switch (name) {
     case "get_similar_genres": {
       if (typeof args.slug !== "string" || args.slug.trim().length === 0) {
@@ -795,7 +801,7 @@ ${track.soundcloud_url ? `- SoundCloud: ${track.soundcloud_url}` : ""}
     }
 
     case "generate_ai_playlist": {
-      const seeds = await hydratePlaylistSeeds(args.playlist ?? []);
+      const seeds = await hydrateTrackRefs(args.playlist ?? [], "playlist");
       const mode = args.mode as string | undefined;
       if (mode !== undefined && !PLAYLIST_MODES.includes(mode as PlaylistOptimizerMode)) {
         throw new Error(`mode must be one of ${PLAYLIST_MODES.join(", ")}`);

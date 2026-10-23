@@ -44,5 +44,7 @@ on `PATH`, or pass an executable path in the constructor. `close()` stops the
 owned process. The `TestPlaybackBackend` from `@groovenet/player/testing` is a small in-memory
 implementation for consumers that need to exercise the core without audio.
 
+`defaultPlayerPaths()` returns the daemon's socket and pidfile paths (`~/.groovenet/player/`), shared by the CLI and the MCP server.
+
 Build with `npm run build --workspace=@groovenet/player` after building
 `@groovenet/client`.

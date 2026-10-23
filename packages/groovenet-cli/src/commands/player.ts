@@ -1,13 +1,10 @@
 import { spawn } from "node:child_process";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { Command } from "commander";
 import { GroovenetClient, loadConfig } from "@groovenet/client";
-import { MpvBackend, PlayerControlClient, PlayerCore, PlayerDaemon, TrackResolver } from "@groovenet/player";
+import { MpvBackend, PlayerControlClient, PlayerCore, PlayerDaemon, TrackResolver, defaultPlayerPaths } from "@groovenet/player";
 import { printError, printJson, printSuccess } from "../output.js";
 
-const playerDir = join(homedir(), ".groovenet", "player");
-export const PLAYER_DAEMON_PATHS = { socketPath: join(playerDir, "player.sock"), pidPath: join(playerDir, "player.pid") };
+export const PLAYER_DAEMON_PATHS = defaultPlayerPaths();
 
 export interface PlayerDaemonOptions {
   /** Overrides `player_artwork` from config for this daemon. */
