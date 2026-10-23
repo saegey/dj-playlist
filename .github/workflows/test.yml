@@ -14,6 +14,12 @@ permissions:
   contents: read
 
 jobs:
+  ci-image:
+    uses: ./.github/workflows/ci-image.yml
+    permissions:
+      contents: read
+      packages: write
+
   lint:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -50,10 +56,17 @@ jobs:
           npm run lint --workspace=mcp-server
 
   test:
+    needs: ci-image
+    container:
+      image: ${{ needs.ci-image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
       contents: read
+      packages: read
     # Node 26's experimental server-side Web Storage shadows jsdom's
     # localStorage, which browser-component tests rely on.
     env:
@@ -67,6 +80,8 @@ jobs:
 
       - uses: ./.github/actions/setup-npm
         with:
+          # Use the Node already verified in the CI image; retain npm caching.
+          node-version: ""
           cache-dependency-path: |
             package-lock.json
             my-collection-search/package-lock.json
@@ -83,36 +98,7 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
-      # The audio ingest route validates uploads by probing the media (#275),
-      # and its tests skip themselves when ffprobe is missing rather than
-      # failing — install it and assert it, or coverage quietly narrows.
-      # Reuse the fingerprint job's cached install/retry pattern. Bound both
-      # attempts so a stalled apt mirror leaves time for tests in this 20-minute
-      # job. Package post-install scripts register ffmpeg's shared libraries.
-      - name: Install ffmpeg
-        id: apt-install
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        timeout-minutes: 5
-        continue-on-error: true
-        with:
-          packages: ffmpeg
-          version: 1.0
-          execute_install_scripts: true
-
-      # A timeout can leave partial downloads in this action's staging dir.
-      - name: Clear apt staging dir before retry
-        if: steps.apt-install.outcome == 'failure'
-        run: rm -rf ~/cache-apt-pkgs
-
-      - name: Install ffmpeg (retry)
-        if: steps.apt-install.outcome == 'failure'
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        timeout-minutes: 5
-        with:
-          packages: ffmpeg
-          version: 1.0
-          execute_install_scripts: true
-
+      # Ingest tests skip without ffprobe. Assert the image still supplies it.
       - name: Verify ffprobe is available
         run: ffprobe -version
 
@@ -421,10 +407,17 @@ jobs:
           fail_ci_if_error: false
 
   fingerprint-service-coverage:
+    needs: ci-image
+    container:
+      image: ${{ needs.ci-image.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     permissions:
       contents: read
+      packages: read
     defaults:
       run:
         working-directory: fingerprint-service
@@ -439,47 +432,7 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked --group dev
 
-      # The decode tests skip themselves when ffmpeg is missing rather than
-      # failing, so install it explicitly and then assert it is there — an
-      # image that silently dropped it would quietly narrow coverage instead.
-      # libchromaprint is not optional at all: `pyacoustid` imports fine
-      # without it and only raises when asked to fingerprint, so a missing
-      # library would surface as every matcher test erroring at once.
-      # Cached across runs so a healthy mirror is only hit once; a flaky
-      # mirror gets a second attempt before we give up, and both attempts are
-      # time-boxed so a hung apt-get fails the job instead of the step eating
-      # GitHub's 6-hour default (#462).
-      # execute_install_scripts runs each package's postinst, same as a real
-      # apt-get install — libblas3 needs it to register its libblas.so.3
-      # alternative, which otherwise never gets created and fails ffmpeg at
-      # runtime even though the restored files are all on disk.
-      - name: Install ffmpeg and libchromaprint
-        id: apt-install
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        timeout-minutes: 10
-        continue-on-error: true
-        with:
-          packages: ffmpeg libchromaprint1
-          version: 1.0
-          execute_install_scripts: true
-
-      # A timed-out attempt can leave ~/cache-apt-pkgs holding a partial
-      # download (it's a plain staging dir, not the GitHub Actions cache, so
-      # nothing else clears it) — wipe it so the retry does a real fresh
-      # install instead of restoring an incomplete package set.
-      - name: Clear apt staging dir before retry
-        if: steps.apt-install.outcome == 'failure'
-        run: rm -rf ~/cache-apt-pkgs
-
-      - name: Install ffmpeg and libchromaprint (retry)
-        if: steps.apt-install.outcome == 'failure'
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        timeout-minutes: 10
-        with:
-          packages: ffmpeg libchromaprint1
-          version: 1.0
-          execute_install_scripts: true
-
+      # Both are mandatory: preserve the assertion when consuming the image.
       - name: Verify ffmpeg and libchromaprint are available
         run: |
           ffmpeg -version

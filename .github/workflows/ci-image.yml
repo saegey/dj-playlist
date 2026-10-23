@@ -1,0 +1,160 @@
+name: CI Base Image
+
+on:
+  workflow_call:
+    outputs:
+      image:
+        description: Verified CI image pinned by digest
+        value: ${{ jobs.image.outputs.image }}
+  workflow_dispatch:
+    inputs:
+      refresh:
+        description: Refresh Node and native packages even if the recipe exists
+        type: boolean
+        default: true
+  push:
+    branches: [main]
+    paths:
+      - .github/docker/ci-base.Dockerfile
+      - .github/workflows/ci-image.yml
+      - .github/actions/setup-npm/action.yml
+      - .mise.toml
+      - package.json
+      - my-collection-search/package.json
+  schedule:
+    # Refresh moving Node/Ubuntu security updates outside routine test runs.
+    - cron: '23 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.result.outputs.image }}
+    env:
+      CAN_PUBLISH: >-
+        ${{ github.actor != 'dependabot[bot]' &&
+            (github.event_name != 'pull_request' ||
+             github.event.pull_request.head.repo.full_name ==
+             github.repository) }}
+      REFRESH: ${{ github.event_name == 'schedule' || inputs.refresh == true }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-npm
+
+      - name: Resolve image recipe and pinned toolchain
+        id: recipe
+        shell: bash
+        run: |
+          set -euo pipefail
+          node_version=$(sed -nE 's/^node = "([0-9.]+)"$/\1/p' .mise.toml)
+          npm_version=$(node -p "require('./package.json').engines.npm")
+          [[ "$node_version" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]]
+          [[ "$npm_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          printf '%s\n' "$node_version" "$npm_version" \
+            > "$RUNNER_TEMP/ci-toolchain"
+          hash=$(cat .github/docker/ci-base.Dockerfile \
+            "$RUNNER_TEMP/ci-toolchain" | sha256sum | cut -c1-16)
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          tag="node-$node_version-npm-$npm_version-$hash"
+          image="ghcr.io/$owner/ci-base:$tag"
+          {
+            echo "image=$image"
+            echo "node_version=$node_version"
+            echo "npm_version=$npm_version"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Reuse published recipe
+        id: existing
+        shell: bash
+        env:
+          IMAGE: ${{ steps.recipe.outputs.image }}
+        run: |
+          set -euo pipefail
+          if [[ "$REFRESH" != true ]] &&
+             digest=$(docker buildx imagetools inspect "$IMAGE" \
+               --format '{{.Manifest.Digest}}'); then
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          elif [[ "$CAN_PUBLISH" != true ]]; then
+            echo '::error::A maintainer must publish this CI recipe first.'
+            exit 1
+          fi
+
+      - name: Build candidate
+        if: steps.existing.outputs.digest == ''
+        uses: docker/build-push-action@v7
+        with:
+          context: .github/docker
+          file: .github/docker/ci-base.Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: ${{ steps.recipe.outputs.image }}
+          pull: true
+          no-cache: ${{ env.REFRESH == 'true' }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=ci-base
+          cache-to: type=gha,mode=max,scope=ci-base
+          build-args: |
+            NODE_VERSION=${{ steps.recipe.outputs.node_version }}
+            NPM_VERSION=${{ steps.recipe.outputs.npm_version }}
+
+      - name: Verify candidate and publish
+        if: steps.existing.outputs.digest == ''
+        shell: bash
+        env:
+          IMAGE: ${{ steps.recipe.outputs.image }}
+          EXPECTED_NODE: ${{ steps.recipe.outputs.node_version }}
+          EXPECTED_NPM: ${{ steps.recipe.outputs.npm_version }}
+        run: |
+          set -euo pipefail
+          docker run --rm -i -e EXPECTED_NODE -e EXPECTED_NPM \
+            "$IMAGE" bash -eu <<'SMOKE'
+          node -e '
+            const actual = process.versions.node;
+            const wanted = process.env.EXPECTED_NODE;
+            if (actual !== wanted && !actual.startsWith(wanted + ".")) {
+              process.exit(1);
+            }
+          '
+          test "$(npm --version)" = "$EXPECTED_NPM"
+          ffmpeg -version
+          ffprobe -version
+          python3 -c 'import ctypes; ctypes.CDLL("libchromaprint.so.1")'
+          docker compose version
+          SMOKE
+          docker push "$IMAGE"
+
+      - name: Export immutable image reference
+        id: result
+        shell: bash
+        env:
+          IMAGE: ${{ steps.recipe.outputs.image }}
+          EXISTING_DIGEST: ${{ steps.existing.outputs.digest }}
+        run: |
+          set -euo pipefail
+          digest="$EXISTING_DIGEST"
+          if [[ -z "$digest" ]]; then
+            digest=$(docker buildx imagetools inspect "$IMAGE" \
+              --format '{{.Manifest.Digest}}')
+          fi
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          echo "image=${IMAGE%:*}@$digest" >> "$GITHUB_OUTPUT"
+          echo "CI image: ${IMAGE%:*}@$digest" >> "$GITHUB_STEP_SUMMARY"

@@ -15,6 +15,9 @@ jobs:
   # Skipped on release tags — those promote already-tested images (see promote).
   test:
     if: github.ref_type != 'tag'
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/test.yml
 
   changes:
