@@ -92,7 +92,7 @@ describe("albums page genre filter (#375)", () => {
     mocks.searchParams = new URLSearchParams("genre=jazz");
     const { user } = renderWithProviders(<AlbumsPage />);
 
-    const input = screen.getAllByRole("textbox", { hidden: true })[0];
+    const input = screen.getAllByRole("textbox")[0];
     await user.type(input, "blue{Enter}");
 
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/albums?q=blue&genre=jazz"));
@@ -138,7 +138,7 @@ describe("albums page missing filter (#447)", () => {
     mocks.searchParams = new URLSearchParams("missing_audio=1&missing_local_cover_art_url=1");
     const { user } = renderWithProviders(<AlbumsPage />);
 
-    const input = screen.getAllByRole("textbox", { hidden: true })[0];
+    const input = screen.getAllByRole("textbox")[0];
     await user.type(input, "blue{Enter}");
     await waitFor(() =>
       expect(mocks.push).toHaveBeenCalledWith(

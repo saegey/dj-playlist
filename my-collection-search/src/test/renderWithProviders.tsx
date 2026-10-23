@@ -66,11 +66,23 @@ export function renderWithProviders(ui: React.ReactElement, options?: RenderOpti
 }
 
 /**
+ * Show what a desktop viewport would: jsdom evaluates no media queries, so the
+ * desktop layout stays `display: none`, and since jsdom 30.1.2 (like a browser)
+ * `focus()` is a no-op inside it. An inline `display` outranks the stylesheet.
+ */
+function showAncestors(el: HTMLElement) {
+  for (let node = el.parentElement; node && node !== document.body; node = node.parentElement) {
+    if (getComputedStyle(node).display === "none") node.style.display = "block";
+  }
+}
+
+/**
  * Choose an item from a Chakra menu by keyboard. Ark selects a clicked item
  * only once a pointer move has highlighted it, which jsdom stops honouring
  * after a few tests; the keyboard path has no such state.
  */
 export async function chooseMenuItem(user: UserEvent, trigger: HTMLElement, name: RegExp) {
+  showAncestors(trigger);
   trigger.focus();
   await user.keyboard("{Enter}");
   const item = await screen.findByRole("menuitem", { name, hidden: true });
