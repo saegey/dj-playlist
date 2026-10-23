@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.4.0](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-client-v3.3.0...groovenet-client-v3.4.0) (2026-10-23)
+
+
+### Features
+
+* **player:** hide the cover-art window by default, add player_artwork option ([#648](https://github.com/Public-Vinyl-Radio/groovenet/issues/648)) ([acb2a4c](https://github.com/Public-Vinyl-Radio/groovenet/commit/acb2a4c7312c437809b3b67d8c83651cf39a0dfe))
+* **player:** log plays from track-change events ([#658](https://github.com/Public-Vinyl-Radio/groovenet/issues/658)) ([df14f14](https://github.com/Public-Vinyl-Radio/groovenet/commit/df14f1422d0884f7a176304583adcb0064a9f572))
+
+
+### Bug Fixes
+
+* **mcp:** document and validate generate_ai_playlist payload ([#638](https://github.com/Public-Vinyl-Radio/groovenet/issues/638)) ([bea4942](https://github.com/Public-Vinyl-Radio/groovenet/commit/bea4942e5ad2caefca0f6d5635fbc966d66a1069))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * @groovenet/contracts bumped from 1.0.1 to 1.1.0
+
 ## [3.3.0](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-client-v3.2.1...groovenet-client-v3.3.0) (2026-10-21)
 
 

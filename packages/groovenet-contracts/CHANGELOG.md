@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-contracts-v1.0.1...groovenet-contracts-v1.1.0) (2026-10-23)
+
+
+### Features
+
+* **player:** log plays from track-change events ([#658](https://github.com/Public-Vinyl-Radio/groovenet/issues/658)) ([df14f14](https://github.com/Public-Vinyl-Radio/groovenet/commit/df14f1422d0884f7a176304583adcb0064a9f572))
+
+
+### Bug Fixes
+
+* **contracts:** add repository field so npm provenance publishing succeeds ([#636](https://github.com/Public-Vinyl-Radio/groovenet/issues/636)) ([cc3838a](https://github.com/Public-Vinyl-Radio/groovenet/commit/cc3838a85b4780fafed4d6bb675510260df3e70e))
+
 ## [1.0.1](https://github.com/Public-Vinyl-Radio/groovenet/compare/groovenet-contracts-v1.0.0...groovenet-contracts-v1.0.1) (2026-10-21)
 
 
