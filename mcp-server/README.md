@@ -49,6 +49,28 @@ the raw `{ genre, related }` API data as JSON text, including scores and
 taxonomy, NPMI, and shared-album signals. Similarity uses every collection;
 scores and signals can be absent for the taxonomy-sibling fallback.
 
+### Player
+
+Controls the local playback daemon (`groovenet player start --detach`) over its
+Unix socket. These tools only work when the MCP server runs on the same machine
+as the daemon, and they never start it.
+
+| Tool | Description |
+|---|---|
+| `player_status` | Status, current track (BPM, key), position/duration, volume and the queue with zero-based indexes and entry ids |
+| `player_play` | Start or resume; optional `index` jumps to a queue position |
+| `player_pause`, `player_resume`, `player_next`, `player_previous` | Transport controls |
+| `player_seek` | Seek to `seconds` in the current track |
+| `player_volume` | Set `volume` (0-100) |
+| `player_queue_list` | The queue with indexes and entry ids |
+| `player_queue_add` | Append tracks: exactly one of `query`, `playlist_id`, or `tracks` (`[{ track_id, friend_id? }]` refs, as printed by `search_tracks`) |
+| `player_queue_remove` | Remove an entry by `id` or zero-based `index` |
+| `player_devices`, `player_select_device` | List audio outputs; switch to one by `device_id` |
+
+Typical flow: `search_tracks` → `player_queue_add` with the refs →
+`player_play`. With no daemon running (or a stale socket) every player tool
+returns an error telling you to run `groovenet player start --detach`.
+
 ### External Search
 | Tool | Description |
 |---|---|
@@ -76,6 +98,14 @@ Configure the API URL (create `mcp-server/.env`):
 API_BASE=http://localhost:3000/api
 # API_KEY=your-key-if-needed
 ```
+
+| Variable | Description |
+|---|---|
+| `API_BASE` | Groovenet API URL (default `http://localhost:3000/api`) |
+| `API_KEY` | Optional API key |
+| `DEFAULT_FRIEND_ID` | Friend used when a tool call omits `friend_id` (default `1`) |
+| `GROOVENET_PLAYER_SOCKET` | Player daemon socket (default `~/.groovenet/player/player.sock`, the CLI's path) |
+| `GROOVENET_PLAYER_TIMEOUT_MS` | Per-request limit for player calls (default `15000`) |
 
 ## Usage with Claude Code
 
@@ -130,10 +160,11 @@ From the repo root:
 
 ```bash
 npm run build --workspace=@groovenet/client
+npm run build --workspace=@groovenet/player
 npm --workspace=mcp-server test
 ```
 
-Tests exercise the MCP stdio interface against a local HTTP fixture server.
+Tests exercise the MCP stdio interface against a local HTTP fixture server. The player tests also run a fake daemon on a temp-dir Unix socket. Build `@groovenet/player` first: the server imports it.
 
 ## License
 
