@@ -201,20 +201,74 @@ describe("POST /api/tracks/upload", () => {
     warnSpy.mockRestore();
   });
 
-  it("warns but still succeeds when persisting the analysis JSON fails", async () => {
+  it("writes the raw analysis for the supplied friend", async () => {
+    await POST(makeRequest({ friendId: "1" }));
+
+    expect(mockWriteEssentiaAnalysis).toHaveBeenCalledTimes(1);
+    expect(mockWriteEssentiaAnalysis).toHaveBeenCalledWith(
+      "t1",
+      1,
+      expect.objectContaining({ rhythm: expect.any(Object) })
+    );
+  });
+
+  it("writes the raw analysis once per friend row sharing the track", async () => {
+    mockFindTracksByTrackId.mockResolvedValue([
+      { track_id: "t1", friend_id: 1 },
+      { track_id: "t1", friend_id: 2 },
+      { track_id: "t1", friend_id: 2 },
+    ]);
+
+    await POST(makeRequest({ friendId: "1" }));
+
+    expect(mockWriteEssentiaAnalysis.mock.calls.map((c) => c[1]).sort()).toEqual([1, 2]);
+  });
+
+  it("still writes for existing rows when no friend_id is supplied", async () => {
+    mockFindTracksByTrackId.mockResolvedValue([{ track_id: "t1", friend_id: 4 }]);
+
+    const res = await POST(makeRequest({ friendId: null }));
+
+    expect(res.status).toBe(200);
+    expect(mockWriteEssentiaAnalysis).toHaveBeenCalledTimes(1);
+    expect(mockWriteEssentiaAnalysis).toHaveBeenCalledWith("t1", 4, expect.anything());
+  });
+
+  it("writes for the requested friend even when the DB update failed", async () => {
+    mockUpdateTrackAnalysis.mockRejectedValue(new Error("db down"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const res = await POST(makeRequest({ friendId: "5" }));
+
+    expect(res.status).toBe(200);
+    expect(mockWriteEssentiaAnalysis).toHaveBeenCalledWith("t1", 5, expect.anything());
+    warnSpy.mockRestore();
+  });
+
+  it("does not write when no friend is known", async () => {
+    mockFindTracksByTrackId.mockResolvedValue(null);
+
+    const res = await POST(makeRequest({ friendId: null }));
+
+    expect(res.status).toBe(200);
+    expect(mockWriteEssentiaAnalysis).not.toHaveBeenCalled();
+  });
+
+  it("logs a write failure with track and friend ids and still succeeds", async () => {
     mockWriteEssentiaAnalysis.mockImplementation(() => {
       throw new Error("disk full");
     });
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const res = await POST(makeRequest());
 
     expect(res.status).toBe(200);
-    expect(warnSpy).toHaveBeenCalledWith(
-      "Failed to persist Essentia analysis file:",
+    expect(mockUpdateTrackAnalysis).toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("track_id=t1, friend_id=1"),
       expect.any(Error)
     );
-    warnSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
   it("returns 400 when the file is missing", async () => {

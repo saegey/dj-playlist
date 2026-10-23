@@ -25,7 +25,7 @@ async function processAudioFile(
   track_id: string,
   friend_id: number | null,
   analysisResult: AnalysisResult
-) {
+): Promise<number[]> {
   const bpm = analysisResult?.rhythm?.bpm
     ? Math.round(analysisResult.rhythm.bpm)
     : null;
@@ -54,6 +54,7 @@ async function processAudioFile(
 
   // Fetch updated track
   const rows = await trackRepository.findTracksByTrackId(track_id);
+  const friendIds = Array.from(new Set((rows ?? []).map((row) => row.friend_id)));
   if (rows && rows[0]) {
     try {
       await embeddingQueueService.enqueue(
@@ -65,6 +66,31 @@ async function processAudioFile(
       );
     } catch (queueError) {
       console.error("Failed to enqueue embedding jobs after upload:", queueError);
+    }
+  }
+  return friendIds;
+}
+
+// The DB analysis above applies to every friend row sharing the track_id, so
+// the raw file is written for each of them (plus the requesting friend, in case
+// the DB update failed). A write failure is logged, not fatal: the analysis is
+// already in Postgres and the debug view is the only reader of the file.
+function persistRawAnalysis(
+  track_id: string,
+  friendIds: number[],
+  requestedFriendId: number | null,
+  analysisResult: AnalysisResult
+) {
+  const targets = new Set(friendIds);
+  if (requestedFriendId !== null) targets.add(requestedFriendId);
+  for (const friend_id of targets) {
+    try {
+      writeEssentiaAnalysis(track_id, friend_id, analysisResult);
+    } catch (saveErr) {
+      console.error(
+        `Failed to persist Essentia analysis file (track_id=${track_id}, friend_id=${friend_id}):`,
+        saveErr
+      );
     }
   }
 }
@@ -135,13 +161,6 @@ export async function POST(req: NextRequest) {
       );
     }
     analysisResult = responseText;
-    if (friendId !== null) {
-      try {
-        writeEssentiaAnalysis(track_id, friendId, analysisResult);
-      } catch (saveErr) {
-        console.warn("Failed to persist Essentia analysis file:", saveErr);
-      }
-    }
   } catch (err) {
     return NextResponse.json(
       {
@@ -206,11 +225,15 @@ export async function POST(req: NextRequest) {
   }
 
   // Update database
+  let friendIds: number[] = [];
   try {
-    await processAudioFile(local_audio_url, track_id, friendId, analysisResult);
+    friendIds = await processAudioFile(local_audio_url, track_id, friendId, analysisResult);
   } catch (err) {
     console.warn("Could not update track with local_audio_url:", err);
   }
+
+  // After the DB update so a file error can never undo it.
+  persistRawAnalysis(track_id, friendIds, friendId, analysisResult);
 
   return NextResponse.json({
     success: true,
