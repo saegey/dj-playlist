@@ -86,10 +86,32 @@ jobs:
       # The audio ingest route validates uploads by probing the media (#275),
       # and its tests skip themselves when ffprobe is missing rather than
       # failing — install it and assert it, or coverage quietly narrows.
+      # Reuse the fingerprint job's cached install/retry pattern. Bound both
+      # attempts so a stalled apt mirror leaves time for tests in this 20-minute
+      # job. Package post-install scripts register ffmpeg's shared libraries.
       - name: Install ffmpeg
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends ffmpeg
+        id: apt-install
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        timeout-minutes: 5
+        continue-on-error: true
+        with:
+          packages: ffmpeg
+          version: 1.0
+          execute_install_scripts: true
+
+      # A timeout can leave partial downloads in this action's staging dir.
+      - name: Clear apt staging dir before retry
+        if: steps.apt-install.outcome == 'failure'
+        run: rm -rf ~/cache-apt-pkgs
+
+      - name: Install ffmpeg (retry)
+        if: steps.apt-install.outcome == 'failure'
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        timeout-minutes: 5
+        with:
+          packages: ffmpeg
+          version: 1.0
+          execute_install_scripts: true
 
       - name: Verify ffprobe is available
         run: ffprobe -version
