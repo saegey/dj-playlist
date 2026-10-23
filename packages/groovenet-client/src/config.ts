@@ -9,6 +9,8 @@ export interface GroovenetConfig {
   username?: string;
   /** Skip TLS certificate verification (e.g. internal CA / self-signed hosts). */
   insecure_tls?: boolean;
+  /** Let the local player's mpv open a window for embedded cover art. Default off. */
+  player_artwork?: boolean;
 }
 
 const CONFIG_DIR = join(homedir(), ".groovenet");

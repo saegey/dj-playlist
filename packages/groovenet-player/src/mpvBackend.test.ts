@@ -63,6 +63,7 @@ function makeBackend(options: {
   startupTimeoutMs?: number;
   commandTimeoutMs?: number;
   insecureTls?: boolean;
+  artwork?: boolean;
 } = {}) {
   const child = makeFakeProcess();
   const requests: Array<{ command: unknown[] }> = [];
@@ -81,6 +82,7 @@ function makeBackend(options: {
     startupTimeoutMs: options.startupTimeoutMs,
     commandTimeoutMs: options.commandTimeoutMs,
     insecureTls: options.insecureTls,
+    artwork: options.artwork,
     spawnProcess: (_executable, args) => {
       if (options.spawnFailure) throw new Error("spawn ENOENT");
       spawnArgs.push(args);
@@ -167,8 +169,19 @@ describe("MpvBackend", () => {
     expect(requests).toContainEqual({ command: ["loadfile", "https://server.test/audio", "replace"] });
     expect(child.kill).not.toHaveBeenCalled();
     expect(spawnArgs[0]).toContain("--tls-verify=no");
+    expect(spawnArgs[0]).toContain("--vid=no");
     await backend.close();
     expect(child.exitCode).toBe(0);
+  });
+
+  it.each([
+    [undefined, true], [false, true], [true, false],
+  ])("artwork=%s hides the cover-art window: %s", async (artwork, hidden) => {
+    const { backend, spawnArgs } = makeBackend({ artwork });
+    await backend.load({ url: "https://server.test/audio", headers: {} });
+    expect(spawnArgs[0]?.includes("--vid=no")).toBe(hidden);
+    expect(spawnArgs[0]).not.toContain("--tls-verify=no");
+    await backend.close();
   });
 
   it("wraps output selection errors as actionable device errors", async () => {

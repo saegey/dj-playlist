@@ -1,12 +1,21 @@
 import { Command } from "commander";
 import { spawn, type ChildProcess } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PlayerControlClient } from "@groovenet/player";
+import { loadConfig } from "@groovenet/client";
+import { MpvBackend, PlayerControlClient } from "@groovenet/player";
 import { PlayerDaemon } from "@groovenet/player";
 import { runPlayerTui } from "./playerTui.js";
-import { addPlayerCommands } from "./player.js";
+import { addPlayerCommands, createPlayerDaemon } from "./player.js";
 
 vi.mock("node:child_process", () => ({ spawn: vi.fn(() => ({ unref: vi.fn(), once: vi.fn() })) }));
+vi.mock("@groovenet/client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@groovenet/client")>()),
+  loadConfig: vi.fn(() => ({ api_base: "http://localhost:3000/api", default_friend_id: 1 })),
+}));
+vi.mock("@groovenet/player", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@groovenet/player")>();
+  return { ...actual, MpvBackend: vi.fn(function (options: ConstructorParameters<typeof actual.MpvBackend>[0]) { return new actual.MpvBackend(options); }) };
+});
 vi.mock("./playerTui.js", () => ({ runPlayerTui: vi.fn() }));
 
 function makeProgram() {
@@ -281,5 +290,67 @@ describe("player CLI commands", () => {
       if (stdoutDescriptor) Object.defineProperty(process.stdout, "isTTY", stdoutDescriptor);
       else Reflect.deleteProperty(process.stdout, "isTTY");
     }
+  });
+
+  describe("cover-art window", () => {
+    const configWith = (player_artwork?: boolean) =>
+      vi.mocked(loadConfig).mockReturnValue({ api_base: "http://localhost:3000/api", default_friend_id: 1, insecure_tls: true, player_artwork });
+
+    it("keeps artwork off unless the config enables it", () => {
+      configWith();
+      createPlayerDaemon();
+      expect(MpvBackend).toHaveBeenLastCalledWith({ insecureTls: true, artwork: undefined });
+      configWith(true);
+      createPlayerDaemon();
+      expect(MpvBackend).toHaveBeenLastCalledWith({ insecureTls: true, artwork: true });
+    });
+
+    it("lets the artwork argument override the config", () => {
+      configWith(false);
+      createPlayerDaemon({ artwork: true });
+      expect(MpvBackend).toHaveBeenLastCalledWith({ insecureTls: true, artwork: true });
+      configWith(true);
+      createPlayerDaemon({ artwork: false });
+      expect(MpvBackend).toHaveBeenLastCalledWith({ insecureTls: true, artwork: false });
+    });
+
+    it("applies --artwork to the foreground daemon, the TUI and the detached daemon", async () => {
+      configWith(false);
+      vi.spyOn(PlayerDaemon.prototype, "start").mockResolvedValue();
+      vi.spyOn(PlayerDaemon.prototype, "stop").mockResolvedValue();
+      vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+      setImmediate(() => process.emit("SIGINT"));
+      await makeProgram().parseAsync(["node", "test", "player", "start", "--artwork"]);
+      expect(MpvBackend).toHaveBeenLastCalledWith({ insecureTls: true, artwork: true });
+
+      await makeProgram().parseAsync(["node", "test", "player", "_daemon", "--artwork"]);
+      expect(MpvBackend).toHaveBeenLastCalledWith({ insecureTls: true, artwork: true });
+      process.emit("SIGTERM");
+
+      vi.spyOn(PlayerControlClient.prototype, "request").mockResolvedValue({ status: "stopped" });
+      vi.spyOn(PlayerControlClient.prototype, "close").mockResolvedValue();
+      await makeProgram().parseAsync(["node", "test", "player", "start", "--detach", "--artwork"]);
+      expect(vi.mocked(spawn).mock.lastCall?.[1]).toEqual([process.argv[1], "player", "_daemon", "--artwork"]);
+      await makeProgram().parseAsync(["node", "test", "player", "start", "--detach"]);
+      expect(vi.mocked(spawn).mock.lastCall?.[1]).toEqual([process.argv[1], "player", "_daemon"]);
+    });
+
+    it("passes --artwork to the interactive player", async () => {
+      const stdinDescriptor = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
+      const stdoutDescriptor = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
+      Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: true });
+      Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: true });
+      try {
+        vi.mocked(runPlayerTui).mockResolvedValueOnce();
+        await makeProgram().parseAsync(["node", "test", "player", "--artwork"]);
+        expect(runPlayerTui).toHaveBeenLastCalledWith({ artwork: true });
+      } finally {
+        vi.mocked(runPlayerTui).mockReset();
+        if (stdinDescriptor) Object.defineProperty(process.stdin, "isTTY", stdinDescriptor);
+        else Reflect.deleteProperty(process.stdin, "isTTY");
+        if (stdoutDescriptor) Object.defineProperty(process.stdout, "isTTY", stdoutDescriptor);
+        else Reflect.deleteProperty(process.stdout, "isTTY");
+      }
+    });
   });
 });

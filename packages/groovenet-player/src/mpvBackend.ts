@@ -11,6 +11,8 @@ import { PlayerError } from "./types.js";
 export interface MpvBackendOptions {
   executable?: string;
   insecureTls?: boolean;
+  /** Let mpv decode and show embedded cover art in its own window. Off by default. */
+  artwork?: boolean;
   startupTimeoutMs?: number;
   commandTimeoutMs?: number;
   /** Injectable process and IPC transport for deterministic backend tests. */
@@ -55,9 +57,11 @@ export class MpvBackend extends EventEmitter implements PlaybackBackend {
     this.spawnProcess = options.spawnProcess ?? ((executable, args) => spawn(executable, args, { stdio: "ignore" }));
     this.connectSocket = options.connectSocket ?? createConnection;
     this.insecureTls = options.insecureTls ?? false;
+    this.artwork = options.artwork ?? false;
   }
 
   private readonly insecureTls: boolean;
+  private readonly artwork: boolean;
 
   // Keep EventEmitter's broad overload for compatibility and add typed event overloads.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -164,6 +168,8 @@ export class MpvBackend extends EventEmitter implements PlaybackBackend {
     this.spawnError = null;
     const args = ["--idle=yes", "--no-terminal", `--input-ipc-server=${this.socketPath}`];
     if (this.insecureTls) args.push("--tls-verify=no");
+    // Embedded cover art is a video track to mpv, which opens a window for it.
+    if (!this.artwork) args.push("--vid=no");
     try {
       this.process = this.spawnProcess(this.executable, args);
     } catch (error) {

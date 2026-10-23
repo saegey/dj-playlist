@@ -33,6 +33,12 @@ Tracks without downloaded audio are skipped with a typed `NO_AUDIO` error.
 `insecureTls` is forwarded as mpv's `--tls-verify=no` setting for installations
 using a self-signed server certificate.
 
+By default mpv is started with `--vid=no`, so embedded cover art does not open
+a window (the player has no artwork view, and the daemon may have no display).
+Pass `artwork: true` to `MpvBackend` to keep mpv's cover-art window. The
+Groovenet CLI exposes this as the `player_artwork` config key and the
+`--artwork` flag; a running daemon must be restarted to pick up a change.
+
 `MpvBackend` does not install mpv. Install it separately and make it available
 on `PATH`, or pass an executable path in the constructor. `close()` stops the
 owned process. The `TestPlaybackBackend` from `@groovenet/player/testing` is a small in-memory

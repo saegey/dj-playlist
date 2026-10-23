@@ -12,7 +12,7 @@ groovenet config set api_base https://groovenet.home.arpa/api
 groovenet config show
 ```
 
-Keys: `api_base`, `api_key`, `default_friend_id`, `username`, `insecure_tls`.
+Keys: `api_base`, `api_key`, `default_friend_id`, `username`, `insecure_tls`, `player_artwork`.
 
 ## Commands
 
