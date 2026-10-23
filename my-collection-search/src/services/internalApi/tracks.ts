@@ -134,6 +134,7 @@ export type AsyncAnalyzeResponse = {
 export type UploadTrackAudioArgs = {
   file: File;
   track_id: string;
+  friend_id: number;
 };
 export type UploadTrackAudioResponse = {
   analysis: AnalyzeResponse;
@@ -198,6 +199,7 @@ export async function uploadTrackAudio(
   const formData = new FormData();
   formData.append("file", args.file);
   formData.append("track_id", args.track_id);
+  formData.append("friend_id", String(args.friend_id));
   return await http<UploadTrackAudioResponse>("/api/tracks/upload", {
     method: "POST",
     body: formData,

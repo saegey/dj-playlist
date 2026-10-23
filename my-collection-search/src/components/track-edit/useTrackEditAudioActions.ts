@@ -35,9 +35,13 @@ export function useTrackEditAudioActions({
   // can review before saving (server persists local_audio_url on its own).
   const handleFileUpload = async (selectedFile: File) => {
     try {
+      if (form.friend_id === undefined) {
+        throw new Error("Track has no friend_id");
+      }
       const { analysis: data } = await uploadAudio({
         file: selectedFile,
         track_id: form.track_id,
+        friend_id: form.friend_id,
       });
       const bpm_confidence = extractBpmConfidence(data.rhythm);
       const { key, key_confidence } = extractKeyAnalysis(data.tonal);

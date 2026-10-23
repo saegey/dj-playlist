@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { chooseMenuItem, renderWithProviders } from "@/test/renderWithProviders";
 import type { Track } from "@/types/track";
 
@@ -273,6 +273,19 @@ describe("TrackActionsMenu mobile drawer", () => {
     const { user } = await openDrawer();
     await user.click(screen.getByText("Remove Audio"));
     expect(await screen.findByRole("dialog", { name: "Remove Audio" })).toBeTruthy();
+  });
+
+  it("uploads chosen audio with the track's friend_id", async () => {
+    mocks.mutateAsync.mockResolvedValue({ analysis: {}, local_audio_url: "a.m4a" });
+    await openDrawer();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["x"], "song.mp3", { type: "audio/mpeg" });
+    fireEvent.change(input, { target: { files: [file] } });
+    await vi.waitFor(() =>
+      expect(mocks.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ file, track_id: "t1", friend_id: 7 })
+      )
+    );
   });
 
   it("opens the delete confirmation and the upload picker", async () => {

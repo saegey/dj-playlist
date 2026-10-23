@@ -202,7 +202,7 @@ describe("uploadTrackAudio", () => {
   it("sends multipart form data without a JSON content type", async () => {
     const file = new File(["audio"], "song.flac", { type: "audio/flac" });
 
-    await uploadTrackAudio({ file, track_id: "t1" });
+    await uploadTrackAudio({ file, track_id: "t1", friend_id: 3 });
 
     const [url, init] = httpMock.mock.calls[0];
     expect(url).toBe("/api/tracks/upload");
@@ -215,10 +215,11 @@ describe("uploadTrackAudio", () => {
   it("includes the file and track id in the form data", async () => {
     const file = new File(["audio"], "song.flac", { type: "audio/flac" });
 
-    await uploadTrackAudio({ file, track_id: "t1" });
+    await uploadTrackAudio({ file, track_id: "t1", friend_id: 3 });
 
     const body = httpMock.mock.calls[0][1].body as FormData;
     expect(body.get("track_id")).toBe("t1");
+    expect(body.get("friend_id")).toBe("3");
     expect((body.get("file") as File).name).toBe("song.flac");
   });
 });
