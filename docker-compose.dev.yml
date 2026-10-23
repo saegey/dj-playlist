@@ -3,6 +3,8 @@
 
 services:
   app:
+    build:
+      target: dev
     working_dir: /app
     environment:
       NODE_ENV: development
@@ -34,7 +36,7 @@ services:
     # own (wrong-platform) typescript in charge. rm -rf first so the symlink
     # actually takes over and contracts builds against this container's
     # freshly-installed, correct-platform node_modules.
-    command: sh -c "npm ci && rm -rf /packages/groovenet-contracts/node_modules && ln -sfn /app/node_modules /packages/groovenet-contracts/node_modules && npm --prefix /packages/groovenet-contracts run build && npm run dev -- -H 0.0.0.0 -p 3000"
+    command: sh -c "node scripts/ensure-dev-deps.mjs && rm -rf /packages/groovenet-contracts/node_modules && ln -sfn /app/node_modules /packages/groovenet-contracts/node_modules && npm --prefix /packages/groovenet-contracts run build && npm run dev -- -H 0.0.0.0 -p 3000"
 
   essentia:
 

@@ -116,6 +116,16 @@ jobs:
           # Node reports paths relative to this job's app working directory.
           sed -i 's#^SF:scripts/#SF:my-collection-search/scripts/#' coverage/storybook.lcov
 
+      - name: Test dev dependency installation with coverage
+        run: |
+          node --test --experimental-test-coverage \
+            --test-coverage-include=scripts/ensure-dev-deps.mjs \
+            --test-reporter=spec --test-reporter=lcov \
+            --test-reporter-destination=stdout \
+            --test-reporter-destination=coverage/dev-deps.lcov \
+            scripts/ensure-dev-deps.test.mjs
+          sed -i 's#^SF:scripts/#SF:my-collection-search/scripts/#' coverage/dev-deps.lcov
+
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v7
         with:
@@ -129,7 +139,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          files: my-collection-search/coverage/lcov.info,my-collection-search/coverage/storybook.lcov
+          files: my-collection-search/coverage/lcov.info,my-collection-search/coverage/storybook.lcov,my-collection-search/coverage/dev-deps.lcov
           flags: webapp
           disable_search: true
           fail_ci_if_error: false

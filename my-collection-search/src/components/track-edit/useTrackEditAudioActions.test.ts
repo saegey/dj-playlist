@@ -86,6 +86,37 @@ describe("useTrackEditAudioActions key staging (#524)", () => {
     expect(next.key_confidence).toBe(0.9);
   });
 
+  it("sends the track's friend_id with the upload", async () => {
+    mockUpload.mockResolvedValue({ analysis: {} });
+    const form = { ...baseForm(), track_id: "t9", friend_id: 4 };
+    const { result } = renderHook(() =>
+      useTrackEditAudioActions({ form, setForm: vi.fn(), onSave: vi.fn() })
+    );
+    const file = new File([], "song.mp3");
+
+    await act(async () => {
+      await result.current.handleFileUpload(file);
+    });
+
+    expect(mockUpload).toHaveBeenCalledWith({ file, track_id: "t9", friend_id: 4 });
+  });
+
+  it("reports an error instead of uploading when the track has no friend_id", async () => {
+    const form = { ...baseForm(), friend_id: undefined };
+    const { result } = renderHook(() =>
+      useTrackEditAudioActions({ form, setForm: vi.fn(), onSave: vi.fn() })
+    );
+
+    await act(async () => {
+      await result.current.handleFileUpload(new File([], "song.mp3"));
+    });
+
+    expect(mockUpload).not.toHaveBeenCalled();
+    expect(mockToast).toHaveBeenCalledWith(
+      expect.objectContaining({ title: "Upload Failed", type: "error" })
+    );
+  });
+
   it("surfaces an upload failure as an error toast instead of staging anything", async () => {
     mockUpload.mockRejectedValue(new Error("network down"));
     const setForm = vi.fn();

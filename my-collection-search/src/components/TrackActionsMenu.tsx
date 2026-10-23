@@ -184,6 +184,7 @@ export default function TrackActionsMenu({
       const result = await uploadMutation.mutateAsync({
         file,
         track_id: track.track_id,
+        friend_id: track.friend_id,
       });
       const analysis = result.analysis;
       const uploadedUrl =

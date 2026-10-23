@@ -69,13 +69,13 @@ jobs:
             [[ -n "$file" ]] || continue
 
             case "$file" in
-              .github/workflows/docker-publish.yml|justfile)
+              .github/workflows/docker-publish.yml|justfile|.dockerignore)
                 force_all=true
                 ;;
             esac
 
             case "$file" in
-              my-collection-search/*)
+              my-collection-search/*|package.json|package-lock.json|packages/*/package.json|mcp-server/package.json|packages/groovenet-contracts/*)
                 webapp=true
                 ;;
             esac
