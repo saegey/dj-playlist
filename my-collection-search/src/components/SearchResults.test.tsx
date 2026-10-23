@@ -131,7 +131,7 @@ const selectTracksButton = () =>
   screen.getAllByRole("button", { name: "Select tracks", hidden: true })[0];
 
 /** The desktop input: jsdom renders both layouts and only the mobile one is accessible. */
-const searchInput = () => screen.getAllByRole("textbox", { hidden: true })[0] as HTMLInputElement;
+const searchInput = () => screen.getAllByRole("textbox")[0] as HTMLInputElement;
 const lastSearchMode = () => mocks.useSearchResults.mock.calls.at(-1)?.[0].searchMode;
 const lastGenres = () => mocks.useSearchResults.mock.calls.at(-1)?.[0].genres;
 const lastAttributes = () => mocks.useSearchResults.mock.calls.at(-1)?.[0].attributes;
