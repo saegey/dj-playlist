@@ -30,3 +30,9 @@ RUN npm install -g "npm@${NPM_VERSION}" && \
     ffmpeg -version && ffprobe -version && \
     python3 -c "import ctypes; ctypes.CDLL('libchromaprint.so.1')" && \
     docker compose version
+
+# Match hosted runner ownership and ordinary filesystem permission checks.
+RUN useradd --create-home --uid 1001 --user-group --shell /bin/bash ci
+USER 1001:1001
+ENV HOME=/home/ci
+WORKDIR /home/ci

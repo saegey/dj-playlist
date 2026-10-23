@@ -4,7 +4,8 @@ The web `test` and `fingerprint-service-coverage` jobs run inside
 `ghcr.io/public-vinyl-radio/ci-base`, pinned to the digest returned by
 `ci-image.yml` for that run. The image includes Node, the exact npm pin,
 ffmpeg/ffprobe, libchromaprint, Python for native-library smoke checks,
-Git/curl/GPG, and the Docker CLI with Compose. It contains no application code
+Git/curl/GPG, and the Docker CLI with Compose. Jobs run as UID 1001, matching
+hosted runner ownership and filesystem permission checks. It contains no app code
 or installed application dependencies. Ubuntu 24.04 keeps system Python 3.12
 and native libraries aligned with the hosted runners. Python environments are still
 managed by `setup-uv` and `uv sync`.
