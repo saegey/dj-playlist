@@ -10,6 +10,8 @@ import { formatPlayback } from "./playerTuiView.js";
 export interface PlayerTuiOptions {
   search?: string;
   playlist?: string;
+  /** Overrides `player_artwork` for the daemon this TUI starts. */
+  artwork?: boolean;
 }
 
 type View = "search" | "playlists" | "queue" | "devices";
@@ -35,7 +37,7 @@ export async function runPlayerTui(options: PlayerTuiOptions = {}, runtime: Play
       initialSnapshot = await control.request<PlaybackSnapshot>("status");
     } catch (error) {
       if (!(error instanceof PlayerProtocolError) || error.code !== "DAEMON_UNAVAILABLE") throw error;
-      daemon = runtime.createDaemon?.() ?? createPlayerDaemon();
+      daemon = runtime.createDaemon?.() ?? createPlayerDaemon({ artwork: options.artwork });
       await daemon.start();
       await control.close();
       control = runtime.createControl?.() ?? new PlayerControlClient(PLAYER_DAEMON_PATHS.socketPath);

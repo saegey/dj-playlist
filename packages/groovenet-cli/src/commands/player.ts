@@ -9,11 +9,16 @@ import { printError, printJson, printSuccess } from "../output.js";
 const playerDir = join(homedir(), ".groovenet", "player");
 export const PLAYER_DAEMON_PATHS = { socketPath: join(playerDir, "player.sock"), pidPath: join(playerDir, "player.pid") };
 
-export function createPlayerDaemon(): PlayerDaemon {
+export interface PlayerDaemonOptions {
+  /** Overrides `player_artwork` from config for this daemon. */
+  artwork?: boolean;
+}
+
+export function createPlayerDaemon(options: PlayerDaemonOptions = {}): PlayerDaemon {
   const config = loadConfig();
   const client = new GroovenetClient({ baseUrl: config.api_base, apiKey: config.api_key, insecureTls: config.insecure_tls, clientName: "cli" });
   const player = new PlayerCore(
-    new MpvBackend({ insecureTls: config.insecure_tls }),
+    new MpvBackend({ insecureTls: config.insecure_tls, artwork: options.artwork ?? config.player_artwork }),
     new TrackResolver(client, { apiBase: config.api_base, apiKey: config.api_key })
   );
   return new PlayerDaemon({ player, paths: PLAYER_DAEMON_PATHS });
@@ -49,6 +54,12 @@ function printPlayerResult(result: unknown, json: boolean): void {
   }
 }
 
+// `player` declares --artwork too, so commander hands the flag to the parent
+// even when it follows a subcommand; read it from either level.
+function artworkFlag(command: Command): true | undefined {
+  return command.optsWithGlobals<{ artwork?: boolean }>().artwork ? true : undefined;
+}
+
 async function withClient<T>(action: (client: PlayerControlClient) => Promise<T>): Promise<T> {
   const client = new PlayerControlClient(PLAYER_DAEMON_PATHS.socketPath);
   try { return await action(client); } finally { await client.close(); }
@@ -60,7 +71,8 @@ export function addPlayerCommands(program: Command): void {
   player
     .option("--playlist <id>", "open a playlist in the interactive player")
     .option("--search <query>", "search for tracks in the interactive player")
-    .action(async (options: { playlist?: string; search?: string }) => {
+    .option("--artwork", "show mpv's cover-art window this run (overrides player_artwork)")
+    .action(async (options: { playlist?: string; search?: string; artwork?: boolean }) => {
       if (!process.stdin.isTTY || !process.stdout.isTTY) {
         printError("The interactive player requires a TTY. Use `groovenet player start --detach` and the player control commands in scripts.");
         process.exitCode = 1;
@@ -77,13 +89,15 @@ export function addPlayerCommands(program: Command): void {
   player.command("start")
     .description("Start the playback daemon")
     .option("--detach", "run the daemon in the background")
+    .option("--artwork", "show mpv's cover-art window (overrides player_artwork)")
     .option("--json", "print machine-readable output")
-    .action(async (options: { detach?: boolean; json?: boolean }) => reportFailure(async () => {
+    .action(async (options: { detach?: boolean; json?: boolean }, command: Command) => reportFailure(async () => {
+      const artwork = artworkFlag(command);
       if (options.detach) {
         const executable = process.argv[1];
         if (!executable) throw new Error("Could not locate the Groovenet CLI entry point.");
         const spawnError: { current: Error | null } = { current: null };
-        const child = spawn(process.execPath, [executable, "player", "_daemon"], { detached: true, stdio: "ignore", env: process.env });
+        const child = spawn(process.execPath, [executable, "player", "_daemon", ...(artwork ? ["--artwork"] : [])], { detached: true, stdio: "ignore", env: process.env });
         child.once("error", (error) => { spawnError.current = error; });
         child.unref();
         const deadline = Date.now() + 5000;
@@ -100,7 +114,7 @@ export function addPlayerCommands(program: Command): void {
         }
         throw new Error(`Player daemon did not start: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
       }
-      const daemon = createPlayerDaemon();
+      const daemon = createPlayerDaemon({ artwork });
       await daemon.start();
       if (options.json) printJson({ started: true, pid: process.pid }); else printSuccess("Player daemon running. Press Ctrl+C to stop.");
       await new Promise<void>((resolve) => {
@@ -118,9 +132,10 @@ export function addPlayerCommands(program: Command): void {
       return undefined;
     }, options.json ?? false));
 
-  player.command("_daemon").description("Internal daemon process").action(async () => {
+  player.command("_daemon").description("Internal daemon process").option("--artwork", "show mpv's cover-art window")
+    .action(async (_options: unknown, command: Command) => {
     try {
-      const daemon = createPlayerDaemon();
+      const daemon = createPlayerDaemon({ artwork: artworkFlag(command) });
       await daemon.start();
       const shutdown = () => {
         process.off("SIGINT", shutdown);

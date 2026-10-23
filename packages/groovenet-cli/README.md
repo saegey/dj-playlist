@@ -85,6 +85,14 @@ continues to list outputs; `devices list` is an explicit alias. See the
 [@groovenet/player protocol document](../groovenet-player/PROTOCOL.md) for the
 versioned local control protocol.
 
+By default mpv's cover-art window is hidden: embedded artwork is passed over
+(`--vid=no`), so playback works on a machine with no display. To get the window
+back, run `groovenet config set player_artwork true` (`config show` prints it),
+or pass `--artwork` to `groovenet player` / `groovenet player start` for one
+run. The daemon reads config when it starts, so restart a running detached
+daemon (`groovenet player stop`, then start it again) after changing
+`player_artwork`.
+
 The TUI requires mpv on `PATH` and a terminal. mpv audio outputs are available
 on macOS, Linux and Windows. macOS AirPlay speakers appear as CoreAudio devices;
 Linux AirPlay routing depends on PipeWire RAOP support, with AirPlay 2 support
