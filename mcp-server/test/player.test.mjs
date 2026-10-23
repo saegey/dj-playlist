@@ -11,6 +11,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 const track = (id, extra = {}) => ({ track_id: id, friend_id: 6, title: `Title ${id}`, artist: `Artist ${id}`, bpm: 120, key: "8A", ...extra });
+const METHODS = ["status", "play", "pause", "resume", "next", "prev", "seek", "volume", "queue.add", "queue.addTrack", "queue.list", "queue.remove", "devices", "devices.select"];
 const entry = (id, t) => ({ id, track: t });
 
 /** A daemon that speaks the player protocol on a unix socket and records what it saw. */
@@ -47,7 +48,7 @@ async function startFakeDaemon(socketPath) {
         if (state.mode === "silent") continue;
         if (state.mode === "hangup") { socket.destroy(); continue; }
         const base = { jsonrpc: "2.0", version: state.version, id: req.id };
-        const handler = state.handlers.get(req.method);
+        const handler = METHODS.includes(req.method) ? state.handlers.get(req.method) : undefined;
         const outcome = handler ? handler(req.params ?? {}) : { result: state.snapshot };
         socket.write(`${JSON.stringify({ ...base, ...outcome })}\n`);
       }
