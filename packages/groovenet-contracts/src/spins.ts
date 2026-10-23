@@ -7,15 +7,17 @@ import { trackGenreSchema } from "./tracks.js";
 //
 // The enums mirror CHECK constraints in the app's
 // `migrations/1790900000000_add-playlist-spin-sessions.js` (selection_mode,
-// provenance) and `1772300000000_add_spin_logging_tables.js` (selection_type);
+// provenance), `1792500000000_add-digital-spin-medium.js` (medium) and `1772300000000_add_spin_logging_tables.js` (selection_type);
 // widening one needs a migration too.
 
 export const spinSelectionModeSchema = z.enum(["sides", "tracks", "automatic", "playlist"]);
 export const spinProvenanceSchema = z.enum(["manual", "automatic", "playlist"]);
+export const spinMediumSchema = z.enum(["vinyl", "digital"]);
 export const spinSelectionTypeSchema = z.enum(["side", "track"]);
 
 export const SPIN_SELECTION_MODES = spinSelectionModeSchema.options;
 export const SPIN_PROVENANCES = spinProvenanceSchema.options;
+export const SPIN_MEDIA = spinMediumSchema.options;
 export const SPIN_SELECTION_TYPES = spinSelectionTypeSchema.options;
 
 // Timestamps are ISO strings on the wire; `format` documents that without
@@ -31,7 +33,7 @@ export const spinSessionSchema = z.object({
   id: z.number().int(),
   friend_id: z.number().int(),
   release_id: z.string(),
-  medium: z.literal("vinyl"),
+  medium: spinMediumSchema.meta({ description: "`digital` for plays logged by the player daemon" }),
   selection_mode: spinSelectionModeSchema,
   played_at: dateTime(),
   note: z.string().nullable().optional(),
@@ -166,6 +168,7 @@ export const spinCreateObjectSchema = z.object({
   friend_id: z.number().int(),
   release_id: z.string().min(1),
   played_at: z.string().min(1).meta({ format: "date-time" }),
+  medium: spinMediumSchema.optional().meta({ description: "Defaults to `vinyl`" }),
   note: z.string().nullable().optional(),
   context_type: z.string().nullable().optional(),
   side_keys: z.array(z.string().min(1)).optional(),
@@ -270,6 +273,7 @@ export const spinTopTracksQuerySchema = z.object({
 });
 
 export type SpinSelectionMode = z.infer<typeof spinSelectionModeSchema>;
+export type SpinMedium = z.infer<typeof spinMediumSchema>;
 export type SpinProvenance = z.infer<typeof spinProvenanceSchema>;
 export type SpinSelectionType = z.infer<typeof spinSelectionTypeSchema>;
 export type SpinTrackRef = z.infer<typeof spinTrackRefSchema>;

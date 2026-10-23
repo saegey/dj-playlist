@@ -1,8 +1,8 @@
 import { Command } from "commander";
 import { spawn, type ChildProcess } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadConfig } from "@groovenet/client";
-import { MpvBackend, PlayerControlClient } from "@groovenet/player";
+import { GroovenetClient, loadConfig } from "@groovenet/client";
+import { MpvBackend, PlayLogger, PlayerControlClient } from "@groovenet/player";
 import { PlayerDaemon } from "@groovenet/player";
 import { runPlayerTui } from "./playerTui.js";
 import { addPlayerCommands, createPlayerDaemon } from "./player.js";
@@ -14,7 +14,11 @@ vi.mock("@groovenet/client", async (importOriginal) => ({
 }));
 vi.mock("@groovenet/player", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@groovenet/player")>();
-  return { ...actual, MpvBackend: vi.fn(function (options: ConstructorParameters<typeof actual.MpvBackend>[0]) { return new actual.MpvBackend(options); }) };
+  return {
+    ...actual,
+    MpvBackend: vi.fn(function (options: ConstructorParameters<typeof actual.MpvBackend>[0]) { return new actual.MpvBackend(options); }),
+    PlayLogger: vi.fn(function (options: ConstructorParameters<typeof actual.PlayLogger>[0]) { return new actual.PlayLogger(options); }),
+  };
 });
 vi.mock("./playerTui.js", () => ({ runPlayerTui: vi.fn() }));
 
@@ -290,6 +294,99 @@ describe("player CLI commands", () => {
       if (stdoutDescriptor) Object.defineProperty(process.stdout, "isTTY", stdoutDescriptor);
       else Reflect.deleteProperty(process.stdout, "isTTY");
     }
+  });
+
+  describe("play logging", () => {
+    const configWith = (player_log_plays?: boolean) =>
+      vi.mocked(loadConfig).mockReturnValue({ api_base: "http://localhost:3000/api", default_friend_id: 7, player_log_plays });
+    const track = { track_id: "t1", friend_id: 7, release_id: "r1" };
+
+    async function logPlay(): Promise<(play: { track: typeof track; startedAt: Date; listened: number }) => Promise<void>> {
+      return vi.mocked(PlayLogger).mock.lastCall![0].logPlay as never;
+    }
+
+    it("stays off unless the config or the argument enables it", () => {
+      vi.mocked(PlayLogger).mockClear();
+      configWith();
+      createPlayerDaemon();
+      configWith(false);
+      createPlayerDaemon();
+      configWith(true);
+      createPlayerDaemon({ logPlays: false });
+      expect(PlayLogger).not.toHaveBeenCalled();
+      createPlayerDaemon();
+      expect(PlayLogger).toHaveBeenCalledOnce();
+      configWith(false);
+      createPlayerDaemon({ logPlays: true });
+      expect(PlayLogger).toHaveBeenCalledTimes(2);
+    });
+
+    it("posts a digital spin for the played track", async () => {
+      configWith(true);
+      const createSpin = vi.spyOn(GroovenetClient.prototype, "createSpin").mockResolvedValue({} as never);
+      createPlayerDaemon();
+      await (await logPlay())({ track, startedAt: new Date("2026-10-23T12:00:00Z"), listened: 100 });
+      expect(createSpin).toHaveBeenCalledWith({
+        friend_id: 7,
+        release_id: "r1",
+        medium: "digital",
+        played_at: "2026-10-23T12:00:00.000Z",
+        context_type: "player",
+        track_refs: [{ track_id: "t1", friend_id: 7 }],
+      });
+    });
+
+    it("treats an already logged play as done and surfaces other errors", async () => {
+      configWith(true);
+      const createSpin = vi.spyOn(GroovenetClient.prototype, "createSpin");
+      createPlayerDaemon();
+      const log = await logPlay();
+      const play = { track, startedAt: new Date(), listened: 100 };
+      createSpin.mockRejectedValueOnce(new Error("API Error: Digital play already logged"));
+      await expect(log(play)).resolves.toBeUndefined();
+      createSpin.mockRejectedValueOnce(new Error("API Error: boom"));
+      await expect(log(play)).rejects.toThrow("boom");
+      createSpin.mockRejectedValueOnce("not an error");
+      await expect(log(play)).rejects.toBe("not an error");
+    });
+
+    it("applies --log-plays to the foreground daemon, the detached daemon and the interactive player", async () => {
+      configWith(false);
+      vi.mocked(PlayLogger).mockClear();
+      vi.spyOn(PlayerDaemon.prototype, "start").mockResolvedValue();
+      vi.spyOn(PlayerDaemon.prototype, "stop").mockResolvedValue();
+      vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+      setImmediate(() => process.emit("SIGINT"));
+      await makeProgram().parseAsync(["node", "test", "player", "start", "--log-plays"]);
+      expect(PlayLogger).toHaveBeenCalledOnce();
+
+      await makeProgram().parseAsync(["node", "test", "player", "_daemon", "--log-plays"]);
+      expect(PlayLogger).toHaveBeenCalledTimes(2);
+      process.emit("SIGTERM");
+
+      vi.spyOn(PlayerControlClient.prototype, "request").mockResolvedValue({ status: "stopped" });
+      vi.spyOn(PlayerControlClient.prototype, "close").mockResolvedValue();
+      await makeProgram().parseAsync(["node", "test", "player", "start", "--detach", "--log-plays"]);
+      expect(vi.mocked(spawn).mock.lastCall?.[1]).toEqual([process.argv[1], "player", "_daemon", "--log-plays"]);
+      await makeProgram().parseAsync(["node", "test", "player", "start", "--detach", "--artwork", "--log-plays"]);
+      expect(vi.mocked(spawn).mock.lastCall?.[1]).toEqual([process.argv[1], "player", "_daemon", "--artwork", "--log-plays"]);
+
+      const stdinDescriptor = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
+      const stdoutDescriptor = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
+      Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: true });
+      Object.defineProperty(process.stdout, "isTTY", { configurable: true, value: true });
+      try {
+        vi.mocked(runPlayerTui).mockResolvedValueOnce();
+        await makeProgram().parseAsync(["node", "test", "player", "--log-plays"]);
+        expect(runPlayerTui).toHaveBeenLastCalledWith({ logPlays: true });
+      } finally {
+        vi.mocked(runPlayerTui).mockReset();
+        if (stdinDescriptor) Object.defineProperty(process.stdin, "isTTY", stdinDescriptor);
+        else Reflect.deleteProperty(process.stdin, "isTTY");
+        if (stdoutDescriptor) Object.defineProperty(process.stdout, "isTTY", stdoutDescriptor);
+        else Reflect.deleteProperty(process.stdout, "isTTY");
+      }
+    });
   });
 
   describe("cover-art window", () => {

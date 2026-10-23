@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
       serviceInput = {
         friend_id: parsedBody.data.friend_id,
         release_id: parsedBody.data.release_id,
+        medium: parsedBody.data.medium,
         played_at: parsedBody.data.played_at,
         note: parsedBody.data.note,
         context_type: parsedBody.data.context_type,
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
       serviceInput = {
         friend_id: parsedBody.data.friend_id,
         release_id: parsedBody.data.release_id,
+        medium: parsedBody.data.medium,
         played_at: parsedBody.data.played_at,
         note: parsedBody.data.note,
         context_type: parsedBody.data.context_type,

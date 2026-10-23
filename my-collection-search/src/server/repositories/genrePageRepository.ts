@@ -8,6 +8,7 @@ import {
   type GenreFilter,
 } from "@/lib/trackFilterSpec";
 import { hasVectorsSelectSql, trackGenresSelectSql } from "@/server/repositories/trackGenreRepository";
+import { VINYL_SESSIONS_SQL } from "@/server/repositories/trackSpinEventRepository";
 
 export type GenrePageCounts = {
   /** Live tracks linked to this genre itself. */
@@ -89,6 +90,7 @@ export class GenrePageRepository {
       LEFT JOIN (
         SELECT track_id, friend_id, COUNT(*) AS play_count
         FROM track_spin_events
+        WHERE session_id IN ${VINYL_SESSIONS_SQL}
         GROUP BY track_id, friend_id
       ) p ON p.track_id = t.track_id AND p.friend_id = t.friend_id
       WHERE ${where.join(" AND ")}
@@ -114,6 +116,7 @@ export class GenrePageRepository {
       LEFT JOIN (
         SELECT release_id, friend_id, COUNT(*) AS play_count
         FROM track_spin_events
+        WHERE session_id IN ${VINYL_SESSIONS_SQL}
         GROUP BY release_id, friend_id
       ) p ON p.release_id = a.release_id AND p.friend_id = a.friend_id
       WHERE ${where.join(" AND ")}

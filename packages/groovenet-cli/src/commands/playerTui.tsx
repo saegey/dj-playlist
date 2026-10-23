@@ -12,6 +12,8 @@ export interface PlayerTuiOptions {
   playlist?: string;
   /** Overrides `player_artwork` for the daemon this TUI starts. */
   artwork?: boolean;
+  /** Overrides `player_log_plays` for the daemon this TUI starts. */
+  logPlays?: boolean;
 }
 
 type View = "search" | "playlists" | "queue" | "devices";
@@ -37,7 +39,7 @@ export async function runPlayerTui(options: PlayerTuiOptions = {}, runtime: Play
       initialSnapshot = await control.request<PlaybackSnapshot>("status");
     } catch (error) {
       if (!(error instanceof PlayerProtocolError) || error.code !== "DAEMON_UNAVAILABLE") throw error;
-      daemon = runtime.createDaemon?.() ?? createPlayerDaemon({ artwork: options.artwork });
+      daemon = runtime.createDaemon?.() ?? createPlayerDaemon({ artwork: options.artwork, logPlays: options.logPlays });
       await daemon.start();
       await control.close();
       control = runtime.createControl?.() ?? new PlayerControlClient(PLAYER_DAEMON_PATHS.socketPath);

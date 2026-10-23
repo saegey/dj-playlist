@@ -154,3 +154,35 @@ dbTest("a spin is only editable by its friend, and a bad selection changes nothi
   expect(unchanged.session.note).toBeNull();
   expect(unchanged.track_events.map((event) => event.track_id)).toEqual(["edit-b1"]);
 });
+
+dbTest("a digital play is stored once, labelled, and kept out of vinyl play counts (#653)", async () => {
+  const before = await playCounts();
+  const digital = {
+    friend_id: friendId,
+    release_id: RELEASE_ID,
+    medium: "digital" as const,
+    played_at: "2026-10-23T12:00:00.000Z",
+    context_type: "player",
+    track_refs: [{ track_id: "edit-b1", friend_id: friendId }],
+  };
+
+  const logged = await service.createSpinSession(digital);
+  expect(logged.session.medium).toBe("digital");
+  expect(logged.track_events.map((event) => event.track_id)).toEqual(["edit-b1"]);
+
+  // The same play posted again is refused, and leaves one session behind.
+  await expect(service.createSpinSession(digital)).rejects.toThrow("Digital play already logged");
+  const sessions = await dbQuery(
+    `SELECT id FROM spin_sessions WHERE friend_id = $1 AND medium = 'digital'`,
+    [friendId]
+  );
+  expect(sessions.rows).toHaveLength(1);
+
+  // A different start time is a different play; the same time on vinyl is not a clash.
+  await service.createSpinSession({ ...digital, played_at: "2026-10-23T13:00:00.000Z" });
+  await service.createSpinSession({ ...digital, medium: "vinyl" });
+  await service.createSpinSession({ ...digital, medium: "vinyl" });
+
+  const after = await playCounts();
+  expect(after["edit-b1"]).toBe((before["edit-b1"] ?? 0) + 2);
+});

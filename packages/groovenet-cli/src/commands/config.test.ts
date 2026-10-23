@@ -43,6 +43,14 @@ describe("config player_artwork", () => {
     expect(log).toHaveBeenCalledWith("  player_artwork: true");
   });
 
+  it("stores player_log_plays as a boolean", async () => {
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    await run("set", "player_log_plays", "on");
+    expect(saveConfig).toHaveBeenLastCalledWith({ player_log_plays: true });
+    await run("set", "player_log_plays", "off");
+    expect(saveConfig).toHaveBeenLastCalledWith({ player_log_plays: false });
+  });
+
   it("keeps the existing keys working", async () => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     await run("set", "insecure_tls", "yes");

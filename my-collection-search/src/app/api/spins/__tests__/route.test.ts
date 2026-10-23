@@ -224,6 +224,52 @@ describe("POST /api/spins", () => {
     });
   });
 
+  it("passes a digital medium through and maps a repeated play to 409", async () => {
+    const post = () =>
+      POST(
+        new Request("http://localhost/api/spins", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            friend_id: 1,
+            release_id: "rel-1",
+            medium: "digital",
+            played_at: "2026-06-24T01:00:00.000Z",
+            context_type: "player",
+            track_refs: [{ track_id: "trk-a1", friend_id: 1 }],
+          }),
+        }) as never
+      );
+
+    mockCreateSpinSession.mockResolvedValueOnce(makeSpinSessionDetail());
+    expect((await post()).status).toBe(200);
+    expect(mockCreateSpinSession).toHaveBeenLastCalledWith(
+      expect.objectContaining({ medium: "digital", context_type: "player" })
+    );
+
+    mockCreateSpinSession.mockRejectedValueOnce(new Error("Digital play already logged"));
+    const res = await post();
+    expect(res.status).toBe(409);
+    expect((await res.json()).error).toBe("Digital play already logged");
+  });
+
+  it("rejects an unknown medium", async () => {
+    const res = await POST(
+      new Request("http://localhost/api/spins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          friend_id: 1,
+          release_id: "rel-1",
+          medium: "cassette",
+          played_at: "2026-06-24T01:00:00.000Z",
+          side_keys: ["A"],
+        }),
+      }) as never
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("returns 500 for an unexpected service failure", async () => {
     mockCreateSpinSession.mockRejectedValueOnce(new Error("db down"));
 

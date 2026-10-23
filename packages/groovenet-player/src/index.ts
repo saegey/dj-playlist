@@ -6,3 +6,5 @@ export * from "./mpvBackend.js";
 export * from "./protocol.js";
 export * from "./daemon.js";
 export * from "./paths.js";
+export * from "./playThreshold.js";
+export * from "./playLogger.js";

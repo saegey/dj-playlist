@@ -39,6 +39,13 @@ Pass `artwork: true` to `MpvBackend` to keep mpv's cover-art window. The
 Groovenet CLI exposes this as the `player_artwork` config key and the
 `--artwork` flag; a running daemon must be restarted to pick up a change.
 
+`PlayLogger` is an opt-in subscriber that turns a `PlayerCore`'s events into
+play records without the core knowing about it. `playThreshold`, `advanceProgress`
+and `isPlay` are the pure rules: a track of 30 seconds or more counts after
+`min(50% of its duration, 240 s)` of accumulated play time, where only forward
+progress while playing is counted. The CLI wires it to `POST /api/spins` with
+`medium: "digital"` (`player_log_plays` / `--log-plays`).
+
 `MpvBackend` does not install mpv. Install it separately and make it available
 on `PATH`, or pass an executable path in the constructor. `close()` stops the
 owned process. The `TestPlaybackBackend` from `@groovenet/player/testing` is a small in-memory

@@ -56,6 +56,9 @@ export type CreateTrackSpinEventInput = {
   album_snapshot: string;
 };
 
+/** Digital plays (#653) are history, not vinyl spins, so play counts skip them. */
+export const VINYL_SESSIONS_SQL = "(SELECT id FROM spin_sessions WHERE medium = 'vinyl')";
+
 export class TrackSpinEventRepository {
   async insertEvents(
     client: Queryable,
@@ -142,7 +145,7 @@ export class TrackSpinEventRepository {
     limit?: number;
     offset?: number;
   }): Promise<TopTrackSpinEventRow[]> {
-    const whereClauses = ["tse.friend_id = $1"];
+    const whereClauses = ["tse.friend_id = $1", `tse.session_id IN ${VINYL_SESSIONS_SQL}`];
     const params: Array<number | string> = [filters.friend_id];
 
     if (filters.release_id) {
@@ -201,6 +204,7 @@ export class TrackSpinEventRepository {
         WHERE tse.friend_id = aggregated.friend_id
           AND tse.release_id = aggregated.release_id
           AND tse.track_id = aggregated.track_id
+          AND tse.session_id IN ${VINYL_SESSIONS_SQL}
         ORDER BY tse.played_at DESC, tse.id DESC
         LIMIT 1
       ) latest ON TRUE

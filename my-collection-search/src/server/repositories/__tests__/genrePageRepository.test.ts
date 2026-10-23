@@ -65,4 +65,13 @@ describe("GenrePageRepository", () => {
     await repo.topAlbums(filter, undefined, 8);
     expect(lastCall()[0]).not.toContain("a.friend_id = $");
   });
+
+  it("counts vinyl spins only for tracks and albums (#653)", async () => {
+    await repo.topTracks(filter, 6, 10);
+    await repo.topAlbums(filter, 6, 10);
+
+    for (const [sql] of dbQuery.mock.calls as [string][]) {
+      expect(sql).toContain("session_id IN (SELECT id FROM spin_sessions WHERE medium = 'vinyl')");
+    }
+  });
 });

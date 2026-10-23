@@ -137,6 +137,20 @@ describe("SpinLoggingService", () => {
     expect(createSessionMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ selection_mode: "automatic", provenance: "automatic", source_id: "pi" }));
   });
 
+  it("stores a digital play and turns a repeat into a conflict", async () => {
+    getAlbumByReleaseAndFriendMock.mockResolvedValue(makeAlbum());
+    getTracksByReleaseAndFriendMock.mockResolvedValue([makeTrack()]);
+    const input = { friend_id: 1, release_id: "rel-1", medium: "digital" as const, played_at: "2026-06-23T20:15:00.000Z", track_refs: [{ track_id: "trk-1", friend_id: 1 }] };
+    createSessionMock.mockRejectedValueOnce(Object.assign(new Error("duplicate key"), { code: "23505" }));
+    await expect(service.createSpinSession(input)).rejects.toThrow("Digital play already logged");
+    expect(createSessionMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ medium: "digital" }));
+    // Another failure, or a vinyl duplicate, is not reworded.
+    createSessionMock.mockRejectedValueOnce(Object.assign(new Error("duplicate key"), { code: "23505" }));
+    await expect(service.createSpinSession({ ...input, medium: undefined })).rejects.toThrow("duplicate key");
+    createSessionMock.mockRejectedValueOnce(new Error("db down"));
+    await expect(service.createSpinSession(input)).rejects.toThrow("db down");
+  });
+
   it("forwards the automatic-detection lookup to the session repository", async () => {
     findAutomaticSessionByDetectionIdMock.mockResolvedValue({ id: 101 });
     await expect(service.findAutomaticSessionByDetectionId("d1")).resolves.toEqual({ id: 101 });

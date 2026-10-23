@@ -44,6 +44,15 @@ describe("TrackSpinEventRepository.listTopTracks", () => {
     expect(params).toEqual([6, 12, 0]);
   });
 
+  it("counts vinyl spins only, so digital plays stay out of the stats (#653)", async () => {
+    dbQuery.mockReset().mockResolvedValue({ rows: [] });
+
+    await repo.listTopTracks({ friend_id: 6, limit: 12, offset: 0 });
+
+    const [sql] = dbQuery.mock.calls[0];
+    expect(sql.match(/session_id IN \(SELECT id FROM spin_sessions WHERE medium = 'vinyl'\)/g)).toHaveLength(2);
+  });
+
   it("scopes to a release when given one", async () => {
     dbQuery.mockReset().mockResolvedValue({ rows: [] });
 
