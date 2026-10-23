@@ -1,7 +1,10 @@
+import { DIGITAL_PLAY_ALREADY_LOGGED } from "@/server/services/spinErrors";
+
 // The HTTP status for an error thrown while resolving a spin's selection —
 // shared by create (POST /api/spins) and edit (PATCH /api/spins/:id).
 export function getSpinErrorStatus(message: string): number {
   if (message === "Album not found") return 404;
+  if (message === DIGITAL_PLAY_ALREADY_LOGGED) return 409;
 
   const badRequestMessages = [
     "Album has no tracks to log",

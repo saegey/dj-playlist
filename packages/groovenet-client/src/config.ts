@@ -11,6 +11,8 @@ export interface GroovenetConfig {
   insecure_tls?: boolean;
   /** Let the local player's mpv open a window for embedded cover art. Default off. */
   player_artwork?: boolean;
+  /** Log a digital spin when the local player has played a track long enough. Default off. */
+  player_log_plays?: boolean;
 }
 
 const CONFIG_DIR = join(homedir(), ".groovenet");

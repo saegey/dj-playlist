@@ -93,6 +93,15 @@ run. The daemon reads config when it starts, so restart a running detached
 daemon (`groovenet player stop`, then start it again) after changing
 `player_artwork`.
 
+Plays can be logged as spins. It is off by default; enable it with
+`groovenet config set player_log_plays true` or pass `--log-plays` to
+`groovenet player` / `groovenet player start` for one run. A track is logged
+once you have listened to half of it or four minutes, whichever comes first
+(tracks under 30 seconds never count). Pauses, seeks and skipped tracks do not
+add listening time. Each play is a spin with `medium = digital` for
+`default_friend_id`, so it shows in spin history but not in vinyl play counts.
+Only tracks from that friend's library with a release are logged.
+
 The TUI requires mpv on `PATH` and a terminal. mpv audio outputs are available
 on macOS, Linux and Windows. macOS AirPlay speakers appear as CoreAudio devices;
 Linux AirPlay routing depends on PipeWire RAOP support, with AirPlay 2 support

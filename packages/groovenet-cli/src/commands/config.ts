@@ -8,7 +8,8 @@ type ConfigKey =
   | "default_friend_id"
   | "username"
   | "insecure_tls"
-  | "player_artwork";
+  | "player_artwork"
+  | "player_log_plays";
 
 const VALID_KEYS: ConfigKey[] = [
   "api_base",
@@ -17,6 +18,7 @@ const VALID_KEYS: ConfigKey[] = [
   "username",
   "insecure_tls",
   "player_artwork",
+  "player_log_plays",
 ];
 
 export function addConfigCommands(program: Command): void {
@@ -38,7 +40,7 @@ export function addConfigCommands(program: Command): void {
           process.exit(2);
         }
         update[key] = num;
-      } else if (key === "insecure_tls" || key === "player_artwork") {
+      } else if (key === "insecure_tls" || key === "player_artwork" || key === "player_log_plays") {
         const truthy = ["true", "1", "yes", "on"];
         const falsy = ["false", "0", "no", "off"];
         const v = value.toLowerCase();

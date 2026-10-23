@@ -1,4 +1,4 @@
-import type { SpinProvenance, SpinSelectionMode, SpinSelectionType } from "@groovenet/contracts";
+import type { SpinMedium, SpinProvenance, SpinSelectionMode, SpinSelectionType } from "@groovenet/contracts";
 import { dbQuery } from "@/lib/serverDb";
 import type { PoolClient } from "pg";
 
@@ -8,7 +8,7 @@ export type SpinSessionRow = {
   id: number;
   friend_id: number;
   release_id: string;
-  medium: "vinyl";
+  medium: SpinMedium;
   selection_mode: SpinSelectionMode;
   played_at: Date | string;
   note: string | null;
@@ -41,7 +41,7 @@ export type SpinSessionSelectionRow = {
 export type CreateSpinSessionInput = {
   friend_id: number;
   release_id: string;
-  medium?: "vinyl";
+  medium?: SpinMedium;
   selection_mode: SpinSelectionMode;
   played_at: string | Date;
   note?: string | null;

@@ -1,9 +1,10 @@
-import type { SpinDerived, SpinProvenance, SpinTrackRef } from "@groovenet/contracts";
+import type { SpinDerived, SpinMedium, SpinProvenance, SpinTrackRef } from "@groovenet/contracts";
 import {
   compareTrackPositions,
   normalizeAlbumTrackSides,
 } from "@/lib/albumTrackPosition";
 import { withDbTransaction } from "@/lib/serverDb";
+import { DIGITAL_PLAY_ALREADY_LOGGED } from "@/server/services/spinErrors";
 import { albumRepository } from "@/server/repositories/albumRepository";
 import { trackRepository } from "@/server/repositories/trackRepository";
 import {
@@ -19,9 +20,12 @@ import {
 } from "@/server/repositories/trackSpinEventRepository";
 import type { Album, Track } from "@/types/track";
 
+const UNIQUE_VIOLATION = "23505";
+
 export type CreateSpinSessionInput = {
   friend_id: number;
   release_id: string;
+  medium?: SpinMedium;
   played_at: string | Date;
   note?: string | null;
   context_type?: string | null;
@@ -208,18 +212,26 @@ export class SpinLoggingService {
     } = await this.expandSelection(input.release_id, input.friend_id, input);
 
     const result = await withDbTransaction(async (client) => {
-      const session = await spinSessionRepository.createSession(client, {
-        friend_id: input.friend_id,
-        release_id: input.release_id,
-        selection_mode: input.provenance === "automatic" ? "automatic" : selectionMode,
-        played_at: input.played_at,
-        note: input.note ?? null,
-        context_type: input.context_type ?? null,
-        provenance: input.provenance,
-        source_id: input.source_id,
-        detection_id: input.detection_id,
-        confidence: input.confidence,
-      });
+      const session = await spinSessionRepository
+        .createSession(client, {
+          friend_id: input.friend_id,
+          release_id: input.release_id,
+          medium: input.medium,
+          selection_mode: input.provenance === "automatic" ? "automatic" : selectionMode,
+          played_at: input.played_at,
+          note: input.note ?? null,
+          context_type: input.context_type ?? null,
+          provenance: input.provenance,
+          source_id: input.source_id,
+          detection_id: input.detection_id,
+          confidence: input.confidence,
+        })
+        .catch((error: unknown) => {
+          if ((error as { code?: string }).code === UNIQUE_VIOLATION && input.medium === "digital") {
+            throw new Error(DIGITAL_PLAY_ALREADY_LOGGED);
+          }
+          throw error;
+        });
 
       const insertedSelections = await spinSessionRepository.insertSelections(
         client,
