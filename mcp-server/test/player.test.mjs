@@ -30,7 +30,7 @@ async function startFakeDaemon(socketPath) {
       volume: 80,
       error: null,
     },
-    handlers: {},
+    handlers: new Map(),
   };
   const server = createSocketServer((socket) => {
     state.connections += 1;
@@ -47,7 +47,7 @@ async function startFakeDaemon(socketPath) {
         if (state.mode === "silent") continue;
         if (state.mode === "hangup") { socket.destroy(); continue; }
         const base = { jsonrpc: "2.0", version: state.version, id: req.id };
-        const handler = state.handlers[req.method];
+        const handler = state.handlers.get(req.method);
         const outcome = handler ? handler(req.params ?? {}) : { result: state.snapshot };
         socket.write(`${JSON.stringify({ ...base, ...outcome })}\n`);
       }
@@ -188,7 +188,7 @@ describe("player tools over MCP stdio", { timeout: 30_000 }, () => {
   });
 
   it("queues a search and a playlist", async () => {
-    daemon.handlers["queue.add"] = () => ({ result: [entry("e3", track("t3"))] });
+    daemon.handlers.set("queue.add", () => ({ result: [entry("e3", track("t3"))] }));
     daemon.snapshot = { ...daemon.snapshot, queue: [...daemon.snapshot.queue, entry("e3", track("t3"))] };
     const byQuery = text(await call("player_queue_add", { query: "cumbia" }));
     assert.match(byQuery, /Added 1 track to the queue:\n {2}\[2\] Title t3 - Artist t3 \(120 BPM, 8A\) \| id=e3/);
@@ -197,12 +197,12 @@ describe("player tools over MCP stdio", { timeout: 30_000 }, () => {
     assert.deepEqual(daemon.requests.filter((r) => r.method === "queue.add").map((r) => r.params), [
       { query: "cumbia" }, { playlistId: 42 }, { playlistId: "p-7" },
     ]);
-    daemon.handlers["queue.add"] = () => ({ result: [] });
+    daemon.handlers.set("queue.add", () => ({ result: [] }));
     assert.match(text(await call("player_queue_add", { query: "nothing" })), /No tracks were added/);
   });
 
   it("hydrates track refs from search_tracks and queues them in order", async () => {
-    daemon.handlers["queue.addTrack"] = (p) => ({ result: [entry(`n-${p.track.track_id}`, p.track)] });
+    daemon.handlers.set("queue.addTrack", (p) => ({ result: [entry(`n-${p.track.track_id}`, p.track)] }));
     const result = await call("player_queue_add", { tracks: [{ track_id: "t1" }, { track_id: "t2", friend_id: 2 }] });
     assert.ok(!result.isError, text(result));
     assert.match(text(result), /Added 2 tracks/);
@@ -225,7 +225,7 @@ describe("player tools over MCP stdio", { timeout: 30_000 }, () => {
   });
 
   it("removes by id or index", async () => {
-    daemon.handlers["queue.remove"] = (p) => ({ result: entry(p.id ?? "e2", track("t2")) });
+    daemon.handlers.set("queue.remove", (p) => ({ result: entry(p.id ?? "e2", track("t2")) }));
     assert.match(text(await call("player_queue_remove", { id: "e2" })), /Removed from the queue: Title t2 - Artist t2 \(120 BPM, 8A\) \| id=e2/);
     await call("player_queue_remove", { index: 0 });
     assert.deepEqual(daemon.requests.map((r) => r.params), [{ id: "e2" }, { index: 0 }]);
@@ -233,12 +233,12 @@ describe("player tools over MCP stdio", { timeout: 30_000 }, () => {
 
   it("lists devices and selects one", async () => {
     const devices = [{ id: "coreaudio/abc", name: "Headphones", description: "USB DAC" }, { id: "auto", name: "Auto" }];
-    daemon.handlers.devices = () => ({ result: devices });
-    daemon.handlers["devices.select"] = () => ({ result: devices });
+    daemon.handlers.set("devices", () => ({ result: devices }));
+    daemon.handlers.set("devices.select", () => ({ result: devices }));
     assert.match(text(await call("player_devices")), /Audio devices \(2\):\n• Headphones — USB DAC \| id=coreaudio\/abc\n• Auto \| id=auto/);
     assert.match(text(await call("player_select_device", { device_id: "auto" })), /^Selected audio device auto\.\nAudio devices \(2\)/);
     assert.deepEqual(daemon.requests[1], { method: "devices.select", params: { id: "auto" } });
-    daemon.handlers.devices = () => ({ result: [] });
+    daemon.handlers.set("devices", () => ({ result: [] }));
     assert.equal(text(await call("player_devices")), "No audio output devices reported.");
   });
 
@@ -270,7 +270,7 @@ describe("player tools over MCP stdio", { timeout: 30_000 }, () => {
   });
 
   it("surfaces daemon error responses with their code", async () => {
-    daemon.handlers.play = () => ({ error: { code: "INVALID_ARGUMENT", message: "The playback queue is empty or the index is out of range" } });
+    daemon.handlers.set("play", () => ({ error: { code: "INVALID_ARGUMENT", message: "The playback queue is empty or the index is out of range" } }));
     const result = await call("player_play", { index: 9 });
     assert.ok(result.isError);
     assert.match(text(result), /Player daemon error \(INVALID_ARGUMENT\): The playback queue is empty/);
@@ -283,7 +283,7 @@ describe("player tools over MCP stdio", { timeout: 30_000 }, () => {
     assert.match(text(wrongVersion), /version mismatch.*daemon version 2, client version 1.*Update the MCP server/s);
 
     daemon.version = 1;
-    daemon.handlers.status = () => ({ error: { code: "VERSION_MISMATCH", message: "Unsupported player protocol version 1; this daemon supports version 3." } });
+    daemon.handlers.set("status", () => ({ error: { code: "VERSION_MISMATCH", message: "Unsupported player protocol version 1; this daemon supports version 3." } }));
     assert.match(text(await call("player_status")), /version mismatch: Unsupported player protocol version 1/);
   });
 
@@ -324,7 +324,7 @@ describe("player tools over MCP stdio", { timeout: 30_000 }, () => {
   it("opens one connection per call and closes it, on success and failure", async () => {
     await call("player_status");
     await call("player_queue_list");
-    daemon.handlers.pause = () => ({ error: { code: "PLAYER_ERROR", message: "boom" } });
+    daemon.handlers.set("pause", () => ({ error: { code: "PLAYER_ERROR", message: "boom" } }));
     await call("player_pause");
     assert.equal(daemon.connections, 3);
     await closedAll();
