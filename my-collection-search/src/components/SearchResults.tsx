@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Box, Text, IconButton, Flex, Grid, Spinner, useBreakpointValue } from "@chakra-ui/react";
+import { Box, Text, IconButton, Flex, Grid, Spinner } from "@chakra-ui/react";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
-import { LuLayoutGrid, LuRows3, LuListChecks } from "react-icons/lu";
+import { LuListChecks } from "react-icons/lu";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { analytics } from "@/lib/analytics/client";
 import TrackSelectionBar from "@/components/TrackSelectionBar";
@@ -12,6 +12,8 @@ import { useTrackStore } from "@/stores/trackStore";
 import { analyzeTrackAsync } from "@/services/internalApi/tracks";
 import { toaster } from "@/components/ui/toaster";
 
+import TrackViewToggle from "@/components/TrackViewToggle";
+import { useTrackViewMode } from "@/hooks/useTrackViewMode";
 import TrackResultStore from "@/components/TrackResultStore";
 import { TrackListHeader, TRACK_ROW_HEIGHT } from "@/components/TrackResult";
 import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
@@ -239,22 +241,7 @@ const SearchResults: React.FC = () => {
   }, [clearSelection]);
 
   // Rows/Cards view mode, persisted to localStorage; phones always get cards.
-  const [viewMode, setViewMode] = React.useState<"row" | "card">("row");
-
-  React.useEffect(() => {
-    const saved = localStorage.getItem("searchViewMode");
-    if (saved === "row" || saved === "card") {
-      setViewMode(saved);
-    }
-  }, []);
-
-  const handleViewModeChange = (mode: "row" | "card") => {
-    setViewMode(mode);
-    localStorage.setItem("searchViewMode", mode);
-  };
-
-  const isMobile = useBreakpointValue({ base: true, md: false }) ?? true;
-  const effectiveLayout: "row" | "card" = isMobile ? "card" : viewMode;
+  const { viewMode, setViewMode: handleViewModeChange, layout: effectiveLayout } = useTrackViewMode();
 
   const rowListRef = React.useRef<HTMLDivElement>(null);
   const [rowListOffset, setRowListOffset] = React.useState(0);
@@ -474,22 +461,7 @@ const SearchResults: React.FC = () => {
             >
               <LuListChecks />
             </IconButton>
-            <IconButton
-              aria-label="Rows view"
-              size="sm"
-              variant={viewMode === "row" ? "solid" : "ghost"}
-              onClick={() => handleViewModeChange("row")}
-            >
-              <LuRows3 />
-            </IconButton>
-            <IconButton
-              aria-label="Cards view"
-              size="sm"
-              variant={viewMode === "card" ? "solid" : "ghost"}
-              onClick={() => handleViewModeChange("card")}
-            >
-              <LuLayoutGrid />
-            </IconButton>
+            <TrackViewToggle value={viewMode} onChange={handleViewModeChange} />
           </>
         }
       />

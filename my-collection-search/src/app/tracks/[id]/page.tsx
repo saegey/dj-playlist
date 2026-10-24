@@ -96,9 +96,9 @@ export default function TrackPage() {
 
               <TrackGenresSection trackId={trackId} friendId={friendId} fallbackTrack={trackQuery.data} />
 
-              <RelatedTracksSection track={trackQuery.data} />
-
               <TrackPlaylistsSection query={playlistsQuery} />
+
+              <RelatedTracksSection track={trackQuery.data} />
 
               {trackQuery.data.release_id && (
                 <AlbumArtworkDialog
