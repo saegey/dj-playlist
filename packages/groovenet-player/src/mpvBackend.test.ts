@@ -169,7 +169,7 @@ describe("MpvBackend", () => {
     expect(requests).toContainEqual({ command: ["loadfile", "https://server.test/audio", "replace"] });
     expect(child.kill).not.toHaveBeenCalled();
     expect(spawnArgs[0]).toContain("--tls-verify=no");
-    expect(spawnArgs[0]).toContain("--vid=no");
+    expect(spawnArgs[0]).toEqual(expect.arrayContaining(["--vid=no", "--audio-display=no", "--force-window=no"]));
     await backend.close();
     expect(child.exitCode).toBe(0);
   });

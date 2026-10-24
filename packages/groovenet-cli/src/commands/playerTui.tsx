@@ -5,7 +5,7 @@ import { GroovenetClient, loadConfig, type Playlist, type Track } from "@grooven
 import { PlayerControlClient, PlayerDaemon, PlayerProtocolError, type AudioDevice, type PlaybackSnapshot, type QueueEntry } from "@groovenet/player";
 import { createPlayerDaemon, PLAYER_DAEMON_PATHS } from "./player.js";
 import { playerTuiAction } from "./playerTuiKeys.js";
-import { formatPlayback } from "./playerTuiView.js";
+import { formatPlayback, visibleWindow } from "./playerTuiView.js";
 
 export interface PlayerTuiOptions {
   search?: string;
@@ -15,6 +15,8 @@ export interface PlayerTuiOptions {
   /** Overrides `player_log_plays` for the daemon this TUI starts. */
   logPlays?: boolean;
 }
+
+const LIST_ROWS = 12;
 
 type View = "search" | "playlists" | "queue" | "devices";
 
@@ -198,6 +200,7 @@ export function PlayerTui({ control, api, initialSnapshot, options }: {
   });
 
   const playbackLines = formatPlayback(snapshot);
+  const rows = visibleWindow(items.length, selected, LIST_ROWS);
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1}>
       <Text bold color="cyan">Groovenet Player</Text>
@@ -205,9 +208,10 @@ export function PlayerTui({ control, api, initialSnapshot, options }: {
       <Text dimColor>{playbackLines[1] || " "}</Text>
       <Text color="green">{playbackLines[2]}</Text>
       {snapshot.error ? <Text color="red">{snapshot.error.code}: {snapshot.error.message}</Text> : null}
-      <Text dimColor>View: {view} · {items.length} item(s){editingSearch ? ` · Search: ${query}▏` : query ? ` · Query: ${query}` : ""}</Text>
+      <Text dimColor>View: {view} · {items.length} item(s){items.length > LIST_ROWS ? ` · ${selected + 1}/${items.length}` : ""}{editingSearch ? ` · Search: ${query}▏` : query ? ` · Query: ${query}` : ""}</Text>
       <Box flexDirection="column" marginTop={1}>
-        {items.length === 0 ? <Text dimColor>{view === "queue" ? "Queue is empty." : "No items."}</Text> : items.slice(0, 12).map((item, index) => {
+        {items.length === 0 ? <Text dimColor>{view === "queue" ? "Queue is empty." : "No items."}</Text> : items.slice(rows.start, rows.end).map((item, row) => {
+          const index = rows.start + row;
           const selectedItem = index === selected;
           const label = view === "search"
             ? `${(item as Track).artist} — ${(item as Track).title}${(item as Track).local_audio_url ? "" : " [no downloaded audio]"}`

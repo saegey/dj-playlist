@@ -169,7 +169,8 @@ export class MpvBackend extends EventEmitter implements PlaybackBackend {
     const args = ["--idle=yes", "--no-terminal", `--input-ipc-server=${this.socketPath}`];
     if (this.insecureTls) args.push("--tls-verify=no");
     // Embedded cover art is a video track to mpv, which opens a window for it.
-    if (!this.artwork) args.push("--vid=no");
+    // --audio-display=no and --force-window=no also cover user mpv.conf settings.
+    if (!this.artwork) args.push("--vid=no", "--audio-display=no", "--force-window=no");
     try {
       this.process = this.spawnProcess(this.executable, args);
     } catch (error) {
