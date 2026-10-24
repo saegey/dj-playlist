@@ -8,3 +8,4 @@ export * from "./daemon.js";
 export * from "./paths.js";
 export * from "./playThreshold.js";
 export * from "./playLogger.js";
+export * from "./ownToneBackend.js";

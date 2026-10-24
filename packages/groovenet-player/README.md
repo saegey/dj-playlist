@@ -61,3 +61,8 @@ companion process. It subscribes to an existing daemon over its socket and expos
 MPRIS for `playerctl` and desktop media keys. It is off unless explicitly started,
 and exits disabled without a Linux session bus. See [MPRIS.md](MPRIS.md) for setup,
 the platform design (including the macOS deferral), and smoke tests.
+
+An opt-in `OwnToneBackend` supports one selected AirPlay output through a
+dedicated patched OwnTone engine. See [OWNTONE.md](OWNTONE.md) for the pinned
+engine build, shared read-only audio mapping, CLI setup, completion semantics
+and verification limits. mpv remains the default.

@@ -1,12 +1,14 @@
 import { spawn } from "node:child_process";
 import { Command } from "commander";
 import { GroovenetClient, loadConfig } from "@groovenet/client";
-import { MpvBackend, PlayLogger, PlayerControlClient, PlayerCore, PlayerDaemon, TrackResolver, defaultPlayerPaths } from "@groovenet/player";
+import { OwnToneBackend, MpvBackend, PlayLogger, PlayerControlClient, PlayerCore, PlayerDaemon, TrackResolver, defaultPlayerPaths } from "@groovenet/player";
 import { printError, printJson, printSuccess } from "../output.js";
 
 export const PLAYER_DAEMON_PATHS = defaultPlayerPaths();
 
 export interface PlayerDaemonOptions {
+  /** Overrides `player_backend` from config for this daemon. */
+  backend?: string;
   /** Overrides `player_artwork` from config for this daemon. */
   artwork?: boolean;
   /** Overrides `player_log_plays` from config for this daemon. */
@@ -16,9 +18,14 @@ export interface PlayerDaemonOptions {
 export function createPlayerDaemon(options: PlayerDaemonOptions = {}): PlayerDaemon {
   const config = loadConfig();
   const client = new GroovenetClient({ baseUrl: config.api_base, apiKey: config.api_key, insecureTls: config.insecure_tls, clientName: "cli" });
+  const backend = options.backend ?? config.player_backend ?? "mpv";
+  if (backend !== "mpv" && backend !== "owntone") throw new Error("Player backend must be mpv or owntone");
+  if (backend === "owntone" && (!config.owntone_url || !config.owntone_library)) throw new Error("OwnTone requires owntone_url and owntone_library in Groovenet config");
   const player = new PlayerCore(
-    new MpvBackend({ insecureTls: config.insecure_tls, artwork: options.artwork ?? config.player_artwork }),
-    new TrackResolver(client, { apiBase: config.api_base, apiKey: config.api_key })
+    backend === "owntone"
+      ? new OwnToneBackend({ apiUrl: config.owntone_url!, password: config.owntone_password, outputId: config.owntone_output })
+      : new MpvBackend({ insecureTls: config.insecure_tls, artwork: options.artwork ?? config.player_artwork }),
+    new TrackResolver(client, { apiBase: config.api_base, apiKey: config.api_key, ...(backend === "owntone" ? { audioLibraryRoot: config.owntone_library } : {}) })
   );
   if (options.logPlays ?? config.player_log_plays) {
     const friendId = config.default_friend_id;
@@ -99,9 +106,10 @@ export function addPlayerCommands(program: Command): void {
   player
     .option("--playlist <id>", "open a playlist in the interactive player")
     .option("--search <query>", "search for tracks in the interactive player")
+    .option("--backend <name>", "playback engine: mpv (default) or owntone")
     .option("--artwork", "show mpv's cover-art window this run (overrides player_artwork)")
     .option("--log-plays", "log plays as digital spins this run (overrides player_log_plays)")
-    .action(async (options: { playlist?: string; search?: string; artwork?: boolean; logPlays?: boolean }) => {
+    .action(async (options: { playlist?: string; search?: string; artwork?: boolean; logPlays?: boolean; backend?: string }) => {
       if (!process.stdin.isTTY || !process.stdout.isTTY) {
         printError("The interactive player requires a TTY. Use `groovenet player start --detach` and the player control commands in scripts.");
         process.exitCode = 1;
@@ -118,17 +126,19 @@ export function addPlayerCommands(program: Command): void {
   player.command("start")
     .description("Start the playback daemon")
     .option("--detach", "run the daemon in the background")
+    .option("--backend <name>", "playback engine: mpv (default) or owntone")
     .option("--artwork", "show mpv's cover-art window (overrides player_artwork)")
     .option("--log-plays", "log plays as digital spins (overrides player_log_plays)")
     .option("--json", "print machine-readable output")
     .action(async (options: { detach?: boolean; json?: boolean }, command: Command) => reportFailure(async () => {
+      const backend = command.optsWithGlobals<{ backend?: string }>().backend;
       const artwork = artworkFlag(command);
       const logPlays = logPlaysFlag(command);
       if (options.detach) {
         const executable = process.argv[1];
         if (!executable) throw new Error("Could not locate the Groovenet CLI entry point.");
         const spawnError: { current: Error | null } = { current: null };
-        const child = spawn(process.execPath, [executable, "player", "_daemon", ...(artwork ? ["--artwork"] : []), ...(logPlays ? ["--log-plays"] : [])], { detached: true, stdio: "ignore", env: process.env });
+        const child = spawn(process.execPath, [executable, "player", "_daemon", ...(backend ? ["--backend", backend] : []), ...(artwork ? ["--artwork"] : []), ...(logPlays ? ["--log-plays"] : [])], { detached: true, stdio: "ignore", env: process.env });
         child.once("error", (error) => { spawnError.current = error; });
         child.unref();
         const deadline = Date.now() + 5000;
@@ -145,7 +155,7 @@ export function addPlayerCommands(program: Command): void {
         }
         throw new Error(`Player daemon did not start: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
       }
-      const daemon = createPlayerDaemon({ artwork, logPlays });
+      const daemon = createPlayerDaemon({ backend, artwork, logPlays });
       await daemon.start();
       if (options.json) printJson({ started: true, pid: process.pid }); else printSuccess("Player daemon running. Press Ctrl+C to stop.");
       await new Promise<void>((resolve) => {
@@ -163,10 +173,10 @@ export function addPlayerCommands(program: Command): void {
       return undefined;
     }, options.json ?? false));
 
-  player.command("_daemon").description("Internal daemon process").option("--artwork", "show mpv's cover-art window").option("--log-plays", "log plays as digital spins")
+  player.command("_daemon").description("Internal daemon process").option("--backend <name>", "playback engine").option("--artwork", "show mpv's cover-art window").option("--log-plays", "log plays as digital spins")
     .action(async (_options: unknown, command: Command) => {
     try {
-      const daemon = createPlayerDaemon({ artwork: artworkFlag(command), logPlays: logPlaysFlag(command) });
+      const daemon = createPlayerDaemon({ backend: command.optsWithGlobals<{ backend?: string }>().backend, artwork: artworkFlag(command), logPlays: logPlaysFlag(command) });
       await daemon.start();
       const shutdown = () => {
         process.off("SIGINT", shutdown);

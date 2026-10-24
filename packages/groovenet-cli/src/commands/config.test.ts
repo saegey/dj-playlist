@@ -71,3 +71,25 @@ describe("config player_artwork", () => {
     expect(saveConfig).not.toHaveBeenCalled();
   });
 });
+
+
+describe("OwnTone configuration", () => {
+  afterEach(() => vi.restoreAllMocks());
+  it("stores engine settings and masks the engine password in human output", async () => {
+    const output = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    for (const [key, value] of [["player_backend", "owntone"], ["owntone_url", "http://engine/api"], ["owntone_library", "/media"], ["owntone_output", "123"], ["owntone_password", "private"]]) {
+      await run("set", key!, value!);
+      expect(saveConfig).toHaveBeenLastCalledWith({ [key!]: value });
+    }
+    expect(output.mock.calls.flat().join("")).not.toContain("private");
+    loadConfig.mockReturnValue({ api_base: "http://x/api", default_friend_id: 1, player_artwork: true, owntone_password: "private" } as ReturnType<typeof loadConfig>);
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    await run("show");
+    expect(log).toHaveBeenCalledWith("  owntone_password: ***");
+  });
+  it("rejects unknown backend names", async () => {
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    vi.spyOn(process, "exit").mockImplementation((() => { throw new Error("exit"); }) as never);
+    await expect(run("set", "player_backend", "vlc")).rejects.toThrow("exit");
+  });
+});

@@ -1,0 +1,91 @@
+--- a/src/player.h
++++ b/src/player.h
+@@ -72,0 +73,6 @@
++
++  /* Groovenet terminal signal v1; snapshotted on the player thread. */
++  char gn_instance[33];
++  uint32_t gn_sequence;
++  uint32_t gn_item_id;
++  const char *gn_reason;
+--- a/src/player.c
++++ b/src/player.c
+@@ -201,0 +202,3 @@
++  // Never report an input/output failure as natural completion.
++  bool gn_failed;
++
+@@ -341,0 +345,14 @@
++
++// Groovenet terminal signal. All access is confined to the player thread.
++static char gn_instance[33];
++static uint32_t gn_sequence;
++static uint32_t gn_item_id;
++static const char *gn_reason = "none";
++
++static void
++gn_terminal(uint32_t item_id, const char *reason)
++{
++  gn_sequence++;
++  gn_item_id = item_id;
++  gn_reason = reason;
++}
+@@ -1023,0 +1041,2 @@
++  pb_session.reading_now->gn_failed = true;
++  gn_terminal(pb_session.reading_now->item_id, "input_error");
+@@ -1090,0 +1110,3 @@
++
++  gn_terminal(pb_session.playing_now->item_id,
++    pb_session.playing_now->gn_failed ? "failed" : "eof");
+@@ -1499,0 +1522,9 @@
++  if ((!device || status == OUTPUT_STATE_FAILED || status == OUTPUT_STATE_STOPPED)
++      && pb_session.playing_now)
++    {
++      pb_session.playing_now->gn_failed = true;
++      if (pb_session.reading_now)
++        pb_session.reading_now->gn_failed = true;
++      gn_terminal(pb_session.playing_now->item_id, "output_lost");
++    }
++
+@@ -1516,7 +1547,3 @@
+-      if (!device->resurrect)
+-	goto out;
+-
+-      DPRINTF(E_LOG, L_PLAYER, "Attempting reconnection in %d sec to the %s device '%s'\n", PLAYER_SPEAKER_RESURRECT_TIME, device->type_name, device->name);
+-
+-      // TODO do this internally instead of through the worker
+-      worker_execute(player_speaker_resurrect, &(device->id), sizeof(device->id), PLAYER_SPEAKER_RESURRECT_TIME);
++      // Groovenet never automatically reclaims a failed/taken-over receiver.
++      // A new explicit play/output-selection action is required.
++      goto out;
+@@ -1791,0 +1819,3 @@
++  if (pb_session.playing_now)
++    gn_terminal(pb_session.playing_now->item_id, "interrupted");
++
+@@ -1910,0 +1941,4 @@
++  memcpy(status->gn_instance, gn_instance, sizeof(status->gn_instance));
++  status->gn_sequence = gn_sequence;
++  status->gn_item_id = gn_item_id;
++  status->gn_reason = gn_reason;
+@@ -3943 +3977,7 @@
+-  int ret;
++  unsigned char nonce[16];
++  unsigned int i;
++  int ret;
++
++  gcry_create_nonce(nonce, sizeof(nonce));
++  for (i = 0; i < sizeof(nonce); i++)
++    snprintf(gn_instance + i * 2, 3, "%02x", nonce[i]);
+--- a/src/httpd_jsonapi.c
++++ b/src/httpd_jsonapi.c
+@@ -1631,0 +1632,2 @@
++  json_object_object_add(output, "busy", json_object_new_boolean(spk->busy));
++  json_object_object_add(output, "prevent_playback", json_object_new_boolean(spk->prevent_playback));
+@@ -2198,0 +2201,9 @@
++
++  /* Additive, versioned extension: stock OwnTone clients ignore these fields. */
++  json_object *terminal = json_object_new_object();
++  json_object_object_add(terminal, "version", json_object_new_int(1));
++  json_object_object_add(terminal, "instance", json_object_new_string(status.gn_instance));
++  json_object_object_add(terminal, "sequence", json_object_new_int64(status.gn_sequence));
++  json_object_object_add(terminal, "item_id", json_object_new_int64(status.gn_item_id));
++  json_object_object_add(terminal, "reason", json_object_new_string(status.gn_reason));
++  json_object_object_add(reply, "groovenet_terminal", terminal);
