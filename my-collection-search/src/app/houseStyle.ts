@@ -129,6 +129,9 @@ export const recipes = {
       },
     },
     variants: {
+      // Mono capitals run wide; step the small size down so chips and toolbar
+      // buttons stay compact.
+      size: { sm: { fontSize: "13px" } },
       variant: {
         solid: { ...buttonLabel, ...solidButton },
         outline: { ...buttonLabel, borderColor: "colorPalette.border", boxShadow: "none" },
@@ -148,6 +151,11 @@ export const recipes = {
       letterSpacing: "0.05em",
     },
     variants: {
+      size: {
+        xs: { fontSize: "10px" },
+        sm: { fontSize: "11px", px: "1.5" },
+        md: { fontSize: "12px" },
+      },
       variant: {
         subtle: { borderWidth: "rule", borderStyle: "solid", borderColor: "colorPalette.border" },
       },

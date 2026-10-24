@@ -50,7 +50,7 @@ export default function FilterChips({ chips, onToggle, onClearAll, leading, mt }
       {chips.map((chip) => (
         <Button
           key={chip.key}
-          size="sm"
+          size="xs"
           variant={chip.active ? "solid" : "outline"}
           colorPalette="neutral"
           onClick={() => onToggle(chip.key)}
@@ -62,7 +62,7 @@ export default function FilterChips({ chips, onToggle, onClearAll, leading, mt }
       ))}
       {anyActive && onClearAll && (
         <Button
-          size="sm"
+          size="xs"
           variant="ghost"
           onClick={onClearAll}
           color="fg.muted"
