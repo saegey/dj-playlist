@@ -166,7 +166,7 @@ export default function AppShell({
           >
             <HStack>
               {isExpanded && (
-                <Text fontFamily="heading" fontWeight="bold" fontSize="xl" letterSpacing="0.04em" textTransform="uppercase">
+                <Text fontFamily="heading" fontWeight="bold" fontSize="xl" letterSpacing="0.01em">
                   GrooveNet
                 </Text>
               )}
