@@ -2,7 +2,7 @@
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
-import { renderWithProviders } from "@/test/renderWithProviders";
+import { renderWithProviders, setViewportWidth } from "@/test/renderWithProviders";
 import type { Track } from "@/types/track";
 
 const mocks = vi.hoisted(() => ({
@@ -19,18 +19,44 @@ vi.mock("@/hooks/useSimilarTracks", () => ({ useSimilarTracks: mocks.similar }))
 vi.mock("@/hooks/useSimilarVibeTracks", () => ({ useSimilarVibeTracks: mocks.vibe }));
 vi.mock("@/services/internalApi/tracks", () => ({ fetchTracksByIds: vi.fn(async () => []) }));
 vi.mock("@/components/TrackResult", () => ({
-  default: (props: { track: Track; showUsername?: boolean }) => (
-    <div data-show-username={String(props.showUsername)}>result {props.track.track_id}</div>
+  default: (props: { track: Track; showUsername?: boolean; layout?: string; buttons?: React.ReactNode }) => (
+    <div data-show-username={String(props.showUsername)} data-layout={props.layout}>
+      result {props.track.track_id}
+      {props.buttons}
+    </div>
+  ),
+  TrackListHeader: () => <div data-testid="row-header">header</div>,
+}));
+const track_ = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/analytics/client", () => ({ analytics: { track: track_ } }));
+vi.mock("@/components/TrackActionsMenu", () => ({
+  default: (props: { onAction?: (action: string) => void }) => (
+    <button onClick={() => props.onAction?.("add_to_playlist")}>actions</button>
   ),
 }));
-vi.mock("@/components/TrackActionsMenu", () => ({ default: () => null }));
 
 import RelatedTracksSection from "./RelatedTracksSection";
 
 const track = { track_id: "seed", friend_id: 9, title: "Seed", artist: "A" } as Track;
 
+const similarTracks = (count: number) => ({
+  data: {
+    tracks: Array.from({ length: count }, (_, i) => ({
+      track_id: `s${i + 1}`,
+      friend_id: 4,
+      title: `S${i + 1}`,
+      artist: "A",
+      distance: 0.1 + i / 100,
+    })),
+  },
+  isLoading: false,
+  error: null,
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
+  setViewportWidth(1280);
   mocks.scope = { scope: "library", savedScope: "library", libraryFriendId: 4, ready: true, setScope: vi.fn() };
   mocks.recommendations.mockReturnValue(empty);
   mocks.similar.mockReturnValue({ data: { tracks: [] }, isLoading: false, error: null });
@@ -108,5 +134,89 @@ describe("RelatedTracksSection scope", () => {
     mocks.scope.scope = "all";
     rerender(<RelatedTracksSection track={track} />);
     expect(screen.getByText("result s1").dataset.showUsername).toBe("true");
+  });
+});
+
+describe("RelatedTracksSection view mode", () => {
+  beforeEach(() => mocks.similar.mockReturnValue(similarTracks(2)));
+
+  it("lists rows under one header by default on desktop", async () => {
+    renderWithProviders(<RelatedTracksSection track={track} />);
+    const first = await screen.findByText("result s1");
+    expect(first.dataset.layout).toBe("row");
+    expect(screen.getAllByTestId("row-header")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Rows view", pressed: true })).toBeTruthy();
+    expect(screen.getAllByText("actions")).toHaveLength(2);
+  });
+
+  it("reports the acted-on track's rank and sources from a row", async () => {
+    const { user } = renderWithProviders(<RelatedTracksSection track={track} />);
+    await screen.findByText("result s2");
+    await user.click(screen.getAllByText("actions")[1]);
+    expect(track_).toHaveBeenCalledWith(
+      "recommendation_acted_on",
+      expect.objectContaining({ track_id: "s2", action: "add_to_playlist", rank: 2, sources: ["similar"] })
+    );
+  });
+
+  it("switches to cards and remembers the choice for search too", async () => {
+    const { user } = renderWithProviders(<RelatedTracksSection track={track} />);
+    await screen.findByText("result s1");
+    await user.click(screen.getByRole("button", { name: "Cards view" }));
+    expect(screen.getByText("result s1").dataset.layout).toBe("card");
+    expect(screen.queryByTestId("row-header")).toBeNull();
+    expect(localStorage.getItem("searchViewMode")).toBe("card");
+
+    await user.click(screen.getByRole("button", { name: "Rows view" }));
+    expect(screen.getByText("result s1").dataset.layout).toBe("row");
+    expect(localStorage.getItem("searchViewMode")).toBe("row");
+  });
+
+  it("starts from the saved search view mode", async () => {
+    localStorage.setItem("searchViewMode", "card");
+    renderWithProviders(<RelatedTracksSection track={track} />);
+    expect((await screen.findByText("result s1")).dataset.layout).toBe("card");
+    expect(screen.getByRole("button", { name: "Cards view", pressed: true })).toBeTruthy();
+  });
+
+  it("ignores an unknown saved mode and survives blocked storage", async () => {
+    localStorage.setItem("searchViewMode", "grid");
+    const { unmount } = renderWithProviders(<RelatedTracksSection track={track} />);
+    expect((await screen.findByText("result s1")).dataset.layout).toBe("row");
+    unmount();
+
+    const get = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const set = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("blocked");
+    });
+    const { user } = renderWithProviders(<RelatedTracksSection track={track} />);
+    await screen.findByText("result s1");
+    await user.click(screen.getByRole("button", { name: "Cards view" }));
+    expect(screen.getByText("result s1").dataset.layout).toBe("card");
+    get.mockRestore();
+    set.mockRestore();
+  });
+
+  it("always shows cards on a phone, without the toggle", async () => {
+    setViewportWidth(390);
+    localStorage.setItem("searchViewMode", "row");
+    renderWithProviders(<RelatedTracksSection track={track} />);
+    expect((await screen.findByText("result s1")).dataset.layout).toBe("card");
+    expect(screen.queryByTestId("row-header")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Rows view" })).toBeNull();
+  });
+
+  it("keeps show-all working in rows view", async () => {
+    mocks.similar.mockReturnValue(similarTracks(25));
+    const { user } = renderWithProviders(<RelatedTracksSection track={track} />);
+    await screen.findByText("result s1");
+    expect(screen.getByText("20 of 25")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Show all 25" }));
+    expect(screen.getByText("25 of 25")).toBeTruthy();
+    expect(screen.getAllByTestId("row-header")).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Show fewer" }));
+    expect(screen.getByText("20 of 25")).toBeTruthy();
   });
 });

@@ -4,13 +4,15 @@ import { useMemo, useState } from "react";
 import { Box, Button, Flex, Heading, Spinner, Text, useBreakpointValue } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import type { Track } from "@/types/track";
-import TrackResult from "@/components/TrackResult";
+import TrackResult, { TrackListHeader } from "@/components/TrackResult";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { analytics } from "@/lib/analytics/client";
 import { useRecommendationsQuery } from "@/hooks/useRecommendations";
 import { useSimilarTracks } from "@/hooks/useSimilarTracks";
 import { useSimilarVibeTracks } from "@/hooks/useSimilarVibeTracks";
 import { useSuggestionScope } from "@/hooks/useSuggestionScope";
+import TrackViewToggle from "@/components/TrackViewToggle";
+import { useTrackViewMode } from "@/hooks/useTrackViewMode";
 import SuggestionScopeToggle from "@/components/SuggestionScopeToggle";
 import { fetchTracksByIds, type TrackBatchRef } from "@/services/internalApi/tracks";
 
@@ -42,6 +44,8 @@ function normalizeArtwork(track: Track): Track {
 export default function RelatedTracksSection({ track }: Props) {
   const [expanded, setExpanded] = useState(false);
   const initialCount = useBreakpointValue({ base: 3, md: 20 }) ?? 3;
+
+  const { viewMode, setViewMode, layout, isMobile } = useTrackViewMode();
 
   const suggestionScope = useSuggestionScope();
   const { scope, libraryFriendId, ready } = suggestionScope;
@@ -156,6 +160,31 @@ export default function RelatedTracksSection({ track }: Props) {
   const isLoading = !ready || recQuery.isLoading || similarQuery.isLoading || vibeQuery.isLoading;
   const hasError = recQuery.error || similarQuery.error || vibeQuery.error;
 
+  const renderTrack = (item: MergedTrack, index: number) => (
+    <TrackResult
+      key={`${item.track_id}-${item.friend_id}`}
+      track={item}
+      layout={layout}
+      // Only meaningful cross-library ("All libraries"): every row is the
+      // browsed library's own otherwise, so the badge is just repeated noise.
+      showUsername={scope === "all"}
+      showRating={true}
+      buttons={
+        <TrackActionsMenu
+          track={item}
+          onAction={(action) =>
+            analytics.track("recommendation_acted_on", {
+              track_id: item.track_id,
+              action,
+              rank: index + 1,
+              sources: item._sources,
+            })
+          }
+        />
+      }
+    />
+  );
+
   return (
     <Box mt={4}>
       <Flex align="center" justify="space-between" mb={3} gap={2}>
@@ -171,6 +200,7 @@ export default function RelatedTracksSection({ track }: Props) {
               {displayTracks.length} of {merged.length}
             </Text>
           )}
+          {!isMobile && <TrackViewToggle value={viewMode} onChange={setViewMode} />}
           <SuggestionScopeToggle value={scope} onChange={suggestionScope.setScope} />
         </Flex>
       </Flex>
@@ -190,29 +220,21 @@ export default function RelatedTracksSection({ track }: Props) {
         </Text>
       ) : (
         <>
-          {displayTracks.map((item, index) => (
-            <TrackResult
-              key={`${item.track_id}-${item.friend_id}`}
-              track={item}
-              // Only meaningful cross-library ("All libraries"): every row is the
-              // browsed library's own otherwise, so the badge is just repeated noise.
-              showUsername={scope === "all"}
-              showRating={true}
-              buttons={
-                <TrackActionsMenu
-                  track={item}
-                  onAction={(action) =>
-                    analytics.track("recommendation_acted_on", {
-                      track_id: item.track_id,
-                      action,
-                      rank: index + 1,
-                      sources: item._sources,
-                    })
-                  }
-                />
-              }
-            />
-          ))}
+          {layout === "row" ? (
+            // One outlined block with one shadow for the stack; rows only rule.
+            // Not virtualised (60 at most). The container query drives which columns drop off.
+            <Box
+              borderWidth="outline"
+              borderColor="border.ink"
+              boxShadow="md"
+              css={{ containerType: "inline-size" }}
+            >
+              <TrackListHeader />
+              {displayTracks.map(renderTrack)}
+            </Box>
+          ) : (
+            displayTracks.map(renderTrack)
+          )}
 
           {merged.length > initialCount && (
             <Button
