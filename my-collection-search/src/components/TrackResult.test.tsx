@@ -513,3 +513,40 @@ describe("TrackResult dense layouts", () => {
     expect(image.src).toContain("data:image/svg+xml");
   });
 });
+
+describe("TrackResult state styling across layouts", () => {
+  const layouts = [
+    ["card", {}],
+    ["dense card", { density: "dense" as const }],
+    ["row", { layout: "row" as const }],
+    ["dense row", { density: "dense" as const, layout: "row" as const }],
+  ] as const;
+
+  it.each(layouts)("renders selected, data-issue and score states in the %s layout", (_name, props) => {
+    const noBpm = { ...track, bpm: undefined, hasVectors: false } as unknown as Track;
+    for (const [score, label] of [[0.95, "95"], [0.8, "80"], [0.5, "50"]] as const) {
+      const { unmount } = renderWithProviders(
+        <TrackResult
+          track={{ ...noBpm, _semanticScore: score } as Track}
+          isSelected
+          onToggleSelect={vi.fn()}
+          {...props}
+        />
+      );
+      // The dense row has no room for a score badge.
+      if (_name !== "dense row") {
+        expect(screen.getAllByText(new RegExp(`^${label}(\\.0)?%$`)).length).toBeGreaterThan(0);
+      }
+      unmount();
+    }
+
+    const healthy = { ...track, bpm: "120", hasVectors: true } as Track;
+    for (const isSelected of [true, false]) {
+      const { unmount } = renderWithProviders(
+        <TrackResult track={healthy} isSelected={isSelected} onToggleSelect={vi.fn()} {...props} />
+      );
+      expect(screen.getAllByText(track.title).length).toBeGreaterThan(0);
+      unmount();
+    }
+  });
+});

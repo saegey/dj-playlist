@@ -46,6 +46,13 @@ describe("GamdlCookieManager", () => {
     expect(screen.getByText((_, el) => el?.textContent === "File: cookies.txt")).toBeTruthy();
   });
 
+  it("flags a cookie file that fails validation", async () => {
+    mocks.getCookieStatus.mockResolvedValue({ exists: true, filename: "cookies.txt", isValid: false });
+    renderWithProviders(<GamdlCookieManager />);
+
+    expect(await screen.findByText("Invalid")).toBeTruthy();
+  });
+
   it("deletes the cookie file from the actions menu", async () => {
     mocks.getCookieStatus.mockResolvedValue({ exists: true, filename: "cookies.txt", isValid: true });
     mocks.deleteCookieFile.mockResolvedValue({ message: "Deleted" });

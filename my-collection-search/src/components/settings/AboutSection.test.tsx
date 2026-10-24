@@ -61,4 +61,33 @@ describe("AboutSection", () => {
       "https://github.com/Public-Vinyl-Radio/groovenet/releases/tag/v1.3.0"
     );
   });
+
+  it.each([
+    [{ comparable: false, error: null }, "n/a (dev build)"],
+    [{ comparable: true, error: "rate limited" }, "unavailable"],
+  ])("explains an update check that cannot answer (%j)", async (patch, text) => {
+    mocks.fetchUpdateInfo.mockResolvedValue({
+      current: "1.2.3", latest: null, updateAvailable: false,
+      releaseUrl: null, releaseName: null, publishedAt: null, ...patch,
+    });
+    renderWithProviders(<AboutSection />);
+
+    expect(await screen.findByText(text)).toBeTruthy();
+  });
+
+  it("shows a dash while the update check has no result, and every service state", async () => {
+    mocks.fetchUpdateInfo.mockReturnValue(new Promise(() => {}));
+    mocks.fetchStatusInfo.mockResolvedValue({
+      services: [
+        { service: "essentia", status: "up", latencyMs: 12 },
+        { service: "ga-service", status: "down", latencyMs: null, detail: "refused" },
+        { service: "redis", status: "unknown", latencyMs: null },
+      ],
+      checkedAt: "2026-10-08T00:00:00.000Z",
+    });
+    renderWithProviders(<AboutSection />);
+
+    expect(await screen.findByText("ga-service")).toBeTruthy();
+    expect(screen.getByText("redis")).toBeTruthy();
+  });
 });

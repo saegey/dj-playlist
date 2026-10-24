@@ -6,8 +6,12 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import type { Track, TrackGenre } from "@/types/track";
 
-const { fetchMetadata, fetchGenreTree, toasterCreate } = vi.hoisted(() => ({
+const { fetchMetadata, fetchGenreTree, toasterCreate, searchYouTube, searchApple, lookupVideos, extractVideos } = vi.hoisted(() => ({
   toasterCreate: vi.fn(),
+  searchYouTube: vi.fn(),
+  searchApple: vi.fn(),
+  lookupVideos: vi.fn(),
+  extractVideos: vi.fn(),
   fetchMetadata: vi.fn(),
   fetchGenreTree: vi.fn(),
 }));
@@ -15,12 +19,12 @@ vi.mock("@/hooks/useTrackMetadataMutation", () => ({
   useTrackMetadataMutation: () => ({ mutateAsync: fetchMetadata }),
 }));
 vi.mock("@/hooks/useYouTubeMusicSearchMutation", () => ({
-  useYouTubeMusicSearchMutation: () => ({ mutateAsync: vi.fn() }),
+  useYouTubeMusicSearchMutation: () => ({ mutateAsync: searchYouTube }),
 }));
-vi.mock("@/services/aiService", () => ({ fetchAppleMusicAISearch: vi.fn() }));
+vi.mock("@/services/aiService", () => ({ fetchAppleMusicAISearch: searchApple }));
 vi.mock("@/services/internalApi/discogs", () => ({
-  lookupDiscogsVideos: vi.fn(),
-  extractDiscogsVideos: vi.fn(),
+  lookupDiscogsVideos: lookupVideos,
+  extractDiscogsVideos: extractVideos,
 }));
 vi.mock("@/components/ui/toaster", () => ({ toaster: { create: toasterCreate } }));
 vi.mock("@/services/internalApi/genres", () => ({ fetchGenreTree }));
@@ -169,5 +173,82 @@ describe("EnrichmentTrackStep — AI genres (#374)", () => {
         (screen.getByRole("button", { name: "Save & Next" }) as HTMLButtonElement).disabled
       ).toBe(false)
     );
+  });
+});
+
+describe("EnrichmentTrackStep — link sources", () => {
+  const ALL = { llm: true, appleMusic: true, youtube: true, fetchAudio: false };
+  const apple = (id: string) => ({ id, url: `https://music.apple.com/${id}`, title: `Apple ${id}`, artist: "A", album: "B" });
+  const video = (id: string) => ({ id, url: `https://youtube.com/${id}`, title: `Video ${id}`, channel: "Chan" });
+
+  function renderAll(onSave = vi.fn().mockResolvedValue(undefined)) {
+    renderWithProviders(
+      <EnrichmentTrackStep track={TRACK} enrichmentTypes={ALL} aiPrompt="p" onSave={onSave} onSkip={vi.fn()} />
+    );
+    return onSave;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fetchGenreTree.mockResolvedValue([]);
+    fetchMetadata.mockResolvedValue({ genres: [], descriptors: [], notes: "" });
+  });
+
+  it("selects the first Apple Music and YouTube result, lets another be picked, and saves both", async () => {
+    searchApple.mockResolvedValue({ results: [apple("a1"), apple("a2")] });
+    searchYouTube.mockResolvedValue({ results: [video("v1"), video("v2")] });
+    const onSave = renderAll();
+
+    await userEvent.click(await screen.findByText("Apple a2"));
+    await userEvent.click(await screen.findByText("Video v2"));
+    await userEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({
+        apple_music_url: "https://music.apple.com/a2",
+        youtube_url: "https://youtube.com/v2",
+      })
+    );
+  });
+
+  it("ignores result clicks once a source is excluded", async () => {
+    searchApple.mockResolvedValue({ results: [apple("a1"), apple("a2")] });
+    searchYouTube.mockResolvedValue({ results: [video("v1"), video("v2")] });
+    const onSave = renderAll();
+
+    await screen.findByText("Apple a2");
+    await screen.findByText("Video v2");
+    for (const box of screen.getAllByText("Include").slice(1)) await userEvent.click(box);
+    await userEvent.click(screen.getByText("Apple a2"));
+    await userEvent.click(screen.getByText("Video v2"));
+    await userEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({}));
+  });
+
+  it("marks each failing source", async () => {
+    fetchMetadata.mockRejectedValue(new Error("x"));
+    searchApple.mockRejectedValue(new Error("x"));
+    searchYouTube.mockRejectedValue(new Error("x"));
+    renderAll();
+
+    await waitFor(() => expect(screen.getAllByText("failed")).toHaveLength(3));
+  });
+
+  it("offers Discogs videos and selects one", async () => {
+    searchApple.mockResolvedValue({ results: [] });
+    searchYouTube.mockResolvedValue({ results: [] });
+    lookupVideos.mockResolvedValue({});
+    extractVideos.mockReturnValue([
+      { title: "Disc one", uri: "https://youtube.com/d1" },
+      { title: "Disc two", url: "https://youtube.com/d2" },
+    ]);
+    const onSave = renderAll();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Load from Discogs" }));
+    await userEvent.click(await screen.findByText("Disc two"));
+    await userEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ youtube_url: "https://youtube.com/d2" }));
   });
 });
