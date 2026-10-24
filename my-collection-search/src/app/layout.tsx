@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { developerToolsEnabled } from "@/lib/developerTools";
 import AnalyticsInit from "@/components/AnalyticsInit";
 import { getClientAnalyticsConfig } from "@/lib/analytics/config";
+import { fontClassName } from "./fonts";
 import { defaultPaletteId, type PaletteId } from "./palettes";
 import { settingsService } from "@/server/services/settingsService";
 
@@ -52,7 +53,7 @@ async function readPalette(): Promise<PaletteId> {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const palette = await readPalette();
   return (
-    <html lang="en" data-palette={palette} suppressHydrationWarning>
+    <html lang="en" data-palette={palette} className={fontClassName} suppressHydrationWarning>
       <body>
         <AnalyticsInit config={getClientAnalyticsConfig()} />
         <EmotionRegistry>
