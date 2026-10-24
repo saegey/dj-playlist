@@ -86,6 +86,9 @@ export default function AppShell({
   developerToolsEnabled: boolean;
 }) {
   const CONTENT_MAX_W = "1360px";
+  // The desktop floating player is fixed over the content; this keeps the last
+  // rows scrollable clear of it (24px page padding + 100px player).
+  const DESKTOP_PLAYER_CLEARANCE = "124px";
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const standalone = useStandaloneMode();
@@ -124,6 +127,7 @@ export default function AppShell({
 
   // Keep initial render deterministic across SSR/CSR; hydrate from storage after mount.
   const [isExpanded, setIsExpanded] = useState(false);
+  const sidebarWidth = isExpanded ? "220px" : "64px";
 
   React.useEffect(() => {
     const saved = localStorage.getItem("sidebar-expanded");
@@ -149,10 +153,11 @@ export default function AppShell({
       {/* Desktop sidebar */}
       <Box
         display={{ base: "none", md: "block" }}
-        position="sticky"
+        position="fixed"
         top={0}
-        h="100vh"
-        w={isExpanded ? "220px" : "64px"}
+        bottom={0}
+        left={0}
+        w={sidebarWidth}
         transition="width 0.18s ease"
         borderRightWidth="outline"
         borderColor="border.ink"
@@ -490,11 +495,14 @@ export default function AppShell({
       <Box
         flex="1"
         minW={0}
+        // The sidebar is fixed, out of flow, so the content makes room for it.
+        ml={{ base: 0, md: sidebarWidth }}
+        transition="margin-left 0.18s ease"
         px={{ base: 4, md: 6 }}
         py={{ base: 4, md: 6 }}
         pb={{
           base: isFullscreenEditMobile ? 6 : mobileContentBottomPadding,
-          md: 6,
+          md: playlistLength > 0 ? DESKTOP_PLAYER_CLEARANCE : 6,
         }}
       >
         <Box w="full" maxW={CONTENT_MAX_W} mx="auto">

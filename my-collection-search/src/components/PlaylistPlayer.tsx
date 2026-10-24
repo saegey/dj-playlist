@@ -58,9 +58,6 @@ const PlaylistPlayer: React.FC = () => {
 
   return (
     <>
-      {/* Spacer so page content scrolls clear of the floating player */}
-      <Box h={{ base: "96px", md: "100px" }} />
-
       {/* Original Player - hide when queue drawer is open */}
       {!isOpen && (
         <PlayerContainer>
