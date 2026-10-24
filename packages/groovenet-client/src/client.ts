@@ -14,6 +14,8 @@ import type {
   LiveSetUpdate,
   Friend,
   FriendListResponse,
+  AppearanceSettings,
+  AppearanceSettingsUpdate,
   GenreTreeResponse,
   GenreSimilarResponse, GenreSimilarQuery,
   Genre, GenreCreateInput, GenreUpdateInput, GenreAliasResponse, GenreMergeResponse,
@@ -574,6 +576,19 @@ export class GroovenetClient {
       ...(ids ? { ids } : {}),
       ...(friendId === undefined ? {} : { friend_id: friendId }),
     });
+  }
+
+  async getAppearanceSettings(): Promise<AppearanceSettings> {
+    return this.request<AppearanceSettings>("GET", "/settings/appearance");
+  }
+
+  async setAppearancePalette(palette: string): Promise<AppearanceSettings> {
+    return this.updateAppearanceSettings({ palette });
+  }
+
+  /** Changes the palette and/or fonts; whatever is left out stays as it is. */
+  async updateAppearanceSettings(update: AppearanceSettingsUpdate): Promise<AppearanceSettings> {
+    return this.request<AppearanceSettings>("PUT", "/settings/appearance", update);
   }
 
   async getFriends(): Promise<Friend[]> {

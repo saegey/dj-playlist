@@ -2,8 +2,18 @@ import type { Preview } from '@storybook/nextjs-vite';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ChakraProvider } from '@/components/ui/provider';
 import React from 'react';
+import { fontClassName } from '@/app/fonts';
+import { fontRoleIds, fontRoles, type FontRoleId } from '@/app/fontChoices';
 
-function StoryProviders({ children }: { children: React.ReactNode }) {
+const fontDataKey = { display: 'fontDisplay', body: 'fontBody', label: 'fontLabel' } as const;
+
+function StoryProviders({
+  children,
+  fonts,
+}: {
+  children: React.ReactNode;
+  fonts: Record<FontRoleId, string>;
+}) {
   const [client] = React.useState(
     () =>
       new QueryClient({
@@ -13,6 +23,19 @@ function StoryProviders({ children }: { children: React.ReactNode }) {
         },
       })
   );
+  // The app sets these on <html> in layout.tsx; stories need them too, so the
+  // house style's faces and the default palette apply.
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const classes = fontClassName.split(' ');
+    root.classList.add(...classes);
+    root.dataset.palette ??= 'sleeve';
+    return () => root.classList.remove(...classes);
+  }, []);
+  // Check a story against each face from the toolbar (Display, Body, Labels).
+  React.useEffect(() => {
+    for (const role of fontRoleIds) document.documentElement.dataset[fontDataKey[role]] = fonts[role];
+  }, [fonts]);
   return (
     <ChakraProvider>
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
@@ -20,10 +43,33 @@ function StoryProviders({ children }: { children: React.ReactNode }) {
   );
 }
 
+const fontToolbar = Object.fromEntries(
+  fontRoleIds.map((role) => [
+    `font${role}`,
+    {
+      description: `${fontRoles[role].label} font`,
+      toolbar: {
+        title: fontRoles[role].label,
+        icon: 'paragraph',
+        items: fontRoles[role].choices.map(({ id, label }) => ({ value: id, title: label })),
+        dynamicTitle: true,
+      },
+    },
+  ])
+);
+
 const preview: Preview = {
+  initialGlobals: Object.fromEntries(fontRoleIds.map((role) => [`font${role}`, 'default'])),
+  globalTypes: fontToolbar,
   decorators: [
-    (Story) => (
-      <StoryProviders>
+    (Story, context) => (
+      <StoryProviders
+        fonts={
+          Object.fromEntries(
+            fontRoleIds.map((role) => [role, context.globals[`font${role}`] ?? 'default'])
+          ) as Record<FontRoleId, string>
+        }
+      >
         <Story />
       </StoryProviders>
     ),

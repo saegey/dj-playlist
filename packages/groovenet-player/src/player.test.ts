@@ -19,6 +19,25 @@ function makePlayer() {
 }
 
 describe("PlayerCore", () => {
+  it("stops without closing the backend or losing the queue, and can replay", async () => {
+    const { player, backend } = makePlayer();
+    const pause = vi.spyOn(backend, "pause");
+    await player.stop();
+    player.add([track("a", "a.mp3"), track("b", "b.mp3")]);
+    await player.play(1);
+    backend.advance(20, 100);
+    await player.stop();
+    expect(player.snapshot).toMatchObject({ status: "stopped", current: null, position: 0, duration: null });
+    expect(player.snapshot.queue).toHaveLength(2);
+    expect(backend.paused).toBe(true);
+    expect(backend.closed).toBe(false);
+    await player.play();
+    expect(player.snapshot.current?.track.track_id).toBe("b");
+    expect(backend.paused).toBe(false);
+    expect(pause).toHaveBeenLastCalledWith(false);
+    await player.close();
+  });
+
   it("plays in queue order, updates state and emits track lifecycle events", async () => {
     const { player, backend } = makePlayer();
     const started = vi.fn();

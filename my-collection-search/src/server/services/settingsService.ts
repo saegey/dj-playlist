@@ -2,14 +2,51 @@ import type {
   DefaultLibrarySettings,
   DefaultLibrarySettingsUpdateResponse,
 } from "@groovenet/contracts";
+import {
+  defaultFontChoiceId,
+  fontRoleIds,
+  resolveFontChoice,
+  type FontRoleId,
+  type FontSelection,
+} from "@/app/fontChoices";
+import { defaultPaletteId, resolvePaletteId, type PaletteId } from "@/app/palettes";
 import { getDefaultTrackMetadataPrompt } from "@/lib/serverPrompts";
 import { friendRepository } from "@/server/repositories/friendRepository";
 import type { GamdlSettings, GamdlSettingsUpdate } from "@/types/gamdl";
-import { settingsRepository } from "@/server/repositories/settingsRepository";
+import {
+  settingsRepository,
+  type AppearancePatch,
+  type AppearanceRow,
+} from "@/server/repositories/settingsRepository";
 import {
   DEFAULT_RECOMMENDATION_SCOPE,
   type RecommendationScope,
 } from "@/types/recommendations";
+
+export interface Appearance {
+  palette: PaletteId;
+  fonts: FontSelection;
+}
+
+export interface AppearanceUpdate {
+  palette?: PaletteId;
+  fonts?: Partial<FontSelection>;
+}
+
+const FONT_COLUMNS = {
+  display: "font_display",
+  body: "font_body",
+  label: "font_label",
+} as const satisfies Record<FontRoleId, keyof AppearanceRow>;
+
+function toAppearance(row: AppearanceRow | null): Appearance {
+  return {
+    palette: resolvePaletteId(row?.palette),
+    fonts: Object.fromEntries(
+      fontRoleIds.map((role) => [role, resolveFontChoice(role, row?.[FONT_COLUMNS[role]])])
+    ) as FontSelection,
+  };
+}
 
 export class SettingsService {
   async getDefaultLibrary(): Promise<DefaultLibrarySettings> {
@@ -28,6 +65,27 @@ export class SettingsService {
       friendId
     );
     return { friend_id };
+  }
+
+  /** The shared palette and fonts; an unset or no-longer-registered id is the default. */
+  async getAppearance(): Promise<Appearance> {
+    return toAppearance(await settingsRepository.findAppearance());
+  }
+
+  /**
+   * Changes only what is supplied. A font set to the default is stored as null,
+   * so it keeps following the app's default if that ever changes.
+   */
+  async updateAppearance(update: AppearanceUpdate): Promise<Appearance> {
+    const patch: AppearancePatch = {};
+    if (update.palette !== undefined) patch.palette = update.palette;
+    for (const role of fontRoleIds) {
+      const choice = update.fonts?.[role];
+      if (choice !== undefined) {
+        patch[FONT_COLUMNS[role]] = choice === defaultFontChoiceId ? null : choice;
+      }
+    }
+    return toAppearance(await settingsRepository.upsertAppearance(patch, defaultPaletteId));
   }
 
   async getAiPrompt(friendId?: number): Promise<{

@@ -44,13 +44,13 @@ export default function AttributeFilter({ value, onChange }: AttributeFilterProp
         <Button
           size="sm"
           variant="outline"
-          borderRadius="full"
+          borderColor="border.ink"
           flexShrink={0}
           aria-label={count > 0 ? `BPM, key and rating filters, ${count} on` : "BPM, key and rating filters"}
         >
           BPM / Key
           {count > 0 && (
-            <Badge size="xs" colorPalette="accent" variant="solid" borderRadius="full">
+            <Badge size="xs" colorPalette="accent" variant="solid">
               {count}
             </Badge>
           )}

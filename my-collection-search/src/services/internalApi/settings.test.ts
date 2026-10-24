@@ -4,7 +4,12 @@ const httpMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/services/http", () => ({ http: httpMock }));
 
-import { fetchRecommendationSettings, updateRecommendationSettings } from "./settings";
+import {
+  fetchAppearanceSettings,
+  fetchRecommendationSettings,
+  updateAppearanceSettings,
+  updateRecommendationSettings,
+} from "./settings";
 
 beforeEach(() => {
   httpMock.mockReset();
@@ -26,6 +31,32 @@ describe("recommendation settings", () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ friend_id: 4, scope: "all" }),
+    });
+  });
+});
+
+describe("appearance settings", () => {
+  it("reads the shared palette", async () => {
+    httpMock.mockResolvedValue({ palette: "sleeve" });
+    await expect(fetchAppearanceSettings()).resolves.toEqual({ palette: "sleeve" });
+    expect(httpMock).toHaveBeenCalledWith("/api/settings/appearance", { method: "GET", cache: "no-store" });
+  });
+
+  it("saves a font change without the palette", async () => {
+    await updateAppearanceSettings({ fonts: { body: "inter" } });
+    expect(httpMock).toHaveBeenCalledWith("/api/settings/appearance", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fonts: { body: "inter" } }),
+    });
+  });
+
+  it("saves the palette", async () => {
+    await updateAppearanceSettings({ palette: "sleeve" });
+    expect(httpMock).toHaveBeenCalledWith("/api/settings/appearance", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ palette: "sleeve" }),
     });
   });
 });

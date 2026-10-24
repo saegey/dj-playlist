@@ -10,7 +10,7 @@ type Props = {
 
 export default function EssentiaSection({ query }: Props) {
   return (
-    <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
+    <Box borderWidth="outline" borderColor="border.ink" boxShadow="sm" p={4} mt={4}>
       <Heading size="sm" mb={3}>
         Essentia Raw Analysis
       </Heading>

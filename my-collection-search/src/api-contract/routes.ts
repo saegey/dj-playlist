@@ -1,10 +1,14 @@
 import { z } from "zod";
+import { fontChoiceIdsFor, fontRoleIds } from "@/app/fontChoices";
+import { paletteIds } from "@/app/palettes";
 import { playlistDeleteResponseSchema } from "@groovenet/contracts";
 import {
   aiPromptSettingsGetResponseSchema,
   aiPromptSettingsPutBodySchema,
   aiPromptSettingsPutResponseSchema,
   aiPromptSettingsQuerySchema,
+  appearanceSettingsPutBodySchema,
+  appearanceSettingsResponseSchema,
   recommendationSettingsPutBodySchema,
   recommendationSettingsQuerySchema,
   recommendationSettingsResponseSchema,
@@ -222,6 +226,44 @@ const TRACK_REF = { $ref: "#/components/schemas/Track" };
 const componentRef = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 const TRACK_GENRE_REF = { $ref: "#/components/schemas/TrackGenre" };
 const ALBUM_ARTWORK_STATE_REF = { $ref: "#/components/schemas/AlbumArtworkState" };
+
+const fontsProperties = Object.fromEntries(
+  fontRoleIds.map((role) => [role, { type: "string", enum: fontChoiceIdsFor(role) }]),
+);
+
+const appearanceSettingsSchemaObject: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    palette: { type: "string", enum: [...paletteIds] },
+    fonts: {
+      type: "object",
+      description:
+        "A face per role. `default` is the app's own face for that role, `system` the platform font.",
+      properties: fontsProperties,
+      required: [...fontRoleIds],
+    },
+  },
+  required: ["palette", "fonts"],
+};
+
+// Every field is optional on the way in; only those sent change.
+const appearanceSettingsPutSchemaObject: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    palette: { type: "string", enum: [...paletteIds] },
+    fonts: {
+      type: "object",
+      additionalProperties: false,
+      properties: fontsProperties,
+    },
+  },
+};
+
+const appearanceExample = {
+  palette: "sleeve",
+  fonts: { display: "default", body: "default", label: "default" },
+};
 
 const recommendationSettingsSchemaObject: Record<string, unknown> = {
   type: "object",
@@ -6099,6 +6141,76 @@ export const apiContractRoutes: ApiContractRoute[] = [
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getAppearanceSettings",
+    method: "get",
+    path: "/api/settings/appearance",
+    summary: "Get the app-wide palette and fonts",
+    tags: ["Settings"],
+    successSchema: appearanceSettingsResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description:
+            "The palette and the display, body and label fonts every device renders with. An unset or unknown stored id is reported as the default. Light/dark mode is per device and not part of this setting.",
+          content: {
+            "application/json": {
+              schema: appearanceSettingsSchemaObject,
+              examples: { appearance: { summary: "Default", value: appearanceExample } },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "updateAppearanceSettings",
+    method: "put",
+    path: "/api/settings/appearance",
+    summary: "Set the app-wide palette and fonts",
+    tags: ["Settings"],
+    bodySchema: appearanceSettingsPutBodySchema,
+    successSchema: appearanceSettingsResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: appearanceSettingsPutSchemaObject,
+            examples: {
+              fontOnly: { summary: "Change one font; the rest stay", value: { fonts: { body: "inter" } } },
+              paletteOnly: { summary: "Change the palette only", value: { palette: "riso" } },
+            },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Saved",
+          content: {
+            "application/json": {
+              schema: appearanceSettingsSchemaObject,
+              examples: { appearance: { summary: "Saved", value: appearanceExample } },
+            },
+          },
+        },
+        "400": {
+          description: "Unknown palette or font id",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
         },
       },
     },

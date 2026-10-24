@@ -55,3 +55,9 @@ implementation for consumers that need to exercise the core without audio.
 
 Build with `npm run build --workspace=@groovenet/player` after building
 `@groovenet/client`.
+
+Linux desktop media controls are available through the optional `groovenet-mpris`
+companion process. It subscribes to an existing daemon over its socket and exposes
+MPRIS for `playerctl` and desktop media keys. It is off unless explicitly started,
+and exits disabled without a Linux session bus. See [MPRIS.md](MPRIS.md) for setup,
+the platform design (including the macOS deferral), and smoke tests.

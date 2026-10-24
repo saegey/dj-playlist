@@ -67,7 +67,7 @@ function ReviewRow({ item }: { item: AlbumArtworkReviewItem }) {
   });
 
   return (
-    <Box borderWidth="1px" borderRadius="md" p={3}>
+    <Box borderWidth="outline" borderColor="border.ink" boxShadow="sm" p={3}>
       <Flex justify="space-between" align="flex-start" gap={2} mb={3}>
         <Box minW={0}>
           <Link asChild fontWeight="semibold">

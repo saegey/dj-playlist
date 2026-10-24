@@ -18,7 +18,7 @@ export default function AudioMetadataSection({
   onExtractCover,
 }: Props) {
   return (
-    <Box borderWidth="1px" borderRadius="md" p={4} mt={4}>
+    <Box borderWidth="outline" borderColor="border.ink" boxShadow="sm" p={4} mt={4}>
       <Flex justify="space-between" align="center" mb={3} gap={3} wrap="wrap">
         <Heading size="sm">Audio File Metadata (ffprobe)</Heading>
         <Button size="sm" variant="outline" loading={isExtractingCover} onClick={onExtractCover}>

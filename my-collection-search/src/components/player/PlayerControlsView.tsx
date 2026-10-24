@@ -345,10 +345,10 @@ export default function PlayerControlsView({
                   }}
                 >
                   <Slider.Control>
-                    <Slider.Track>
-                      <Slider.Range />
+                    <Slider.Track bg="bg.panel" height="10px" borderWidth="outline" borderColor="border.ink">
+                      <Slider.Range bg="accent.solid" />
                     </Slider.Track>
-                    <Slider.Thumbs rounded="l1" />
+                    <Slider.Thumbs rounded="none" width="10px" height="18px" bg="neutral.solid" borderWidth="0" boxShadow="none" />
                   </Slider.Control>
                 </Slider.Root>
               </HStack>

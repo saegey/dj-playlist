@@ -28,7 +28,7 @@ import type { Album, Track } from "@/types/track";
 
 function Stat({ value, label, detail }: { value: number; label: string; detail: string }) {
   return (
-    <Box borderWidth="1px" borderRadius="md" px={4} py={3} minW="160px">
+    <Box borderWidth="outline" borderColor="border.ink" boxShadow="md" px={4} py={3} minW="160px">
       <Text fontSize="2xl" fontWeight="semibold" lineHeight="short">
         {value.toLocaleString()}
       </Text>
@@ -61,7 +61,7 @@ export default function GenrePage() {
   if (query.error) {
     return (
       <PageContainer size="standard">
-        <Box borderWidth="1px" borderRadius="md" p={4}>
+        <Box borderWidth="outline" borderColor="border.ink" boxShadow="sm" p={4}>
           <Text fontWeight="medium">Couldn&apos;t load this genre</Text>
           <Text color="fg.muted" mt={1}>
             {query.error.message}

@@ -101,6 +101,8 @@ import {
   spinUpdateResponseSchema as sharedSpinUpdateResponseSchema,
   trackSpinEventSchema as sharedTrackSpinEventSchema,
 } from "@groovenet/contracts";
+import { fontChoiceIdsFor, fontRoleIds, type FontChoiceId, type FontRoleId } from "@/app/fontChoices";
+import { paletteIds } from "@/app/palettes";
 import { RECOMMENDATION_SCOPES } from "@/types/recommendations";
 
 const toInt = (value: unknown): unknown => {
@@ -970,6 +972,27 @@ export const aiPromptSettingsGetResponseSchema = z.object({
 export const aiPromptSettingsPutResponseSchema = z.object({
   prompt: z.string(),
   isDefault: z.boolean(),
+});
+
+export const appearancePaletteSchema = z.enum(paletteIds);
+
+// Each role accepts only its own faces, so a slab can't be set as the body font.
+const appearanceFontsShape = Object.fromEntries(
+  fontRoleIds.map((role) => [role, z.enum(fontChoiceIdsFor(role))]),
+) as { [R in FontRoleId]: z.ZodEnum<{ [K in FontChoiceId]: K }> };
+
+// Every field is optional and only the ones sent change, so `{ palette }` still
+// works and a font change leaves the palette alone.
+export const appearanceSettingsPutBodySchema = z
+  .object({
+    palette: appearancePaletteSchema.optional(),
+    fonts: z.object(appearanceFontsShape).partial().strict().optional(),
+  })
+  .strict();
+
+export const appearanceSettingsResponseSchema = z.object({
+  palette: appearancePaletteSchema,
+  fonts: z.object(appearanceFontsShape),
 });
 
 export const recommendationSettingsQuerySchema = z.object({

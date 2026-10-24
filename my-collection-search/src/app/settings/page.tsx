@@ -15,6 +15,7 @@ import GamdlSettingsSection from "@/components/settings/GamdlSettingsSection";
 import AiPromptSettingsSection from "@/components/settings/AiPromptSettingsSection";
 import DefaultLibrarySettingsSection from "@/components/settings/DefaultLibrarySettingsSection";
 import SuggestionScopeSettingsSection from "@/components/settings/SuggestionScopeSettingsSection";
+import AppearanceSettingsSection from "@/components/settings/AppearanceSettingsSection";
 import AboutSection from "@/components/settings/AboutSection";
 import PageContainer from "@/components/layout/PageContainer";
 import DiscogsSyncDialog from "@/components/settings/dialogs/DiscogsSyncDialog";
@@ -46,6 +47,12 @@ function SettingsPageContent() {
             <SuggestionScopeSettingsSection />
           </>
         ),
+      },
+      {
+        id: "appearance",
+        label: "Appearance",
+        description: "colour palette and light or dark mode",
+        content: <AppearanceSettingsSection />,
       },
       {
         id: "downloads",
@@ -134,7 +141,7 @@ function SettingsPageContent() {
                   fontSize="xs"
                   fontWeight="semibold"
                   letterSpacing="wide"
-                  textTransform="uppercase"
+                  fontFamily="label" textTransform="uppercase"
                   color="fg.muted"
                   mb={2}
                 >
@@ -148,9 +155,9 @@ function SettingsPageContent() {
                     height: "var(--chakra-sizes-12)",
                     padding: "0 var(--chakra-spacing-4)",
                     borderRadius: "var(--chakra-radii-lg)",
-                    borderWidth: "1px",
+                    borderWidth: "var(--chakra-border-widths-outline)",
                     borderStyle: "solid",
-                    borderColor: "var(--chakra-colors-border)",
+                    borderColor: "var(--chakra-colors-border-ink)",
                     backgroundColor: "var(--chakra-colors-bg)",
                     color: "inherit",
                     fontSize: "1rem",
@@ -165,8 +172,10 @@ function SettingsPageContent() {
               </Box>
 
               <Tabs.List
+                className="hide-scrollbar"
                 display={{ base: "none", md: "flex" }}
                 overflowX="auto"
+                pb="1"
                 mb={4}
               >
                 {sections.map((section) => (
@@ -178,8 +187,9 @@ function SettingsPageContent() {
               </Tabs.List>
 
               <Box
-                borderWidth={{ base: 0, md: 1 }}
-                borderRadius={{ base: "none", md: "lg" }}
+                borderWidth={{ base: 0, md: "outline" }}
+                borderColor="border.ink"
+                boxShadow={{ base: "none", md: "md" }}
                 p={{ base: 0, md: 6 }}
                 bg="bg"
               >

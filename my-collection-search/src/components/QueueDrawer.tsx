@@ -72,10 +72,10 @@ function QueueProgressSlider({
         step={0.1}
       >
         <Slider.Control>
-          <Slider.Track bg="overlay.track" height="6px" borderRadius="full">
+          <Slider.Track bg="overlay.track" height="6px">
             <Slider.Range bg="overlay.fg" />
           </Slider.Track>
-          <Slider.Thumbs rounded="full" bg="overlay.fg" borderWidth="0" boxShadow="none" />
+          <Slider.Thumbs rounded="none" bg="overlay.fg" borderWidth="0" boxShadow="none" />
         </Slider.Control>
       </Slider.Root>
       <Flex justify="space-between" mt={1.5}>
@@ -470,8 +470,9 @@ export default function QueueDrawer({
                         mx="auto"
                         aspectRatio={1}
                         objectFit="cover"
-                        borderRadius="28px"
-                        boxShadow="0 24px 64px var(--gn-shadow)"
+                        borderWidth="outline"
+                        borderColor="border.ink"
+                        boxShadow="md"
                       />
                     </Box>
 
@@ -536,10 +537,10 @@ export default function QueueDrawer({
                           }}
                         >
                           <Slider.Control>
-                            <Slider.Track bg="overlay.track" height="6px" borderRadius="full">
+                            <Slider.Track bg="overlay.track" height="6px">
                               <Slider.Range bg="overlay.fg" />
                             </Slider.Track>
-                            <Slider.Thumbs rounded="full" bg="overlay.fg" borderWidth="0" boxShadow="none" />
+                            <Slider.Thumbs rounded="none" bg="overlay.fg" borderWidth="0" boxShadow="none" />
                           </Slider.Control>
                         </Slider.Root>
                       </HStack>

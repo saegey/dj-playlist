@@ -915,6 +915,50 @@ describe("GroovenetClient friends", () => {
   });
 });
 
+describe("GroovenetClient appearance settings", () => {
+  it("getAppearanceSettings reads the shared palette", async () => {
+    const client = clientReturning({ palette: "sleeve" });
+
+    await expect(client.getAppearanceSettings()).resolves.toEqual({ palette: "sleeve" });
+    expect(requestMock).toHaveBeenCalledWith({
+      method: "GET",
+      url: "/settings/appearance",
+      data: undefined,
+      params: undefined,
+    });
+  });
+
+  it("setAppearancePalette puts the palette id", async () => {
+    const client = clientReturning({ palette: "riso" });
+
+    await expect(client.setAppearancePalette("riso")).resolves.toEqual({ palette: "riso" });
+    expect(requestMock).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/settings/appearance",
+      data: { palette: "riso" },
+      params: undefined,
+    });
+  });
+});
+
+describe("GroovenetClient appearance fonts", () => {
+  it("updateAppearanceSettings sends only what changed", async () => {
+    const fonts = { display: "default", body: "inter", label: "default" };
+    const client = clientReturning({ palette: "sleeve", fonts });
+
+    await expect(client.updateAppearanceSettings({ fonts: { body: "inter" } })).resolves.toEqual({
+      palette: "sleeve",
+      fonts,
+    });
+    expect(requestMock).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/settings/appearance",
+      data: { fonts: { body: "inter" } },
+      params: undefined,
+    });
+  });
+});
+
 describe("GroovenetClient external search helpers", () => {
   it("searchAppleMusic posts the lookup options", async () => {
     const client = clientReturning({ results: [] });

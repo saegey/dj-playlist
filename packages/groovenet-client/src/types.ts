@@ -786,3 +786,23 @@ export type {
   RecordCopyDefaultUpdate as RecordCopyDefaultUpdateInput,
   RecordCopyUpdate as RecordCopyUpdateInput,
 } from "@groovenet/contracts";
+
+/** The font roles the app lets you choose a face for. */
+export type AppearanceFontRole = "display" | "body" | "label";
+
+/** A face id per role: `default` (the app's own), `system`, or a registered face such as `inter`. */
+export type AppearanceFonts = Record<AppearanceFontRole, string>;
+
+/** The app-wide palette and fonts. Light/dark mode is per device and not part of it. */
+export interface AppearanceSettings {
+  /** A palette id from the app's registry, e.g. `sleeve`. */
+  palette: string;
+  /** Absent from servers that predate font choices. */
+  fonts?: AppearanceFonts;
+}
+
+/** A change to the appearance; only the fields sent are changed. */
+export interface AppearanceSettingsUpdate {
+  palette?: string;
+  fonts?: Partial<AppearanceFonts>;
+}

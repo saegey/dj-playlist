@@ -26,7 +26,7 @@ counts are as of this inventory; the table below is authoritative.
 | done | friends & library settings | 4 | Flat shapes, no enums; established the inventory. |
 | done | record care | 10 | Self-contained, enum-heavy (sleeve, action, cleaning method, care status). |
 | done | spins | 6 | Client and CLI already declared `SpinSession` and friends by hand. |
-| 3 | settings (AI prompt, recommendations, gamdl) | 8 | Flat settings documents. |
+| 3 | settings (AI prompt, appearance, recommendations, gamdl) | 10 | Flat settings documents. |
 | 4 | backups | 10 | Settings + status payloads; one binary download stays an exception. |
 | 5 | background jobs | 5 | Job entity also shapes the SSE events. |
 | 6 | genres | 7 | Recursive `GenreTreeNode` moves out of `routes.ts`. |
@@ -153,6 +153,8 @@ is closed, so they need a follow-up issue as their owner.
 | PUT | `/api/set-recordings/{sha256}` | set derivation | #552 |  |
 | GET | `/api/settings/ai-prompt` | settings | #552 |  |
 | PUT | `/api/settings/ai-prompt` | settings | #552 |  |
+| GET | `/api/settings/appearance` | settings | #552 |  |
+| PUT | `/api/settings/appearance` | settings | #552 |  |
 | GET | `/api/settings/backup` | backups | #552 |  |
 | PUT | `/api/settings/backup` | backups | #552 |  |
 | POST | `/api/settings/backup/run` | backups | #552 |  |

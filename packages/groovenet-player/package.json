@@ -8,6 +8,9 @@
   },
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "bin": {
+    "groovenet-mpris": "build/mprisBin.js"
+  },
   "exports": {
     ".": {
       "import": "./build/index.js",
@@ -29,7 +32,9 @@
     "test:coverage": "vitest run --coverage"
   },
   "files": [
-    "build/"
+    "build/",
+    "MPRIS.md",
+    "scripts/mpris-smoke.mjs"
   ],
   "publishConfig": {
     "access": "public"
@@ -48,5 +53,8 @@
     "type": "git",
     "url": "git+https://github.com/Public-Vinyl-Radio/groovenet.git",
     "directory": "packages/groovenet-player"
+  },
+  "optionalDependencies": {
+    "dbus-next": "0.10.2"
   }
 }

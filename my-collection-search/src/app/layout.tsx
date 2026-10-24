@@ -8,7 +8,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { developerToolsEnabled } from "@/lib/developerTools";
 import AnalyticsInit from "@/components/AnalyticsInit";
 import { getClientAnalyticsConfig } from "@/lib/analytics/config";
+import { fontClassName } from "./fonts";
+import { defaultFontChoiceId } from "./fontChoices";
 import { defaultPaletteId } from "./palettes";
+import { settingsService, type Appearance } from "@/server/services/settingsService";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +38,37 @@ export const viewport = {
   initialScale: 1,
 };
 
-// data-palette is server-rendered so the palette is in place before first
-// paint; #669 will read the user's choice instead of the default.
-export default function RootLayout({ children }: { children: ReactNode }) {
+const defaultAppearance: Appearance = {
+  palette: defaultPaletteId,
+  fonts: { display: defaultFontChoiceId, body: defaultFontChoiceId, label: defaultFontChoiceId },
+};
+
+// The saved palette and fonts, or the defaults when they can't be read: a
+// settings outage must not take the whole app down with it.
+async function readAppearance(): Promise<Appearance> {
+  try {
+    return await settingsService.getAppearance();
+  } catch (err) {
+    console.error("Failed to load the saved appearance, using the defaults:", err);
+    return defaultAppearance;
+  }
+}
+
+// The data-* attributes are server-rendered so the palette and fonts are in
+// place before first paint. Light/dark is per device (localStorage) and applied
+// client-side.
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const { palette, fonts } = await readAppearance();
   return (
-    <html lang="en" data-palette={defaultPaletteId} suppressHydrationWarning>
+    <html
+      lang="en"
+      data-palette={palette}
+      data-font-display={fonts.display}
+      data-font-body={fonts.body}
+      data-font-label={fonts.label}
+      className={fontClassName}
+      suppressHydrationWarning
+    >
       <body>
         <AnalyticsInit config={getClientAnalyticsConfig()} />
         <EmotionRegistry>

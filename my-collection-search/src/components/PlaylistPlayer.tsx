@@ -29,13 +29,11 @@ export const PlayerContainer: React.FC<{ children: React.ReactNode }> = ({
       zIndex={100}
       width={{ base: "calc(100% - 32px)", md: "calc(100% - 80px)" }}
       maxW="920px"
-      borderRadius={{ base: "24px", md: "2xl" }}
       overflow="hidden"
-      borderWidth="1px"
-      borderColor="border.subtle"
-      boxShadow="0 8px 32px var(--gn-shadow), 0 2px 8px var(--gn-shadow)"
-      bg="color-mix(in srgb, var(--gn-surface) 85%, transparent)"
-      style={{ backdropFilter: "blur(20px) saturate(180%)" }}
+      borderWidth="outline"
+      borderColor="border.ink"
+      boxShadow="md"
+      bg="bg.panel"
       px={{ base: 2.5, md: 5 }}
       py={{ base: 1.5, md: 3 }}
     >
@@ -60,9 +58,6 @@ const PlaylistPlayer: React.FC = () => {
 
   return (
     <>
-      {/* Spacer so page content scrolls clear of the floating player */}
-      <Box h={{ base: "96px", md: "100px" }} />
-
       {/* Original Player - hide when queue drawer is open */}
       {!isOpen && (
         <PlayerContainer>

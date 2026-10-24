@@ -76,6 +76,14 @@ describe("genre filter chips", () => {
     ]);
   });
 
+  it("carries each genre's track count when the search has facets", () => {
+    const genres = [{ id: "c", name: "Cumbia", slug: "cumbia", parent_id: null, parent_name: null, track_count: 0 }];
+    expect(genreFilterChips(["cumbia", "gone"], genres, new Map([["c", 41]]))).toEqual([
+      { key: "genre:cumbia", label: "Cumbia", active: true, count: 41 },
+      { key: "genre:gone", label: "gone", active: true },
+    ]);
+  });
+
   it("reads a slug only from a genre chip's key", () => {
     expect(genreSlugFromChipKey("genre:salsa")).toBe("salsa");
     expect(genreSlugFromChipKey("missingAudio")).toBeNull();

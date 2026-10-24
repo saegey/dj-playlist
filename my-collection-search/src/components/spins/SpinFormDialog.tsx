@@ -276,7 +276,7 @@ export default function SpinFormDialog({
       ) : (
         <Stack gap={3}>
           {sides.map((side) => (
-            <Box key={side.side_key} borderWidth="1px" borderRadius="md" p={3}>
+            <Box key={side.side_key} borderWidth="outline" borderColor="border.ink" boxShadow="sm" p={3}>
               <HStack gap={2}>
                 {form.selectionMode === "sides" && (
                   <Checkbox.Root

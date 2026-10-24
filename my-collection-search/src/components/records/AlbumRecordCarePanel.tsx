@@ -69,7 +69,7 @@ export default function AlbumRecordCarePanel({ releaseId, friendId, albumTitle }
         </HStack>
       </Flex>
 
-      <Box borderWidth="1px" borderRadius="md">
+      <Box borderWidth="outline" borderColor="border.ink" boxShadow="md">
         {isLoading ? (
           <Flex justify="center" py={4}>
             <Spinner size="sm" />

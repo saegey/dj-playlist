@@ -42,13 +42,14 @@ export default function FilterSheet({ count, onClearAll, children }: FilterSheet
         <Button
           size="xs"
           variant="outline"
+          borderColor="border.ink"
           flexShrink={0}
           aria-label={count > 0 ? `Filters, ${count} on` : "Filters"}
         >
           <LuSlidersHorizontal />
           Filters
           {count > 0 && (
-            <Badge size="xs" colorPalette="accent" variant="solid" borderRadius="full">
+            <Badge size="xs" colorPalette="accent" variant="solid">
               {count}
             </Badge>
           )}

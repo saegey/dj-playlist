@@ -35,8 +35,8 @@ import { toaster } from "@/components/ui/toaster";
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Box borderWidth="1px" borderRadius="md" p={4}>
-      <Text fontWeight="semibold" fontSize="sm" color="fg.muted" mb={3} textTransform="uppercase" letterSpacing="wide">
+    <Box borderWidth="outline" borderColor="border.ink" boxShadow="sm" p={4}>
+      <Text fontWeight="semibold" fontSize="sm" color="fg.muted" mb={3} fontFamily="label" textTransform="uppercase" letterSpacing="wide">
         {title}
       </Text>
       {children}
@@ -141,7 +141,7 @@ export default function TrackEditPage() {
       </Flex>
 
       {!hasValidFriendId && (
-        <Box borderWidth="1px" borderRadius="md" p={4}>
+        <Box borderWidth="outline" borderColor="border.ink" boxShadow="sm" p={4}>
           <Text>Missing <code>friend_id</code> query param.</Text>
         </Box>
       )}
@@ -330,12 +330,10 @@ export default function TrackEditPage() {
             <Flex
               gap={2}
               p="10px"
-              borderWidth="1px"
-              borderColor="border"
-              borderRadius="28px"
-              bg="color-mix(in srgb, var(--gn-surface) 60%, transparent)"
-              boxShadow="0 18px 40px var(--gn-shadow)"
-              style={{ backdropFilter: "blur(24px) saturate(200%)" }}
+              borderWidth="outline"
+              borderColor="border.ink"
+              bg="bg.panel"
+              boxShadow="md"
             >
               <Button
                 variant="outline"

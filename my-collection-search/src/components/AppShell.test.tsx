@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/test/renderWithProviders";
 
 const pathname = vi.hoisted(() => ({ value: "/chore" }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.value }));
+const playlist = vi.hoisted(() => ({ length: 0 }));
 vi.mock("@/providers/PlaylistPlayerProvider", () => ({
-  usePlaylistPlayer: () => ({ playlistLength: 0 }),
+  usePlaylistPlayer: () => ({ playlistLength: playlist.length }),
 }));
 vi.mock("@/providers/CommandPaletteProvider", () => ({
   useCommandPalette: () => ({ setPaletteOpen: vi.fn() }),
@@ -24,7 +25,28 @@ describe("AppShell", () => {
   afterEach(() => {
     standaloneMode.value = false;
     pathname.value = "/chore";
+    playlist.length = 0;
+    localStorage.clear();
   });
+
+  // jsdom ignores media queries, so read the rules Emotion emitted for an
+  // element instead of its computed style.
+  function rulesFor(el: Element) {
+    const classes = [...el.classList];
+    return Array.from(document.styleSheets)
+      .flatMap((sheet) => Array.from(sheet.cssRules))
+      .map((rule) => rule.cssText)
+      .filter((css) => classes.some((c) => css.includes(`.${c}`)))
+      .join("\n");
+  }
+
+  const toggle = () => screen.getByRole("button", { name: /(Collapse|Expand) sidebar/, hidden: true });
+  const sidebarOf = () => {
+    let el = toggle().parentElement!;
+    while (!/position:\s*fixed/.test(rulesFor(el))) el = el.parentElement!;
+    return el;
+  };
+  const contentOf = () => screen.getByText("page").parentElement!;
 
   it.each(["/chore", "/", "/playlists", "/somewhere-else"])("renders every navigation surface at %s", async (path) => {
     pathname.value = path;
@@ -59,5 +81,53 @@ describe("AppShell", () => {
       configurable: true,
       value: originalVisibilityState,
     });
+  });
+
+  it("pins the desktop sidebar to the viewport instead of the document", () => {
+    renderWithProviders(<AppShell developerToolsEnabled>page</AppShell>);
+
+    const css = rulesFor(sidebarOf());
+    expect(css).toMatch(/position:\s*fixed/);
+    expect(css).toMatch(/top:\s*0/);
+    expect(css).toMatch(/bottom:\s*0/);
+    expect(css).toMatch(/left:\s*0/);
+    expect(css).not.toMatch(/sticky|100vh/);
+  });
+
+  it("offsets the content by the sidebar width and follows its state", async () => {
+    const { user } = renderWithProviders(<AppShell developerToolsEnabled>page</AppShell>);
+    expect(rulesFor(sidebarOf())).toMatch(/width:\s*64px/);
+    expect(rulesFor(contentOf())).toMatch(/margin-left:\s*64px/);
+
+    await user.click(toggle());
+
+    expect(rulesFor(sidebarOf())).toMatch(/width:\s*220px/);
+    expect(rulesFor(contentOf())).toMatch(/margin-left:\s*220px/);
+    expect(JSON.parse(localStorage.getItem("sidebar-expanded")!)).toBe(true);
+  });
+
+  it("restores an expanded sidebar from storage", async () => {
+    localStorage.setItem("sidebar-expanded", "true");
+    renderWithProviders(<AppShell developerToolsEnabled>page</AppShell>);
+
+    await waitFor(() => expect(toggle().getAttribute("aria-label")).toBe("Collapse sidebar"));
+    expect(rulesFor(contentOf())).toMatch(/margin-left:\s*220px/);
+  });
+
+  it("ignores an unreadable stored sidebar state", () => {
+    localStorage.setItem("sidebar-expanded", "{not json");
+    renderWithProviders(<AppShell developerToolsEnabled>page</AppShell>);
+
+    expect(toggle()).toBeTruthy();
+  });
+
+  it("keeps desktop content clear of the floating player only while it is open", () => {
+    const { unmount } = renderWithProviders(<AppShell developerToolsEnabled>page</AppShell>);
+    expect(rulesFor(contentOf())).not.toMatch(/124px/);
+    unmount();
+
+    playlist.length = 3;
+    renderWithProviders(<AppShell developerToolsEnabled>page</AppShell>);
+    expect(rulesFor(contentOf())).toMatch(/padding-bottom:\s*124px/);
   });
 });

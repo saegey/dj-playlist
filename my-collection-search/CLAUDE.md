@@ -86,12 +86,14 @@ Reference only tokens that exist: an undefined one (`brand.0` was) compiles to
 an invalid value the browser drops, so it fails silently.
 - **Colour:** semantic tokens over raw scales — `bg`, `bg.subtle` (toolbars,
   active nav), `bg.muted` (row hover), `bg.panel` (inputs, popovers, dialogs),
-  `fg`, `fg.muted` (secondary text), `border`. All of them read `--gn-*`
+  `fg`, `fg.muted` (secondary text), `border` (`border.ink` for the 2px outline of
+  controls and containers). All of them read `--gn-*`
   variables, so they follow the palette; raw scales (`gray.500`, `blue.500`)
   do not, and ESLint rejects them (`no-restricted-syntax` in
   `eslint.config.mjs`) in colour props and `colorPalette`.
 - **One accent:** `accent.solid` or `colorPalette="accent"` for the primary
-  action, active filters, selection and playback progress. Never two solid
+  action, selection and playback progress. Active filter chips are the
+  exception: a solid ink fill (`colorPalette="neutral"`). Never two solid
   accent buttons side by side; `colorPalette="danger"` only for destructive
   actions. `colorPalette="neutral"` for inactive chips and plain badges.
   `overlay.*` tokens (`overlay.fg`, `.fg.muted`, `.track`, `.scrim`,
@@ -108,27 +110,96 @@ an invalid value the browser drops, so it fails silently.
   `src/app/palettes/<id>.ts` exporting a `Palette`, register it in
   `palettes/index.ts`; `chakraTheme.ts` emits `[data-palette="<id>"]` and
   `[data-palette="<id>"].dark`, and `palettes.test.ts` checks completeness and
-  WCAG AA contrast (4.5:1 text, 3:1 borders, focus rings, icons) and that the
-  status colours differ in lightness. An unknown `data-palette` falls back to
-  the default palette (Sleeve), which is also declared on `:root`. Sleeve's
-  values are provisional until #664 is signed off; change them in `sleeve.ts` only.
+  WCAG contrast and that the status colours differ in lightness. The presets
+  are Sleeve (default), Riso (cream, fluorescent pink, teal), Midnight (navy,
+  cream, amber) and Mono (black and white). An optional `contrast: "AA" | "AAA"`
+  on a `Palette` (default AA) sets the bar: AA is 4.5:1 for text pairs, AAA is
+  7:1 (Mono declares it); borders, focus rings and icon-sized pairs stay at
+  3:1 either way. A failure names the palette, mode and pair. Nothing else to wire up: Settings →
+  Appearance builds its picker from the registry (a card per palette, named
+  from its id), and `PUT /api/settings/appearance` validates against it. The
+  palette is a shared server setting (`appearance_settings`), read by the root
+  layout; light/dark/system is per device in localStorage via
+  `ColorModeProvider`. An unknown `data-palette` falls back to
+  the default palette (Sleeve), which is also declared on `:root`. Every
+  palette's values are provisional until #664 is signed off; change them in the
+  palette's own file only.
 - **Status** tokens `status.{missing,analysis,genre,success}.{fg,subtle,border}`
   carry the badge meanings below.
+- **House style (#667):** the whole look lives in `src/app/houseStyle.ts`
+  (shape tokens, shadows, font tokens, recipe overrides, focus ring), wired in
+  by `chakraTheme.ts`. Components don't restyle themselves: reach for a
+  token or variant, not a literal. Values there are provisional until #664 is
+  signed off; tuning is a one-file change. There is no Classic style switch.
+- **Shape:** every radius token is `0`, so `borderRadius="md"`/`xl`/... are all
+  square; don't set one on a new component. `full` stays for round things only
+  (slider thumbs and tracks, player transport buttons, avatars, dots). Controls
+  and containers carry a 2px outline (`borderWidth="outline"`,
+  `borderColor="border.ink"`); a literal `1px` is for ruled dividers inside a
+  block (`borderWidth="rule"`).
+- **Shadow:** hard offsets, no blur, never a literal. `boxShadow="sm"` (3px) for
+  compact controls, `md` (6px) for containers: cards, dialogs, popovers, menus,
+  drawers, the list block. They read `--gn-shadow`, which a palette must keep
+  opaque (`palettes.test.ts` checks it). Hover is a background step, never a lift.
+- **Lists:** a list is ONE outlined block with ruled dividers and ONE shadow for
+  the whole stack (the track rows in `SearchResults`, record care, spins), never
+  a shadow per row; 50+ results stay calm that way.
 - **Buttons:** `size="sm"` by default, `xs` inside cards and dense rows;
-  `variant="outline"` is the default, `ghost` for low-weight actions
-  (`color="fg.muted"` for tertiary), `solid` for the one primary action.
-  Icon-only buttons need an `aria-label`.
-- **Badges** (`size="sm"`, `subtle`) have fixed meanings: `status.missing`
+  `variant="outline"` is the default and `ghost` the low-weight action
+  (`color="fg.muted"` for tertiary): both are quiet, with no shadow. `solid` is
+  the one primary action: ink outline, hard shadow, and a press that shifts it
+  2px down and right while the shadow shrinks (nothing moves under
+  `prefers-reduced-motion`). Solid and outline labels use the mono face. Icon-only
+  buttons need an `aria-label`.
+- **Focus:** a solid 2px ring in the palette's focus colour, offset 2px so the
+  border never hides it. Recipes use `focusVisibleRing="outside"`; the global
+  `:focus-visible` rule covers anything else, including custom controls. Don't
+  write `outline: none` without a replacement. The default `gray` palette's
+  `focusRing` is remapped to the accent ring, so unstyled controls meet 3:1.
+- **Badges** are tags: every badge is uppercase, letter-spaced mono (the badge
+  recipe's base), and `subtle` adds a ruled outline. `size="sm"`, `subtle`, with
+  fixed meanings: `status.missing`
   missing data the pipeline needs (No embedding), `status.analysis` missing
   analysis (No BPM), `status.genre` genre/AI-derived, bold `accent` library ID,
   `status.success`/`status.analysis`/`status.missing` similarity score. Always
   text, never colour alone. Genre badges go through `GenreBadge`.
-- **Shape:** `borderRadius="md"` for buttons, inputs, cards and artwork;
-  `full` only for filter chips, player transport buttons and slider tracks;
-  `xl` for the search toolbar, `2xl` for dialogs and drawers. Separate with
-  1px `border`, not shadows (the house style, #667, will change this); hover is a background step, never a lift.
-- **Type:** the system UI stack (no webfont); `fontFamily="mono"` only for
-  IDs and paths. Inputs use 16px text so iOS doesn't zoom.
+- **Filter chips** (`FilterChips`): square, the active chip a solid ink fill.
+  Give a chip `count` where the data already has one (genre chips take the
+  facet counts); the label becomes "Genre · 41". Don't add a count query for it.
+- **Type:** three user-selectable roles, each with a curated list in the
+  registry `src/app/fontChoices.ts`: **Display** (the `heading` token: page
+  titles, card headings), **Body** (`body`: UI text) and **Labels** (`label`:
+  buttons, tags, overlines, nav, IDs such as LP-342). Each role lists 2 to 4
+  choices; the first (`default`) is the app's own face and the last is
+  `system` (`system-ui` / `ui-monospace`, no file). `fontRoleIds`,
+  `isFontChoiceId`, `resolveFontChoice(role, value)` (unknown, missing or
+  another role's id is the default) and `fontChoiceIdsFor(role)` derive from it,
+  and so do the `PUT /api/settings/appearance` validation, the OpenAPI enums,
+  the Settings → Appearance → Typography picker and the CSS. `fontFamily="mono"`
+  (IDs, paths) is not a role: it is always IBM Plex Mono.
+  - **Scheme:** `layout.tsx` renders `data-font-display|body|label` on `<html>`
+    next to `data-palette` (from the shared `appearance_settings` row, nullable
+    `font_*` columns, null = default), so there is no flash. `chakraTheme.ts`
+    (`fontBlocks`) emits `[data-font-<role>="<id>"] { --gn-font-heading|body|label: ... }`
+    per choice, with each role's default also on `:root`, so a missing or unknown
+    attribute still gets the default. The font tokens read those variables.
+  - **Cascade rule:** `fonts.ts` loads every face through `next/font/local`
+    under its own `--face-<id>` variable (`--face-plex-sans`, `--face-inter`,
+    ...) and never sets a `--gn-font-*` variable. next/font's class has the same
+    specificity as an attribute selector, so defining `--gn-font-*` there would
+    win or lose by stylesheet order. A choice's value is
+    `var(--face-<id>, <role stack>)`, so a missing face degrades to the stack
+    (Storybook). Alternative faces set `preload: false`: the browser fetches a
+    woff2 only when a rule applies it (the chosen face, or the picker's cards).
+  - **Add a face:** commit a latin-subset woff2 per needed weight (400/500/600,
+    fewer if the face needs fewer) and its OFL/Apache licence as
+    `src/app/fonts/OFL-<Family>.txt`; add a literal `localFont` call in
+    `fonts.ts` with `variable: "--face-<id>"`, `display: "swap"`,
+    `preload: false` and a metric-matched `adjustFontFallback`; list it in the
+    role's `choices` in `fontChoices.ts`. `fonts.test.ts` checks the faces match
+    the registry and that files and licences exist. Check it in Storybook (the
+    toolbar has Display/Body/Labels font switchers) and in the app at 390px: buttons, chips, tags,
+    tabs and track rows must hold. Inputs use 16px text so iOS doesn't zoom.
 - **Copy:** terse sentence case, DJ vocabulary ("112 BPM", "D major (10B)",
   "B2", "LP-342"), no emoji in the UI.
 - **Layout:** pages sit in `PageContainer` (`wide` for lists, `narrow` for
