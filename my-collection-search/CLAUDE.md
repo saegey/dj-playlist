@@ -208,6 +208,22 @@ an invalid value the browser drops, so it fails silently.
   analysis (No BPM), `status.genre` genre/AI-derived, bold `accent` library ID,
   `status.success`/`status.analysis`/`status.missing` similarity score. Always
   text, never colour alone. Genre badges go through `GenreBadge`.
+- **Track rows** (`TrackResult layout="row"`, `TRACK_ROW_HEIGHT` = 80, also the
+  virtualiser's `estimateSize`): three-line first cell (title, artist,
+  `Album · Year`), then a Release cell that holds what must never clip (library
+  ID, side/position, extras) and wraps instead of truncating. Header and rows share
+  `trackRowGridCss`; Genre and Rating, then Key, drop off as the list block (a
+  `container-type: inline-size` ancestor) narrows. Anything that can overflow ends
+  in an ellipsis with a `title` tooltip; never cut a badge or tag mid-glyph.
+- **Search fields and controls:** text you type uses the body face (14px at `md`,
+  16px on phones), controls you click use the label face (13px). The search field,
+  mode toggle, icon buttons and filter controls are all `size="sm"` (36px) so the
+  toolbar shares a baseline.
+- **Filter row** (`FilterChips` with `FilterGroup`s as `leading`): Genre and its
+  "Include similar" toggle are one unit (`GenreFilterGroup`, the toggle shows once a
+  genre is selected and the field reads "Genre · N"); Missing and BPM / Key are a
+  second group, with a wider gap between groups. Active chips and "Clear all" sit on
+  their own line below, which holds its height empty so nothing jumps.
 - **Filter chips** (`FilterChips`): square, the active chip a solid ink fill.
   Give a chip `count` where the data already has one (genre chips take the
   facet counts); the label becomes "Genre · 41". Don't add a count query for it.

@@ -22,6 +22,8 @@ type UnifiedSearchControlsProps = {
   mobileSecondaryControls?: React.ReactNode;
 };
 
+const SEARCH_FONT_SIZE = { base: "16px", md: "14px" };
+
 export default function UnifiedSearchControls({
   query,
   onQueryChange,
@@ -62,7 +64,9 @@ export default function UnifiedSearchControls({
             onKeyDown={handleKeyDown}
             variant="outline"
             bg="bg.panel"
-            fontSize="16px"
+            size="sm"
+            // 16px on phones so iOS doesn't zoom on focus; 14px beside the 13px label-face controls.
+            fontSize={SEARCH_FONT_SIZE}
             placeholder={placeholder}
           />
         </InputGroup>
@@ -73,7 +77,7 @@ export default function UnifiedSearchControls({
               includeAllOption={includeAllOption}
               value={selectedFriend}
               onChange={onFriendChange}
-              size="md"
+              size="sm"
               iconOnlyMobile={compactDesktop}
             />
           </Box>
@@ -90,8 +94,8 @@ export default function UnifiedSearchControls({
               onChange={(e) => onQueryChange(e.target.value)}
               onKeyDown={handleKeyDown}
               variant="outline"
-            bg="bg.panel"
-              fontSize="16px"
+              bg="bg.panel"
+              fontSize={SEARCH_FONT_SIZE}
               size="sm"
               placeholder={placeholder}
             />
