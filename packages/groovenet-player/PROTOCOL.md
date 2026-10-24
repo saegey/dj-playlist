@@ -41,6 +41,7 @@ event before the response to the command that caused it.
 | `status` | none | Current playback snapshot |
 | `play` | optional `index` (zero-based queue index) | Playback snapshot |
 | `pause`, `resume`, `next`, `prev` | none | Playback snapshot |
+| `stop` | none | Stop playback, retain queue and daemon; playback snapshot |
 | `seek` | `seconds` (non-negative number) | Playback snapshot |
 | `volume` | `volume` (0–100) | Playback snapshot |
 | `queue.add` | `query` or `playlistId` | Added queue entries |
