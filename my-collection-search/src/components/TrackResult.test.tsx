@@ -114,13 +114,13 @@ describe("TrackResult layout", () => {
     expect(screen.getByRole("button", { name: "Play" })).toBeTruthy();
   });
 
-  it("keeps the row grid's 7 columns aligned for a track with no genres at all", () => {
+  it("keeps the row grid's 6 columns aligned for a track with no genres at all", () => {
     // A child that renders null (e.g. GenreList for a genre-less track) drops out of
     // the DOM, which shifts every later CSS Grid auto-placed column left by one —
     // regression coverage for that, not just a snapshot of the current markup.
     renderWithProviders(<TrackResult track={{ ...track, track_genres: [], local_tags: "", styles: [] }} layout="row" />);
 
-    expect(screen.getByTestId("track-row-grid").children.length).toBe(7);
+    expect(screen.getByTestId("track-row-grid").children.length).toBe(6);
   });
 
   it("never lets the 'more actions' menu shrink out of view: it sits outside the squeezable grid", () => {
@@ -683,14 +683,15 @@ describe("TrackResult row layout (#685)", () => {
     const headerGrid = screen.getByText("Release").parentElement as HTMLElement;
     expect(getComputedStyle(rowGrid).gridTemplateColumns).toContain("minmax(150px");
     expect(getComputedStyle(headerGrid).gridTemplateColumns).toBe(getComputedStyle(rowGrid).gridTemplateColumns);
-    expect(TRACK_ROW_GRID_TEMPLATE.split(/\s(?![^()]*\))/)).toHaveLength(7);
+    expect(TRACK_ROW_GRID_TEMPLATE.split(/\s(?![^()]*\))/)).toHaveLength(6);
     // Same columns, same order, in the header and the row.
-    const labels = ["Track", "Release", "Time", "BPM", "Key", "Genre", "Rating"];
+    const labels = ["Track", "Release", "Time", "BPM / Key", "Genre", "Rating"];
     expect(Array.from(headerGrid.children).map((el) => el.textContent)).toEqual(labels);
     expect(headerGrid.children).toHaveLength(rowGrid.children.length);
-    ["key", "genre", "rating"].forEach((col, i) => {
-      expect(headerGrid.querySelectorAll(`[data-col=${col}]`)).toHaveLength(1);
-      expect(rowGrid.querySelectorAll(`[data-col=${col}]`)).toHaveLength(1);
+    // The key sits beside BPM, in the same cell in the header and the row.
+    expect(headerGrid.children[3].querySelector("[data-col=key]")).toBeTruthy();
+    expect(rowGrid.children[3].querySelector("[data-col=key]")).toBeTruthy();
+    ["genre", "rating"].forEach((col, i) => {
       expect(headerGrid.children[4 + i].getAttribute("data-col")).toBe(col);
       expect(rowGrid.children[4 + i].getAttribute("data-col")).toBe(col);
     });

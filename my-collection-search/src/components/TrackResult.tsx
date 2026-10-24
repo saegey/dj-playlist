@@ -58,31 +58,31 @@ const PLACEHOLDER_SRC =
 export const TRACK_ROW_EDGE_WIDTH = "44px";
 /**
  * The full grid every `layout="row"` track shares with `TrackListHeader`, so columns never drift apart.
- * Track, Release, Time, BPM, Key, Genre, Rating.
+ * Track, Release, Time, BPM / Key, Genre, Rating.
  */
 export const TRACK_ROW_GRID_TEMPLATE =
-  "minmax(200px, 2fr) minmax(128px, 0.9fr) 48px 56px 96px minmax(168px, 1.4fr) 76px";
+  "minmax(200px, 2fr) minmax(128px, 0.9fr) 48px 132px minmax(168px, 1.4fr) 76px";
 const TRACK_ROW_GRID_BASE = "minmax(150px, 2fr) minmax(112px, 0.9fr) 48px 56px";
-const TRACK_ROW_GRID_WITH_KEY = `${TRACK_ROW_GRID_BASE} 96px`;
-/** Width of the list block at which Key, then Genre and Rating, have room to show. */
+const TRACK_ROW_GRID_WITH_KEY = "minmax(150px, 2fr) minmax(112px, 0.9fr) 48px 132px";
+/** Width of the list block at which the key joins BPM, then Genre and Rating have room to show. */
 const TRACK_ROW_KEY_MIN_WIDTH = "780px";
 const TRACK_ROW_FULL_MIN_WIDTH = "1040px";
 
 /**
  * Styles for the grid in a row and in the header. Columns drop off the right as the
  * list block (a `container-type: inline-size` ancestor) narrows, rather than being
- * cut mid-cell: below 780px Key, Genre and Rating go, below 1040px Genre and Rating.
+ * cut mid-cell: below 780px the key (beside BPM), Genre and Rating go, below 1040px Genre and Rating.
  */
 export const trackRowGridCss = {
   gridTemplateColumns: TRACK_ROW_GRID_BASE,
   "& [data-col]": { display: "none" },
   [`@container (min-width: ${TRACK_ROW_KEY_MIN_WIDTH})`]: {
     gridTemplateColumns: TRACK_ROW_GRID_WITH_KEY,
-    "& [data-col=key]": { display: "flex" },
+    "& [data-col=key]": { display: "contents" },
   },
   [`@container (min-width: ${TRACK_ROW_FULL_MIN_WIDTH})`]: {
     gridTemplateColumns: TRACK_ROW_GRID_TEMPLATE,
-    "& [data-col=key]": { display: "flex" },
+    "& [data-col=key]": { display: "contents" },
     "& [data-col=genre]": { display: "block" },
     "& [data-col=rating]": { display: "flex" },
   },
@@ -140,8 +140,9 @@ export function TrackListHeader() {
         <Text>Track</Text>
         <Text>Release</Text>
         <Text textAlign="right">Time</Text>
-        <Text textAlign="right">BPM</Text>
-        <Text data-col="key">Key</Text>
+        <Text>
+          BPM<span data-col="key"> / Key</span>
+        </Text>
         <Text data-col="genre">Genre</Text>
         <Text data-col="rating">Rating</Text>
       </Grid>
@@ -943,19 +944,16 @@ export default function TrackResult({
           )}
 
           {showDetails ? (
-            <Flex justifyContent="flex-end">
-              <BpmValue bpm={track.bpm} bpmConfidence={track.bpm_confidence} />
+            <Flex alignItems="center" gap={2} minW={0}>
+              <Flex minW="56px" flexShrink={0}>
+                <BpmValue bpm={track.bpm} bpmConfidence={track.bpm_confidence} align="left" />
+              </Flex>
+              <Box data-col="key" minW={0}>
+                <KeyChip keyName={track.key} camelot={camelot} keyConfidence={track.key_confidence} showName={false} />
+              </Box>
             </Flex>
           ) : (
             <Box />
-          )}
-
-          {showDetails ? (
-            <Flex data-col="key" minW={0}>
-              <KeyChip keyName={track.key} camelot={camelot} keyConfidence={track.key_confidence} showName={false} />
-            </Flex>
-          ) : (
-            <Box data-col="key" />
           )}
 
           {/*
