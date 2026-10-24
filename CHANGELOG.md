@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.3.9](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.8...v0.3.9) (2026-10-24)
+
+
+### Features
+
+* **player:** add opt-in OwnTone backend with explicit EOF events ([#701](https://github.com/Public-Vinyl-Radio/groovenet/issues/701)) ([12b6b0a](https://github.com/Public-Vinyl-Radio/groovenet/commit/12b6b0a31016e7c9b67a7d559e9dcd9e6267934a))
+* **player:** add optional MPRIS desktop controls ([#679](https://github.com/Public-Vinyl-Radio/groovenet/issues/679)) ([b9a3bf2](https://github.com/Public-Vinyl-Radio/groovenet/commit/b9a3bf2a66ea3ba790ed291cf7755a5f72024858))
+* **settings:** appearance — palette and light/dark/system picker ([#677](https://github.com/Public-Vinyl-Radio/groovenet/issues/677)) ([3c43663](https://github.com/Public-Vinyl-Radio/groovenet/commit/3c436631b761ed362d5eabfa94ca283b8b3eb0fd))
+* **settings:** choose display, body and label fonts ([#686](https://github.com/Public-Vinyl-Radio/groovenet/issues/686)) ([c3ac994](https://github.com/Public-Vinyl-Radio/groovenet/commit/c3ac99409b6e042ab3fa07b22d92d9b850d32255))
+* **settings:** custom colour palette with contrast checks ([#696](https://github.com/Public-Vinyl-Radio/groovenet/issues/696)) ([ad232ba](https://github.com/Public-Vinyl-Radio/groovenet/commit/ad232bac162881250e815d21f1457af22ab667b2))
+* **tracks:** table list view for related tracks ([#702](https://github.com/Public-Vinyl-Radio/groovenet/issues/702)) ([1794581](https://github.com/Public-Vinyl-Radio/groovenet/commit/1794581b0a4af62157e80292210a0086bc09b040))
+* **ui:** add Riso, Midnight and Mono palettes ([#682](https://github.com/Public-Vinyl-Radio/groovenet/issues/682)) ([f7933cd](https://github.com/Public-Vinyl-Radio/groovenet/commit/f7933cdbb54d8271ba9502df2d9113ab6d0725aa))
+* **ui:** palette-driven theme tokens with Sleeve default ([#674](https://github.com/Public-Vinyl-Radio/groovenet/issues/674)) ([c2cc5e6](https://github.com/Public-Vinyl-Radio/groovenet/commit/c2cc5e69aba7998f84a5820e64c8494426d6f357))
+* **ui:** retro house style with square outlines and hard shadows ([#678](https://github.com/Public-Vinyl-Radio/groovenet/issues/678)) ([c6fc301](https://github.com/Public-Vinyl-Radio/groovenet/commit/c6fc30103bbef290b31a859724490def858cff1e))
+
+
+### Bug Fixes
+
+* **player:** scroll long TUI lists and harden cover-art hiding ([#659](https://github.com/Public-Vinyl-Radio/groovenet/issues/659)) ([e67145d](https://github.com/Public-Vinyl-Radio/groovenet/commit/e67145da3dd8df9cb041580bd0aa6e25d6da972d))
+* **ui:** keep the sidebar full height at the bottom of the page ([#695](https://github.com/Public-Vinyl-Radio/groovenet/issues/695)) ([09858ae](https://github.com/Public-Vinyl-Radio/groovenet/commit/09858aebd85c65705e6ffa973cd198d89ae4aa6b))
+* **ui:** stop clipping track row badges and tidy the search toolbar ([#697](https://github.com/Public-Vinyl-Radio/groovenet/issues/697)) ([54d9ea3](https://github.com/Public-Vinyl-Radio/groovenet/commit/54d9ea3ce2f4a04a234a916ba7039133010a33d6))
+
 ## [0.3.8](https://github.com/Public-Vinyl-Radio/groovenet/compare/v0.3.7...v0.3.8) (2026-10-23)
 
 
