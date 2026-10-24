@@ -124,6 +124,51 @@ an invalid value the browser drops, so it fails silently.
   the default palette (Sleeve), which is also declared on `:root`. Every
   palette's values are provisional until #664 is signed off; change them in the
   palette's own file only.
+- **Custom palette (#671):** one saved palette, shared like the preset choice,
+  with the reserved id `custom` (`customPaletteId` in `src/app/palettes/custom.ts`;
+  never in the registry). `appearance_settings.palette` may be `custom` only while
+  a valid `custom_palette` is stored; otherwise every reader falls back to Sleeve.
+  - **Stored shape (`CustomPalette`, nullable `custom_palette jsonb`):** `base`
+    (a preset id, supplying the status colours) plus, for `light` and `dark`,
+    exactly five colours `ground`, `surface`, `ink`, `accent`, `shadow`. Inputs only;
+    everything else is derived at render time, so a better derivation reaches
+    palettes already saved. Never store or accept free-form CSS.
+  - **Validation:** every colour must match `^#[0-9a-fA-F]{6}$` (lowercased on the
+    way in). `customPaletteSchema` (zod, in `custom.ts`) is the one definition: the
+    PUT body, the response, `parseCustomPalette` on the DB value and the layout all
+    use it. Invalid input is a 400; an invalid stored row is "no custom palette"
+    (default palette), never an error. The values end up in a `<style>`, which is
+    why `customPaletteCss` throws on anything that isn't `#rrggbb`. The API accepts
+    `{ palette, fonts, customPalette }`, all optional; `customPalette: null`
+    deletes it (and resets `palette` to the default if it was in use).
+  - **Rendering:** when the saved palette is `custom`, `layout.tsx` renders
+    `<style id="gn-custom-palette">` in `<head>` with `:root[data-palette="custom"]{...}`
+    and `:root[data-palette="custom"].dark{...}`. The extra `:root` outranks the
+    default palette's `:root` block whatever the stylesheet order. On the client
+    `applyCustomPaletteStyle` (in `useAppearanceSettings`) injects or removes the
+    same element when a palette is chosen, saved or deleted, and the hook's
+    rollback restores it.
+  - **Derivation (`derivePalette`, pure, deterministic):** `ink-muted` and `border`
+    are ink mixed toward ground; accent tint/muted/emphasized are ground mixed toward
+    the accent; `accent-fg`, `focus-ring`, `accent-border` start at the accent;
+    `accent-contrast` is the first of ground, ink, white, black that reads on the
+    accent. Status colours are the base preset's, unchanged. Derived colours are
+    pulled toward ink (or, for the tint, ground) in 2% steps until their AA pair
+    passes. **Colours the user typed are never altered:** a failure caused by them
+    (ink near ground, an accent near the ground, status text on a new ground) is
+    reported by `checkContrast`/`contrastFailures`, which hold the same pairs as
+    `palettes.test.ts` at AA. Saving is never blocked: the editor lists failing
+    pairs per mode, asks to confirm, and stores nothing about the warning.
+  - **Changing the derivation safely:** it changes how saved palettes look, so
+    edit `deriveMode` in `custom.ts` only with `custom.test.ts` open: the pinned
+    Sleeve outputs there will move (update them deliberately), and "a custom palette
+    copied from each preset passes every AA pair the preset passes" must still
+    hold. Add a variable to `paletteVariableNames` and `deriveMode` must produce it
+    (the completeness test fails otherwise). Keep every output `#rrggbb`.
+  - **Editor:** `CustomPaletteEditor` (Settings → Appearance). The live preview
+    scopes the draft by setting `--gn-*` inline on its wrapper, so the page is
+    untouched until Save. Catppuccin/Nord presets (#689), Classic (#672),
+    import/export and several saved palettes are out of scope.
 - **Status** tokens `status.{missing,analysis,genre,success}.{fg,subtle,border}`
   carry the badge meanings below.
 - **House style (#667):** the whole look lives in `src/app/houseStyle.ts`
