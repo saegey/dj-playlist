@@ -14,6 +14,7 @@ import {
   popoverAnatomy,
   segmentGroupAnatomy,
   switchAnatomy,
+  tabsAnatomy,
   selectAnatomy,
 } from "@chakra-ui/react/anatomy";
 
@@ -208,6 +209,35 @@ export const slotRecipes = {
         // Ringed inside the segment, so keyboard focus doesn't read as a
         // second, heavier selection box around the filled one.
         "&:has(input:focus-visible)": { "--focus-ring-offset": "-4px" },
+      },
+    },
+  }),
+  // Tabs are outlined boxes in the label face; the selected one is an ink fill,
+  // like an active filter chip, instead of an underline.
+  tabs: defineSlotRecipe({
+    slots: tabsAnatomy.keys(),
+    variants: {
+      variant: {
+        line: {
+          list: { gap: "2", _horizontal: { borderBottomWidth: "0" } },
+          trigger: {
+            borderWidth: "outline",
+            borderColor: "border.ink",
+            bg: "bg.panel",
+            fontFamily: "label",
+            fontSize: "13px",
+            fontWeight: "semibold",
+            color: "fg",
+            focusVisibleRing: "outside",
+            _hover: { bg: "bg.emphasized" },
+            _selected: {
+              bg: "neutral.solid",
+              color: "neutral.contrast",
+              "&::before": { display: "none" },
+            },
+          },
+          indicator: { display: "none" },
+        },
       },
     },
   }),

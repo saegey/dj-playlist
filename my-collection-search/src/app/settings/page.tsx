@@ -172,8 +172,10 @@ function SettingsPageContent() {
               </Box>
 
               <Tabs.List
+                className="hide-scrollbar"
                 display={{ base: "none", md: "flex" }}
                 overflowX="auto"
+                pb="1"
                 mb={4}
               >
                 {sections.map((section) => (
