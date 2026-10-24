@@ -170,11 +170,11 @@ export default function GamdlCookieManager() {
             ) : cookieInfo?.exists ? (
               <VStack align="start" gap={3}>
                 <HStack>
-                  <Icon color="green.500">
+                  <Icon color="fg.success">
                     <LuCheck />
                   </Icon>
                   <Text fontWeight="medium">Cookie file active</Text>
-                  <Badge colorPalette={cookieInfo.isValid ? "green" : "red"} variant="subtle">
+                  <Badge colorPalette={cookieInfo.isValid ? "status.success" : "status.missing"} variant="subtle">
                     {cookieInfo.isValid ? "Valid" : "Invalid"}
                   </Badge>
                 </HStack>
@@ -214,7 +214,7 @@ export default function GamdlCookieManager() {
               </VStack>
             ) : (
               <HStack>
-                <Icon color="red.500">
+                <Icon color="fg.error">
                   <LuX />
                 </Icon>
                 <Text>No cookie file found</Text>

@@ -83,7 +83,7 @@ export default function BackupPolicySettingsSection(): React.JSX.Element {
       {loading ? (
         <Spinner size="sm" />
       ) : !policy ? (
-        <Text color="red.500">Policy unavailable.</Text>
+        <Text color="fg.error">Policy unavailable.</Text>
       ) : (
         <>
           <Flex direction="column" gap={3}>
@@ -251,7 +251,7 @@ export default function BackupPolicySettingsSection(): React.JSX.Element {
           </Flex>
 
           <Flex mt={4} gap={2} align={{ base: "stretch", md: "center" }} direction={{ base: "column", md: "row" }}>
-            <Button colorPalette="blue" onClick={save} loading={saving}>
+            <Button colorPalette="accent" onClick={save} loading={saving}>
               Save Policy
             </Button>
             <Button variant="outline" onClick={() => void load()} disabled={saving}>

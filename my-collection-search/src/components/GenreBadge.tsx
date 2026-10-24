@@ -122,7 +122,7 @@ export function GenreBadgeRow({
       >
         <GenreBadgeList items={mobileItems} kind={kind} scope={scope} />
         {overflow > 0 && (
-          <Badge size="sm" variant="subtle" colorPalette="gray" flexShrink={0}>
+          <Badge size="sm" variant="subtle" colorPalette="neutral" flexShrink={0}>
             +{overflow}
           </Badge>
         )}

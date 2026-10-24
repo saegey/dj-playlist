@@ -134,18 +134,18 @@ export default function EmbeddingQueueSection({
           </Button>
         </Flex>
         {dataUpdatedAt > 0 && (
-          <Text fontSize="xs" color="gray.500">
+          <Text fontSize="xs" color="fg.muted">
             Updated: {new Date(dataUpdatedAt).toLocaleTimeString()}
           </Text>
         )}
       </Flex>
 
       {data.paused && (
-        <Card.Root borderColor="red.400" borderWidth="1px">
+        <Card.Root borderColor="border.error" borderWidth="1px">
           <Card.Body py={3}>
             <Flex gap={2} align="center" flexWrap="wrap">
-              <Badge colorPalette="red" variant="solid">Paused</Badge>
-              <Text fontSize="sm" color="red.600">{data.pause_reason}</Text>
+              <Badge colorPalette="status.missing" variant="solid">Paused</Badge>
+              <Text fontSize="sm" color="fg.error">{data.pause_reason}</Text>
             </Flex>
           </Card.Body>
         </Card.Root>
@@ -155,8 +155,8 @@ export default function EmbeddingQueueSection({
         <SummaryStat label="Interactive" value={data.lanes.interactive} />
         <SummaryStat label="Sync" value={data.lanes.sync} />
         <SummaryStat label="Bulk" value={data.lanes.bulk} />
-        <SummaryStat label="Retrying" value={data.retrying} color="orange.500" />
-        <SummaryStat label="Failed" value={data.failed_count} color={data.failed_count > 0 ? "red.500" : undefined} />
+        <SummaryStat label="Retrying" value={data.retrying} color="fg.warning" />
+        <SummaryStat label="Failed" value={data.failed_count} color={data.failed_count > 0 ? "fg.error" : undefined} />
         <SummaryStat label="Drain rate" value={`${Math.round(data.drain_rate_per_minute)}/min`} isText />
         <SummaryStat label="ETA" value={formatEta(data.eta_seconds)} isText />
         <SummaryStat
@@ -167,7 +167,7 @@ export default function EmbeddingQueueSection({
       </SimpleGrid>
 
       {!data.paused && data.last_error && (
-        <Text fontSize="xs" color="gray.500">Last error: {data.last_error}</Text>
+        <Text fontSize="xs" color="fg.muted">Last error: {data.last_error}</Text>
       )}
 
       {data.active_backfill_runs.length > 0 && (
@@ -182,7 +182,7 @@ export default function EmbeddingQueueSection({
                   <Box key={run.run_id}>
                     <Flex justify="space-between" fontSize="sm" mb={1}>
                       <Text fontFamily="mono">{run.run_id.slice(0, 8)}</Text>
-                      <Text color="gray.600">
+                      <Text color="fg.muted">
                         {done} / {run.queued} ({pct}%)
                       </Text>
                     </Flex>
@@ -191,7 +191,7 @@ export default function EmbeddingQueueSection({
                         <Progress.Range />
                       </Progress.Track>
                     </Progress.Root>
-                    <Flex gap={3} fontSize="xs" color="gray.500" mt={1}>
+                    <Flex gap={3} fontSize="xs" color="fg.muted" mt={1}>
                       <Text>Success: {run.success}</Text>
                       <Text>Skipped: {run.skipped}</Text>
                       <Text>Failed: {run.failed}</Text>
@@ -205,7 +205,7 @@ export default function EmbeddingQueueSection({
       )}
 
       {failed.length === 0 ? (
-        <Text fontSize="sm" color="gray.500">No failed embedding jobs.</Text>
+        <Text fontSize="sm" color="fg.muted">No failed embedding jobs.</Text>
       ) : (
         <Card.Root>
           <Card.Body>
@@ -213,7 +213,7 @@ export default function EmbeddingQueueSection({
               <Heading size="sm">Failed jobs ({failed.length})</Heading>
               <Button
                 size="sm"
-                colorPalette="red"
+                colorPalette="danger"
                 variant="outline"
                 disabled={selected.size === 0 || retryMutation.isPending}
                 loading={retryMutation.isPending}
@@ -269,7 +269,7 @@ export default function EmbeddingQueueSection({
                       <Table.Cell maxW="320px" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" title={job.error}>
                         {job.error}
                       </Table.Cell>
-                      <Table.Cell whiteSpace="nowrap" color="gray.600" fontSize="xs">
+                      <Table.Cell whiteSpace="nowrap" color="fg.muted" fontSize="xs">
                         {formatTimestamp(job.failed_at)}
                       </Table.Cell>
                       <Table.Cell>
@@ -311,7 +311,7 @@ function SummaryStat({
         <Text fontSize={isText ? "md" : "xl"} fontWeight="bold" color={color}>
           {value}
         </Text>
-        <Text fontSize="xs" color="gray.500">{label}</Text>
+        <Text fontSize="xs" color="fg.muted">{label}</Text>
       </Card.Body>
     </Card.Root>
   );

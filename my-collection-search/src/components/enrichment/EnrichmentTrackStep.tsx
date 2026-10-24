@@ -262,7 +262,7 @@ export default function EnrichmentTrackStep({
               </Text>
               {llmLoading && <Spinner size="xs" />}
               {llmError && (
-                <Badge colorPalette="red" size="xs">
+                <Badge colorPalette="status.missing" size="xs">
                   failed
                 </Badge>
               )}
@@ -343,7 +343,7 @@ export default function EnrichmentTrackStep({
               </Text>
               {appleMusicLoading && <Spinner size="xs" />}
               {appleMusicError && (
-                <Badge colorPalette="red" size="xs">
+                <Badge colorPalette="status.missing" size="xs">
                   failed
                 </Badge>
               )}
@@ -371,11 +371,11 @@ export default function EnrichmentTrackStep({
                   borderRadius="md"
                   borderWidth="1px"
                   borderColor={
-                    selectedAppleUrl === result.url ? "blue.500" : "border"
+                    selectedAppleUrl === result.url ? "accent.border" : "border"
                   }
                   cursor={appleMusicInclude ? "pointer" : "default"}
                   onClick={() => appleMusicInclude && setSelectedAppleUrl(result.url)}
-                  bg={selectedAppleUrl === result.url ? "blue.subtle" : undefined}
+                  bg={selectedAppleUrl === result.url ? "accent.subtle" : undefined}
                 >
                   {result.artwork && (
                     <Image
@@ -445,7 +445,7 @@ export default function EnrichmentTrackStep({
               </Text>
               {youtubeLoading && <Spinner size="xs" />}
               {youtubeError && (
-                <Badge colorPalette="red" size="xs">
+                <Badge colorPalette="status.missing" size="xs">
                   failed
                 </Badge>
               )}
@@ -473,11 +473,11 @@ export default function EnrichmentTrackStep({
                   borderRadius="md"
                   borderWidth="1px"
                   borderColor={
-                    selectedYoutubeUrl === result.url ? "blue.500" : "border"
+                    selectedYoutubeUrl === result.url ? "accent.border" : "border"
                   }
                   cursor={youtubeInclude ? "pointer" : "default"}
                   onClick={() => youtubeInclude && setSelectedYoutubeUrl(result.url ?? "")}
-                  bg={selectedYoutubeUrl === result.url ? "blue.subtle" : undefined}
+                  bg={selectedYoutubeUrl === result.url ? "accent.subtle" : undefined}
                 >
                   {result.thumbnail && (
                     <Image
@@ -535,10 +535,10 @@ export default function EnrichmentTrackStep({
                             p={2}
                             borderRadius="md"
                             borderWidth="1px"
-                            borderColor={selectedYoutubeUrl === url ? "blue.500" : "border"}
+                            borderColor={selectedYoutubeUrl === url ? "accent.border" : "border"}
                             cursor={youtubeInclude ? "pointer" : "default"}
                             onClick={() => youtubeInclude && setSelectedYoutubeUrl(url)}
-                            bg={selectedYoutubeUrl === url ? "blue.subtle" : undefined}
+                            bg={selectedYoutubeUrl === url ? "accent.subtle" : undefined}
                           >
                             <Box flex={1} minW={0}>
                               <Text fontSize="sm" fontWeight="medium" lineClamp={2}>
@@ -567,7 +567,7 @@ export default function EnrichmentTrackStep({
           Skip
         </Button>
         <Button
-          colorPalette="blue"
+          colorPalette="accent"
           size="sm"
           onClick={handleSave}
           loading={isSaving}

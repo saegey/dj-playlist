@@ -101,7 +101,7 @@ export default function FriendSelectDialog({
             <Dialog.Footer>
               <Button
                 onClick={handleConfirm}
-                colorPalette="blue"
+                colorPalette="accent"
                 disabled={!selectedFriendId || loading || friends.length === 0}
               >
                 Import

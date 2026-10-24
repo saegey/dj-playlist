@@ -15,9 +15,9 @@ function formatTimestamp(value: string): string {
 }
 
 function statusColor(status: BackupStatus["status"]): string {
-  if (status === "success") return "green";
-  if (status === "failed") return "red";
-  return "orange";
+  if (status === "success") return "status.success";
+  if (status === "failed") return "status.missing";
+  return "status.analysis";
 }
 
 export function formatBytes(value: number | null): string {
@@ -98,7 +98,7 @@ export default function BackupStatusSection(): React.JSX.Element {
           </Text>
         </Box>
         <Flex gap={2}>
-          <Button colorPalette="blue" size="sm" onClick={runNow} loading={running}>
+          <Button colorPalette="accent" size="sm" onClick={runNow} loading={running}>
             Run Remote Backup
           </Button>
           <Button
@@ -134,13 +134,13 @@ export default function BackupStatusSection(): React.JSX.Element {
           </Text>
 
           {status.error ? (
-            <Text fontSize="sm" color="red.500">
+            <Text fontSize="sm" color="fg.error">
               Error: {status.error}
             </Text>
           ) : null}
 
           {status.missing_env?.length ? (
-            <Text fontSize="sm" color="red.500">
+            <Text fontSize="sm" color="fg.error">
               Missing env: {status.missing_env.join(", ")}
             </Text>
           ) : null}
@@ -198,7 +198,7 @@ export default function BackupStatusSection(): React.JSX.Element {
                 <Text fontSize="sm">Remote Restic repository: {formatBytes(metrics.remote_repository_bytes)}</Text>
                 <Text fontSize="sm">Remote snapshots: {metrics.snapshot_count ?? "Unavailable"}</Text>
                 {metrics.error ? (
-                  <Text fontSize="sm" color="red.500">Repository metrics error: {metrics.error}</Text>
+                  <Text fontSize="sm" color="fg.error">Repository metrics error: {metrics.error}</Text>
                 ) : null}
               </Flex>
             )}

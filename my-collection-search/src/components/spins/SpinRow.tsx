@@ -119,7 +119,7 @@ export default function SpinRow({
             <Badge
               size="xs"
               variant="subtle"
-              colorPalette={provenance.automatic ? "purple" : "gray"}
+              colorPalette={provenance.automatic ? "status.genre" : "neutral"}
             >
               {provenance.label}
             </Badge>

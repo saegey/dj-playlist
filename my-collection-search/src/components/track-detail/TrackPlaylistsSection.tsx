@@ -22,7 +22,7 @@ export default function TrackPlaylistsSection({ query }: Props) {
           <Skeleton height="20px" />
         </VStack>
       ) : query.error ? (
-        <Text color="red.500">
+        <Text color="fg.error">
           {query.error instanceof Error
             ? query.error.message
             : "Failed to load playlist memberships"}
@@ -34,7 +34,7 @@ export default function TrackPlaylistsSection({ query }: Props) {
               <Link as={NextLink} href={`/playlists/${playlist.id}`} fontWeight="medium">
                 {playlist.name}
               </Link>
-              <Badge colorPalette="blue">Position {playlist.position}</Badge>
+              <Badge colorPalette="accent">Position {playlist.position}</Badge>
             </HStack>
           ))}
         </VStack>

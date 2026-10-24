@@ -53,7 +53,7 @@ export default function ConfirmDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
                 Cancel
               </Button>
-              <Button colorPalette="red" onClick={handleConfirm} loading={pending}>
+              <Button colorPalette="danger" onClick={handleConfirm} loading={pending}>
                 {confirmLabel}
               </Button>
             </Dialog.Footer>

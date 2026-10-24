@@ -174,7 +174,7 @@ export default function PlaylistActionsMenu({
           </Menu.Trigger>
           <Menu.Positioner>
             <Menu.Content>
-              <Flex px={3} py={1} fontWeight="bold" fontSize="sm" color="gray.500">
+              <Flex px={3} py={1} fontWeight="bold" fontSize="sm" color="fg.muted">
                 Playlist Sort
               </Flex>
               {menuDivider}

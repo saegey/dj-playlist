@@ -28,7 +28,7 @@ const CompactProgressSlider: React.FC<Props> = React.memo(({ seek }) => {
         step={0.1}
       >
         <Slider.Control>
-          <Slider.Track bg="blackAlpha.200" height="2px" borderRadius="full">
+          <Slider.Track bg="bg.emphasized" height="2px" borderRadius="full">
             <Slider.Range bg="accent.solid" />
           </Slider.Track>
           <Slider.Thumbs

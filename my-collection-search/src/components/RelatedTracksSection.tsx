@@ -181,7 +181,7 @@ export default function RelatedTracksSection({ track }: Props) {
           <Text fontSize="sm">Loading related tracks...</Text>
         </Flex>
       ) : hasError ? (
-        <Text color="red.500" fontSize="sm">Could not load related tracks.</Text>
+        <Text color="fg.error" fontSize="sm">Could not load related tracks.</Text>
       ) : displayTracks.length === 0 ? (
         <Text color="fg.muted" fontSize="sm">
           {scope === "library"

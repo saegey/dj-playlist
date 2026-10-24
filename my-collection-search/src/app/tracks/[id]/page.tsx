@@ -70,7 +70,7 @@ export default function TrackPage() {
             </VStack>
           ) : trackQuery.error ? (
             <Box borderWidth="1px" borderRadius="md" p={4}>
-              <Text color="red.500" fontWeight="medium">
+              <Text color="fg.error" fontWeight="medium">
                 Failed to load track
               </Text>
               <Text mt={1}>{trackQuery.error.message}</Text>

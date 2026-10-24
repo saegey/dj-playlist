@@ -34,11 +34,11 @@ const TECH_STACK = [
 function statusColor(status: ServiceStatus): string {
   switch (status) {
     case "up":
-      return "green";
+      return "status.success";
     case "down":
-      return "red";
+      return "status.missing";
     default:
-      return "gray";
+      return "neutral";
   }
 }
 
@@ -97,7 +97,7 @@ export default function AboutSection(): React.JSX.Element {
 
       {/* Update banner */}
       {update?.updateAvailable ? (
-        <Box borderWidth={1} borderColor="green.400" borderRadius="lg" p={4} mb={6}>
+        <Box borderWidth={1} borderColor="border.success" borderRadius="lg" p={4} mb={6}>
           <Flex
             align={{ base: "flex-start", md: "center" }}
             justify="space-between"
@@ -105,7 +105,7 @@ export default function AboutSection(): React.JSX.Element {
             flexWrap="wrap"
           >
             <Flex align="center" gap={3}>
-              <Badge colorPalette="green" variant="solid">
+              <Badge colorPalette="status.success" variant="solid">
                 Update available
               </Badge>
               <Text fontWeight="semibold" fontSize="sm">
@@ -117,7 +117,7 @@ export default function AboutSection(): React.JSX.Element {
                 href={update.releaseUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                colorPalette="blue"
+                colorPalette="accent"
                 color="colorPalette.fg"
                 fontSize="sm"
                 fontWeight="medium"
@@ -146,7 +146,7 @@ export default function AboutSection(): React.JSX.Element {
                     href={`${REPO_URL}/commit/${version.gitSha}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    colorPalette="blue"
+                    colorPalette="accent"
                     color="colorPalette.fg"
                   >
                     {version.gitSha}
@@ -167,7 +167,7 @@ export default function AboutSection(): React.JSX.Element {
                 {!update ? (
                   "—"
                 ) : update.updateAvailable ? (
-                  <Text as="span" color="green.500" fontWeight="semibold">
+                  <Text as="span" color="fg.success" fontWeight="semibold">
                     {update.latest} available
                   </Text>
                 ) : !update.comparable ? (
@@ -179,7 +179,7 @@ export default function AboutSection(): React.JSX.Element {
                     unavailable
                   </Text>
                 ) : (
-                  <Text as="span" color="green.500">
+                  <Text as="span" color="fg.success">
                     up to date
                   </Text>
                 )}
@@ -247,7 +247,7 @@ export default function AboutSection(): React.JSX.Element {
           href={REPO_URL}
           target="_blank"
           rel="noopener noreferrer"
-          colorPalette="blue"
+          colorPalette="accent"
           color="colorPalette.fg"
           fontSize="sm"
         >

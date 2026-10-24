@@ -16,10 +16,10 @@ interface SimilarVibeTracksProps {
  * Distance color coding helper
  */
 function getDistanceColor(distance: number): string {
-  if (distance < 0.2) return "green";
-  if (distance < 0.4) return "blue";
-  if (distance < 0.6) return "orange";
-  return "gray";
+  if (distance < 0.2) return "status.success";
+  if (distance < 0.4) return "accent";
+  if (distance < 0.6) return "status.analysis";
+  return "neutral";
 }
 
 /**
@@ -53,15 +53,15 @@ export default function SimilarVibeTracks({
 
   if (error) {
     return (
-      <Box p={4} borderWidth={1} borderRadius="md" borderColor="red.500">
-        <Text color="red.500" fontWeight="bold">
+      <Box p={4} borderWidth={1} borderRadius="md" borderColor="border.error">
+        <Text color="fg.error" fontWeight="bold">
           Error loading similar vibe tracks
         </Text>
         <Text fontSize="sm" mt={2}>
           {error instanceof Error ? error.message : String(error)}
         </Text>
         {String(error).includes("no audio vibe embedding") && (
-          <Text fontSize="sm" mt={2} color="gray.600">
+          <Text fontSize="sm" mt={2} color="fg.muted">
             This track does not have an audio vibe embedding yet. Run the
             backfill command to generate embeddings.
           </Text>
@@ -74,7 +74,7 @@ export default function SimilarVibeTracks({
     return (
       <Box p={4} borderWidth={1} borderRadius="md">
         <Text>No similar vibe tracks found.</Text>
-        <Text fontSize="sm" mt={2} color="gray.600">
+        <Text fontSize="sm" mt={2} color="fg.muted">
           Make sure this track has audio analysis data (BPM, key, mood, etc.)
         </Text>
       </Box>
@@ -85,7 +85,7 @@ export default function SimilarVibeTracks({
     <Box>
       {/* Summary */}
       <Flex gap={2} mb={4} flexWrap="wrap">
-        <Text fontSize="sm" color="gray.600">
+        <Text fontSize="sm" color="fg.muted">
           Found {data.count} tracks with similar vibes
         </Text>
       </Flex>
@@ -122,12 +122,12 @@ export default function SimilarVibeTracks({
                       {getDistanceLabel(similarTrack.distance)}
                     </Badge>
                     {similarTrack.bpm && (
-                      <Badge colorPalette="purple" size="sm" variant="subtle">
+                      <Badge colorPalette="status.genre" size="sm" variant="subtle">
                         {Math.round(parseFloat(similarTrack.bpm))} BPM
                       </Badge>
                     )}
                     {similarTrack.key && (
-                      <Badge colorPalette="cyan" size="sm" variant="subtle">
+                      <Badge colorPalette="accent" size="sm" variant="subtle">
                         {similarTrack.key}
                       </Badge>
                     )}
@@ -140,11 +140,11 @@ export default function SimilarVibeTracks({
       </Box>
 
       {/* Help text */}
-      <Box mt={4} p={3} bg="gray.50" borderRadius="md">
+      <Box mt={4} p={3} bg="bg.subtle" borderRadius="md">
         <Text fontSize="sm" fontWeight="bold" mb={1}>
           🎵 About Similar Vibe Tracks
         </Text>
-        <Text fontSize="sm" color="gray.700">
+        <Text fontSize="sm" color="fg.muted">
           Tracks are ranked by audio vibe similarity based on BPM, key, energy,
           mood, danceability, acoustic/electronic balance, vocal presence, and
           percussiveness. Lower distance = more similar sound and feel.

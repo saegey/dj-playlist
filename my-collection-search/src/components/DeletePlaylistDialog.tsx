@@ -55,7 +55,7 @@ export default function DeletePlaylistDialog({ open, playlistId, onClose, fetchP
             </Dialog.Body>
             <Dialog.Footer>
               <Button
-                colorPalette="red"
+                colorPalette="danger"
                 ml={3}
                 onClick={confirmDeletePlaylist}
                 loading={isPending}
