@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Box, Button, Flex, Heading, Spinner, Text, useBreakpointValue } from "@chakra-ui/react";
+import { LuChevronDown, LuChevronUp } from "react-icons/lu";
 import { useQuery } from "@tanstack/react-query";
 import type { Track } from "@/types/track";
 import TrackResult, { TrackListHeader } from "@/components/TrackResult";
@@ -237,15 +238,17 @@ export default function RelatedTracksSection({ track }: Props) {
           )}
 
           {merged.length > initialCount && (
-            <Button
-              size="sm"
-              variant="outline"
-              mt={2}
-              w="full"
-              onClick={() => setExpanded((v) => !v)}
-            >
-              {expanded ? `Show fewer` : `Show all ${merged.length}`}
-            </Button>
+            // Centred outline button under the list, like "Load More" in the album results.
+            <Flex justify="center" mt={4}>
+              <Button
+                variant="outline"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((v) => !v)}
+              >
+                {expanded ? <LuChevronUp /> : <LuChevronDown />}
+                {expanded ? "Show fewer" : `Show all ${merged.length}`}
+              </Button>
+            </Flex>
           )}
         </>
       )}
