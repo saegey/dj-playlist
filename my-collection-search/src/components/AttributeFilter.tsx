@@ -44,6 +44,7 @@ export default function AttributeFilter({ value, onChange }: AttributeFilterProp
         <Button
           size="sm"
           variant="outline"
+          borderColor="border.ink"
           flexShrink={0}
           aria-label={count > 0 ? `BPM, key and rating filters, ${count} on` : "BPM, key and rating filters"}
         >

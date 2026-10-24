@@ -6,6 +6,7 @@
 import { defineRecipe, defineSlotRecipe, type SystemStyleObject } from "@chakra-ui/react";
 import {
   cardAnatomy,
+  comboboxAnatomy,
   dialogAnatomy,
   drawerAnatomy,
   menuAnatomy,
@@ -203,6 +204,21 @@ export const slotRecipes = {
       item: {
         fontFamily: "label",
         "&[data-state=checked]": { color: "neutral.contrast" },
+        // Ringed inside the segment, so keyboard focus doesn't read as a
+        // second, heavier selection box around the filled one.
+        "&:has(input:focus-visible)": { "--focus-ring-offset": "-4px" },
+      },
+    },
+  }),
+  // The genre filter: a field that looks like the buttons beside it.
+  combobox: defineSlotRecipe({
+    slots: comboboxAnatomy.keys(),
+    base: { content: container },
+    variants: {
+      variant: {
+        outline: {
+          input: { ...fieldStates(outsideRing).outline, ...buttonLabel, fontSize: { base: "16px", md: "13px" } },
+        },
       },
     },
   }),

@@ -126,7 +126,6 @@ export default function GenreFilter({ selected, onAdd, counts, inSheet = false }
         <Combobox.Input
           aria-label="Filter by genre"
           placeholder={isLoading ? "Loading…" : "Genre"}
-          fontSize="16px"
         />
         <Combobox.IndicatorGroup>
           <Combobox.Trigger />

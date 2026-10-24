@@ -42,6 +42,7 @@ export default function FilterSheet({ count, onClearAll, children }: FilterSheet
         <Button
           size="xs"
           variant="outline"
+          borderColor="border.ink"
           flexShrink={0}
           aria-label={count > 0 ? `Filters, ${count} on` : "Filters"}
         >
