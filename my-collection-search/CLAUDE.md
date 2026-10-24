@@ -109,7 +109,12 @@ an invalid value the browser drops, so it fails silently.
   `palettes/index.ts`; `chakraTheme.ts` emits `[data-palette="<id>"]` and
   `[data-palette="<id>"].dark`, and `palettes.test.ts` checks completeness and
   WCAG AA contrast (4.5:1 text, 3:1 borders, focus rings, icons) and that the
-  status colours differ in lightness. An unknown `data-palette` falls back to
+  status colours differ in lightness. Nothing else to wire up: Settings →
+  Appearance builds its picker from the registry (a card per palette, named
+  from its id), and `PUT /api/settings/appearance` validates against it. The
+  palette is a shared server setting (`appearance_settings`), read by the root
+  layout; light/dark/system is per device in localStorage via
+  `ColorModeProvider`. An unknown `data-palette` falls back to
   the default palette (Sleeve), which is also declared on `:root`. Sleeve's
   values are provisional until #664 is signed off; change them in `sleeve.ts` only.
 - **Status** tokens `status.{missing,analysis,genre,success}.{fg,subtle,border}`

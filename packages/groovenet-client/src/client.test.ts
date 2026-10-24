@@ -915,6 +915,32 @@ describe("GroovenetClient friends", () => {
   });
 });
 
+describe("GroovenetClient appearance settings", () => {
+  it("getAppearanceSettings reads the shared palette", async () => {
+    const client = clientReturning({ palette: "sleeve" });
+
+    await expect(client.getAppearanceSettings()).resolves.toEqual({ palette: "sleeve" });
+    expect(requestMock).toHaveBeenCalledWith({
+      method: "GET",
+      url: "/settings/appearance",
+      data: undefined,
+      params: undefined,
+    });
+  });
+
+  it("setAppearancePalette puts the palette id", async () => {
+    const client = clientReturning({ palette: "riso" });
+
+    await expect(client.setAppearancePalette("riso")).resolves.toEqual({ palette: "riso" });
+    expect(requestMock).toHaveBeenCalledWith({
+      method: "PUT",
+      url: "/settings/appearance",
+      data: { palette: "riso" },
+      params: undefined,
+    });
+  });
+});
+
 describe("GroovenetClient external search helpers", () => {
   it("searchAppleMusic posts the lookup options", async () => {
     const client = clientReturning({ results: [] });

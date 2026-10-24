@@ -1,6 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { palettes } from "./palettes";
+import { sleeve } from "./palettes/sleeve";
 
+const service = vi.hoisted(() => ({ getAppearance: vi.fn() }));
+vi.mock("@/server/services/settingsService", () => ({ settingsService: service }));
 vi.mock("./providers", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock("@/components/EmotionRegistry", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock("@/components/AppShell", () => ({ default: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }));
@@ -11,15 +15,47 @@ vi.mock("@/lib/developerTools", () => ({ developerToolsEnabled: () => false }));
 
 import RootLayout from "./layout";
 
+const render = async (children: React.ReactNode = "content") =>
+  renderToStaticMarkup(await RootLayout({ children }));
+
+beforeEach(() => {
+  service.getAppearance.mockReset();
+  service.getAppearance.mockResolvedValue({ palette: "sleeve" });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("root layout", () => {
-  it("server-renders the default palette on <html>, so there is no flash", () => {
-    const html = renderToStaticMarkup(<RootLayout>content</RootLayout>);
+  it("server-renders the saved palette on <html>, so there is no flash", async () => {
+    const html = await render();
     expect(html).toMatch(/^<html [^>]*data-palette="sleeve"/);
     expect(html).toContain("<main>content</main>");
   });
 
-  it("leaves the light/dark class to the colour-mode provider", () => {
-    const html = renderToStaticMarkup(<RootLayout>x</RootLayout>);
-    expect(html).not.toMatch(/^<html [^>]*class=/);
+  it("renders any registered palette the setting names", async () => {
+    (palettes as Record<string, unknown>).riso = sleeve;
+    try {
+      service.getAppearance.mockResolvedValue({ palette: "riso" });
+      expect(await render()).toMatch(/^<html [^>]*data-palette="riso"/);
+    } finally {
+      delete (palettes as Record<string, unknown>).riso;
+    }
+  });
+
+  it("falls back to the default palette, without throwing, when the setting can't be read", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    service.getAppearance.mockRejectedValue(new Error("db down"));
+
+    const html = await render();
+
+    expect(html).toMatch(/^<html [^>]*data-palette="sleeve"/);
+    expect(html).toContain("<main>content</main>");
+    expect(error).toHaveBeenCalled();
+  });
+
+  it("leaves the light/dark class to the colour-mode provider", async () => {
+    expect(await render("x")).not.toMatch(/^<html [^>]*class=/);
   });
 });

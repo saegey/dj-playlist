@@ -6,7 +6,7 @@ import * as React from "react";
 import { LuMoon, LuSun } from "react-icons/lu";
 
 export type ColorMode = "light" | "dark";
-type ThemeSetting = ColorMode | "system";
+export type ThemeSetting = ColorMode | "system";
 
 type AttributeMode = "class" | `data-${string}`;
 
@@ -22,12 +22,17 @@ export interface ColorModeProviderProps {
 
 export interface UseColorModeReturn {
   colorMode: ColorMode;
+  /** What the user chose: `system` follows the OS, `colorMode` is what it resolved to. */
+  colorModeSetting: ThemeSetting;
+  setColorModeSetting: (setting: ThemeSetting) => void;
   setColorMode: (colorMode: ColorMode) => void;
   toggleColorMode: () => void;
 }
 
 interface ColorModeContextValue {
   colorMode: ColorMode;
+  colorModeSetting: ThemeSetting;
+  setColorModeSetting: (setting: ThemeSetting) => void;
   setColorMode: (colorMode: ColorMode) => void;
   toggleColorMode: () => void;
   mounted: boolean;
@@ -127,14 +132,16 @@ export function ColorModeProvider({
     cleanup();
   }, [attribute, disableTransitionOnChange, mounted, resolvedTheme]);
 
-  const setColorMode = React.useCallback((colorMode: ColorMode) => {
-    setThemeState(colorMode);
+  const setColorModeSetting = React.useCallback((setting: ThemeSetting) => {
+    setThemeState(setting);
     try {
-      localStorage.setItem(storageKey, colorMode);
+      localStorage.setItem(storageKey, setting);
     } catch {
       // Ignore storage failures in private browsing or restricted contexts.
     }
   }, [storageKey]);
+
+  const setColorMode = setColorModeSetting;
 
   const toggleColorMode = React.useCallback(() => {
     setColorMode(resolvedTheme === "dark" ? "light" : "dark");
@@ -142,10 +149,12 @@ export function ColorModeProvider({
 
   const value = React.useMemo<ColorModeContextValue>(() => ({
     colorMode: resolvedTheme,
+    colorModeSetting: theme,
+    setColorModeSetting,
     setColorMode,
     toggleColorMode,
     mounted,
-  }), [mounted, resolvedTheme, setColorMode, toggleColorMode]);
+  }), [mounted, resolvedTheme, theme, setColorModeSetting, setColorMode, toggleColorMode]);
 
   return (
     <ColorModeContext.Provider value={value}>
@@ -162,6 +171,8 @@ export function useColorMode(): UseColorModeReturn {
 
   return {
     colorMode: context.colorMode,
+    colorModeSetting: context.colorModeSetting,
+    setColorModeSetting: context.setColorModeSetting,
     setColorMode: context.setColorMode,
     toggleColorMode: context.toggleColorMode,
   };

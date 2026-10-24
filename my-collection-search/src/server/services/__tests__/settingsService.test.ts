@@ -16,6 +16,8 @@ const repo = vi.hoisted(() => ({
   findGamdlSettingsByFriendId: vi.fn(),
   updateGamdlSettings: vi.fn(),
   resetGamdlSettings: vi.fn(),
+  findAppearancePalette: vi.fn(),
+  upsertAppearancePalette: vi.fn(),
   findRecommendationScope: vi.fn(),
   upsertRecommendationScope: vi.fn(),
 }));
@@ -35,6 +37,26 @@ import { settingsService } from "../settingsService";
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetDefaultPrompt.mockReturnValue("DEFAULT_PROMPT");
+});
+
+// ─── Appearance ───────────────────────────────────────────────────────────────
+
+describe("appearance", () => {
+  it("reads the saved palette", async () => {
+    repo.findAppearancePalette.mockResolvedValueOnce("sleeve");
+    await expect(settingsService.getAppearance()).resolves.toEqual({ palette: "sleeve" });
+  });
+
+  it.each([null, "retired-palette"])("falls back to the default for %j", async (stored) => {
+    repo.findAppearancePalette.mockResolvedValueOnce(stored);
+    await expect(settingsService.getAppearance()).resolves.toEqual({ palette: "sleeve" });
+  });
+
+  it("saves the palette", async () => {
+    repo.upsertAppearancePalette.mockResolvedValueOnce("sleeve");
+    await expect(settingsService.updateAppearance("sleeve")).resolves.toEqual({ palette: "sleeve" });
+    expect(repo.upsertAppearancePalette).toHaveBeenCalledWith("sleeve");
+  });
 });
 
 // ─── Default library ──────────────────────────────────────────────────────────

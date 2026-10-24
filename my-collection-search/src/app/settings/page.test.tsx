@@ -31,6 +31,7 @@ vi.mock("@/components/settings/GamdlSettingsSection", () => stub("gamdl"));
 vi.mock("@/components/settings/AiPromptSettingsSection", () => stub("ai prompt"));
 vi.mock("@/components/settings/DefaultLibrarySettingsSection", () => stub("default library section"));
 vi.mock("@/components/settings/SuggestionScopeSettingsSection", () => stub("suggestion scope section"));
+vi.mock("@/components/settings/AppearanceSettingsSection", () => stub("appearance section"));
 vi.mock("@/components/settings/AboutSection", () => stub("about"));
 vi.mock("@/components/settings/dialogs/DiscogsSyncDialog", () => stub("discogs dialog"));
 vi.mock("@/components/settings/dialogs/RemoveFriendDialog", () => stub("remove dialog"));
@@ -72,6 +73,13 @@ describe("SettingsPage", () => {
     expect(mocks.replace).toHaveBeenCalledWith("/settings?section=about", { scroll: false });
   });
 
+  it("shows the appearance section on its own tab", () => {
+    mocks.searchParams = new URLSearchParams("section=appearance");
+    renderWithProviders(<SettingsPage />);
+
+    expect(screen.getByText("appearance section")).toBeTruthy();
+  });
+
   it("exposes the tab row with roving tabindex, so arrow keys can move between sections", () => {
     // jsdom runs no media queries (the desktop row's base style is display:
     // none, so it never actually gets real focus here) and Chakra's
@@ -86,8 +94,8 @@ describe("SettingsPage", () => {
 
     const tabs = screen.getAllByRole("tab", { hidden: true });
     expect(tabs.map((tab) => tab.getAttribute("aria-selected"))).toEqual([
-      "false", "true", "false", "false", "false", "false",
+      "false", "false", "true", "false", "false", "false", "false",
     ]);
-    expect(tabs.map((tab) => tab.tabIndex)).toEqual([-1, 0, -1, -1, -1, -1]);
+    expect(tabs.map((tab) => tab.tabIndex)).toEqual([-1, -1, 0, -1, -1, -1, -1]);
   });
 });

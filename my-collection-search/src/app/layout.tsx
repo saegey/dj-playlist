@@ -8,7 +8,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { developerToolsEnabled } from "@/lib/developerTools";
 import AnalyticsInit from "@/components/AnalyticsInit";
 import { getClientAnalyticsConfig } from "@/lib/analytics/config";
-import { defaultPaletteId } from "./palettes";
+import { defaultPaletteId, type PaletteId } from "./palettes";
+import { settingsService } from "@/server/services/settingsService";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +36,23 @@ export const viewport = {
   initialScale: 1,
 };
 
+// The saved palette, or the default when it can't be read: a settings outage
+// must not take the whole app down with it.
+async function readPalette(): Promise<PaletteId> {
+  try {
+    return (await settingsService.getAppearance()).palette;
+  } catch (err) {
+    console.error("Failed to load the saved palette, using the default:", err);
+    return defaultPaletteId;
+  }
+}
+
 // data-palette is server-rendered so the palette is in place before first
-// paint; #669 will read the user's choice instead of the default.
-export default function RootLayout({ children }: { children: ReactNode }) {
+// paint. Light/dark is per device (localStorage) and applied client-side.
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const palette = await readPalette();
   return (
-    <html lang="en" data-palette={defaultPaletteId} suppressHydrationWarning>
+    <html lang="en" data-palette={palette} suppressHydrationWarning>
       <body>
         <AnalyticsInit config={getClientAnalyticsConfig()} />
         <EmotionRegistry>
