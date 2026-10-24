@@ -57,7 +57,7 @@ const PLACEHOLDER_SRC =
 export const TRACK_ROW_EDGE_WIDTH = "44px";
 /** The grid every `layout="row"` track shares with `TrackListHeader`, so columns never drift apart. */
 export const TRACK_ROW_GRID_TEMPLATE =
-  "minmax(180px, 2.2fr) minmax(130px, 1.6fr) 32px 44px 56px 108px minmax(120px, 1.3fr) 76px";
+  "minmax(180px, 2.2fr) minmax(130px, 1.6fr) 32px 44px 56px 108px minmax(150px, 1.5fr) 76px";
 export const TRACK_ROW_HEIGHT = 64;
 
 export type TrackResultProps = {
@@ -99,6 +99,7 @@ export function TrackListHeader() {
       borderColor="border"
       fontSize="11px"
       lineHeight="16px"
+      fontFamily="label"
       letterSpacing="0.08em"
       textTransform="uppercase"
       color="fg.muted"

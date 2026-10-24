@@ -69,7 +69,7 @@ export default function AlbumSpinPanel({
         </HStack>
       )}
 
-      <Box borderWidth="1px" borderRadius="md">
+      <Box borderWidth="outline" borderColor="border.ink" boxShadow="md">
         {spinsQuery.isLoading ? (
           <Flex justify="center" py={4}>
             <Spinner size="sm" />

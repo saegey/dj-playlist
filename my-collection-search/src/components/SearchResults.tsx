@@ -510,7 +510,7 @@ const SearchResults: React.FC = () => {
           </>
         }
         chips={[
-          ...genreFilterChips(genres, taxonomy),
+          ...genreFilterChips(genres, taxonomy, genreCounts),
           ...addedGenreChips(addedGenres),
           ...TRACK_MISSING_OPTIONS.filter(({ key }) => activeFilters[key]).map(
             ({ key, chipLabel }) => ({ key, label: chipLabel, active: true })
@@ -542,7 +542,8 @@ const SearchResults: React.FC = () => {
 
           {effectiveLayout === "row" ? (
             // Rows view: dense, grid-aligned, virtualised (fixed row height).
-            <Box borderWidth="1px" borderRadius="md" overflow="hidden">
+            // One outlined block with one shadow for the whole stack; rows only rule.
+            <Box borderWidth="outline" borderColor="border.ink" boxShadow="md" overflow="hidden">
               <TrackListHeader />
               <Box ref={rowListRef} position="relative" height={`${rowVirtualizer.getTotalSize()}px`}>
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {

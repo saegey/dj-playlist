@@ -158,7 +158,7 @@ export default function EnrichmentWizard() {
           </Text>
         </Box>
 
-        <Box borderWidth="1px" borderRadius="lg" p={5}>
+        <Box borderWidth="outline" borderColor="border.ink" boxShadow="sm" p={5}>
           <Text fontWeight="semibold" mb={4} fontSize="sm">
             Data sources
           </Text>

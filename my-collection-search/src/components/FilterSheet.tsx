@@ -48,7 +48,7 @@ export default function FilterSheet({ count, onClearAll, children }: FilterSheet
           <LuSlidersHorizontal />
           Filters
           {count > 0 && (
-            <Badge size="xs" colorPalette="accent" variant="solid" borderRadius="full">
+            <Badge size="xs" colorPalette="accent" variant="solid">
               {count}
             </Badge>
           )}

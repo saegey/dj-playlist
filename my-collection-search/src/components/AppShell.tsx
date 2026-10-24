@@ -154,8 +154,8 @@ export default function AppShell({
         h="100vh"
         w={isExpanded ? "220px" : "64px"}
         transition="width 0.18s ease"
-        borderRightWidth="1px"
-        borderColor="border"
+        borderRightWidth="outline"
+        borderColor="border.ink"
         bg="bg"
       >
         <Flex direction="column" h="100%" py={3} gap={2}>
@@ -166,7 +166,7 @@ export default function AppShell({
           >
             <HStack>
               {isExpanded && (
-                <Text fontWeight="semibold" letterSpacing="0.02em">
+                <Text fontFamily="heading" fontWeight="bold" fontSize="xl" letterSpacing="0.04em" textTransform="uppercase">
                   GrooveNet
                 </Text>
               )}
@@ -221,7 +221,7 @@ export default function AppShell({
                     fontSize="10px"
                     px="4px"
                     py="1px"
-                    borderRadius="4px"
+                    borderRadius="md"
                     bg="bg"
                     border="1px solid"
                     borderColor="border"
@@ -262,7 +262,8 @@ export default function AppShell({
                     _hover={{ textDecoration: "none", bg: "bg.subtle" }}
                     px={isExpanded ? 3 : 2}
                     py={2}
-                    borderRadius="md"
+                    borderWidth="outline"
+                    borderColor={active ? "border.ink" : "transparent"}
                     bg={active ? "bg.subtle" : undefined}
                     title={item.label}
                     display="flex"
@@ -281,7 +282,13 @@ export default function AppShell({
                         color={active ? "accent.fg" : "fg.muted"}
                       />
                       {isExpanded && (
-                        <Text fontWeight={active ? "bold" : "normal"} fontSize={'0.9rem'}>
+                        <Text
+                          fontFamily="label"
+                          fontWeight={active ? "semibold" : "normal"}
+                          fontSize="xs"
+                          letterSpacing="0.06em"
+                          textTransform="uppercase"
+                        >
                           {item.label}
                         </Text>
                       )}
@@ -303,17 +310,16 @@ export default function AppShell({
           onOpenChange={(e) => setDrawerOpen(e.open)}
           placement="bottom"
         >
-          <Drawer.Backdrop bg="overlay.backdrop" backdropFilter="blur(4px)" />
+          <Drawer.Backdrop bg="overlay.backdrop" />
           <Drawer.Positioner
             paddingTop={0}
             paddingBottom={`calc(env(safe-area-inset-bottom, 0px) + ${mobileDrawerBottomPadding})`}
           >
             <Drawer.Content
               mx={4}
-              borderTopRadius="2xl"
-              borderWidth="1px"
-              borderColor="border"
-              boxShadow="0 20px 48px var(--gn-shadow)"
+              borderWidth="outline"
+              borderColor="border.ink"
+              boxShadow="md"
             >
               <Drawer.Header borderBottomWidth="1px" py={3} px={5} position="relative">
                 <Box
@@ -419,11 +425,10 @@ export default function AppShell({
           gap={1}
           px={2}
           py={1.5}
-          borderWidth="1px"
-          borderColor="border"
-          borderRadius="2xl"
+          borderWidth="outline"
+          borderColor="border.ink"
           bg="bg"
-          boxShadow="0 12px 28px var(--gn-shadow)"
+          boxShadow="md"
         >
           {primaryMobileMenuItems.map((item) => {
             const active = isActiveRoute(current, item.href);
@@ -449,6 +454,7 @@ export default function AppShell({
                     color={active ? "accent.fg" : "fg.muted"}
                   />
                   <Text
+                    fontFamily="label"
                     fontSize="xs"
                     fontWeight={active ? "semibold" : "medium"}
                     color={active ? "fg" : "fg.muted"}
@@ -472,7 +478,7 @@ export default function AppShell({
           >
             <VStack gap={1}>
               <Icon as={FiMoreHorizontal} boxSize={5} color="fg.muted" />
-              <Text fontSize="xs" fontWeight="medium" color="fg.muted" lineHeight="1">
+              <Text fontFamily="label" fontSize="xs" fontWeight="medium" color="fg.muted" lineHeight="1">
                 More
               </Text>
             </VStack>

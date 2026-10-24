@@ -132,7 +132,7 @@ function SpinsPageContent() {
                     <Text fontSize="xs" fontWeight="semibold" color="fg.muted" mb={1.5}>
                       {day.label}
                     </Text>
-                    <Box borderWidth="1px" borderRadius="md">
+                    <Box borderWidth="outline" borderColor="border.ink" boxShadow="md">
                       {day.items.map((item) => (
                         <SpinRow
                           key={item.session.id}

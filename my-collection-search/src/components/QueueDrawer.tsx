@@ -470,8 +470,9 @@ export default function QueueDrawer({
                         mx="auto"
                         aspectRatio={1}
                         objectFit="cover"
-                        borderRadius="28px"
-                        boxShadow="0 24px 64px var(--gn-shadow)"
+                        borderWidth="outline"
+                        borderColor="border.ink"
+                        boxShadow="md"
                       />
                     </Box>
 

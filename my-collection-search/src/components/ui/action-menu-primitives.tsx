@@ -83,7 +83,7 @@ export function DrawerItem({ icon, label, onClick, href, external, disabled, col
 export function DrawerSectionLabel({ label }: { label: string }) {
   return (
     <Flex px={5} pt={3} pb={1}>
-      <Text fontSize="xs" fontWeight="semibold" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+      <Text fontSize="xs" fontWeight="semibold" color="fg.muted" fontFamily="label" textTransform="uppercase" letterSpacing="wide">
         {label}
       </Text>
     </Flex>

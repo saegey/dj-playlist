@@ -15,13 +15,21 @@ const CHIP_PREFIX = "genre:";
 const SIMILAR_CHIP_PREFIX = "similar:";
 
 /** Filter chips for the chosen genre slugs, named from the taxonomy once it loads. */
-export function genreFilterChips(selected: string[], genres: GenreOption[]): FilterChip[] {
-  const names = new Map(genres.map((genre) => [genre.slug, genre.name]));
-  return selected.map((slug) => ({
-    key: `${CHIP_PREFIX}${slug}`,
-    label: names.get(slug) ?? slug,
-    active: true,
-  }));
+export function genreFilterChips(
+  selected: string[],
+  genres: GenreOption[],
+  counts?: ReadonlyMap<string, number>,
+): FilterChip[] {
+  const byslug = new Map(genres.map((genre) => [genre.slug, genre]));
+  return selected.map((slug) => {
+    const genre = byslug.get(slug);
+    return {
+      key: `${CHIP_PREFIX}${slug}`,
+      label: genre?.name ?? slug,
+      active: true,
+      count: genre ? counts?.get(genre.id) : undefined,
+    };
+  });
 }
 
 /** The slug a genre chip's key stands for, or null for any other chip. */
@@ -118,7 +126,6 @@ export default function GenreFilter({ selected, onAdd, counts, inSheet = false }
         <Combobox.Input
           aria-label="Filter by genre"
           placeholder={isLoading ? "Loading…" : "Genre"}
-          borderRadius="full"
           fontSize="16px"
         />
         <Combobox.IndicatorGroup>

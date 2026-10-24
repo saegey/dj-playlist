@@ -25,7 +25,7 @@ export default function TrackGenresSection({ trackId, friendId, fallbackTrack }:
   const discogsStyles = discogsGenreBadges(track.album_styles ?? track.styles, lookup);
 
   return (
-    <Box borderWidth="1px" borderRadius="md" p={4} mt={4} data-testid="track-genres-section">
+    <Box borderWidth="outline" borderColor="border.ink" boxShadow="sm" p={4} mt={4} data-testid="track-genres-section">
       <Heading size="sm" mb={3}>
         Genres
       </Heading>
