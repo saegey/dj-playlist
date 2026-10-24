@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { contrastRatio, luminance } from "./contrast";
-import { paletteVariableNames, palettes, statusNames, type PaletteVariable } from "./index";
+import {
+  defaultPaletteId,
+  isPaletteId,
+  paletteIds,
+  paletteVariableNames,
+  palettes,
+  resolvePaletteId,
+  statusNames,
+  type PaletteVariable,
+} from "./index";
 
 const modes = ["light", "dark"] as const;
 
@@ -58,5 +67,21 @@ describe.each(Object.entries(palettes))("palette %s", (_id, palette) => {
         }
       }
     });
+  });
+});
+
+describe("palette lookup", () => {
+  it("knows the registered ids", () => {
+    expect(paletteIds).toEqual(Object.keys(palettes));
+    expect(isPaletteId(defaultPaletteId)).toBe(true);
+  });
+
+  it.each([undefined, null, 3, "", "nope", "constructor", "__proto__"])("treats %j as the default", (value) => {
+    expect(isPaletteId(value)).toBe(false);
+    expect(resolvePaletteId(value)).toBe(defaultPaletteId);
+  });
+
+  it("keeps a registered id", () => {
+    expect(resolvePaletteId("sleeve")).toBe("sleeve");
   });
 });

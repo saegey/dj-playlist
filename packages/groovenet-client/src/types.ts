@@ -786,3 +786,9 @@ export type {
   RecordCopyDefaultUpdate as RecordCopyDefaultUpdateInput,
   RecordCopyUpdate as RecordCopyUpdateInput,
 } from "@groovenet/contracts";
+
+/** The app-wide colour palette. Light/dark mode is per device and not part of it. */
+export interface AppearanceSettings {
+  /** A palette id from the app's registry, e.g. `sleeve`. */
+  palette: string;
+}

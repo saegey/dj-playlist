@@ -39,6 +39,28 @@ export class SettingsRepository {
     return rows[0]?.friend_id ?? friendId;
   }
 
+  /** The saved palette id, or null when none has been chosen. */
+  async findAppearancePalette(): Promise<string | null> {
+    const { rows } = await dbQuery<{ palette: string }>(
+      "SELECT palette FROM appearance_settings WHERE id = 1"
+    );
+    return rows[0]?.palette ?? null;
+  }
+
+  async upsertAppearancePalette(palette: string): Promise<string> {
+    const { rows } = await dbQuery<{ palette: string }>(
+      `
+      INSERT INTO appearance_settings (id, palette, updated_at)
+      VALUES (1, $1, current_timestamp)
+      ON CONFLICT (id)
+      DO UPDATE SET palette = EXCLUDED.palette, updated_at = current_timestamp
+      RETURNING palette
+      `,
+      [palette]
+    );
+    return rows[0]?.palette ?? palette;
+  }
+
   async findAiPromptByFriendId(friendId: number): Promise<string | null> {
     const { rows } = await dbQuery<{ prompt: string | null }>(
       "SELECT prompt FROM ai_prompt_settings WHERE friend_id = $1 LIMIT 1",

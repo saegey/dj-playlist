@@ -22,6 +22,26 @@ const ROW = {
   serving_template_version: 1,
 };
 
+describe("appearance palette", () => {
+  it("reads the saved palette, or null when none is saved", async () => {
+    dbQuery.mockResolvedValueOnce({ rows: [{ palette: "sleeve" }] }).mockResolvedValueOnce({ rows: [] });
+
+    await expect(makeRepo().findAppearancePalette()).resolves.toBe("sleeve");
+    await expect(makeRepo().findAppearancePalette()).resolves.toBeNull();
+    expect(dbQuery.mock.calls[0][0]).toContain("FROM appearance_settings WHERE id = 1");
+  });
+
+  it("upserts the single row", async () => {
+    dbQuery.mockResolvedValueOnce({ rows: [{ palette: "riso" }] }).mockResolvedValueOnce({ rows: [] });
+
+    await expect(makeRepo().upsertAppearancePalette("riso")).resolves.toBe("riso");
+    const [sql, params] = dbQuery.mock.calls[0];
+    expect(sql).toContain("ON CONFLICT (id)");
+    expect(params).toEqual(["riso"]);
+    await expect(makeRepo().upsertAppearancePalette("mono")).resolves.toBe("mono");
+  });
+});
+
 describe("recommendation scope", () => {
   it("reads a library's saved scope, or null when it has none", async () => {
     dbQuery.mockResolvedValueOnce({ rows: [{ scope: "all" }] }).mockResolvedValueOnce({ rows: [] });

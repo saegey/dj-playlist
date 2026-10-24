@@ -1,10 +1,13 @@
 import { z } from "zod";
+import { paletteIds } from "@/app/palettes";
 import { playlistDeleteResponseSchema } from "@groovenet/contracts";
 import {
   aiPromptSettingsGetResponseSchema,
   aiPromptSettingsPutBodySchema,
   aiPromptSettingsPutResponseSchema,
   aiPromptSettingsQuerySchema,
+  appearanceSettingsPutBodySchema,
+  appearanceSettingsResponseSchema,
   recommendationSettingsPutBodySchema,
   recommendationSettingsQuerySchema,
   recommendationSettingsResponseSchema,
@@ -222,6 +225,14 @@ const TRACK_REF = { $ref: "#/components/schemas/Track" };
 const componentRef = (name: string) => ({ $ref: `#/components/schemas/${name}` });
 const TRACK_GENRE_REF = { $ref: "#/components/schemas/TrackGenre" };
 const ALBUM_ARTWORK_STATE_REF = { $ref: "#/components/schemas/AlbumArtworkState" };
+
+const appearanceSettingsSchemaObject: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    palette: { type: "string", enum: [...paletteIds] },
+  },
+  required: ["palette"],
+};
 
 const recommendationSettingsSchemaObject: Record<string, unknown> = {
   type: "object",
@@ -6099,6 +6110,72 @@ export const apiContractRoutes: ApiContractRoute[] = [
           content: {
             "application/json": { schema: errorResponseSchemaObject },
           },
+        },
+      },
+    },
+  },
+  {
+    operationId: "getAppearanceSettings",
+    method: "get",
+    path: "/api/settings/appearance",
+    summary: "Get the app-wide colour palette",
+    tags: ["Settings"],
+    successSchema: appearanceSettingsResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      responses: {
+        "200": {
+          description:
+            "The palette every device renders with. An unset or unknown stored id is reported as the default. Light/dark mode is per device and not part of this setting.",
+          content: {
+            "application/json": {
+              schema: appearanceSettingsSchemaObject,
+              examples: { appearance: { summary: "Default", value: { palette: "sleeve" } } },
+            },
+          },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+      },
+    },
+  },
+  {
+    operationId: "updateAppearanceSettings",
+    method: "put",
+    path: "/api/settings/appearance",
+    summary: "Set the app-wide colour palette",
+    tags: ["Settings"],
+    bodySchema: appearanceSettingsPutBodySchema,
+    successSchema: appearanceSettingsResponseSchema,
+    errorSchema: apiErrorSchema,
+    openapi: {
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { ...appearanceSettingsSchemaObject, additionalProperties: false },
+          },
+        },
+      },
+      responses: {
+        "200": {
+          description: "Saved",
+          content: {
+            "application/json": {
+              schema: appearanceSettingsSchemaObject,
+              examples: { appearance: { summary: "Saved", value: { palette: "sleeve" } } },
+            },
+          },
+        },
+        "400": {
+          description: "Unknown palette",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
+        },
+        "500": {
+          description: "Server error",
+          content: { "application/json": { schema: errorResponseSchemaObject } },
         },
       },
     },

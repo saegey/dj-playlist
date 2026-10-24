@@ -101,6 +101,7 @@ import {
   spinUpdateResponseSchema as sharedSpinUpdateResponseSchema,
   trackSpinEventSchema as sharedTrackSpinEventSchema,
 } from "@groovenet/contracts";
+import { paletteIds } from "@/app/palettes";
 import { RECOMMENDATION_SCOPES } from "@/types/recommendations";
 
 const toInt = (value: unknown): unknown => {
@@ -970,6 +971,16 @@ export const aiPromptSettingsGetResponseSchema = z.object({
 export const aiPromptSettingsPutResponseSchema = z.object({
   prompt: z.string(),
   isDefault: z.boolean(),
+});
+
+export const appearancePaletteSchema = z.enum(paletteIds);
+
+export const appearanceSettingsPutBodySchema = z.object({
+  palette: appearancePaletteSchema,
+});
+
+export const appearanceSettingsResponseSchema = z.object({
+  palette: appearancePaletteSchema,
 });
 
 export const recommendationSettingsQuerySchema = z.object({

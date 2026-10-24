@@ -15,6 +15,7 @@ import GamdlSettingsSection from "@/components/settings/GamdlSettingsSection";
 import AiPromptSettingsSection from "@/components/settings/AiPromptSettingsSection";
 import DefaultLibrarySettingsSection from "@/components/settings/DefaultLibrarySettingsSection";
 import SuggestionScopeSettingsSection from "@/components/settings/SuggestionScopeSettingsSection";
+import AppearanceSettingsSection from "@/components/settings/AppearanceSettingsSection";
 import AboutSection from "@/components/settings/AboutSection";
 import PageContainer from "@/components/layout/PageContainer";
 import DiscogsSyncDialog from "@/components/settings/dialogs/DiscogsSyncDialog";
@@ -46,6 +47,12 @@ function SettingsPageContent() {
             <SuggestionScopeSettingsSection />
           </>
         ),
+      },
+      {
+        id: "appearance",
+        label: "Appearance",
+        description: "colour palette and light or dark mode",
+        content: <AppearanceSettingsSection />,
       },
       {
         id: "downloads",

@@ -2,6 +2,7 @@ import type {
   DefaultLibrarySettings,
   DefaultLibrarySettingsUpdateResponse,
 } from "@groovenet/contracts";
+import { resolvePaletteId, type PaletteId } from "@/app/palettes";
 import { getDefaultTrackMetadataPrompt } from "@/lib/serverPrompts";
 import { friendRepository } from "@/server/repositories/friendRepository";
 import type { GamdlSettings, GamdlSettingsUpdate } from "@/types/gamdl";
@@ -28,6 +29,17 @@ export class SettingsService {
       friendId
     );
     return { friend_id };
+  }
+
+  /** The shared palette; an unset or no-longer-registered id is the default. */
+  async getAppearance(): Promise<{ palette: PaletteId }> {
+    const stored = await settingsRepository.findAppearancePalette();
+    return { palette: resolvePaletteId(stored) };
+  }
+
+  async updateAppearance(palette: PaletteId): Promise<{ palette: PaletteId }> {
+    const saved = await settingsRepository.upsertAppearancePalette(palette);
+    return { palette: resolvePaletteId(saved) };
   }
 
   async getAiPrompt(friendId?: number): Promise<{

@@ -4,6 +4,8 @@ import {
   aiPromptSettingsPutBodySchema,
   aiPromptSettingsPutResponseSchema,
   aiPromptSettingsQuerySchema,
+  appearanceSettingsPutBodySchema,
+  appearanceSettingsResponseSchema,
   backupPolicyGetResponseSchema,
   backupPolicyPutBodySchema,
   backupPolicyPutResponseSchema,
@@ -208,6 +210,26 @@ export async function updateBackupPolicy(
   body: UpdateBackupPolicyBody
 ): Promise<UpdateBackupPolicyResponse> {
   return await http<UpdateBackupPolicyResponse>("/api/settings/backup", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export type AppearanceSettingsResponse = z.infer<typeof appearanceSettingsResponseSchema>;
+export type UpdateAppearanceSettingsBody = z.input<typeof appearanceSettingsPutBodySchema>;
+
+export async function fetchAppearanceSettings(): Promise<AppearanceSettingsResponse> {
+  return await http<AppearanceSettingsResponse>("/api/settings/appearance", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export async function updateAppearanceSettings(
+  body: UpdateAppearanceSettingsBody
+): Promise<AppearanceSettingsResponse> {
+  return await http<AppearanceSettingsResponse>("/api/settings/appearance", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

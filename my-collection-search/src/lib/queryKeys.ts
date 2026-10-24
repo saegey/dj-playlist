@@ -4,6 +4,7 @@ import { AppleMusicAISearchArgs } from "@/services/aiService";
 import type { TrackAttributeFilters } from "@/lib/trackFilters";
 
 export const queryKeys = {
+  appearance: () => ["settings", "appearance"] as const,
   defaultLibrary: () => ["settings", "default-library"] as const,
   recommendationSettings: (friend_id: number) =>
     ["settings", "recommendations", friend_id] as const,
