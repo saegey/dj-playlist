@@ -176,7 +176,7 @@ export default function SetDetailsPanel({
         display={{ base: "block", md: "none" }}
         position="fixed"
         inset={0}
-        bg="blackAlpha.600"
+        bg="overlay.backdrop"
         zIndex="modal"
         onClick={() => { void load(); setEditing(false); }}
       />
@@ -434,14 +434,14 @@ export default function SetDetailsPanel({
             ))}
           </Box>
           <Flex justify="space-between" gap={2}>
-            <Button size="sm" variant="ghost" colorPalette="red" onClick={async () => {
+            <Button size="sm" variant="ghost" colorPalette="danger" onClick={async () => {
               if (!window.confirm("Remove this set? The playlist will be kept, but its set history and attachments will be removed.")) return;
               try { await deleteLiveSet(playlistId); setSet(null); setEditing(false); toaster.create({ title: "Set removed; playlist kept", type: "success" }); }
               catch { toaster.create({ title: "Could not remove set", type: "error" }); }
             }}>Remove set</Button>
             <Flex gap={2}>
               <Button size="sm" variant="ghost" onClick={() => { void load(); setEditing(false); }}>Cancel</Button>
-              <Button size="sm" colorPalette="purple" loading={saving} onClick={save}>Save set details</Button>
+              <Button size="sm" colorPalette="status.genre" loading={saving} onClick={save}>Save set details</Button>
             </Flex>
           </Flex>
         </VStack>

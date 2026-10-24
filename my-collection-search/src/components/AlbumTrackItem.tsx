@@ -21,7 +21,6 @@ import { getTrackDurationSeconds } from "@/lib/trackUtils";
 import { trackGenreBadges } from "@/lib/genres/links";
 import { useGenreLookup } from "@/hooks/useGenreTaxonomyQuery";
 import { GenreBadgeList } from "./GenreBadge";
-import { useColorModeValue } from "@/components/ui/color-mode";
 import TrackPlaylistUsage from "@/components/TrackPlaylistUsage";
 
 function formatSeconds(seconds: number): string {
@@ -55,9 +54,9 @@ export default function AlbumTrackItem({
   const genreLookup = useGenreLookup();
   const genreLabels = trackGenreBadges(track, genreLookup);
   const positionLabel = String(track.position ?? "").trim();
-  const rowHoverBg = useColorModeValue("gray.50", "gray.800");
-  const positionBg = useColorModeValue("gray.100", "gray.700");
-  const positionColor = useColorModeValue("gray.700", "gray.200");
+  const rowHoverBg = "bg.muted";
+  const positionBg = "bg.emphasized";
+  const positionColor = "fg";
 
   // Only show artist if different from album artist (for compilations)
   const showArtist = track.artist !== albumArtist;
@@ -133,7 +132,7 @@ export default function AlbumTrackItem({
         {showArtist && (
           <Text
             fontSize={{ base: "xs", md: "sm" }}
-            color="gray.600"
+            color="fg.muted"
             lineClamp={1}
           >
             {track.artist}
@@ -143,12 +142,12 @@ export default function AlbumTrackItem({
         <Flex
           gap={{ base: 1.5, md: 2 }}
           fontSize={{ base: "xs", md: "sm" }}
-          color="gray.600"
+          color="fg.muted"
           flexWrap="wrap"
           alignItems="center"
         >
           {track.library_identifier && (
-            <Badge colorPalette="blue" size="xs" fontWeight="bold">
+            <Badge colorPalette="accent" size="xs" fontWeight="bold">
               {track.library_identifier}
             </Badge>
           )}
@@ -157,7 +156,7 @@ export default function AlbumTrackItem({
             <Text>{formatSeconds(getTrackDurationSeconds(track) || 0)}</Text>
           )}
           {track.bpm && (
-            <Badge colorPalette="purple" size="xs" variant="subtle">
+            <Badge colorPalette="status.genre" size="xs" variant="subtle">
               {track.bpm} BPM
             </Badge>
           )}
@@ -187,8 +186,8 @@ export default function AlbumTrackItem({
                     as="button"
                     display="inline-flex"
                     alignItems="center"
-                    color="yellow.500"
-                    _hover={{ color: "yellow.400" }}
+                    color="fg.warning"
+                    _hover={{ color: "fg.warning" }}
                     w="fit-content"
                   >
                     <FiFileText size={13} />

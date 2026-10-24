@@ -39,7 +39,7 @@ export default function PlaylistListItem({
       py={3}
       borderWidth="1px"
       borderRadius="md"
-      _hover={{ bg: "bg.muted", borderColor: "blue.200" }}
+      _hover={{ bg: "bg.muted", borderColor: "accent.border" }}
       _active={{ bg: "bg.subtle" }}
     >
       <HStack justify="space-between" align="center" gap={3}>
@@ -72,7 +72,7 @@ export default function PlaylistListItem({
                 {playlist.set?.title || playlist.name}
               </Text>
               {playlist.set && (
-                <Badge size="sm" colorPalette={playlist.set.status === "performed" ? "green" : "purple"}>
+                <Badge size="sm" colorPalette={playlist.set.status === "performed" ? "status.success" : "status.genre"}>
                   {playlist.set.status === "performed" ? "Played" : "Set"}
                 </Badge>
               )}

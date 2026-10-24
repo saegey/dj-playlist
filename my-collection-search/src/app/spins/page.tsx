@@ -184,7 +184,7 @@ function SpinsPageContent() {
                     buttons={<TrackActionsMenu track={buildTopTrackFallback(track)} />}
                     footer={
                       <Flex gap={1} align="center" flexWrap="wrap">
-                        <Badge colorPalette="blue" size="sm">#{index + 1}</Badge>
+                        <Badge colorPalette="accent" size="sm">#{index + 1}</Badge>
                         <Badge variant="outline" size="sm">{track.play_count}× played</Badge>
                         {track.position_snapshot && (
                           <Badge variant="subtle" size="sm">{track.position_snapshot}</Badge>

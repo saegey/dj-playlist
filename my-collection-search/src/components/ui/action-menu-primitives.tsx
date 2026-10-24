@@ -8,8 +8,8 @@ export const menuDivider = (
   <Box
     as="hr"
     my={1}
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
+    borderColor="border"
+    _dark={{ borderColor: "border" }}
     borderWidth={0}
     borderTopWidth={1}
   />
@@ -18,8 +18,8 @@ export const menuDivider = (
 export const drawerDivider = (
   <Box
     as="hr"
-    borderColor="gray.200"
-    _dark={{ borderColor: "gray.700" }}
+    borderColor="border"
+    _dark={{ borderColor: "border" }}
     borderWidth={0}
     borderTopWidth={1}
   />

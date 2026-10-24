@@ -65,4 +65,36 @@ describe("GamdlTestConnection", () => {
     expect(await screen.findByText("gamdl not found")).toBeTruthy();
     await waitFor(() => expect(screen.getByText(/missing_binary/)).toBeTruthy());
   });
+
+  it.each([true, false])("reports the test download when it was attempted (success: %s)", async (success) => {
+    mocks.testGamdlConnection.mockResolvedValue({
+      success,
+      message: "Download checked",
+      details: {
+        gamdl_available: true,
+        cookie_file_exists: false,
+        test_download_attempted: true,
+        test_download_success: success,
+      },
+    });
+    const { user } = renderWithProviders(<GamdlTestConnection />);
+
+    await chooseMenuItem(user, screen.getByRole("button", { name: /Actions/ }), /Test Connection/);
+
+    expect(await screen.findByText("Download checked")).toBeTruthy();
+    expect(screen.queryByText(/Error Type/)).toBeNull();
+  });
+
+  it("shows a neutral badge for a check the server did not report", async () => {
+    mocks.testGamdlConnection.mockResolvedValue({
+      success: true,
+      message: "Partial result",
+      details: { gamdl_available: true, cookie_file_exists: true, test_download_attempted: false },
+    });
+    const { user } = renderWithProviders(<GamdlTestConnection />);
+
+    await chooseMenuItem(user, screen.getByRole("button", { name: /Actions/ }), /Test Connection/);
+
+    expect(await screen.findByText("Partial result")).toBeTruthy();
+  });
 });

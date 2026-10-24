@@ -212,7 +212,7 @@ export default function FriendsDiscogsSection() {
           }}
         />
         <Button
-          colorPalette="green"
+          colorPalette="status.success"
           onClick={startAddFriend}
           disabled={!newFriend.trim() || disableAdd}
           loading={addFriendPending}
@@ -286,7 +286,7 @@ export default function FriendsDiscogsSection() {
                     aria-label="Remove friend"
                     size="xs"
                     variant="ghost"
-                    colorPalette="red"
+                    colorPalette="danger"
                     onClick={() => handleRemoveFriendClick(friend.username)}
                     disabled={removeFriendPending}
                   >
@@ -347,7 +347,7 @@ export default function FriendsDiscogsSection() {
                 Cancel
               </Button>
               <Button
-                colorPalette="red"
+                colorPalette="danger"
                 onClick={handleConfirmRemove}
                 ml={3}
               >

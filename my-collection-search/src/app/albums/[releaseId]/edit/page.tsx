@@ -243,7 +243,7 @@ function EditAlbumContent() {
   if (!friendId) {
     return (
       <PageContainer size="standard" py={8}>
-        <Text color="red.500">Error: friend_id parameter is required</Text>
+        <Text color="fg.error">Error: friend_id parameter is required</Text>
       </PageContainer>
     );
   }
@@ -261,7 +261,7 @@ function EditAlbumContent() {
   if (error || !album) {
     return (
       <PageContainer size="standard" py={8}>
-        <Text color="red.500">
+        <Text color="fg.error">
           Error loading album: {error instanceof Error ? error.message : "Unknown error"}
         </Text>
       </PageContainer>
@@ -304,7 +304,7 @@ function EditAlbumContent() {
           </Button>
           <Button
             onClick={handleSave}
-            colorPalette="blue"
+            colorPalette="accent"
             loading={updateMutation.isPending}
           >
             Save Changes
@@ -333,19 +333,17 @@ function EditAlbumContent() {
               w="full"
               p="10px"
               borderWidth="1px"
-              borderColor="rgba(255, 255, 255, 0.45)"
+              borderColor="border"
               borderRadius="28px"
-              bg="transparent"
-              _light={{ bg: "rgba(255, 255, 255, 0.58)" }}
-              _dark={{ bg: "rgba(18, 18, 24, 0.58)" }}
-              boxShadow="0 18px 40px rgba(15, 23, 42, 0.16)"
+              bg="color-mix(in srgb, var(--gn-surface) 60%, transparent)"
+              boxShadow="0 18px 40px var(--gn-shadow)"
               style={{ backdropFilter: "blur(24px) saturate(200%)" }}
             >
               <Button
                 onClick={handleCancel}
                 variant="outline"
                 bg="bg"
-                borderColor="blackAlpha.200"
+                borderColor="border.subtle"
                 disabled={updateMutation.isPending}
                 flex={1}
                 fontWeight="semibold"
@@ -355,7 +353,7 @@ function EditAlbumContent() {
               </Button>
               <Button
                 onClick={handleSave}
-                colorPalette="blue"
+                colorPalette="accent"
                 loading={updateMutation.isPending}
                 flex={1}
                 fontWeight="semibold"

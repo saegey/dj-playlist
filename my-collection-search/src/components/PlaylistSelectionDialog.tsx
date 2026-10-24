@@ -118,7 +118,7 @@ export default function PlaylistSelectionDialog({
                     left={3}
                     top="50%"
                     transform="translateY(-50%)"
-                    color="gray.400"
+                    color="fg.muted"
                   >
                     <FiSearch />
                   </Box>
@@ -128,7 +128,7 @@ export default function PlaylistSelectionDialog({
                 {isLoading && (
                   <Box textAlign="center" py={4}>
                     <Spinner />
-                    <Text mt={2} color="gray.500">
+                    <Text mt={2} color="fg.muted">
                       Loading playlists...
                     </Text>
                   </Box>
@@ -137,7 +137,7 @@ export default function PlaylistSelectionDialog({
                 {/* Error State */}
                 {error && (
                   <Box textAlign="center" py={4}>
-                    <Text color="red.500">Failed to load playlists</Text>
+                    <Text color="fg.error">Failed to load playlists</Text>
                   </Box>
                 )}
 
@@ -147,11 +147,11 @@ export default function PlaylistSelectionDialog({
                     {filteredPlaylists.length === 0 ? (
                       <Box textAlign="center" py={4}>
                         {searchQuery.trim() ? (
-                          <Text color="gray.500">
+                          <Text color="fg.muted">
                             No playlists found matching ({searchQuery})
                           </Text>
                         ) : (
-                          <Text color="gray.500">No playlists found</Text>
+                          <Text color="fg.muted">No playlists found</Text>
                         )}
                       </Box>
                     ) : (
@@ -167,7 +167,7 @@ export default function PlaylistSelectionDialog({
                         >
                           <VStack align="flex-start">
                             <Text fontWeight="medium">{playlist.name}</Text>
-                            <Text fontSize="sm" color="gray.500">
+                            <Text fontSize="sm" color="fg.muted">
                               {Array.isArray(playlist.tracks)
                                 ? `${playlist.tracks.length} tracks`
                                 : "0 tracks"}
@@ -180,7 +180,7 @@ export default function PlaylistSelectionDialog({
                 )}
 
                 {/* Create New Playlist Button */}
-                <Box borderTop="1px solid" borderColor="gray.200" pt={4}>
+                <Box borderTop="1px solid" borderColor="border" pt={4}>
                   <Button
                     onClick={handleCreateNew}
                     variant="outline"

@@ -88,11 +88,15 @@ an invalid value the browser drops, so it fails silently.
   active nav), `bg.muted` (row hover), `bg.panel` (inputs, popovers, dialogs),
   `fg`, `fg.muted` (secondary text), `border`. All of them read `--gn-*`
   variables, so they follow the palette; raw scales (`gray.500`, `blue.500`)
-  do not and are being replaced (#666). Don't add new ones.
+  do not, and ESLint rejects them (`no-restricted-syntax` in
+  `eslint.config.mjs`) in colour props and `colorPalette`.
 - **One accent:** `accent.solid` or `colorPalette="accent"` for the primary
   action, active filters, selection and playback progress. Never two solid
-  accent buttons side by side; `colorPalette="red"` only for destructive
-  actions.
+  accent buttons side by side; `colorPalette="danger"` only for destructive
+  actions. `colorPalette="neutral"` for inactive chips and plain badges.
+  `overlay.*` tokens (`overlay.fg`, `.fg.muted`, `.track`, `.scrim`,
+  `.backdrop`) are for content over artwork or scrims; they don't change with
+  palette or mode.
 - **Palettes:** a palette is a block of `--gn-*` CSS variables chosen by
   `data-palette` on `<html>` (server-rendered in `layout.tsx`, so no flash),
   independent of the `.dark` class that `ColorModeProvider` sets. The variable
@@ -109,17 +113,16 @@ an invalid value the browser drops, so it fails silently.
   the default palette (Sleeve), which is also declared on `:root`. Sleeve's
   values are provisional until #664 is signed off; change them in `sleeve.ts` only.
 - **Status** tokens `status.{missing,analysis,genre,success}.{fg,subtle,border}`
-  carry the badge meanings below; always with their word, never colour alone.
+  carry the badge meanings below.
 - **Buttons:** `size="sm"` by default, `xs` inside cards and dense rows;
   `variant="outline"` is the default, `ghost` for low-weight actions
   (`color="fg.muted"` for tertiary), `solid` for the one primary action.
   Icon-only buttons need an `aria-label`.
-- **Badges** (`size="sm"`, `subtle`) have fixed meanings: missing data the
-  pipeline needs (No embedding), missing analysis (No BPM), genre/AI-derived,
-  bold library ID, and similarity score (`green`/`yellow`/`red`). Until #666
-  moves them onto the `status.*` tokens they still use `red`, `orange`,
-  `purple` and `blue`. Always text, never colour alone. Genre badges go
-  through `GenreBadge`.
+- **Badges** (`size="sm"`, `subtle`) have fixed meanings: `status.missing`
+  missing data the pipeline needs (No embedding), `status.analysis` missing
+  analysis (No BPM), `status.genre` genre/AI-derived, bold `accent` library ID,
+  `status.success`/`status.analysis`/`status.missing` similarity score. Always
+  text, never colour alone. Genre badges go through `GenreBadge`.
 - **Shape:** `borderRadius="md"` for buttons, inputs, cards and artwork;
   `full` only for filter chips, player transport buttons and slider tracks;
   `xl` for the search toolbar, `2xl` for dialogs and drawers. Separate with

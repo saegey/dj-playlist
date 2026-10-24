@@ -70,7 +70,7 @@ export default function GenresPage() {
         </Flex>
 
         {error ? (
-          <Text color="red.500">Couldn&apos;t load the genre taxonomy: {error.message}</Text>
+          <Text color="fg.error">Couldn&apos;t load the genre taxonomy: {error.message}</Text>
         ) : !entries ? (
           <VStack align="stretch" gap={2} data-testid="genres-loading">
             <Skeleton height="24px" />

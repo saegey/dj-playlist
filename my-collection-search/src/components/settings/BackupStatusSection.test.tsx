@@ -69,4 +69,17 @@ describe("BackupStatusSection", () => {
     );
     expect(mocks.fetchBackupStatus).toHaveBeenCalledTimes(2);
   });
+
+  it.each(["failed", "skipped"] as const)("shows a %s backup with its error, missing env and metrics error", async (state) => {
+    mocks.fetchBackupStatus.mockResolvedValue({
+      status: { ...status, status: state, error: "disk full", missing_env: ["RESTIC_PASSWORD"] },
+      metrics: { ...metrics, error: "repo locked" },
+    });
+    renderWithProviders(<BackupStatusSection />);
+
+    expect(await screen.findByText(state)).toBeTruthy();
+    expect(screen.getByText("Error: disk full")).toBeTruthy();
+    expect(screen.getByText("Missing env: RESTIC_PASSWORD")).toBeTruthy();
+    expect(screen.getByText("Repository metrics error: repo locked")).toBeTruthy();
+  });
 });

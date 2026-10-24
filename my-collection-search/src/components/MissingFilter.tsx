@@ -52,7 +52,7 @@ export default function MissingFilter<K extends string>({
         >
           Missing
           {count > 0 && (
-            <Badge size="xs" colorPalette="blue" variant="solid" borderRadius="full">
+            <Badge size="xs" colorPalette="accent" variant="solid" borderRadius="full">
               {count}
             </Badge>
           )}

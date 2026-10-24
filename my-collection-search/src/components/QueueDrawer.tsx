@@ -72,17 +72,17 @@ function QueueProgressSlider({
         step={0.1}
       >
         <Slider.Control>
-          <Slider.Track bg="whiteAlpha.300" height="6px" borderRadius="full">
-            <Slider.Range bg="whiteAlpha.900" />
+          <Slider.Track bg="overlay.track" height="6px" borderRadius="full">
+            <Slider.Range bg="overlay.fg" />
           </Slider.Track>
-          <Slider.Thumbs rounded="full" bg="white" borderWidth="0" boxShadow="none" />
+          <Slider.Thumbs rounded="full" bg="overlay.fg" borderWidth="0" boxShadow="none" />
         </Slider.Control>
       </Slider.Root>
       <Flex justify="space-between" mt={1.5}>
-        <Text fontSize="xs" color="whiteAlpha.900" fontVariantNumeric="tabular-nums">
+        <Text fontSize="xs" color="overlay.fg" fontVariantNumeric="tabular-nums">
           {formatSeconds(currentTime || 0)}
         </Text>
-        <Text fontSize="xs" color="whiteAlpha.900" fontVariantNumeric="tabular-nums">
+        <Text fontSize="xs" color="overlay.fg" fontVariantNumeric="tabular-nums">
           -{formatSeconds(Math.max((duration || 0) - (currentTime || 0), 0))}
         </Text>
       </Flex>
@@ -120,7 +120,7 @@ function MobileQueueList({
             aria-label="Remove track"
             size="xs"
             variant="ghost"
-            colorPalette="red"
+            colorPalette="danger"
             onClick={() => removeFromQueue(idx)}
           >
             <FiTrash2 />
@@ -220,7 +220,7 @@ export default function QueueDrawer({
               size="xs"
               variant="ghost"
               onClick={() => playTrack(idx)}
-              colorPalette="blue"
+              colorPalette="accent"
             >
               <FiPlay />
             </Button>
@@ -229,7 +229,7 @@ export default function QueueDrawer({
             size="xs"
             variant="ghost"
             onClick={() => removeFromQueue(idx)}
-            colorPalette="red"
+            colorPalette="danger"
           >
             <FiTrash2 />
           </Button>
@@ -271,7 +271,7 @@ export default function QueueDrawer({
                       variant="outline"
                       onClick={clearQueue}
                       disabled={playlist.length === 0}
-                      colorPalette="red"
+                      colorPalette="danger"
                     >
                       <FiTrash2 />
                       Clear
@@ -379,7 +379,7 @@ export default function QueueDrawer({
         size="full"
       >
         <Portal>
-          <Drawer.Backdrop bg="blackAlpha.700" backdropFilter="blur(14px)" />
+          <Drawer.Backdrop bg="overlay.backdrop" backdropFilter="blur(14px)" />
         </Portal>
         <Drawer.Positioner>
           <Drawer.Content
@@ -387,10 +387,10 @@ export default function QueueDrawer({
             flexDirection="column"
             height="100%"
             bg="transparent"
-            color="white"
+            color="overlay.fg"
             overflow="hidden"
           >
-            <Box position="absolute" inset={0} bg="black" />
+            <Box position="absolute" inset={0} bg="overlay.scrim" />
             <Box
               position="absolute"
               inset={0}
@@ -422,7 +422,7 @@ export default function QueueDrawer({
                 <IconButton
                   aria-label="Collapse player"
                   variant="ghost"
-                  color="whiteAlpha.900"
+                  color="overlay.fg"
                   position="absolute"
                   right={0}
                   top={0}
@@ -432,7 +432,7 @@ export default function QueueDrawer({
                 </IconButton>
                 <Button
                   variant="ghost"
-                  color="whiteAlpha.800"
+                  color="overlay.fg"
                   onClick={() => setMobileView(mobileView === "player" ? "queue" : "player")}
                   p={0}
                   minW="auto"
@@ -444,14 +444,14 @@ export default function QueueDrawer({
 
               {playlist.length === 0 ? (
                 <Flex flex="1" align="center" justify="center">
-                  <EmptyState.Root size="sm" colorPalette="gray">
+                  <EmptyState.Root size="sm" colorPalette="neutral">
                     <EmptyState.Content>
-                      <EmptyState.Indicator color="whiteAlpha.700">
+                      <EmptyState.Indicator color="overlay.fg.muted">
                         <LuMusic />
                       </EmptyState.Indicator>
                       <VStack textAlign="center">
-                        <EmptyState.Title color="white">Queue is empty</EmptyState.Title>
-                        <EmptyState.Description color="whiteAlpha.700">
+                        <EmptyState.Title color="overlay.fg">Queue is empty</EmptyState.Title>
+                        <EmptyState.Description color="overlay.fg.muted">
                           Add tracks to your queue to start playback.
                         </EmptyState.Description>
                       </VStack>
@@ -471,7 +471,7 @@ export default function QueueDrawer({
                         aspectRatio={1}
                         objectFit="cover"
                         borderRadius="28px"
-                        boxShadow="0 24px 64px rgba(0,0,0,0.28)"
+                        boxShadow="0 24px 64px var(--gn-shadow)"
                       />
                     </Box>
 
@@ -480,7 +480,7 @@ export default function QueueDrawer({
                         <Text fontWeight="bold" fontSize="xl" lineHeight="1.1" lineClamp={1}>
                           {currentTrack?.title ?? "No track playing"}
                         </Text>
-                        <Text color="whiteAlpha.700" fontSize="lg" lineHeight="1.15" lineClamp={1}>
+                        <Text color="overlay.fg.muted" fontSize="lg" lineHeight="1.15" lineClamp={1}>
                           {currentTrack?.artist ?? "—"}
                         </Text>
                       </Box>
@@ -495,7 +495,7 @@ export default function QueueDrawer({
                         <IconButton
                           aria-label="Previous"
                           variant="ghost"
-                          color="white"
+                          color="overlay.fg"
                           size="lg"
                           onClick={playPrev}
                           disabled={!canPrev}
@@ -508,7 +508,7 @@ export default function QueueDrawer({
                           h="84px"
                           borderRadius="full"
                           bg="transparent"
-                          color="white"
+                          color="overlay.fg"
                           onClick={isPlaying ? handlePause : handlePlay}
                           disabled={safeLen === 0}
                         >
@@ -517,7 +517,7 @@ export default function QueueDrawer({
                         <IconButton
                           aria-label="Next"
                           variant="ghost"
-                          color="white"
+                          color="overlay.fg"
                           size="lg"
                           onClick={playNext}
                           disabled={!canNext}
@@ -536,10 +536,10 @@ export default function QueueDrawer({
                           }}
                         >
                           <Slider.Control>
-                            <Slider.Track bg="whiteAlpha.300" height="6px" borderRadius="full">
-                              <Slider.Range bg="whiteAlpha.900" />
+                            <Slider.Track bg="overlay.track" height="6px" borderRadius="full">
+                              <Slider.Range bg="overlay.fg" />
                             </Slider.Track>
-                            <Slider.Thumbs rounded="full" bg="white" borderWidth="0" boxShadow="none" />
+                            <Slider.Thumbs rounded="full" bg="overlay.fg" borderWidth="0" boxShadow="none" />
                           </Slider.Control>
                         </Slider.Root>
                       </HStack>
@@ -547,10 +547,10 @@ export default function QueueDrawer({
                       <Flex justify="space-between" align="center" pt={1}>
                         <Button
                           variant="ghost"
-                          color="whiteAlpha.700"
+                          color="overlay.fg.muted"
                           size="sm"
                           onClick={openSaveDialog}
-                          _hover={{ bg: "transparent", color: "white" }}
+                          _hover={{ bg: "transparent", color: "overlay.fg" }}
                           _active={{ bg: "transparent" }}
                         >
                           <HStack gap={2}>
@@ -560,10 +560,10 @@ export default function QueueDrawer({
                         </Button>
                         <Button
                           variant="ghost"
-                          color="whiteAlpha.900"
+                          color="overlay.fg"
                           size="sm"
                           onClick={() => setMobileView("queue")}
-                          _hover={{ bg: "transparent", color: "white" }}
+                          _hover={{ bg: "transparent", color: "overlay.fg" }}
                           _active={{ bg: "transparent" }}
                         >
                           <HStack gap={2}>
@@ -573,12 +573,12 @@ export default function QueueDrawer({
                         </Button>
                         <Button
                           variant="ghost"
-                          color={isAirPlayAvailable ? "whiteAlpha.900" : "whiteAlpha.500"}
+                          color={isAirPlayAvailable ? "overlay.fg" : "overlay.fg.subtle"}
                           size="sm"
                           onClick={handleAirPlayClick}
                           _hover={{
                             bg: "transparent",
-                            color: "white",
+                            color: "overlay.fg",
                           }}
                           _active={{ bg: "transparent" }}
                         >
@@ -602,7 +602,7 @@ export default function QueueDrawer({
                       <Text fontWeight="bold" fontSize="xl" lineClamp={1}>
                         {currentTrack?.title ?? "No track playing"}
                       </Text>
-                      <Text color="whiteAlpha.700" fontSize="lg" lineClamp={1}>
+                      <Text color="overlay.fg.muted" fontSize="lg" lineClamp={1}>
                         {currentTrack?.artist ?? "—"}
                       </Text>
                     </Box>
@@ -610,7 +610,7 @@ export default function QueueDrawer({
                       <IconButton
                         aria-label="Save queue"
                         variant="ghost"
-                        color="white"
+                        color="overlay.fg"
                         onClick={openSaveDialog}
                       >
                         <FiSave />
@@ -618,7 +618,7 @@ export default function QueueDrawer({
                       <IconButton
                         aria-label="Clear queue"
                         variant="ghost"
-                        color="white"
+                        color="overlay.fg"
                         onClick={clearQueue}
                       >
                         <FiTrash2 />
@@ -631,7 +631,7 @@ export default function QueueDrawer({
                       <Text fontWeight="bold" fontSize="xl">
                         Playing Next
                       </Text>
-                      <Text color="whiteAlpha.700" fontSize="sm">
+                      <Text color="overlay.fg.muted" fontSize="sm">
                         {playlist.length} tracks • {totalDuration}
                       </Text>
                     </Box>
@@ -662,7 +662,7 @@ export default function QueueDrawer({
                       <IconButton
                         aria-label="Previous"
                         variant="ghost"
-                        color="white"
+                        color="overlay.fg"
                         size="md"
                         onClick={playPrev}
                         disabled={!canPrev}
@@ -675,7 +675,7 @@ export default function QueueDrawer({
                         h="72px"
                         borderRadius="full"
                         bg="transparent"
-                        color="white"
+                        color="overlay.fg"
                         onClick={isPlaying ? handlePause : handlePlay}
                         disabled={safeLen === 0}
                       >
@@ -684,7 +684,7 @@ export default function QueueDrawer({
                       <IconButton
                         aria-label="Next"
                         variant="ghost"
-                        color="white"
+                        color="overlay.fg"
                         size="md"
                         onClick={playNext}
                         disabled={!canNext}

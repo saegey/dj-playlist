@@ -32,12 +32,12 @@ export default function ExpandableMarkdown({
         {isLong && (
           <Text
             as="span"
-            color="blue.500"
+            color="accent.fg"
             fontSize="xs"
             cursor="pointer"
             textDecoration="underline"
             onClick={() => setExpanded((e) => !e)}
-            _hover={{ color: "blue.700" }}
+            _hover={{ color: "accent.fg" }}
             role="button"
             tabIndex={0}
             display="inline"

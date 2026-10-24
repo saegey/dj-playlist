@@ -35,7 +35,6 @@ import AlbumArtworkDialog from "@/components/AlbumArtworkDialog";
 import DeleteAlbumDialog from "@/components/DeleteAlbumDialog";
 import { usePlaylistPlayer } from "@/providers/PlaylistPlayerProvider";
 import { toaster } from "@/components/ui/toaster";
-import { useColorModeValue } from "@/components/ui/color-mode";
 import PageContainer from "@/components/layout/PageContainer";
 import {
   compareTrackPositions,
@@ -91,11 +90,11 @@ function AlbumDetailContent() {
   const [artworkOpen, setArtworkOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
 
-  const mutedText = useColorModeValue("gray.600", "gray.400");
-  const subtleText = useColorModeValue("gray.500", "gray.500");
+  const mutedText = "fg.muted";
+  const subtleText = "fg.muted";
   const genreLookup = useGenreLookup();
-  const sideHeaderBg = useColorModeValue("gray.100", "gray.800");
-  const sideHeaderAccent = useColorModeValue("gray.400", "gray.600");
+  const sideHeaderBg = "bg.muted";
+  const sideHeaderAccent = "border";
   const album = albumFromStore;
   const tracks = React.useMemo(() => {
     return [...tracksFromStore].sort((a, b) =>
@@ -214,7 +213,7 @@ function AlbumDetailContent() {
   if (!friendId) {
     return (
       <PageContainer size="standard" py={8}>
-        <Text color="red.500">Error: friend_id parameter is required</Text>
+        <Text color="fg.error">Error: friend_id parameter is required</Text>
       </PageContainer>
     );
   }
@@ -232,7 +231,7 @@ function AlbumDetailContent() {
   if (error || !album) {
     return (
       <PageContainer size="standard" py={8}>
-        <Text color="red.500">
+        <Text color="fg.error">
           Error loading album: {error instanceof Error ? error.message : "Unknown error"}
         </Text>
       </PageContainer>
@@ -283,7 +282,7 @@ function AlbumDetailContent() {
           <Box>
             <Flex alignItems="center" gap={2} flexWrap="wrap">
               {album.library_identifier && (
-                <Badge colorPalette="blue" size={{ base: "sm", md: "md" }} variant="solid" fontWeight="bold">
+                <Badge colorPalette="accent" size={{ base: "sm", md: "md" }} variant="solid" fontWeight="bold">
                   {album.library_identifier}
                 </Badge>
               )}
@@ -366,8 +365,8 @@ function AlbumDetailContent() {
                     as="button"
                     display="inline-flex"
                     alignItems="center"
-                    color="yellow.500"
-                    _hover={{ color: "yellow.400" }}
+                    color="fg.warning"
+                    _hover={{ color: "fg.warning" }}
                   >
                     <FiFileText size={13} />
                   </Box>

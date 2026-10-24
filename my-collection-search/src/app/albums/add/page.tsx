@@ -199,7 +199,7 @@ export default function AddAlbumPage() {
           </Button>
           <Button
             onClick={handleSave}
-            colorPalette="blue"
+            colorPalette="accent"
             loading={createAlbumMutation.isPending}
           >
             Save Album

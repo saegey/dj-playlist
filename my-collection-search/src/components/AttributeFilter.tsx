@@ -50,7 +50,7 @@ export default function AttributeFilter({ value, onChange }: AttributeFilterProp
         >
           BPM / Key
           {count > 0 && (
-            <Badge size="xs" colorPalette="blue" variant="solid" borderRadius="full">
+            <Badge size="xs" colorPalette="accent" variant="solid" borderRadius="full">
               {count}
             </Badge>
           )}
@@ -168,7 +168,7 @@ export function AttributeFields({ value, onChange }: AttributeFilterProps) {
                 aria-pressed={value.star_rating === stars}
                 size="sm"
                 variant="ghost"
-                color={lit ? "yellow.500" : "fg.muted"}
+                color={lit ? "fg.warning" : "fg.muted"}
                 onClick={() => setRating(stars)}
               >
                 <LuStar fill={lit ? "currentColor" : "none"} />

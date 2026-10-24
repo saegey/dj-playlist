@@ -94,6 +94,36 @@ const config = defineConfig({
           border: v("--gn-accent-border"),
         },
         status: statusTokens,
+        // Destructive actions: the "missing" status colours, with a solid fill.
+        danger: {
+          solid: v("--gn-status-missing-fg"),
+          contrast: v("--gn-ground"),
+          fg: v("--gn-status-missing-fg"),
+          subtle: v("--gn-status-missing-subtle"),
+          muted: v("--gn-status-missing-subtle"),
+          emphasized: v("--gn-status-missing-border"),
+          focusRing: v("--gn-status-missing-border"),
+          border: v("--gn-status-missing-border"),
+        },
+        // Neutral controls (inactive chips, plain badges): ink over ground.
+        neutral: {
+          solid: v("--gn-ink"),
+          contrast: v("--gn-ground"),
+          fg: v("--gn-ink-muted"),
+          subtle: mix(6),
+          muted: mix(12),
+          emphasized: mix(18),
+          focusRing: v("--gn-accent-focus-ring"),
+          border: v("--gn-border"),
+        },
+        // Content drawn over album artwork or a dark scrim. Constant across
+        // palettes and modes: it must stay legible on the image, not the page.
+        overlay: {
+          fg: { DEFAULT: { value: "#ffffff" }, muted: { value: "rgba(255, 255, 255, 0.7)" }, subtle: { value: "rgba(255, 255, 255, 0.5)" } },
+          track: { value: "rgba(255, 255, 255, 0.3)" },
+          scrim: { value: "rgba(0, 0, 0, 0.55)" },
+          backdrop: { value: "rgba(0, 0, 0, 0.6)" },
+        },
       },
       shadows: {
         xs: { value: "0 1px 2px var(--gn-shadow)" },

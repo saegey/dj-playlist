@@ -46,7 +46,7 @@ export default function SuggestionScopeSettingsSection(): React.JSX.Element {
       ) : settings.isPending ? (
         <Spinner size="sm" />
       ) : settings.error ? (
-        <Text color="red.500">Failed to load the suggestion scope.</Text>
+        <Text color="fg.error">Failed to load the suggestion scope.</Text>
       ) : (
         <Flex gap={3} align="center" flexWrap="wrap">
           <SuggestionScopeToggle

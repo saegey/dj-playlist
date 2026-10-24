@@ -59,7 +59,7 @@ export default function TrackSelectionBar({
               Select all {loadedCount}
             </Button>
           )}
-          <Button size="xs" variant="ghost" colorPalette="red" onClick={onClear}>
+          <Button size="xs" variant="ghost" colorPalette="danger" onClick={onClear}>
             Clear
           </Button>
         </Flex>
@@ -69,7 +69,7 @@ export default function TrackSelectionBar({
               Download ({downloadableCount})
             </Button>
           )}
-          <Button size="sm" colorPalette="blue" onClick={onEnrich} flex={{ base: 1, md: "none" }}>
+          <Button size="sm" colorPalette="accent" onClick={onEnrich} flex={{ base: 1, md: "none" }}>
             Enrich {selectedCount} →
           </Button>
         </Flex>

@@ -79,7 +79,7 @@ function ReviewRow({ item }: { item: AlbumArtworkReviewItem }) {
             {item.artist}
           </Text>
         </Box>
-        <Badge colorPalette={item.art_match_status === "mismatch" ? "orange" : "gray"} flexShrink={0}>
+        <Badge colorPalette={item.art_match_status === "mismatch" ? "status.analysis" : "neutral"} flexShrink={0}>
           {STATUS_LABELS[item.art_match_status]}
           {item.art_match_distance !== null ? ` · ${item.art_match_distance}/64` : ""}
         </Badge>

@@ -93,14 +93,14 @@ export default function DatabaseBackups() {
                     download
                     style={{ textDecoration: "none" }}
                   >
-                    <Button colorPalette="blue" size="xs" aria-label={`Download ${backup.filename}`}>
+                    <Button colorPalette="accent" size="xs" aria-label={`Download ${backup.filename}`}>
                       <FiDownload />
                     </Button>
                   </a>
                   <IconButton
                     size="xs"
                     variant="outline"
-                    colorPalette="red"
+                    colorPalette="danger"
                     aria-label={`Delete ${backup.filename}`}
                     onClick={() => setPendingDelete(backup.filename)}
                   >
@@ -115,7 +115,7 @@ export default function DatabaseBackups() {
               mt={3}
               size="sm"
               variant="ghost"
-              colorPalette="blue"
+              colorPalette="accent"
               onClick={() => setShowAllBackups((v) => !v)}
               alignSelf="flex-start"
             >
@@ -149,7 +149,7 @@ export default function DatabaseBackups() {
               </Dialog.Body>
               <Dialog.Footer>
                 <Button
-                  colorPalette="red"
+                  colorPalette="danger"
                   onClick={confirmDelete}
                   loading={removeBackup.isPending}
                   disabled={removeBackup.isPending}

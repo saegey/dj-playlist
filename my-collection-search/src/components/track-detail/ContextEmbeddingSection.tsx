@@ -27,11 +27,11 @@ export default function ContextEmbeddingSection({ query }: Props) {
           <Skeleton height="80px" />
         </VStack>
       ) : query.error ? (
-        <Text color="red.500">{query.error.message || "Failed to load context embedding preview"}</Text>
+        <Text color="fg.error">{query.error.message || "Failed to load context embedding preview"}</Text>
       ) : query.data ? (
         <VStack align="stretch" gap={3}>
           <HStack gap={2} flexWrap="wrap">
-            <Badge colorPalette="teal">Natural-language search</Badge>
+            <Badge colorPalette="accent">Natural-language search</Badge>
             <Badge variant="outline">{query.data.contextData.era}</Badge>
           </HStack>
           <Box
@@ -43,8 +43,8 @@ export default function ContextEmbeddingSection({ query }: Props) {
             maxH="420px"
             fontSize="xs"
             whiteSpace="pre-wrap"
-            bg="gray.50"
-            _dark={{ bg: "gray.900" }}
+            bg="bg.subtle"
+            _dark={{ bg: "bg.subtle" }}
           >
             {query.data.contextText}
           </Box>

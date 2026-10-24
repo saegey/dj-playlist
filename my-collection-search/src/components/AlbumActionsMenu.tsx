@@ -136,7 +136,7 @@ export default function AlbumActionsMenu({
                       <DrawerItem
                         icon={<FiTrash2 />}
                         label="Delete Album..."
-                        color="red.500"
+                        color="fg.error"
                         onClick={() => { onDeleteAlbum(); close(); }}
                       />
                     )}

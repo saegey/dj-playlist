@@ -164,18 +164,16 @@ export default function TrackEditForm({
                       gap={2}
                       p="10px"
                       borderWidth="1px"
-                      borderColor="rgba(255, 255, 255, 0.45)"
+                      borderColor="border"
                       borderRadius="28px"
-                      bg="transparent"
-                      _light={{ bg: "rgba(255, 255, 255, 0.58)" }}
-                      _dark={{ bg: "rgba(18, 18, 24, 0.58)" }}
-                      boxShadow="0 18px 40px rgba(15, 23, 42, 0.16)"
+                      bg="color-mix(in srgb, var(--gn-surface) 60%, transparent)"
+                      boxShadow="0 18px 40px var(--gn-shadow)"
                       style={{ backdropFilter: "blur(24px) saturate(200%)" }}
                     >
                       <Button
                         variant="outline"
                         bg="bg"
-                        borderColor="blackAlpha.200"
+                        borderColor="border.subtle"
                         onClick={() => setDialogOpen(false)}
                         disabled={loading}
                         flex={1}
@@ -189,7 +187,7 @@ export default function TrackEditForm({
                         loading={loading}
                         disabled={loading}
                         flex={1}
-                        colorPalette="blue"
+                        colorPalette="accent"
                         fontWeight="semibold"
                         borderRadius="xl"
                       >

@@ -88,7 +88,7 @@ export default function AlbumSearchResults({
   if (error) {
     return (
       <Box p={4}>
-        <Text color="red.500">Error loading albums: {error.message}</Text>
+        <Text color="fg.error">Error loading albums: {error.message}</Text>
       </Box>
     );
   }
@@ -98,9 +98,9 @@ export default function AlbumSearchResults({
   if (albums.length === 0) {
     return (
       <Box p={4}>
-        <Text color="gray.500">No albums found.</Text>
+        <Text color="fg.muted">No albums found.</Text>
         {query && (
-          <Text fontSize="sm" color="gray.400" mt={2}>
+          <Text fontSize="sm" color="fg.muted" mt={2}>
             Try adjusting your search or filters.
           </Text>
         )}
@@ -110,7 +110,7 @@ export default function AlbumSearchResults({
 
   return (
     <Box>
-      <Text fontSize="sm" color="gray.500" mb={2}>
+      <Text fontSize="sm" color="fg.muted" mb={2}>
         {totalHits.toLocaleString()} {totalHits === 1 ? "album" : "albums"}
       </Text>
 
@@ -137,7 +137,7 @@ export default function AlbumSearchResults({
           </Flex>
         )}
         {!hasNextPage && albums.length > 0 && (
-          <Text textAlign="center" color="gray.500" fontSize="sm">
+          <Text textAlign="center" color="fg.muted" fontSize="sm">
             End of results
           </Text>
         )}

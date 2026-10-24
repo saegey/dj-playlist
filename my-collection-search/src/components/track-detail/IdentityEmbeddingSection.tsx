@@ -21,7 +21,7 @@ export default function IdentityEmbeddingSection({ query }: Props) {
           <Skeleton height="120px" />
         </VStack>
       ) : query.error ? (
-        <Text color="red.500">
+        <Text color="fg.error">
           {query.error instanceof Error
             ? query.error.message
             : "Failed to load identity embedding preview"}
@@ -29,7 +29,7 @@ export default function IdentityEmbeddingSection({ query }: Props) {
       ) : query.data ? (
         <VStack align="stretch" gap={3}>
           <HStack gap={2} flexWrap="wrap">
-            <Badge colorPalette="purple">Music Identity</Badge>
+            <Badge colorPalette="status.genre">Music Identity</Badge>
             <Badge variant="outline">{query.data.identityData.era}</Badge>
             <Badge variant="outline">{query.data.identityData.country}</Badge>
           </HStack>
@@ -42,8 +42,8 @@ export default function IdentityEmbeddingSection({ query }: Props) {
             maxH="420px"
             fontSize="xs"
             whiteSpace="pre-wrap"
-            bg="gray.50"
-            _dark={{ bg: "gray.900" }}
+            bg="bg.subtle"
+            _dark={{ bg: "bg.subtle" }}
           >
             {query.data.identityText}
           </Box>

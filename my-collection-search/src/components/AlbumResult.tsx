@@ -9,7 +9,6 @@ import {
   Image,
   RatingGroup,
 } from "@chakra-ui/react";
-import { useColorModeValue } from "@/components/ui/color-mode";
 import { Album } from "@/types/track";
 import { useUpdateAlbumMutation } from "@/hooks/useAlbumsQuery";
 import { useAlbum } from "@/hooks/useAlbum";
@@ -50,8 +49,8 @@ export default function AlbumResult({
     resolvedAlbum?.album_thumbnail ||
     "/images/placeholder-artwork.png";
   const [rating, setRating] = useState(resolvedAlbum?.album_rating || 0);
-  const mutedText = useColorModeValue("gray.600", "gray.300");
-  const subtleText = useColorModeValue("gray.500", "gray.400");
+  const mutedText = "fg.muted";
+  const subtleText = "fg.muted";
 
   const updateMutation = useUpdateAlbumMutation();
   const genreLookup = useGenreLookup();
@@ -169,10 +168,10 @@ export default function AlbumResult({
             </Text>
           </Link>
 
-          <Flex gap={2} fontSize="xs" color="gray.500" alignItems="center" flexWrap="wrap">
+          <Flex gap={2} fontSize="xs" color="fg.muted" alignItems="center" flexWrap="wrap">
             {resolvedAlbum.library_identifier && (
               <Text
-                color="blue.600"
+                color="accent.fg"
                 fontWeight="bold"
                 flexShrink={0}
               >
@@ -182,7 +181,7 @@ export default function AlbumResult({
             {displayYear && <Text>{displayYear}</Text>}
             {resolvedAlbum.track_count > 0 && (
               <>
-                <Text color="gray.400">·</Text>
+                <Text color="fg.muted">·</Text>
                 <Text>
                   {resolvedAlbum.track_count} track{resolvedAlbum.track_count !== 1 ? "s" : ""}
                 </Text>
@@ -195,7 +194,7 @@ export default function AlbumResult({
             fontSize="xs"
             flexWrap="wrap"
             alignItems="center"
-            color="gray.500"
+            color="fg.muted"
             mt={0.5}
           >
             <RatingGroup.Root

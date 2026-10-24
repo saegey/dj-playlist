@@ -45,7 +45,7 @@ export default function FilterChips({ chips, onToggle, onClearAll, leading, mt }
           key={chip.key}
           size="sm"
           variant={chip.active ? "solid" : "outline"}
-          colorPalette={chip.active ? "blue" : "gray"}
+          colorPalette={chip.active ? "accent" : "neutral"}
           onClick={() => onToggle(chip.key)}
           borderRadius="full"
           px={3}

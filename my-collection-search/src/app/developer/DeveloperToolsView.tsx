@@ -48,7 +48,7 @@ export default function DeveloperToolsView({ storybookUrl }: { storybookUrl: str
           <Card.Root key={tool.href} variant="outline">
             <Card.Body gap={4}>
               <HStack gap={3} align="flex-start">
-                <Icon as={tool.icon} boxSize={5} color="blue.500" mt={1} />
+                <Icon as={tool.icon} boxSize={5} color="accent.fg" mt={1} />
                 <Box>
                   <Heading size="md">{tool.title}</Heading>
                   <Text color="fg.muted" mt={1}>{tool.description}</Text>
@@ -71,7 +71,7 @@ export default function DeveloperToolsView({ storybookUrl }: { storybookUrl: str
           <Card.Root variant="outline">
             <Card.Body gap={4}>
               <HStack gap={3} align="flex-start">
-                <Icon as={FiBookOpen} boxSize={5} color="blue.500" mt={1} />
+                <Icon as={FiBookOpen} boxSize={5} color="accent.fg" mt={1} />
                 <Box>
                   <Heading size="md">Storybook</Heading>
                   <Text color="fg.muted" mt={1}>

@@ -243,3 +243,23 @@ describe("PlayerControlsView — no artwork", () => {
     expect(screen.queryByRole("img")).toBeNull();
   });
 });
+
+describe("PlayerControlsView — AirPlay and Queue toggles", () => {
+  it.each([true, false])("renders AirPlay and Queue (active: %s)", (active) => {
+    renderWithProviders(
+      <PlaylistPlayerProvider>
+        <PlayerControlsView
+          {...baseProps}
+          compact={false}
+          isAirPlayAvailable
+          isAirPlayActive={active}
+          isQueueOpen={active}
+          onQueueToggle={noop}
+        />
+      </PlaylistPlayerProvider>
+    );
+
+    expect(screen.getByRole("button", { name: "AirPlay" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Queue" })).toBeTruthy();
+  });
+});

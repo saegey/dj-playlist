@@ -125,7 +125,7 @@ export default function CoverArtUpload({
             <Button size="sm" onClick={handleClick} variant="outline">
               Change Image
             </Button>
-            <Button size="sm" onClick={handleClear} variant="outline" colorPalette="red">
+            <Button size="sm" onClick={handleClear} variant="outline" colorPalette="danger">
               Remove
             </Button>
           </Flex>
@@ -139,12 +139,12 @@ export default function CoverArtUpload({
           onClick={handleClick}
           cursor="pointer"
           border="2px dashed"
-          borderColor={dragActive ? "blue.400" : "border.subtle"}
+          borderColor={dragActive ? "accent.border" : "border.subtle"}
           borderRadius="md"
           padding={6}
           textAlign="center"
-          bg={dragActive ? "blue.subtle" : "bg.subtle"}
-          _hover={{ borderColor: "blue.400", bg: "blue.subtle" }}
+          bg={dragActive ? "accent.subtle" : "bg.subtle"}
+          _hover={{ borderColor: "accent.border", bg: "accent.subtle" }}
           transition="all 0.2s"
         >
           <Text fontSize="sm" color="fg.muted">

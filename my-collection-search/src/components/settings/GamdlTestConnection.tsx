@@ -74,12 +74,12 @@ export default function GamdlTestConnection() {
 
   const getStatusIcon = (status?: boolean) => {
     if (status === undefined) return <LuClock />;
-    return status ? <LuCheck color="green" /> : <LuX color="red" />;
+    return status ? <LuCheck color="var(--chakra-colors-fg-success)" /> : <LuX color="var(--chakra-colors-fg-error)" />;
   };
 
   const getStatusColor = (status?: boolean) => {
-    if (status === undefined) return "gray";
-    return status ? "green" : "red";
+    if (status === undefined) return "neutral";
+    return status ? "status.success" : "status.missing";
   };
 
   return (
@@ -174,7 +174,7 @@ export default function GamdlTestConnection() {
                     </List.Root>
 
                     {lastResult.details.error_type && (
-                      <Text fontSize="sm" color="red.500" mt={2}>
+                      <Text fontSize="sm" color="fg.error" mt={2}>
                         <strong>Error Type:</strong> {lastResult.details.error_type}
                       </Text>
                     )}
