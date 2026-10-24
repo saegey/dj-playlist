@@ -1,8 +1,23 @@
 # Server-hosted AirPlay players
 
-Status: draft for review; implementation has not started.
+Status: design merged in #688; prototype validation underway. Initial backend
+implementation is pending.
 
 Issue: [#651](https://github.com/Public-Vinyl-Radio/groovenet/issues/651).
+
+## Initial delivery scope update (2026-10-24)
+
+The design PR (#688) has merged. During prototype review, the user deferred
+synchronized multi-room playback because it is not currently a priority.
+The initial backend targets one selected AirPlay speaker at a time. Speaker
+groups and synchronization checks below describe follow-up scope and do not
+block that delivery. They remain unverified, not passed.
+
+Independent persistent named players and queues remain planned in #693;
+concurrent-instance validation is distinct from synchronized multi-room audio.
+The backend work in #692 can proceed from reviewed single-output findings in
+#691 without waiting for the deferred synchronization checks. See
+`evaluations/691/README.md` for measured prototype results and remaining checks.
 
 ## Intended experience
 

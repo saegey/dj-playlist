@@ -3,6 +3,12 @@
 Part of [#651](https://github.com/Public-Vinyl-Radio/groovenet/issues/651).
 Design review: [#688](https://github.com/Public-Vinyl-Radio/groovenet/pull/688).
 
+Current scope: the user has deferred synchronized multi-room playback. Initial
+backend delivery targets one selected speaker; multi-room checks below remain
+follow-up work and must not be marked passed. Independent named queues remain
+planned. The design PR has merged, and the single-output findings can inform
+#692 while the remaining validation work stays open.
+
 ## Isolated API experiment
 
 Run from a checkout on a machine with Docker, Bash, and Python 3:
