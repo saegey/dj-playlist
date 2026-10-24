@@ -13,8 +13,8 @@ vi.mock("next/font/local", () => ({
 import { fontClassName } from "./fonts";
 
 describe("fonts", () => {
-  it("loads heading, body and mono as swappable CSS variables", () => {
-    expect(loaded.map((o) => o.variable)).toEqual(["--gn-font-heading", "--gn-font-body", "--gn-font-mono"]);
+  it("loads body and mono as swappable CSS variables", () => {
+    expect(loaded.map((o) => o.variable)).toEqual(["--gn-font-body", "--gn-font-mono"]);
     expect(fontClassName).toBe(loaded.map((o) => `class-for-${o.variable}`).join(" "));
   });
 
@@ -28,7 +28,6 @@ describe("fonts", () => {
         expect(existsSync(path.join(import.meta.dirname, file)), file).toBe(true);
       }
     }
-    expect(existsSync(path.join(import.meta.dirname, "fonts/OFL-BarlowCondensed.txt"))).toBe(true);
     expect(existsSync(path.join(import.meta.dirname, "fonts/OFL-IBMPlex.txt"))).toBe(true);
   });
 });

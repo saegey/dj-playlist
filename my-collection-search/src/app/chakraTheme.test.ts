@@ -120,7 +120,7 @@ describe("chakra theme", () => {
     });
 
     it("points the font tokens at swappable variables, with label defaulting to mono", () => {
-      expect(token("fonts.heading")).toContain("var(--gn-font-heading)");
+      expect(token("fonts.heading")).toContain("var(--gn-font-heading, var(--gn-font-body))");
       expect(token("fonts.body")).toContain("var(--gn-font-body)");
       expect(token("fonts.mono")).toContain("var(--gn-font-mono)");
       expect(token("fonts.label")).toContain("var(--gn-font-label, var(--gn-font-mono))");

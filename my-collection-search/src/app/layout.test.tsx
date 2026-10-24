@@ -5,7 +5,7 @@ import { sleeve } from "./palettes/sleeve";
 
 const service = vi.hoisted(() => ({ getAppearance: vi.fn() }));
 vi.mock("@/server/services/settingsService", () => ({ settingsService: service }));
-vi.mock("./fonts", () => ({ fontClassName: "gn-font-heading gn-font-body gn-font-mono" }));
+vi.mock("./fonts", () => ({ fontClassName: "gn-font-body gn-font-mono" }));
 vi.mock("./providers", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock("@/components/EmotionRegistry", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock("@/components/AppShell", () => ({ default: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }));
@@ -58,7 +58,7 @@ describe("root layout", () => {
 
   it("puts only the font variable classes on <html>, leaving light/dark to the colour-mode provider", async () => {
     const html = await render("x");
-    expect(html).toMatch(/^<html [^>]*class="gn-font-heading gn-font-body gn-font-mono"/);
+    expect(html).toMatch(/^<html [^>]*class="gn-font-body gn-font-mono"/);
     expect(html).not.toMatch(/class="[^"]*\bdark\b/);
   });
 });

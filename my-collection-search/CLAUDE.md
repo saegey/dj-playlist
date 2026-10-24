@@ -163,11 +163,11 @@ an invalid value the browser drops, so it fails silently.
   facet counts); the label becomes "Genre · 41". Don't add a count query for it.
 - **Type:** fonts are self-hosted through `next/font/local` (`src/app/fonts.ts`,
   woff2 under `src/app/fonts/` with their OFL licences) and exposed as
-  `--gn-font-heading|body|mono|label`, which the `heading`, `body`, `mono` and
+  `--gn-font-body|mono` (plus optional `--gn-font-heading|label`), which the `heading`, `body`, `mono` and
   `label` font tokens read; a later font setting (#670) swaps a face by
-  overriding the variable. Headings are a condensed display face (Barlow
-  Condensed), body is IBM Plex Sans, and `fontFamily="mono"` (IDs, paths) is
-  IBM Plex Mono. `fontFamily="label"` (defaults to the mono face) is for
+  overriding the variable. Body and headings are IBM Plex Sans (headings fall
+  back to the body face until `--gn-font-heading` is set), and
+  `fontFamily="mono"` (IDs, paths) is IBM Plex Mono. `fontFamily="label"` (defaults to the mono face) is for
   overlines (uppercase, letter-spaced), table headers, tags, nav and buttons.
   Add a face by committing its woff2 and licence and listing it in `fonts.ts`;
   `fonts.test.ts` checks the files exist. Inputs use 16px text so iOS doesn't zoom.

@@ -1,21 +1,10 @@
 // Self-hosted faces (woff2 under ./fonts, SIL OFL licences alongside), loaded
 // through next/font so they are fingerprinted, preloaded and need no network
-// at build time. Each sets a `--gn-font-*` variable that the theme's `heading`,
-// `body`, `mono` and `label` tokens read, so a later setting (#670) can swap
-// one by overriding the variable. Provisional until #664 is signed off.
+// at build time. Each sets a `--gn-font-*` variable that the theme's `body`,
+// `mono`, `heading` and `label` tokens read, so a later setting (#670) can swap
+// one by overriding the variable. Headings use the body face until a
+// `--gn-font-heading` is set. Provisional until #664 is signed off.
 import localFont from "next/font/local";
-
-// Condensed display face for headings.
-const heading = localFont({
-  src: [
-    { path: "./fonts/BarlowCondensed-600.woff2", weight: "600", style: "normal" },
-    { path: "./fonts/BarlowCondensed-700.woff2", weight: "700", style: "normal" },
-  ],
-  variable: "--gn-font-heading",
-  display: "swap",
-  adjustFontFallback: "Arial",
-  fallback: ["Arial Narrow", "Helvetica Neue", "Arial", "sans-serif"],
-});
 
 const body = localFont({
   src: [
@@ -43,4 +32,4 @@ const mono = localFont({
 });
 
 /** Class names that define the font variables; put them on <html>. */
-export const fontClassName = [heading, body, mono].map((font) => font.variable).join(" ");
+export const fontClassName = [body, mono].map((font) => font.variable).join(" ");

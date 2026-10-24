@@ -76,7 +76,7 @@ export const borderWidths = {
 const sansFallback = `"Helvetica Neue", Arial, sans-serif`;
 const monoFallback = `ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
 export const fonts = {
-  heading: { value: `var(--gn-font-heading), "Arial Narrow", ${sansFallback}` },
+  heading: { value: `var(--gn-font-heading, var(--gn-font-body)), ${sansFallback}` },
   body: { value: `var(--gn-font-body), ${sansFallback}` },
   mono: { value: `var(--gn-font-mono), ${monoFallback}` },
   label: { value: `var(--gn-font-label, var(--gn-font-mono)), ${monoFallback}` },

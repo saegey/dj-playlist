@@ -18,6 +18,7 @@ const ProgressSlider: React.FC<Props> = React.memo(({ seek }) => {
   return (
     <HStack gap={3} align="center" mb={2}>
       <Text
+        fontFamily="label"
         fontSize="xs"
         minW="36px"
         textAlign="right"
@@ -39,14 +40,22 @@ const ProgressSlider: React.FC<Props> = React.memo(({ seek }) => {
           step={0.1}
         >
           <Slider.Control>
-            <Slider.Track bg="bg.emphasized" height="8px" borderRadius="full">
+            <Slider.Track bg="bg.panel" height="12px" borderWidth="outline" borderColor="border.ink">
               <Slider.Range bg="accent.solid" />
             </Slider.Track>
-            <Slider.Thumbs rounded="full" />
+            <Slider.Thumbs
+              rounded="none"
+              width="14px"
+              height="22px"
+              bg="neutral.solid"
+              borderWidth="0"
+              boxShadow="none"
+            />
           </Slider.Control>
         </Slider.Root>
       </Box>
       <Text
+        fontFamily="label"
         fontSize="xs"
         minW="36px"
         color="fg.muted"
