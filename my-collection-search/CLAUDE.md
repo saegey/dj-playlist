@@ -81,30 +81,49 @@ then serve it at `/storybook/index.html`. Never mount a host Storybook directory
 over that image path. `just build-storybook` is for optional local inspection;
 generated output must stay untracked. See the root README's Storybook workflow.
 
-Chakra UI v3 with its default theme; `src/app/chakraTheme.ts` adds only
-`accent.solid`. Reference only tokens that exist: an undefined one (`brand.0`
-was) compiles to an invalid value the browser drops, so it fails silently.
+Chakra UI v3 on `src/app/chakraTheme.ts`, which makes colour palette-driven.
+Reference only tokens that exist: an undefined one (`brand.0` was) compiles to
+an invalid value the browser drops, so it fails silently.
 - **Colour:** semantic tokens over raw scales — `bg`, `bg.subtle` (toolbars,
   active nav), `bg.muted` (row hover), `bg.panel` (inputs, popovers, dialogs),
-  `fg`, `fg.muted` (secondary text), `border`. `fg.subtle` misses 4.5:1
-  contrast; only for non-essential labels such as side positions.
-- **One accent, blue:** `accent.solid` or `colorPalette="blue"` for the
-  primary action, active filters, selection and playback progress. Never two
-  solid blue buttons side by side; `colorPalette="red"` only for destructive
+  `fg`, `fg.muted` (secondary text), `border`. All of them read `--gn-*`
+  variables, so they follow the palette; raw scales (`gray.500`, `blue.500`)
+  do not and are being replaced (#666). Don't add new ones.
+- **One accent:** `accent.solid` or `colorPalette="accent"` for the primary
+  action, active filters, selection and playback progress. Never two solid
+  accent buttons side by side; `colorPalette="red"` only for destructive
   actions.
+- **Palettes:** a palette is a block of `--gn-*` CSS variables chosen by
+  `data-palette` on `<html>` (server-rendered in `layout.tsx`, so no flash),
+  independent of the `.dark` class that `ColorModeProvider` sets. The variable
+  list is `paletteVariableNames` in `src/app/palettes/types.ts`: `--gn-ground`
+  (page), `--gn-surface` (panels), `--gn-ink`, `--gn-ink-muted`, `--gn-border`,
+  `--gn-accent-{solid,fg,subtle,contrast,muted,emphasized,focus-ring,border}`,
+  `--gn-shadow`, and `--gn-status-{missing,analysis,genre,success}-{fg,subtle,border}`.
+  Every palette defines every variable in light and dark. To add one: create
+  `src/app/palettes/<id>.ts` exporting a `Palette`, register it in
+  `palettes/index.ts`; `chakraTheme.ts` emits `[data-palette="<id>"]` and
+  `[data-palette="<id>"].dark`, and `palettes.test.ts` checks completeness and
+  WCAG AA contrast (4.5:1 text, 3:1 borders, focus rings, icons) and that the
+  status colours differ in lightness. An unknown `data-palette` falls back to
+  the default palette (Sleeve), which is also declared on `:root`. Sleeve's
+  values are provisional until #664 is signed off; change them in `sleeve.ts` only.
+- **Status** tokens `status.{missing,analysis,genre,success}.{fg,subtle,border}`
+  carry the badge meanings below; always with their word, never colour alone.
 - **Buttons:** `size="sm"` by default, `xs` inside cards and dense rows;
   `variant="outline"` is the default, `ghost` for low-weight actions
   (`color="fg.muted"` for tertiary), `solid` for the one primary action.
   Icon-only buttons need an `aria-label`.
-- **Badges** (`size="sm"`, `subtle`) have fixed meanings: `red` missing data
-  the pipeline needs (No embedding), `orange` missing analysis (No BPM),
-  `purple` genre/AI-derived, bold `blue` library ID, `green`/`yellow`/`red`
-  similarity score. Always text, never colour alone. Genre badges go through
-  `GenreBadge`.
+- **Badges** (`size="sm"`, `subtle`) have fixed meanings: missing data the
+  pipeline needs (No embedding), missing analysis (No BPM), genre/AI-derived,
+  bold library ID, and similarity score (`green`/`yellow`/`red`). Until #666
+  moves them onto the `status.*` tokens they still use `red`, `orange`,
+  `purple` and `blue`. Always text, never colour alone. Genre badges go
+  through `GenreBadge`.
 - **Shape:** `borderRadius="md"` for buttons, inputs, cards and artwork;
   `full` only for filter chips, player transport buttons and slider tracks;
   `xl` for the search toolbar, `2xl` for dialogs and drawers. Separate with
-  1px `border`, not shadows; hover is a background step, never a lift.
+  1px `border`, not shadows (the house style, #667, will change this); hover is a background step, never a lift.
 - **Type:** the system UI stack (no webfont); `fontFamily="mono"` only for
   IDs and paths. Inputs use 16px text so iOS doesn't zoom.
 - **Copy:** terse sentence case, DJ vocabulary ("112 BPM", "D major (10B)",

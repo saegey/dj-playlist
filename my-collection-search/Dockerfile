@@ -104,6 +104,7 @@ COPY --exclude=app --exclude=server --exclude=scripts --exclude=workers \
      --exclude=**/__tests__ --exclude=**/*.test.* --exclude=**/*.spec.* \
      my-collection-search/src ./src
 COPY my-collection-search/src/app/chakraTheme.ts ./src/app/chakraTheme.ts
+COPY --exclude=**/*.test.* my-collection-search/src/app/palettes ./src/app/palettes
 
 FROM frontend AS storybook
 ENV STORYBOOK_DISABLE_TELEMETRY=1

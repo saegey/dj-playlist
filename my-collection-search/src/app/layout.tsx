@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { developerToolsEnabled } from "@/lib/developerTools";
 import AnalyticsInit from "@/components/AnalyticsInit";
 import { getClientAnalyticsConfig } from "@/lib/analytics/config";
+import { defaultPaletteId } from "./palettes";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +35,11 @@ export const viewport = {
   initialScale: 1,
 };
 
+// data-palette is server-rendered so the palette is in place before first
+// paint; #669 will read the user's choice instead of the default.
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-palette={defaultPaletteId} suppressHydrationWarning>
       <body>
         <AnalyticsInit config={getClientAnalyticsConfig()} />
         <EmotionRegistry>
