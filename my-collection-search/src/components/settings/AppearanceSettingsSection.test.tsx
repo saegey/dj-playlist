@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
 import React from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "@/test/renderWithProviders";
-import { palettes, paletteIds } from "@/app/palettes";
-import { sleeve } from "@/app/palettes/sleeve";
+import { paletteIds } from "@/app/palettes";
 
 const api = vi.hoisted(() => ({
   fetchAppearanceSettings: vi.fn(),
@@ -16,16 +15,6 @@ vi.mock("@/components/ui/toaster", () => ({ toaster: toast }));
 
 import AppearanceSettingsSection from "./AppearanceSettingsSection";
 
-const riso = {
-  light: { ...sleeve.light, "--gn-ground": "#ffe8f0" },
-  dark: { ...sleeve.dark, "--gn-ground": "#301020" },
-};
-
-function addRiso() {
-  (palettes as Record<string, unknown>).riso = riso;
-  paletteIds.push("riso" as never);
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
@@ -35,33 +24,27 @@ beforeEach(() => {
   api.updateAppearanceSettings.mockImplementation(async ({ palette }) => ({ palette }));
 });
 
-afterEach(() => {
-  delete (palettes as Record<string, unknown>).riso;
-  const at = paletteIds.indexOf("riso" as never);
-  if (at >= 0) paletteIds.splice(at, 1);
-});
-
 describe("AppearanceSettingsSection palette", () => {
   it("shows a card per registered palette, with the saved one selected", async () => {
     renderWithProviders(<AppearanceSettingsSection />);
 
     const sleeveCard = await screen.findByRole("radio", { name: /sleeve/i });
     await waitFor(() => expect(sleeveCard.getAttribute("aria-checked")).toBe("true"));
-    expect(screen.getAllByRole("radio", { name: /sleeve|riso/i })).toHaveLength(1);
+    for (const id of paletteIds) {
+      expect(screen.getByRole("radio", { name: new RegExp(id, "i") })).toBeTruthy();
+    }
   });
 
   it("paints each card's swatches from the palette in the current mode", async () => {
-    addRiso();
     renderWithProviders(<AppearanceSettingsSection />);
 
     const card = await screen.findByRole("radio", { name: /riso/i });
     const ground = card.querySelector<HTMLElement>("[title=Ground]");
-    expect(ground?.style.backgroundColor).toBe("rgb(255, 232, 240)");
+    expect(ground?.style.backgroundColor).toBe("rgb(251, 241, 222)");
     expect(card.querySelectorAll("[title]")).toHaveLength(4);
   });
 
   it("lists every palette in the registry and applies the chosen one at once", async () => {
-    addRiso();
     const { user } = renderWithProviders(<AppearanceSettingsSection />);
     await waitFor(() =>
       expect(screen.getByRole("radio", { name: /sleeve/i }).getAttribute("aria-checked")).toBe("true")
@@ -78,7 +61,6 @@ describe("AppearanceSettingsSection palette", () => {
   });
 
   it("selects the card as soon as it is clicked, before the save returns", async () => {
-    addRiso();
     let finish: (value: { palette: string }) => void = () => {};
     api.updateAppearanceSettings.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
     const { user } = renderWithProviders(<AppearanceSettingsSection />);
@@ -105,7 +87,6 @@ describe("AppearanceSettingsSection palette", () => {
   });
 
   it("puts the page back and says so when saving fails", async () => {
-    addRiso();
     api.updateAppearanceSettings.mockRejectedValue(new Error("db down"));
     const { user } = renderWithProviders(<AppearanceSettingsSection />);
     await waitFor(() =>
@@ -119,7 +100,6 @@ describe("AppearanceSettingsSection palette", () => {
   });
 
   it("reports a non-Error failure by its text", async () => {
-    addRiso();
     api.updateAppearanceSettings.mockRejectedValue("nope");
     const { user } = renderWithProviders(<AppearanceSettingsSection />);
     await user.click(await screen.findByRole("radio", { name: /riso/i }));
@@ -159,13 +139,12 @@ describe("AppearanceSettingsSection mode", () => {
   });
 
   it("shows swatches for the current mode", async () => {
-    addRiso();
     localStorage.setItem("theme", "dark");
     renderWithProviders(<AppearanceSettingsSection />);
 
     const card = await screen.findByRole("radio", { name: /riso/i });
     await waitFor(() =>
-      expect(card.querySelector<HTMLElement>("[title=Ground]")?.style.backgroundColor).toBe("rgb(48, 16, 32)")
+      expect(card.querySelector<HTMLElement>("[title=Ground]")?.style.backgroundColor).toBe("rgb(26, 20, 36)")
     );
   });
 });

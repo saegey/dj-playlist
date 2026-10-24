@@ -33,7 +33,12 @@ export const paletteVariableNames = [
 export type PaletteVariable = (typeof paletteVariableNames)[number];
 export type PaletteValues = Record<PaletteVariable, string>;
 
+/** WCAG level a palette's text pairs are held to; non-text pairs stay at 3:1. */
+export type ContrastLevel = "AA" | "AAA";
+
 export interface Palette {
+  /** Defaults to AA. */
+  contrast?: ContrastLevel;
   light: PaletteValues;
   dark: PaletteValues;
 }

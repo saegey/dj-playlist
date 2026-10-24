@@ -1,10 +1,13 @@
+import { midnight } from "./midnight";
+import { mono } from "./mono";
+import { riso } from "./riso";
 import { sleeve } from "./sleeve";
 import type { Palette } from "./types";
 
 export * from "./types";
 
 /** Add a palette here and it gets its CSS blocks and test coverage. */
-export const palettes = { sleeve } satisfies Record<string, Palette>;
+export const palettes = { sleeve, riso, midnight, mono } satisfies Record<string, Palette>;
 
 export type PaletteId = keyof typeof palettes;
 
