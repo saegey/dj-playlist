@@ -128,6 +128,7 @@ describe("chakra theme", () => {
 
     it("rings default-palette controls in the palette's focus colour", () => {
       expect(resolved("gray.focusRing")).toBe("var(--gn-accent-focus-ring)");
+      expect(resolved("gray.border")).toBe("var(--gn-border)");
     });
 
     it("draws the outline colour from ink", () => {
@@ -170,6 +171,11 @@ describe("chakra theme", () => {
       const slots = system._config.theme?.slotRecipes as any;
       expect(slots.nativeSelect.variants.variant.outline.field.borderWidth).toBe("outline");
       expect(slots.select.variants.variant.outline.trigger.borderWidth).toBe("outline");
+    });
+
+    it("fills a selected segment with ink inside an outlined strip", () => {
+      const root = (system._config.theme?.slotRecipes as any).segmentGroup.base.root;
+      expect(root).toMatchObject({ borderWidth: "outline", "--segment-indicator-bg": "colors.neutral.solid" });
     });
 
     it("declares a global focus ring offset from the border", () => {

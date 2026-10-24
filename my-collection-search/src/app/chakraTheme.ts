@@ -106,7 +106,8 @@ const config = defineConfig({
         // The page's default colorPalette is gray, so any control that doesn't
         // pick one rings in this colour. Chakra's own is too pale (about 2:1
         // on the ground); the focus ring must reach 3:1 in every palette.
-        gray: { focusRing: v("--gn-accent-focus-ring") },
+        // Its border is likewise too pale for an outline button (under 2:1).
+        gray: { focusRing: v("--gn-accent-focus-ring"), border: v("--gn-border") },
         status: statusTokens,
         // Destructive actions: the "missing" status colours, with a solid fill.
         danger: {

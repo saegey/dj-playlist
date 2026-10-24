@@ -11,6 +11,7 @@ import {
   menuAnatomy,
   nativeSelectAnatomy,
   popoverAnatomy,
+  segmentGroupAnatomy,
   selectAnatomy,
 } from "@chakra-ui/react/anatomy";
 
@@ -183,6 +184,25 @@ export const slotRecipes = {
       variant: {
         outline: { trigger: fieldStates(outsideRing).outline },
         subtle: { trigger: fieldStates(outsideRing).subtle },
+      },
+    },
+  }),
+  // A segmented control: an outlined strip whose selection is an ink fill,
+  // like an active filter chip.
+  segmentGroup: defineSlotRecipe({
+    slots: segmentGroupAnatomy.keys(),
+    base: {
+      root: {
+        "--segment-indicator-bg": "colors.neutral.solid",
+        "--segment-indicator-shadow": "none",
+        borderWidth: "outline",
+        borderColor: "border.ink",
+        boxShadow: "none",
+        bg: "bg.panel",
+      },
+      item: {
+        fontFamily: "label",
+        "&[data-state=checked]": { color: "neutral.contrast" },
       },
     },
   }),
