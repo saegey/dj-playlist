@@ -180,7 +180,7 @@ export default function GenrePage() {
                   buttons={<TrackActionsMenu track={track as unknown as Track} />}
                   footer={
                     <Flex gap={1} align="center">
-                      <Badge colorPalette="blue" size="sm">
+                      <Badge colorPalette="accent" size="sm">
                         #{index + 1}
                       </Badge>
                       {track.play_count > 0 && (

@@ -71,7 +71,7 @@ export default function SpinActionsMenu({ label, onEdit, onDelete, deleting }: P
                     <DrawerItem
                       icon={<FiTrash />}
                       label="Delete spin"
-                      color="red.500"
+                      color="fg.error"
                       onClick={() => { setSheetOpen(false); setConfirmOpen(true); }}
                     />
                   </Stack>
@@ -133,7 +133,7 @@ export default function SpinActionsMenu({ label, onEdit, onDelete, deleting }: P
                 <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={deleting}>
                   Cancel
                 </Button>
-                <Button colorPalette="red" onClick={handleConfirm} loading={deleting}>
+                <Button colorPalette="danger" onClick={handleConfirm} loading={deleting}>
                   Delete
                 </Button>
               </Dialog.Footer>

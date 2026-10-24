@@ -386,7 +386,7 @@ export default function TrackActionsMenu({
                       <DrawerItem
                         icon={<FiTrash2 />}
                         label={removeAudioLoading ? "Removing..." : "Remove Audio"}
-                        color="red.500"
+                        color="fg.error"
                         disabled={removeAudioLoading}
                         onClick={() => { setRemoveAudioConfirmOpen(true); setDrawerOpen(false); }}
                       />
@@ -394,7 +394,7 @@ export default function TrackActionsMenu({
                     <DrawerItem
                       icon={<FiTrash2 />}
                       label="Delete Track"
-                      color="red.500"
+                      color="fg.error"
                       onClick={() => { setDeleteConfirmOpen(true); setDrawerOpen(false); }}
                     />
                     {/* External links */}
@@ -485,14 +485,14 @@ export default function TrackActionsMenu({
                   <Menu.Item
                     onSelect={() => setRemoveAudioConfirmOpen(true)}
                     value="remove-audio"
-                    color="red.500"
+                    color="fg.error"
                     disabled={removeAudioLoading}
                   >
                     <FiTrash2 />
                     {removeAudioLoading ? "Removing..." : "Remove Audio"}
                   </Menu.Item>
                 )}
-                <Menu.Item onSelect={() => setDeleteConfirmOpen(true)} value="delete" color="red.500">
+                <Menu.Item onSelect={() => setDeleteConfirmOpen(true)} value="delete" color="fg.error">
                   <FiTrash2 /> Delete Track
                 </Menu.Item>
                 {/* External links */}
@@ -564,7 +564,7 @@ export default function TrackActionsMenu({
                 <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} disabled={deleteLoading}>
                   Cancel
                 </Button>
-                <Button colorPalette="red" onClick={handleDeleteConfirm} loading={deleteLoading}>
+                <Button colorPalette="danger" onClick={handleDeleteConfirm} loading={deleteLoading}>
                   Delete
                 </Button>
               </Dialog.Footer>
@@ -594,7 +594,7 @@ export default function TrackActionsMenu({
                 <Button variant="outline" onClick={() => setRemoveAudioConfirmOpen(false)} disabled={removeAudioLoading}>
                   Cancel
                 </Button>
-                <Button colorPalette="red" onClick={handleRemoveAudioConfirm} loading={removeAudioLoading}>
+                <Button colorPalette="danger" onClick={handleRemoveAudioConfirm} loading={removeAudioLoading}>
                   Remove
                 </Button>
               </Dialog.Footer>

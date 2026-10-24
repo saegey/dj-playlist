@@ -105,7 +105,7 @@ export default function RemovedReleasesDialog({
                 Keep Files
               </Button>
               <Button
-                colorPalette="red"
+                colorPalette="danger"
                 onClick={onDelete}
                 loading={deletePending}
                 disabled={deletePending}

@@ -192,8 +192,8 @@ function ConfidenceIndicator({
           display="inline-flex"
           alignItems="center"
           flexShrink={0}
-          color={low ? "orange.400" : "fg.subtle"}
-          _hover={{ color: low ? "orange.300" : "fg.muted" }}
+          color={low ? "fg.warning" : "fg.subtle"}
+          _hover={{ color: low ? "fg.warning" : "fg.muted" }}
           aria-label={low ? `Uncertain ${subject}` : `${subject === "key" ? "Key" : "BPM"} confidence`}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
           onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
@@ -242,7 +242,7 @@ function BpmValue({
   const hasBpm = Number.isFinite(num) && num > 0;
   if (!hasBpm) {
     return (
-      <Badge colorPalette="orange" variant="subtle" size="sm" whiteSpace="nowrap">
+      <Badge colorPalette="status.analysis" variant="subtle" size="sm" whiteSpace="nowrap">
         No BPM
       </Badge>
     );
@@ -283,9 +283,9 @@ function GenreList({
   const overflow = items.length - shown.length;
   return (
     <Flex gap={1.5} alignItems="center" overflow="hidden" minW={0} data-testid="track-genres">
-      <GenreBadgeList items={shown} kind={kind} scope="tracks" colorPalette="purple" variant="subtle" />
+      <GenreBadgeList items={shown} kind={kind} scope="tracks" colorPalette="status.genre" variant="subtle" />
       {overflow > 0 && (
-        <Badge size="sm" variant="subtle" colorPalette="gray" flexShrink={0}>
+        <Badge size="sm" variant="subtle" colorPalette="neutral" flexShrink={0}>
           +{overflow}
         </Badge>
       )}
@@ -381,7 +381,7 @@ function ArtworkPlay({
       bg="transparent"
       cursor="pointer"
       _hover={{ "& .artwork-play-scrim": { opacity: 1 } }}
-      _focusVisible={{ "& .artwork-play-scrim": { opacity: 1 }, outline: "2px solid", outlineColor: "blue.500" }}
+      _focusVisible={{ "& .artwork-play-scrim": { opacity: 1 }, outline: "2px solid", outlineColor: "accent.focusRing" }}
     >
       <Image
         src={artworkSrc}
@@ -399,12 +399,12 @@ function ArtworkPlay({
         display="flex"
         alignItems="center"
         justifyContent="center"
-        bg="rgba(12, 12, 14, 0.55)"
+        bg="overlay.scrim"
         opacity={0}
         transition="opacity 0.15s ease"
         pointerEvents="none"
       >
-        <Icon as={FaPlay} boxSize={iconSize} color="white" />
+        <Icon as={FaPlay} boxSize={iconSize} color="overlay.fg" />
       </Box>
     </Box>
   );
@@ -420,8 +420,8 @@ function NotesIndicator({ notes }: { notes: string }) {
           display="inline-flex"
           alignItems="center"
           flexShrink={0}
-          color="yellow.400"
-          _hover={{ color: "yellow.300" }}
+          color="fg.warning"
+          _hover={{ color: "fg.warning" }}
           aria-label="Has notes"
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
           onMouseDown={(e: React.MouseEvent) => e.stopPropagation()}
@@ -531,14 +531,14 @@ export default function TrackResult({
   const metaExtras: React.ReactNode[] = [];
   if (track.library_identifier) {
     metaExtras.push(
-      <Badge key="lib" colorPalette="blue" size="sm" fontWeight="bold" flexShrink={0}>
+      <Badge key="lib" colorPalette="accent" size="sm" fontWeight="bold" flexShrink={0}>
         {track.library_identifier}
       </Badge>
     );
   }
   if (sortPositionChange) {
     metaExtras.push(
-      <Badge key="sort" colorPalette="purple" size="sm" flexShrink={0}>
+      <Badge key="sort" colorPalette="status.genre" size="sm" flexShrink={0}>
         #{sortPositionChange.currentPosition} was #{sortPositionChange.previousPosition}
       </Badge>
     );
@@ -651,7 +651,7 @@ export default function TrackResult({
             <Flex gap={1.5} alignItems="center" flexWrap="nowrap" overflow="hidden" data-testid="track-genres" onClick={stopRowEvent} onMouseDown={stopRowEvent}>
               <GenreBadgeList items={discogsGenres.slice(0, 4)} kind="discogs-genre" scope="tracks" size="xs" />
               <GenreBadgeList items={discogsStyles.slice(0, 4)} kind="discogs-style" scope="tracks" size="xs" />
-              <GenreBadgeList items={trackGenres} kind="track" scope="tracks" size="xs" colorPalette="blue" />
+              <GenreBadgeList items={trackGenres} kind="track" scope="tracks" size="xs" colorPalette="accent" />
             </Flex>
           )}
         </Flex>
@@ -680,7 +680,7 @@ export default function TrackResult({
         gap={3}
         width="100%"
         minW={0}
-        borderColor={isSelected ? "blue.500" : undefined}
+        borderColor={isSelected ? "accent.border" : undefined}
         _hover={{ bg: "bg.muted", ...containerHoverReveal }}
         _focusWithin={containerHoverReveal}
       >
@@ -711,7 +711,7 @@ export default function TrackResult({
             </Link>
             {hasNotes && showNotes && <NotesIndicator notes={track.notes as string} />}
             {score !== undefined && (
-              <Badge colorPalette={score > 90 ? "green" : score > 75 ? "yellow" : "red"} size="xs" flexShrink={0}>
+              <Badge colorPalette={score > 90 ? "status.success" : score > 75 ? "status.analysis" : "status.missing"} size="xs" flexShrink={0}>
                 {score.toFixed(0)}%
               </Badge>
             )}
@@ -741,7 +741,7 @@ export default function TrackResult({
             <Flex gap={1.5} alignItems="center" flexWrap="wrap" data-testid="track-genres">
               <GenreBadgeList items={discogsGenres.slice(0, 4)} kind="discogs-genre" scope="tracks" size="xs" />
               <GenreBadgeList items={discogsStyles.slice(0, 4)} kind="discogs-style" scope="tracks" size="xs" />
-              <GenreBadgeList items={trackGenres} kind="track" scope="tracks" size="xs" colorPalette="blue" />
+              <GenreBadgeList items={trackGenres} kind="track" scope="tracks" size="xs" colorPalette="accent" />
             </Flex>
           )}
           {footer && <Box mt={1}>{footer}</Box>}
@@ -765,9 +765,8 @@ export default function TrackResult({
         borderBottomWidth="1px"
         borderBottomColor="border"
         borderLeftWidth={hasDataIssue ? "3px" : undefined}
-        borderLeftColor={hasDataIssue ? "red.400" : undefined}
-        bg={hasDataIssue ? "red.50" : isSelected ? "blue.subtle" : undefined}
-        _dark={{ bg: hasDataIssue ? "red.900" : isSelected ? "blue.subtle" : undefined }}
+        borderLeftColor={hasDataIssue ? "border.error" : undefined}
+        bg={hasDataIssue ? "bg.error" : isSelected ? "accent.subtle" : undefined}
         _hover={{ bg: hasDataIssue ? undefined : "bg.muted", ...containerHoverReveal }}
         _focusWithin={containerHoverReveal}
       >
@@ -818,7 +817,7 @@ export default function TrackResult({
               </Link>
               {hasNotes && showNotes && <NotesIndicator notes={track.notes as string} />}
               {score !== undefined && (
-                <Badge colorPalette={score > 90 ? "green" : score > 75 ? "yellow" : "red"} size="sm" flexShrink={0}>
+                <Badge colorPalette={score > 90 ? "status.success" : score > 75 ? "status.analysis" : "status.missing"} size="sm" flexShrink={0}>
                   {score.toFixed(1)}%
                 </Badge>
               )}
@@ -907,8 +906,8 @@ export default function TrackResult({
     <Flex
       borderWidth="1px"
       borderLeftWidth={hasDataIssue ? "3px" : "1px"}
-      borderLeftColor={hasDataIssue ? "red.400" : undefined}
-      borderColor={isSelected ? "blue.500" : undefined}
+      borderLeftColor={hasDataIssue ? "border.error" : undefined}
+      borderColor={isSelected ? "accent.border" : undefined}
       borderRadius="md"
       p={3}
       gap={3}
@@ -919,8 +918,7 @@ export default function TrackResult({
       mb={3}
       width="100%"
       minW={0}
-      bg={hasDataIssue ? "red.50" : undefined}
-      _dark={{ bg: hasDataIssue ? "red.900" : undefined }}
+      bg={hasDataIssue ? "bg.error" : undefined}
       _hover={{ bg: hasDataIssue ? undefined : "bg.muted", ...containerHoverReveal }}
       _focusWithin={containerHoverReveal}
     >
@@ -954,7 +952,7 @@ export default function TrackResult({
             </Link>
             {hasNotes && showNotes && <NotesIndicator notes={track.notes as string} />}
             {score !== undefined && (
-              <Badge colorPalette={score > 90 ? "green" : score > 75 ? "yellow" : "red"} size="sm" flexShrink={0}>
+              <Badge colorPalette={score > 90 ? "status.success" : score > 75 ? "status.analysis" : "status.missing"} size="sm" flexShrink={0}>
                 {score.toFixed(1)}%
               </Badge>
             )}

@@ -37,6 +37,18 @@ describe("chakra theme", () => {
     }
   });
 
+  it.each(["danger", "neutral"])("defines %s as a full virtual palette", (name) => {
+    for (const part of ["solid", "contrast", "fg", "subtle", "muted", "emphasized", "focusRing", "border"]) {
+      expect(resolved(`${name}.${part}`), part).toBeTruthy();
+    }
+  });
+
+  it("keeps overlay colours constant across palettes", () => {
+    for (const token of ["overlay.fg", "overlay.fg.muted", "overlay.fg.subtle", "overlay.track", "overlay.scrim", "overlay.backdrop"]) {
+      expect(resolved(token), token).not.toMatch(/var\(--gn-/);
+    }
+  });
+
   it("defines fg, subtle and border for every status", () => {
     for (const status of statusNames) {
       for (const part of ["fg", "subtle", "border"]) {

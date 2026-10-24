@@ -4,6 +4,11 @@ import storybook from "eslint-plugin-storybook";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
+// Raw Chakra scales and literal white/black: fixed whatever the palette or mode.
+const COLOUR_PROPS = "/^(color|bg|background|backgroundColor|borderColor|border[A-Z][a-z]+Color|outlineColor|fill|stroke)$/";
+const RAW_COLOUR = "/^((gray|red|blue|green|orange|purple|yellow|cyan|teal|pink)\\.[0-9]{2,3}|(white|black)(Alpha\\.[0-9]+)?)$/";
+const RAW_PALETTE = "/^(gray|red|blue|green|orange|purple|yellow|cyan|teal|pink)$/";
+
 const eslintConfig = [...nextVitals, ...nextTs, {
   rules: {
     // Existing codebase has broad `any` usage and migration debt.
@@ -19,6 +24,16 @@ const eslintConfig = [...nextVitals, ...nextTs, {
     "no-restricted-syntax": ["error", {
       selector: "JSXAttribute[name.name='colorScheme']",
       message: "Chakra v3 has no `colorScheme` prop; use `colorPalette` instead.",
+    }, {
+      // Palettes can only recolour what reads a semantic token (#666).
+      selector: `JSXAttribute[name.name=${COLOUR_PROPS}] Literal[value=${RAW_COLOUR}]`,
+      message: "Use a semantic token (fg.muted, bg.subtle, accent.fg, status.*…), not a raw palette colour.",
+    }, {
+      selector: `Property[key.name=${COLOUR_PROPS}] > Literal[value=${RAW_COLOUR}]`,
+      message: "Use a semantic token (fg.muted, bg.subtle, accent.fg, status.*…), not a raw palette colour.",
+    }, {
+      selector: `JSXAttribute[name.name='colorPalette'] Literal[value=${RAW_PALETTE}]`,
+      message: "Use colorPalette accent, neutral, danger or status.*, not a raw palette.",
     }],
   },
 }, {

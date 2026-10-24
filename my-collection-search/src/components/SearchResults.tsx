@@ -531,10 +531,10 @@ const SearchResults: React.FC = () => {
         </Box>
       ) : (
         <>
-          <Text fontSize="sm" color="gray.500" mb={2} mt={3}>
+          <Text fontSize="sm" color="fg.muted" mb={2} mt={3}>
             {estimatedResults.toLocaleString()} results found
             {activeFilterCount > 0 && (
-              <Text as="span" color="blue.500" ml={2}>
+              <Text as="span" color="accent.fg" ml={2}>
                 ({activeFilterCount} filter{activeFilterCount !== 1 ? "s" : ""} active)
               </Text>
             )}

@@ -278,7 +278,7 @@ export default function AppShell({
                       <Icon
                         as={ItemIcon}
                         boxSize={5}
-                        color={active ? "blue.500" : "fg.muted"}
+                        color={active ? "accent.fg" : "fg.muted"}
                       />
                       {isExpanded && (
                         <Text fontWeight={active ? "bold" : "normal"} fontSize={'0.9rem'}>
@@ -303,7 +303,7 @@ export default function AppShell({
           onOpenChange={(e) => setDrawerOpen(e.open)}
           placement="bottom"
         >
-          <Drawer.Backdrop bg="blackAlpha.400" backdropFilter="blur(4px)" />
+          <Drawer.Backdrop bg="overlay.backdrop" backdropFilter="blur(4px)" />
           <Drawer.Positioner
             paddingTop={0}
             paddingBottom={`calc(env(safe-area-inset-bottom, 0px) + ${mobileDrawerBottomPadding})`}
@@ -313,7 +313,7 @@ export default function AppShell({
               borderTopRadius="2xl"
               borderWidth="1px"
               borderColor="border"
-              boxShadow="0 20px 48px rgba(15, 23, 42, 0.2)"
+              boxShadow="0 20px 48px var(--gn-shadow)"
             >
               <Drawer.Header borderBottomWidth="1px" py={3} px={5} position="relative">
                 <Box
@@ -324,7 +324,7 @@ export default function AppShell({
                   w="40px"
                   h="4px"
                   borderRadius="full"
-                  bg="blackAlpha.300"
+                  bg="overlay.backdrop"
                 />
                 <Box pr={8}>
                   <Text fontWeight="semibold" fontSize="sm">
@@ -364,7 +364,7 @@ export default function AppShell({
                           <Icon
                             as={ItemIcon}
                             boxSize={5}
-                            color={active ? "blue.500" : "fg.muted"}
+                            color={active ? "accent.fg" : "fg.muted"}
                           />
                           <Text fontWeight={active ? "bold" : "normal"}>
                             {item.label}
@@ -423,7 +423,7 @@ export default function AppShell({
           borderColor="border"
           borderRadius="2xl"
           bg="bg"
-          boxShadow="0 12px 28px rgba(15, 23, 42, 0.12)"
+          boxShadow="0 12px 28px var(--gn-shadow)"
         >
           {primaryMobileMenuItems.map((item) => {
             const active = isActiveRoute(current, item.href);
@@ -446,7 +446,7 @@ export default function AppShell({
                   <Icon
                     as={ItemIcon}
                     boxSize={5}
-                    color={active ? "blue.500" : "fg.muted"}
+                    color={active ? "accent.fg" : "fg.muted"}
                   />
                   <Text
                     fontSize="xs"

@@ -52,13 +52,13 @@ export default function PlaylistRecommendations({
             buttons={[
               <Flex key="badges-menu" align="center" gap={1} wrap="wrap">
                 {rec._simIdentity != null && rec._simAudio != null && (
-                  <Badge colorPalette="purple" size="sm">Identity + Vibe</Badge>
+                  <Badge colorPalette="status.genre" size="sm">Identity + Vibe</Badge>
                 )}
                 {rec._simIdentity != null && rec._simAudio == null && (
-                  <Badge colorPalette="blue" size="sm">Identity</Badge>
+                  <Badge colorPalette="accent" size="sm">Identity</Badge>
                 )}
                 {rec._simAudio != null && rec._simIdentity == null && (
-                  <Badge colorPalette="cyan" size="sm">Vibe</Badge>
+                  <Badge colorPalette="accent" size="sm">Vibe</Badge>
                 )}
                 <Menu.Root>
                   <Menu.Trigger asChild>

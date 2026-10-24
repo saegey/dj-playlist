@@ -67,7 +67,7 @@ export default function TrackEditFormFields({
             />
             {formatBpmConfidencePercent(values.bpm_confidence) !== null &&
               (isBpmConfidenceLow(values.bpm_confidence) ? (
-                <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
+                <Badge colorPalette="status.analysis" variant="subtle" size="sm" mt={1}>
                   Uncertain BPM — {formatBpmConfidencePercent(values.bpm_confidence)}% confident
                 </Badge>
               ) : (
@@ -85,7 +85,7 @@ export default function TrackEditFormFields({
             />
             {formatKeyConfidencePercent(values.key_confidence) !== null &&
               (isKeyConfidenceLow(values.key_confidence) ? (
-                <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
+                <Badge colorPalette="status.analysis" variant="subtle" size="sm" mt={1}>
                   Uncertain key — {formatKeyConfidencePercent(values.key_confidence)}% confident
                 </Badge>
               ) : (

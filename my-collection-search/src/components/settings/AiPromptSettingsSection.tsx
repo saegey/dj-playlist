@@ -120,7 +120,7 @@ export default function AiPromptSettingsSection(): React.JSX.Element {
             Using default prompt
           </Text>
         ) : (
-          <Text fontSize="sm" color="green.600">
+          <Text fontSize="sm" color="fg.success">
             Custom prompt active
           </Text>
         )}
@@ -135,7 +135,7 @@ export default function AiPromptSettingsSection(): React.JSX.Element {
       />
 
       <Flex gap={2} mt={3}>
-        <Button colorPalette="blue" onClick={handleSave} loading={saving}>
+        <Button colorPalette="accent" onClick={handleSave} loading={saving}>
           Save Prompt
         </Button>
         <Button variant="outline" onClick={handleReset} disabled={saving}>

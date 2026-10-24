@@ -115,7 +115,7 @@ export default function ManifestVerificationDialog({
               <HStack>
                 {hasMissingFiles && (
                   <Button
-                    colorPalette="orange"
+                    colorPalette="status.analysis"
                     onClick={onCleanup}
                     loading={cleanupPending}
                     disabled={cleanupPending}
@@ -124,7 +124,7 @@ export default function ManifestVerificationDialog({
                   </Button>
                 )}
                 <Button
-                  colorPalette="blue"
+                  colorPalette="accent"
                   onClick={onContinue}
                   disabled={cleanupPending}
                 >

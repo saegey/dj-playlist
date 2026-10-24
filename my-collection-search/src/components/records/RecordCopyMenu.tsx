@@ -50,7 +50,7 @@ export default function RecordCopyMenu({ label, onLogCare, onEdit, onRemove }: P
                         <DrawerItem
                           icon={<FiTrash />}
                           label="Remove copy"
-                          color="red.500"
+                          color="fg.error"
                           onClick={fromSheet(onRemove)}
                         />
                       </>

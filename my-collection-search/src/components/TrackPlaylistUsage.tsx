@@ -36,7 +36,7 @@ export default function TrackPlaylistUsage({
       <Popover.Trigger asChild>
         <Badge
           as="button"
-          colorPalette="purple"
+          colorPalette="status.genre"
           size={size}
           variant={variant}
           cursor="pointer"
@@ -48,11 +48,11 @@ export default function TrackPlaylistUsage({
         <Popover.Content maxW="280px">
           <Popover.Body>
             {playlistsQuery.isLoading ? (
-              <Text fontSize="sm" color="gray.500">
+              <Text fontSize="sm" color="fg.muted">
                 Loading playlists...
               </Text>
             ) : playlistsQuery.error ? (
-              <Text fontSize="sm" color="red.500">
+              <Text fontSize="sm" color="fg.error">
                 Failed to load playlists
               </Text>
             ) : playlistsQuery.data && playlistsQuery.data.length > 0 ? (
@@ -74,14 +74,14 @@ export default function TrackPlaylistUsage({
                         {playlist.name}
                       </NextLink>
                     </Link>
-                    <Badge size="xs" colorPalette="blue" flexShrink={0}>
+                    <Badge size="xs" colorPalette="accent" flexShrink={0}>
                       #{playlist.position}
                     </Badge>
                   </Flex>
                 ))}
               </Flex>
             ) : (
-              <Text fontSize="sm" color="gray.500">
+              <Text fontSize="sm" color="fg.muted">
                 No playlist memberships found.
               </Text>
             )}

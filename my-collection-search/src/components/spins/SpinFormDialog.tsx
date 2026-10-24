@@ -252,7 +252,7 @@ export default function SpinFormDialog({
       </HStack>
 
       <HStack gap={2} wrap="wrap">
-        <Badge colorPalette="blue">
+        <Badge colorPalette="accent">
           {form.selectionMode === "sides"
             ? `${selectedSideCount} side${selectedSideCount === 1 ? "" : "s"} selected`
             : `${selectedTrackCount} track${selectedTrackCount === 1 ? "" : "s"} selected`}
@@ -260,7 +260,7 @@ export default function SpinFormDialog({
         <Badge variant="outline">
           {selectedTrackCount} track event{selectedTrackCount === 1 ? "" : "s"}
         </Badge>
-        {isFullAlbumSpin && <Badge colorPalette="green">Full album</Badge>}
+        {isFullAlbumSpin && <Badge colorPalette="status.success">Full album</Badge>}
       </HStack>
 
       {playableStructureQuery.isLoading ? (
@@ -268,7 +268,7 @@ export default function SpinFormDialog({
           <Spinner size="sm" />
         </Flex>
       ) : playableStructureQuery.error ? (
-        <Text color="red.500">
+        <Text color="fg.error">
           {playableStructureQuery.error instanceof Error
             ? playableStructureQuery.error.message
             : "Failed to load playable structure"}

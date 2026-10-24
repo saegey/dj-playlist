@@ -69,7 +69,7 @@ export default function TrackListBuilder({
         <Text fontSize="lg" fontWeight="semibold">
           Tracks
         </Text>
-        <Button onClick={addTrack} size="sm" colorPalette="blue">
+        <Button onClick={addTrack} size="sm" colorPalette="accent">
           + Add Track
         </Button>
       </Flex>
@@ -105,7 +105,7 @@ export default function TrackListBuilder({
                 size="xs"
                 onClick={() => removeTrack(index)}
                 variant="ghost"
-                colorPalette="red"
+                colorPalette="danger"
               >
                 Remove
               </Button>

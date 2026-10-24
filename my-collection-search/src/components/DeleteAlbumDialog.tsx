@@ -66,7 +66,7 @@ export default function DeleteAlbumDialog({
             </Dialog.Body>
             <Dialog.Footer>
               <Button
-                colorPalette="red"
+                colorPalette="danger"
                 ml={3}
                 onClick={confirmDeleteAlbum}
                 loading={isPending}

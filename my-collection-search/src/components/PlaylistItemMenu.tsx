@@ -143,7 +143,7 @@ export const PlaylistItemMenu: React.FC<PlaylistItemMenuProps> = ({
                     <DrawerItem
                       icon={<FiTrash />}
                       label="Remove"
-                      color="red.500"
+                      color="fg.error"
                       onClick={() => { removeFromPlaylist(idx); close(); }}
                     />
                   </Stack>

@@ -67,7 +67,7 @@ export default function NamePlaylistDialog({
                 mb={2}
               />
               {typeof trackCount === "number" && (
-                <Text fontSize="sm" color="gray.500">
+                <Text fontSize="sm" color="fg.muted">
                   {trackCount} tracks will be saved.
                 </Text>
               )}
@@ -75,7 +75,7 @@ export default function NamePlaylistDialog({
             <Dialog.Footer>
               <Button
                 onClick={handleConfirm}
-                colorPalette="blue"
+                colorPalette="accent"
                 disabled={!localName.trim()}
               >
                 {confirmLabel}

@@ -36,7 +36,7 @@ import { toaster } from "@/components/ui/toaster";
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <Box borderWidth="1px" borderRadius="md" p={4}>
-      <Text fontWeight="semibold" fontSize="sm" color="gray.500" mb={3} textTransform="uppercase" letterSpacing="wide">
+      <Text fontWeight="semibold" fontSize="sm" color="fg.muted" mb={3} textTransform="uppercase" letterSpacing="wide">
         {title}
       </Text>
       {children}
@@ -213,7 +213,7 @@ export default function TrackEditPage() {
                   />
                   {formatBpmConfidencePercent(form.bpm_confidence) !== null &&
                     (isBpmConfidenceLow(form.bpm_confidence) ? (
-                      <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
+                      <Badge colorPalette="status.analysis" variant="subtle" size="sm" mt={1}>
                         Uncertain BPM — {formatBpmConfidencePercent(form.bpm_confidence)}% confident
                       </Badge>
                     ) : (
@@ -231,7 +231,7 @@ export default function TrackEditPage() {
                   />
                   {formatKeyConfidencePercent(form.key_confidence) !== null &&
                     (isKeyConfidenceLow(form.key_confidence) ? (
-                      <Badge colorPalette="orange" variant="subtle" size="sm" mt={1}>
+                      <Badge colorPalette="status.analysis" variant="subtle" size="sm" mt={1}>
                         Uncertain key — {formatKeyConfidencePercent(form.key_confidence)}% confident
                       </Badge>
                     ) : (
@@ -331,18 +331,16 @@ export default function TrackEditPage() {
               gap={2}
               p="10px"
               borderWidth="1px"
-              borderColor="rgba(255, 255, 255, 0.45)"
+              borderColor="border"
               borderRadius="28px"
-              bg="transparent"
-              _light={{ bg: "rgba(255, 255, 255, 0.58)" }}
-              _dark={{ bg: "rgba(18, 18, 24, 0.58)" }}
-              boxShadow="0 18px 40px rgba(15, 23, 42, 0.16)"
+              bg="color-mix(in srgb, var(--gn-surface) 60%, transparent)"
+              boxShadow="0 18px 40px var(--gn-shadow)"
               style={{ backdropFilter: "blur(24px) saturate(200%)" }}
             >
               <Button
                 variant="outline"
                 bg="bg"
-                borderColor="blackAlpha.200"
+                borderColor="border.subtle"
                 onClick={() => router.back()}
                 disabled={saving}
                 flex={1}
@@ -356,7 +354,7 @@ export default function TrackEditPage() {
                 loading={saving}
                 disabled={saving}
                 flex={1}
-                colorPalette="blue"
+                colorPalette="accent"
                 fontWeight="semibold"
                 borderRadius="xl"
               >

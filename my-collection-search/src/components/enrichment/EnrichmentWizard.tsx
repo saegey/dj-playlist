@@ -250,7 +250,7 @@ export default function EnrichmentWizard() {
             Cancel
           </Button>
           <Button
-            colorPalette="blue"
+            colorPalette="accent"
             onClick={startEnrichment}
             disabled={
               !enrichmentTypes.llm &&
@@ -273,7 +273,7 @@ export default function EnrichmentWizard() {
         </Text>
         <Flex gap={6}>
           <Box textAlign="center">
-            <Text fontSize="3xl" fontWeight="bold" color="green.500">
+            <Text fontSize="3xl" fontWeight="bold" color="fg.success">
               {savedCount}
             </Text>
             <Text fontSize="sm" color="fg.muted">
@@ -281,7 +281,7 @@ export default function EnrichmentWizard() {
             </Text>
           </Box>
           <Box textAlign="center">
-            <Text fontSize="3xl" fontWeight="bold" color="gray.400">
+            <Text fontSize="3xl" fontWeight="bold" color="fg.muted">
               {skippedCount}
             </Text>
             <Text fontSize="sm" color="fg.muted">
@@ -289,7 +289,7 @@ export default function EnrichmentWizard() {
             </Text>
           </Box>
         </Flex>
-        <Button colorPalette="blue" onClick={() => router.push("/")}>
+        <Button colorPalette="accent" onClick={() => router.push("/")}>
           Back to tracks
         </Button>
       </Flex>
@@ -307,7 +307,7 @@ export default function EnrichmentWizard() {
           <Text fontSize="sm" color="fg.muted">
             Track {Math.min(currentIndex + 1, queue.length)} of {queue.length}
           </Text>
-          <Badge size="sm" colorPalette="blue">
+          <Badge size="sm" colorPalette="accent">
             {savedCount} saved
           </Badge>
           {skippedCount > 0 && (

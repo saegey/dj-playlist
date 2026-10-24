@@ -60,7 +60,7 @@ export default function PlaylistItemActionsMenu({
                     <DrawerItem icon={<FaPlay />} label="Play Now" onClick={() => { onPlay(); close(); }} />
                     {onCreateSet && <DrawerItem icon={<FiCalendar />} label="Turn into a set" onClick={() => { onCreateSet(); close(); }} />}
                     {drawerDivider}
-                    <DrawerItem icon={<FiTrash />} label="Delete" color="red.500" onClick={() => { onDelete(); close(); }} />
+                    <DrawerItem icon={<FiTrash />} label="Delete" color="fg.error" onClick={() => { onDelete(); close(); }} />
                   </Stack>
                 </Drawer.Body>
               </Drawer.Content>

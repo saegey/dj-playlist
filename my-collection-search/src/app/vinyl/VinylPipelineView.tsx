@@ -54,10 +54,10 @@ function formatBytes(bytes: number): string {
 }
 
 const INGEST_STATUS_COLOR: Record<string, string> = {
-  received: "blue",
-  processing: "orange",
-  processed: "green",
-  failed: "red",
+  received: "accent",
+  processing: "status.analysis",
+  processed: "status.success",
+  failed: "status.missing",
 };
 
 /**
@@ -72,16 +72,16 @@ function DetectionRow({ detection }: { detection: DetectionWindow }) {
     return (
       <Table.Row>
         <Table.Cell whiteSpace="nowrap">{formatClock(detection.window_start_at)}</Table.Cell>
-        <Table.Cell color="gray.500">no match</Table.Cell>
+        <Table.Cell color="fg.muted">no match</Table.Cell>
         <Table.Cell>—</Table.Cell>
         <Table.Cell>—</Table.Cell>
-        <Table.Cell whiteSpace="nowrap" color="gray.500">{formatLevel(detection.level_dbfs)}</Table.Cell>
+        <Table.Cell whiteSpace="nowrap" color="fg.muted">{formatLevel(detection.level_dbfs)}</Table.Cell>
       </Table.Row>
     );
   }
 
   const confidence = detection.confidence ?? 0;
-  const color = confidence >= 0.85 ? "green.600" : "yellow.600";
+  const color = confidence >= 0.85 ? "fg.success" : "fg.warning";
 
   return (
     <Table.Row>
@@ -91,7 +91,7 @@ function DetectionRow({ detection }: { detection: DetectionWindow }) {
       </Table.Cell>
       <Table.Cell color={color} fontWeight="medium">{confidence.toFixed(3)}</Table.Cell>
       <Table.Cell whiteSpace="nowrap">{formatOffset(detection.offset_seconds)}</Table.Cell>
-      <Table.Cell whiteSpace="nowrap" color="gray.500">{formatLevel(detection.level_dbfs)}</Table.Cell>
+      <Table.Cell whiteSpace="nowrap" color="fg.muted">{formatLevel(detection.level_dbfs)}</Table.Cell>
     </Table.Row>
   );
 }
@@ -166,7 +166,7 @@ export default function VinylPipelineView() {
             </Flex>
           </Flex>
           {stats.dataUpdatedAt > 0 && (
-            <Text fontSize="xs" color="gray.500">
+            <Text fontSize="xs" color="fg.muted">
               Updated: {new Date(stats.dataUpdatedAt).toLocaleTimeString()}
             </Text>
           )}
@@ -178,30 +178,30 @@ export default function VinylPipelineView() {
         ) : s ? (
           <Card.Root
             variant="outline"
-            borderColor={!s.index.engine_registered || s.index.empty ? "red.400" : undefined}
+            borderColor={!s.index.engine_registered || s.index.empty ? "border.error" : undefined}
           >
             <Card.Body>
               {s.ingest_writable === false && (
-                <Text color="red.500" fontWeight="bold" mb={2}>
+                <Text color="fg.error" fontWeight="bold" mb={2}>
                   ✗ ingest volume is NOT writable — every upload will fail
                 </Text>
               )}
               {!s.index.engine_registered ? (
-                <Text color="red.500" fontWeight="bold" fontSize="lg">
+                <Text color="fg.error" fontWeight="bold" fontSize="lg">
                   ✗ No fingerprint engine registered — is fingerprint-service running?
                 </Text>
               ) : s.index.empty ? (
-                <Text color="red.500" fontWeight="bold" fontSize="lg">
+                <Text color="fg.error" fontWeight="bold" fontSize="lg">
                   ✗ Reference index is EMPTY — nothing can match
                 </Text>
               ) : (
-                <Text color="green.600" fontWeight="bold" fontSize="lg">
+                <Text color="fg.success" fontWeight="bold" fontSize="lg">
                   ✓ Index: {s.index.indexed_tracks} tracks ({s.index.fingerprint_type}{" "}
                   {s.index.fingerprint_version})
                 </Text>
               )}
               {s.index.missing_fingerprint_tracks > 0 && (
-                <Text color="yellow.600" fontSize="sm" mt={1}>
+                <Text color="fg.warning" fontSize="sm" mt={1}>
                   ⚠ {s.index.missing_fingerprint_tracks} track(s) have audio but no fingerprint
                 </Text>
               )}
@@ -219,21 +219,21 @@ export default function VinylPipelineView() {
                     <Text fontSize="2xl" fontWeight="bold" color={`${INGEST_STATUS_COLOR[status]}.500`}>
                       {s.ingests.by_status[status] ?? 0}
                     </Text>
-                    <Text fontSize="sm" color="gray.500" textTransform="capitalize">{status}</Text>
+                    <Text fontSize="sm" color="fg.muted" textTransform="capitalize">{status}</Text>
                   </Card.Body>
                 </Card.Root>
               ))}
               <Card.Root>
                 <Card.Body textAlign="center" py={4}>
-                  <Text fontSize="2xl" fontWeight="bold" color={s.queue_depth === null ? "gray.400" : undefined}>
+                  <Text fontSize="2xl" fontWeight="bold" color={s.queue_depth === null ? "fg.muted" : undefined}>
                     {s.queue_depth === null ? "?" : s.queue_depth}
                   </Text>
-                  <Text fontSize="sm" color="gray.500">Queue depth</Text>
+                  <Text fontSize="sm" color="fg.muted">Queue depth</Text>
                 </Card.Body>
               </Card.Root>
             </SimpleGrid>
 
-            <Flex gap={4} wrap="wrap" fontSize="sm" color="gray.600">
+            <Flex gap={4} wrap="wrap" fontSize="sm" color="fg.muted">
               {retention.data && (
                 <Text>
                   Volume: {formatBytes(retention.data.bytes)} across {retention.data.files} file(s)
@@ -243,13 +243,13 @@ export default function VinylPipelineView() {
                 </Text>
               )}
               {s.ingests.oldest_in_flight && (
-                <Text color="yellow.600">
+                <Text color="fg.warning">
                   Oldest in flight: {s.ingests.oldest_in_flight.status} since{" "}
                   {formatClock(s.ingests.oldest_in_flight.received_at)}
                 </Text>
               )}
               {s.spins.pending !== null && s.spins.pending > 0 && (
-                <Text color="yellow.600">
+                <Text color="fg.warning">
                   {s.spins.pending} detection(s) awaiting a spin session
                 </Text>
               )}
@@ -258,8 +258,8 @@ export default function VinylPipelineView() {
             {s.ingests.failures.length > 0 && (
               <Box>
                 {s.ingests.failures.map((f) => (
-                  <Flex key={f.error} gap={2} fontSize="sm" color="red.500">
-                    <Badge colorPalette="red" variant="subtle">{f.count}×</Badge>
+                  <Flex key={f.error} gap={2} fontSize="sm" color="fg.error">
+                    <Badge colorPalette="status.missing" variant="subtle">{f.count}×</Badge>
                     <Text>{f.error}</Text>
                   </Flex>
                 ))}
@@ -274,7 +274,7 @@ export default function VinylPipelineView() {
           {detections.isLoading ? (
             <Flex justify="center" py={4}><Spinner size="lg" /></Flex>
           ) : rows.length === 0 ? (
-            <Text color="gray.500">No detections in this window.</Text>
+            <Text color="fg.muted">No detections in this window.</Text>
           ) : (
             <Box overflowX="auto">
               <Table.Root size="sm" variant="outline">

@@ -215,7 +215,7 @@ export default function PlaylistManager() {
         />
 
         {!loadingPlaylists && playlists.length > 0 && (
-          <Text fontSize="sm" color="gray.500" px={1}>
+          <Text fontSize="sm" color="fg.muted" px={1}>
             {filtered.length.toLocaleString()}{" "}
             {filtered.length === 1 ? "playlist" : "playlists"}
           </Text>

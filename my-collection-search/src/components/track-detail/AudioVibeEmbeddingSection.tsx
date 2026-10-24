@@ -21,7 +21,7 @@ export default function AudioVibeEmbeddingSection({ query }: Props) {
           <Skeleton height="120px" />
         </VStack>
       ) : query.error ? (
-        <Text color="red.500">
+        <Text color="fg.error">
           {query.error instanceof Error
             ? query.error.message
             : "Failed to load audio vibe embedding preview"}
@@ -29,7 +29,7 @@ export default function AudioVibeEmbeddingSection({ query }: Props) {
       ) : query.data ? (
         <VStack align="stretch" gap={3}>
           <HStack gap={2} flexWrap="wrap">
-            <Badge colorPalette="cyan">Audio Vibe</Badge>
+            <Badge colorPalette="accent">Audio Vibe</Badge>
             {query.data.vibeData.bpm !== "unknown" && (
               <Badge variant="outline">{query.data.vibeData.bpm} BPM</Badge>
             )}
@@ -37,7 +37,7 @@ export default function AudioVibeEmbeddingSection({ query }: Props) {
               <Badge variant="outline">{query.data.vibeData.key}</Badge>
             )}
             {query.data.vibeData.energy && (
-              <Badge variant="outline" colorPalette="orange">
+              <Badge variant="outline" colorPalette="status.analysis">
                 {query.data.vibeData.energy} energy
               </Badge>
             )}
@@ -51,8 +51,8 @@ export default function AudioVibeEmbeddingSection({ query }: Props) {
             maxH="420px"
             fontSize="xs"
             whiteSpace="pre-wrap"
-            bg="gray.50"
-            _dark={{ bg: "gray.900" }}
+            bg="bg.subtle"
+            _dark={{ bg: "bg.subtle" }}
           >
             {query.data.vibeText}
           </Box>

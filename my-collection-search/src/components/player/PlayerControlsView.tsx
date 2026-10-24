@@ -153,7 +153,7 @@ export default function PlayerControlsView({
                 h="36px"
                 borderRadius="full"
                 variant="solid"
-                colorPalette="gray"
+                colorPalette="neutral"
                 onClick={(event) => {
                   event.stopPropagation();
                   onPause();
@@ -169,7 +169,7 @@ export default function PlayerControlsView({
                 h="36px"
                 borderRadius="full"
                 variant="solid"
-                colorPalette="gray"
+                colorPalette="neutral"
                 onClick={(event) => {
                   event.stopPropagation();
                   onPlay();
@@ -296,7 +296,7 @@ export default function PlayerControlsView({
               aria-label="Pause"
               size="sm"
               variant="solid"
-              colorPalette="red"
+              colorPalette="danger"
               onClick={onPause}
             >
               <FiPause />
@@ -306,7 +306,7 @@ export default function PlayerControlsView({
               aria-label="Play"
               size="sm"
               variant="solid"
-              colorPalette="green"
+              colorPalette="status.success"
               onClick={onPlay}
               disabled={safeLen === 0}
             >
@@ -360,7 +360,7 @@ export default function PlayerControlsView({
               aria-label="AirPlay"
               size="sm"
               variant={isAirPlayActive ? "solid" : "ghost"}
-              colorPalette={isAirPlayActive ? "blue" : undefined}
+              colorPalette={isAirPlayActive ? "accent" : undefined}
               title="AirPlay"
               onClick={onAirPlayClick}
             >
@@ -375,7 +375,7 @@ export default function PlayerControlsView({
               variant="ghost"
               title="Queue"
               onClick={onQueueToggle}
-              colorPalette={isQueueOpen ? "blue" : undefined}
+              colorPalette={isQueueOpen ? "accent" : undefined}
             >
               <FiList />
             </IconButton>

@@ -512,7 +512,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
             </Text>
             {hasUnsavedChanges && (
               <Badge
-                colorPalette="orange"
+                colorPalette="status.analysis"
                 variant="solid"
                 size="sm"
                 display={{ base: "none", md: "inline-flex" }}
@@ -521,10 +521,10 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
               </Badge>
             )}
           </Flex>
-          <Text fontSize="sm" color="gray.500" mb={2}>
+          <Text fontSize="sm" color="fg.muted" mb={2}>
             Total Playtime: {totalPlaytimeFormatted}
             {durationMissingCount > 0 && (
-              <Text as="span" color="gray.400"> ({durationMissingCount} track{durationMissingCount !== 1 ? "s" : ""} missing timing)</Text>
+              <Text as="span" color="fg.muted"> ({durationMissingCount} track{durationMissingCount !== 1 ? "s" : ""} missing timing)</Text>
             )}
           </Text>
         </Box>
@@ -532,7 +532,7 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           {hasUnsavedChanges && playlistId && (
             <Button
               size="sm"
-              colorPalette="blue"
+              colorPalette="accent"
               display={{ base: "none", md: "inline-flex" }}
               onClick={saveExisting}
             >
@@ -685,8 +685,8 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
         >
           <Box
             borderWidth="1px"
-            borderColor="orange.200"
-            bg="orange.50"
+            borderColor="border.warning"
+            bg="bg.warning"
             borderRadius="xl"
             boxShadow="lg"
             px={3}
@@ -694,14 +694,14 @@ const PlaylistViewer = ({ playlistId }: { playlistId?: number }) => {
           >
             <Flex align="center" gap={3}>
               <Box flex="1" minW={0}>
-                <Text fontSize="sm" fontWeight="semibold" color="orange.800">
+                <Text fontSize="sm" fontWeight="semibold" color="fg.warning">
                   Unsaved changes
                 </Text>
-                <Text fontSize="xs" color="orange.700">
+                <Text fontSize="xs" color="fg.warning">
                   Reordered tracks won&apos;t persist until you save.
                 </Text>
               </Box>
-              <Button size="sm" colorPalette="orange" onClick={saveExisting}>
+              <Button size="sm" colorPalette="status.analysis" onClick={saveExisting}>
                 Save
               </Button>
             </Flex>

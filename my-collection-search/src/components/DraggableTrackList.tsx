@@ -92,7 +92,7 @@ export default function DraggableTrackList({
                       bg={
                         isCurrentTrack
                           ? useDenseRow
-                            ? "whiteAlpha.100"
+                            ? "bg.muted"
                             : "bg.muted"
                           : undefined
                       }

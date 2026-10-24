@@ -32,7 +32,7 @@ export default function AudioMetadataSection({
           <Skeleton height="120px" />
         </VStack>
       ) : query.error ? (
-        <Text color="red.500">
+        <Text color="fg.error">
           {query.error instanceof Error
             ? query.error.message
             : "Failed to load audio metadata"}
@@ -40,7 +40,7 @@ export default function AudioMetadataSection({
       ) : query.data ? (
         <VStack align="stretch" gap={3}>
           <HStack gap={2} flexWrap="wrap">
-            <Badge colorPalette={query.data.has_embedded_cover ? "green" : "gray"}>
+            <Badge colorPalette={query.data.has_embedded_cover ? "status.success" : "neutral"}>
               {query.data.has_embedded_cover ? "Embedded Cover Found" : "No Embedded Cover"}
             </Badge>
             <Badge variant="outline">{query.data.local_audio_url}</Badge>
