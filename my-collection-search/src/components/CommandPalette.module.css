@@ -2,7 +2,6 @@
   position: fixed;
   inset: 0;
   background: rgba(12, 12, 14, 0.45);
-  backdrop-filter: blur(6px);
   z-index: 1200;
 }
 
@@ -14,9 +13,9 @@
   width: min(720px, 92vw);
   max-height: 72vh;
   background: var(--chakra-colors-bg, #ffffff);
-  border: 1px solid var(--chakra-colors-border, rgba(0, 0, 0, 0.08));
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
-  border-radius: 16px;
+  border: var(--chakra-border-widths-outline, 2px) solid var(--chakra-colors-border-ink);
+  box-shadow: var(--chakra-shadows-md);
+  border-radius: 0;
   padding: 10px;
   z-index: 1201;
   display: flex;
@@ -35,10 +34,17 @@
   width: 100%;
   border: none;
   outline: none;
-  background: transparent;
+  background: var(--chakra-colors-bg-panel, transparent);
+  border: var(--chakra-border-widths-outline, 2px) solid var(--chakra-colors-border-ink);
   padding: 10px 12px;
   font-size: 16px;
   color: var(--chakra-colors-fg, #111111);
+}
+
+/* The dialog's own outline would be hidden by the field's, so ring the field. */
+.input:focus-visible {
+  outline: 2px solid var(--gn-accent-focus-ring);
+  outline-offset: 2px;
 }
 
 .list {
@@ -57,7 +63,8 @@
   padding: 6px 4px 2px;
 }
 
-.groupHeading {
+.group [cmdk-group-heading] {
+  font-family: var(--chakra-fonts-label);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -70,13 +77,26 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: 0;
   cursor: pointer;
   color: var(--chakra-colors-fg, #111111);
 }
 
+/* The selection is a solid ink fill, like an active filter chip. */
 .item[data-selected="true"] {
-  background: var(--chakra-colors-bg-subtle, rgba(0, 0, 0, 0.04));
+  background: var(--chakra-colors-neutral-solid);
+  color: var(--chakra-colors-neutral-contrast);
+}
+
+.item[data-selected="true"] .itemMeta {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.item[data-selected="true"] .kbd {
+  background: transparent;
+  border-color: currentColor;
+  color: inherit;
 }
 
 .itemLabel {
@@ -107,11 +127,11 @@
   align-items: center;
   justify-content: center;
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 11px;
-  font-family: inherit;
+  font-family: var(--chakra-fonts-label);
   background: var(--chakra-colors-bg-subtle, rgba(0, 0, 0, 0.05));
-  border: 1px solid var(--chakra-colors-border, rgba(0, 0, 0, 0.12));
+  border: 1px solid var(--chakra-colors-border-ink);
   color: var(--chakra-colors-fg-muted, #6b7280);
   font-weight: 500;
   line-height: 1.4;
@@ -121,7 +141,7 @@
 .separator {
   height: 1px;
   margin: 6px 6px;
-  background: var(--chakra-colors-border, rgba(0, 0, 0, 0.08));
+  background: var(--chakra-colors-border-ink);
 }
 
 .footer {
@@ -130,7 +150,7 @@
   gap: 10px;
   flex-wrap: wrap;
   padding: 8px 12px 4px;
-  border-top: 1px solid var(--chakra-colors-border, rgba(0, 0, 0, 0.08));
+  border-top: var(--chakra-border-widths-outline, 2px) solid var(--chakra-colors-border-ink);
   margin-top: 4px;
 }
 
@@ -138,6 +158,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  font-family: var(--chakra-fonts-label);
   font-size: 11px;
   color: var(--chakra-colors-fg-muted, #6b7280);
   white-space: nowrap;

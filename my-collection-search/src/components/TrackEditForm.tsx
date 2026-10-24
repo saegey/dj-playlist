@@ -163,12 +163,10 @@ export default function TrackEditForm({
                     <Flex
                       gap={2}
                       p="10px"
-                      borderWidth="1px"
-                      borderColor="border"
-                      borderRadius="28px"
-                      bg="color-mix(in srgb, var(--gn-surface) 60%, transparent)"
-                      boxShadow="0 18px 40px var(--gn-shadow)"
-                      style={{ backdropFilter: "blur(24px) saturate(200%)" }}
+                      borderWidth="outline"
+                      borderColor="border.ink"
+                      bg="bg.panel"
+                      boxShadow="md"
                     >
                       <Button
                         variant="outline"

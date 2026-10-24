@@ -1,4 +1,5 @@
 import { defineConfig, createSystem, defaultConfig, type SystemStyleObject } from "@chakra-ui/react";
+import * as house from "./houseStyle";
 import {
   defaultPaletteId,
   paletteVariableNames,
@@ -52,8 +53,15 @@ export function paletteBlocks(
 }
 
 const config = defineConfig({
-  globalCss: paletteBlocks(palettes, defaultPaletteId),
+  globalCss: { ...paletteBlocks(palettes, defaultPaletteId), ...house.globalCss },
   theme: {
+    tokens: {
+      radii: house.radii,
+      borderWidths: house.borderWidths,
+      fonts: house.fonts,
+    },
+    recipes: house.recipes,
+    slotRecipes: house.slotRecipes,
     semanticTokens: {
       colors: {
         bg: {
@@ -77,6 +85,8 @@ const config = defineConfig({
         border: {
           DEFAULT: v("--gn-border"),
           subtle: v("--gn-border"),
+          // The outline of controls and containers in the house style.
+          ink: v("--gn-ink"),
           error: v("--gn-status-missing-border"),
           warning: v("--gn-status-analysis-border"),
           success: v("--gn-status-success-border"),
@@ -93,6 +103,11 @@ const config = defineConfig({
           focusRing: v("--gn-accent-focus-ring"),
           border: v("--gn-accent-border"),
         },
+        // The page's default colorPalette is gray, so any control that doesn't
+        // pick one rings in this colour. Chakra's own is too pale (about 2:1
+        // on the ground); the focus ring must reach 3:1 in every palette.
+        // Its border is likewise too pale for an outline button (under 2:1).
+        gray: { focusRing: v("--gn-accent-focus-ring"), border: v("--gn-border") },
         status: statusTokens,
         // Destructive actions: the "missing" status colours, with a solid fill.
         danger: {
@@ -125,12 +140,7 @@ const config = defineConfig({
           backdrop: { value: "rgba(0, 0, 0, 0.6)" },
         },
       },
-      shadows: {
-        xs: { value: "0 1px 2px var(--gn-shadow)" },
-        sm: { value: "0 1px 3px var(--gn-shadow)" },
-        md: { value: "0 4px 8px var(--gn-shadow)" },
-        lg: { value: "0 8px 16px var(--gn-shadow)" },
-      },
+      shadows: house.shadows,
     },
   },
 });

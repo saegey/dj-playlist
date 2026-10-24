@@ -77,7 +77,7 @@ export default function RecordCareList({ friendId, status }: Props) {
 
   return (
     <Stack gap={3}>
-      <Box borderWidth="1px" borderRadius="md" as="ul" listStyleType="none">
+      <Box borderWidth="outline" borderColor="border.ink" boxShadow="md" as="ul" listStyleType="none">
         {items.map((item, index) => (
           <Flex
             as="li"

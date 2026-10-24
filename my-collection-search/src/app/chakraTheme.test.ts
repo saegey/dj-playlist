@@ -93,4 +93,95 @@ describe("chakra theme", () => {
       `[data-palette="other"].dark`,
     ]);
   });
+
+  describe("house style (#667)", () => {
+    const token = (path: string) => system.tokens.getByName(path)?.value;
+
+    it("squares every radius but leaves full for round things", () => {
+      for (const name of ["2xs", "xs", "sm", "md", "lg", "xl", "2xl", "3xl", "4xl"]) {
+        expect(token(`radii.${name}`), name).toBe("0");
+      }
+      expect(token("radii.full")).toBe("9999px");
+      // The semantic steps recipes use point at the squared scale.
+      for (const name of ["l1", "l2", "l3"]) expect(token(`radii.${name}`), name).toMatch(/0|radii/);
+    });
+
+    it("has a 2px outline width", () => {
+      expect(token("borderWidths.outline")).toBe("2px");
+    });
+
+    it.each(["xs", "sm", "md", "lg", "xl", "2xl", "pressed"])("makes shadow %s a hard offset with no blur", (name) => {
+      expect(token(`shadows.${name}`)).toMatch(/^\d+px \d+px 0 0 var\(--gn-shadow\)$/);
+    });
+
+    it("keeps a smaller compact step than the container step", () => {
+      expect(token("shadows.sm")).toBe("3px 3px 0 0 var(--gn-shadow)");
+      expect(token("shadows.md")).toBe("6px 6px 0 0 var(--gn-shadow)");
+    });
+
+    it("points the font tokens at swappable variables, with label defaulting to mono", () => {
+      expect(token("fonts.heading")).toContain("var(--gn-font-heading, var(--gn-font-body))");
+      expect(token("fonts.body")).toContain("var(--gn-font-body)");
+      expect(token("fonts.mono")).toContain("var(--gn-font-mono)");
+      expect(token("fonts.label")).toContain("var(--gn-font-label, var(--gn-font-mono))");
+    });
+
+    it("rings default-palette controls in the palette's focus colour", () => {
+      expect(resolved("gray.focusRing")).toBe("var(--gn-accent-focus-ring)");
+      expect(resolved("gray.border")).toBe("var(--gn-border)");
+    });
+
+    it("draws the outline colour from ink", () => {
+      expect(resolved("border.ink")).toBe("var(--gn-ink)");
+    });
+
+    it("gives the solid button an ink outline, hard shadow and a press that respects reduced motion", () => {
+      const solid = (system._config.theme?.recipes?.button as any).variants.variant.solid;
+      expect(solid.borderColor).toBe("border.ink");
+      expect(solid.boxShadow).toBe("sm");
+      const press = solid._active["@media (prefers-reduced-motion: no-preference)"];
+      expect(press.transform).toBe("translate(2px, 2px)");
+      expect(press.boxShadow).toBe("pressed");
+      // Outside the media query nothing moves.
+      expect(solid._active.transform).toBeUndefined();
+    });
+
+    it("keeps outline and ghost buttons shadowless", () => {
+      const variants = (system._config.theme?.recipes?.button as any).variants.variant;
+      expect(variants.outline.boxShadow).toBe("none");
+      expect(variants.ghost.boxShadow).toBe("none");
+    });
+
+    it("makes every badge an uppercase label-face tag", () => {
+      const base = (system._config.theme?.recipes?.badge as any).base;
+      expect(base).toMatchObject({ fontFamily: "label", textTransform: "uppercase" });
+    });
+
+    it.each(["card", "dialog", "drawer", "popover", "menu", "select"])("outlines %s with a hard shadow", (name) => {
+      const recipe = (system._config.theme?.slotRecipes as any)[name];
+      const container = recipe.base?.content ?? recipe.variants.variant.outline.root;
+      expect(container).toMatchObject({ borderWidth: "outline", boxShadow: "md" });
+    });
+
+    it("gives inputs, textareas and selects a 2px outline with an offset focus ring", () => {
+      const recipes = system._config.theme?.recipes as any;
+      for (const name of ["input", "textarea"]) {
+        expect(recipes[name].variants.variant.outline).toMatchObject({ borderWidth: "outline", focusVisibleRing: "outside" });
+      }
+      const slots = system._config.theme?.slotRecipes as any;
+      expect(slots.nativeSelect.variants.variant.outline.field.borderWidth).toBe("outline");
+      expect(slots.select.variants.variant.outline.trigger.borderWidth).toBe("outline");
+    });
+
+    it("fills a selected segment with ink inside an outlined strip", () => {
+      const root = (system._config.theme?.slotRecipes as any).segmentGroup.base.root;
+      expect(root).toMatchObject({ borderWidth: "outline", "--segment-indicator-bg": "colors.neutral.solid" });
+    });
+
+    it("declares a global focus ring offset from the border", () => {
+      const css = system._config.globalCss as unknown as Record<string, Record<string, string>>;
+      expect(css[":focus-visible"]).toMatchObject({ outlineOffset: "2px" });
+      expect(css[":focus-visible"].outline).toContain("var(--gn-accent-focus-ring)");
+    });
+  });
 });

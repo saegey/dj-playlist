@@ -2,6 +2,7 @@ import type { Preview } from '@storybook/nextjs-vite';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Provider as ChakraProvider } from '@/components/ui/provider';
 import React from 'react';
+import { fontClassName } from '@/app/fonts';
 
 function StoryProviders({ children }: { children: React.ReactNode }) {
   const [client] = React.useState(
@@ -13,6 +14,15 @@ function StoryProviders({ children }: { children: React.ReactNode }) {
         },
       })
   );
+  // The app sets these on <html> in layout.tsx; stories need them too, so the
+  // house style's faces and the default palette apply.
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const classes = fontClassName.split(' ');
+    root.classList.add(...classes);
+    root.dataset.palette ??= 'sleeve';
+    return () => root.classList.remove(...classes);
+  }, []);
   return (
     <ChakraProvider>
       <QueryClientProvider client={client}>{children}</QueryClientProvider>

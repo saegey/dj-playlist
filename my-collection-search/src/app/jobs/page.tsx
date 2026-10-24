@@ -342,7 +342,7 @@ export default function JobsPage() {
                 gap={0}
               >
                 <Text fontWeight="bold" fontSize="lg" color={stat.color}>{stat.value}</Text>
-                <Text fontSize="9px" color="fg.muted" letterSpacing="wide" textTransform="uppercase">{stat.label}</Text>
+                <Text fontSize="9px" color="fg.muted" letterSpacing="wide" fontFamily="label" textTransform="uppercase">{stat.label}</Text>
               </Flex>
             ))}
           </Flex>

@@ -46,13 +46,13 @@ export default function MissingFilter<K extends string>({
         <Button
           size="sm"
           variant="outline"
-          borderRadius="full"
+          borderColor="border.ink"
           flexShrink={0}
           aria-label={count > 0 ? `Missing data filters, ${count} on` : "Missing data filters"}
         >
           Missing
           {count > 0 && (
-            <Badge size="xs" colorPalette="accent" variant="solid" borderRadius="full">
+            <Badge size="xs" colorPalette="accent" variant="solid">
               {count}
             </Badge>
           )}

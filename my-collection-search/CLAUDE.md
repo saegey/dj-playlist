@@ -86,12 +86,14 @@ Reference only tokens that exist: an undefined one (`brand.0` was) compiles to
 an invalid value the browser drops, so it fails silently.
 - **Colour:** semantic tokens over raw scales — `bg`, `bg.subtle` (toolbars,
   active nav), `bg.muted` (row hover), `bg.panel` (inputs, popovers, dialogs),
-  `fg`, `fg.muted` (secondary text), `border`. All of them read `--gn-*`
+  `fg`, `fg.muted` (secondary text), `border` (`border.ink` for the 2px outline of
+  controls and containers). All of them read `--gn-*`
   variables, so they follow the palette; raw scales (`gray.500`, `blue.500`)
   do not, and ESLint rejects them (`no-restricted-syntax` in
   `eslint.config.mjs`) in colour props and `colorPalette`.
 - **One accent:** `accent.solid` or `colorPalette="accent"` for the primary
-  action, active filters, selection and playback progress. Never two solid
+  action, selection and playback progress. Active filter chips are the
+  exception: a solid ink fill (`colorPalette="neutral"`). Never two solid
   accent buttons side by side; `colorPalette="danger"` only for destructive
   actions. `colorPalette="neutral"` for inactive chips and plain badges.
   `overlay.*` tokens (`overlay.fg`, `.fg.muted`, `.track`, `.scrim`,
@@ -119,21 +121,56 @@ an invalid value the browser drops, so it fails silently.
   values are provisional until #664 is signed off; change them in `sleeve.ts` only.
 - **Status** tokens `status.{missing,analysis,genre,success}.{fg,subtle,border}`
   carry the badge meanings below.
+- **House style (#667):** the whole look lives in `src/app/houseStyle.ts`
+  (shape tokens, shadows, font tokens, recipe overrides, focus ring), wired in
+  by `chakraTheme.ts`. Components don't restyle themselves: reach for a
+  token or variant, not a literal. Values there are provisional until #664 is
+  signed off; tuning is a one-file change. There is no Classic style switch.
+- **Shape:** every radius token is `0`, so `borderRadius="md"`/`xl`/... are all
+  square; don't set one on a new component. `full` stays for round things only
+  (slider thumbs and tracks, player transport buttons, avatars, dots). Controls
+  and containers carry a 2px outline (`borderWidth="outline"`,
+  `borderColor="border.ink"`); a literal `1px` is for ruled dividers inside a
+  block (`borderWidth="rule"`).
+- **Shadow:** hard offsets, no blur, never a literal. `boxShadow="sm"` (3px) for
+  compact controls, `md` (6px) for containers: cards, dialogs, popovers, menus,
+  drawers, the list block. They read `--gn-shadow`, which a palette must keep
+  opaque (`palettes.test.ts` checks it). Hover is a background step, never a lift.
+- **Lists:** a list is ONE outlined block with ruled dividers and ONE shadow for
+  the whole stack (the track rows in `SearchResults`, record care, spins), never
+  a shadow per row; 50+ results stay calm that way.
 - **Buttons:** `size="sm"` by default, `xs` inside cards and dense rows;
-  `variant="outline"` is the default, `ghost` for low-weight actions
-  (`color="fg.muted"` for tertiary), `solid` for the one primary action.
-  Icon-only buttons need an `aria-label`.
-- **Badges** (`size="sm"`, `subtle`) have fixed meanings: `status.missing`
+  `variant="outline"` is the default and `ghost` the low-weight action
+  (`color="fg.muted"` for tertiary): both are quiet, with no shadow. `solid` is
+  the one primary action: ink outline, hard shadow, and a press that shifts it
+  2px down and right while the shadow shrinks (nothing moves under
+  `prefers-reduced-motion`). Solid and outline labels use the mono face. Icon-only
+  buttons need an `aria-label`.
+- **Focus:** a solid 2px ring in the palette's focus colour, offset 2px so the
+  border never hides it. Recipes use `focusVisibleRing="outside"`; the global
+  `:focus-visible` rule covers anything else, including custom controls. Don't
+  write `outline: none` without a replacement. The default `gray` palette's
+  `focusRing` is remapped to the accent ring, so unstyled controls meet 3:1.
+- **Badges** are tags: every badge is uppercase, letter-spaced mono (the badge
+  recipe's base), and `subtle` adds a ruled outline. `size="sm"`, `subtle`, with
+  fixed meanings: `status.missing`
   missing data the pipeline needs (No embedding), `status.analysis` missing
   analysis (No BPM), `status.genre` genre/AI-derived, bold `accent` library ID,
   `status.success`/`status.analysis`/`status.missing` similarity score. Always
   text, never colour alone. Genre badges go through `GenreBadge`.
-- **Shape:** `borderRadius="md"` for buttons, inputs, cards and artwork;
-  `full` only for filter chips, player transport buttons and slider tracks;
-  `xl` for the search toolbar, `2xl` for dialogs and drawers. Separate with
-  1px `border`, not shadows (the house style, #667, will change this); hover is a background step, never a lift.
-- **Type:** the system UI stack (no webfont); `fontFamily="mono"` only for
-  IDs and paths. Inputs use 16px text so iOS doesn't zoom.
+- **Filter chips** (`FilterChips`): square, the active chip a solid ink fill.
+  Give a chip `count` where the data already has one (genre chips take the
+  facet counts); the label becomes "Genre · 41". Don't add a count query for it.
+- **Type:** fonts are self-hosted through `next/font/local` (`src/app/fonts.ts`,
+  woff2 under `src/app/fonts/` with their OFL licences) and exposed as
+  `--gn-font-body|mono` (plus optional `--gn-font-heading|label`), which the `heading`, `body`, `mono` and
+  `label` font tokens read; a later font setting (#670) swaps a face by
+  overriding the variable. Body and headings are IBM Plex Sans (headings fall
+  back to the body face until `--gn-font-heading` is set), and
+  `fontFamily="mono"` (IDs, paths) is IBM Plex Mono. `fontFamily="label"` (defaults to the mono face) is for
+  overlines (uppercase, letter-spaced), table headers, tags, nav and buttons.
+  Add a face by committing its woff2 and licence and listing it in `fonts.ts`;
+  `fonts.test.ts` checks the files exist. Inputs use 16px text so iOS doesn't zoom.
 - **Copy:** terse sentence case, DJ vocabulary ("112 BPM", "D major (10B)",
   "B2", "LP-342"), no emoji in the UI.
 - **Layout:** pages sit in `PageContainer` (`wide` for lists, `narrow` for

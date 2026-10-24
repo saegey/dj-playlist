@@ -8,6 +8,8 @@ export interface FilterChip {
   key: string;
   label: string;
   active: boolean;
+  /** Results the filter matches, shown in the label ("Missing audio · 41"). Omit where unknown. */
+  count?: number;
 }
 
 interface FilterChipsProps {
@@ -21,6 +23,11 @@ interface FilterChipsProps {
   leading?: React.ReactNode;
   /** Space above the row, which goes with it when it's hidden. */
   mt?: FlexProps["mt"];
+}
+
+/** The chip's text: its label, then the count when the data has one. */
+export function chipLabel({ label, count }: Pick<FilterChip, "label" | "count">): string {
+  return count === undefined ? label : `${label} · ${count.toLocaleString()}`;
 }
 
 export default function FilterChips({ chips, onToggle, onClearAll, leading, mt }: FilterChipsProps) {
@@ -43,23 +50,21 @@ export default function FilterChips({ chips, onToggle, onClearAll, leading, mt }
       {chips.map((chip) => (
         <Button
           key={chip.key}
-          size="sm"
+          size="xs"
           variant={chip.active ? "solid" : "outline"}
-          colorPalette={chip.active ? "accent" : "neutral"}
+          colorPalette="neutral"
           onClick={() => onToggle(chip.key)}
-          borderRadius="full"
           px={3}
         >
-          {chip.label}
+          {chipLabel(chip)}
           {chip.active && <LuX />}
         </Button>
       ))}
       {anyActive && onClearAll && (
         <Button
-          size="sm"
+          size="xs"
           variant="ghost"
           onClick={onClearAll}
-          borderRadius="full"
           color="fg.muted"
         >
           Clear all

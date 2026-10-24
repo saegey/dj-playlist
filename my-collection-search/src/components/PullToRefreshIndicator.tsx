@@ -28,7 +28,7 @@ export default function PullToRefreshIndicator({
         placeItems: "center",
         borderRadius: 999,
         background: "var(--chakra-colors-bg, white)",
-        boxShadow: "0 2px 12px var(--gn-shadow)",
+        boxShadow: "2px 2px 0 0 var(--gn-shadow)",
         color: "var(--gn-accent-solid)",
         opacity: visible ? 1 : 0,
         pointerEvents: "none",
