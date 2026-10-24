@@ -61,9 +61,9 @@ export const TRACK_ROW_EDGE_WIDTH = "44px";
  * Track, Release, Time, BPM / Key, Genre, Rating.
  */
 export const TRACK_ROW_GRID_TEMPLATE =
-  "minmax(200px, 2fr) minmax(128px, 0.9fr) 48px 132px minmax(168px, 1.4fr) 76px";
+  "minmax(200px, 2fr) minmax(128px, 0.9fr) 48px 112px minmax(168px, 1.4fr) 76px";
 const TRACK_ROW_GRID_BASE = "minmax(150px, 2fr) minmax(112px, 0.9fr) 48px 56px";
-const TRACK_ROW_GRID_WITH_KEY = "minmax(150px, 2fr) minmax(112px, 0.9fr) 48px 132px";
+const TRACK_ROW_GRID_WITH_KEY = "minmax(150px, 2fr) minmax(112px, 0.9fr) 48px 112px";
 /** Width of the list block at which the key joins BPM, then Genre and Rating have room to show. */
 const TRACK_ROW_KEY_MIN_WIDTH = "780px";
 const TRACK_ROW_FULL_MIN_WIDTH = "1040px";
@@ -945,7 +945,7 @@ export default function TrackResult({
 
           {showDetails ? (
             <Flex alignItems="center" gap={2} minW={0}>
-              <Flex minW="56px" flexShrink={0}>
+              <Flex minW="34px" flexShrink={0}>
                 <BpmValue bpm={track.bpm} bpmConfidence={track.bpm_confidence} align="left" />
               </Flex>
               <Box data-col="key" minW={0}>
