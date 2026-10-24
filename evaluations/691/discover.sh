@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# Debian discovery experiment. Never selects outputs or starts playback.
-# Usage: bash discover.sh LAN_INTERFACE
+# Debian discovery experiment; optional explicit Lounge-only audio smoke test.
+# Usage: bash discover.sh LAN_INTERFACE [--play-lounge]
 set -euo pipefail
 umask 077
 
 [[ "$(uname -s)" == Linux ]]
 lan_interface="${1:?Supply the LAN interface, e.g. enp170s0}"
+fixture_mode="${2:-discover}"
+[[ "$fixture_mode" == discover || "$fixture_mode" == --play-lounge ]]
 [[ "$lan_interface" =~ ^[a-zA-Z0-9_.:-]+$ ]]
 ip link show "$lan_interface" >/dev/null
 if ss -H -ltn 'sport = :13689' | grep -q .; then
@@ -19,6 +21,17 @@ fixture_image='docker.io/owntone/owntone@sha256:6a88589edc4dd9c438da62a18a25374d
 lan_address="$(ip -4 -o addr show "$lan_interface" | awk '{print $4}' | cut -d/ -f1 | head -n1)"
 [[ -n "$lan_address" ]]
 cleanup() {
+  fixture_status=$?
+  if [[ "$fixture_status" != 0 ]]; then
+    docker logs --tail 60 "$fixture_name" >&2 || true
+  fi
+  if [[ "$fixture_mode" == --play-lounge ]]; then
+    docker exec "$fixture_name" curl -fsS --max-time 5 -X PUT \
+      http://127.0.0.1:13689/api/player/stop >/dev/null 2>&1 || true
+    docker exec "$fixture_name" curl -fsS --max-time 5 -X PUT \
+      -H 'Content-Type: application/json' --data '{"outputs":[]}' \
+      http://127.0.0.1:13689/api/outputs/set >/dev/null 2>&1 || true
+  fi
   docker rm -f "$fixture_name" >/dev/null 2>&1 || true
   rm -f "$fixture_dir/owntone.conf" "$fixture_dir/avahi-daemon.conf"
   rmdir "$fixture_dir"
@@ -111,3 +124,71 @@ assert result["state"] == "stop", "Unexpected playback"
 print(json.dumps(result, indent=2))
 '
 echo 'PASS: discovery inspected; no outputs selected and playback stopped'
+
+if [[ "$fixture_mode" != --play-lounge ]]; then
+  exit 0
+fi
+
+# Operator must check room/session occupancy before opting into this mode.
+# Generate a 12-second 440 Hz tone, peak approximately -44 dBFS. Attenuate PCM
+# itself because this receiver is configured to ignore AirPlay volume commands.
+api() {
+  docker exec "$fixture_name" curl -fsS --max-time 10 "$@"
+}
+api http://127.0.0.1:13689/api/outputs/202481586338774 | python3 -c '
+import json, sys
+output = json.load(sys.stdin)
+assert output["name"] == "Lounge Room Audio"
+assert output["type"] == "AirPlay 2"
+assert not output["selected"]
+'
+docker exec "$fixture_name" ffmpeg -hide_banner -loglevel error \
+  -f lavfi -i sine=frequency=440:sample_rate=44100:duration=12 \
+  -af volume=0.05 -ac 2 -metadata title=Groovenet-691-test \
+  /tmp/media/groovenet-691-test.wav
+
+fixture_uri=''
+for ((attempt = 0; attempt < 30; attempt++)); do
+  fixture_uri="$(api 'http://127.0.0.1:13689/api/search?query=Groovenet-691-test&type=tracks' | python3 -c '
+import json, sys
+items = json.load(sys.stdin).get("tracks", {}).get("items", [])
+print(items[0]["uri"] if items else "")
+')"
+  [[ -n "$fixture_uri" ]] && break
+  sleep 0.5
+done
+[[ "$fixture_uri" == library:track:* ]]
+api -X POST --get --data-urlencode "uris=$fixture_uri" \
+  http://127.0.0.1:13689/api/queue/items/add | python3 -m json.tool
+api -X PUT -H 'Content-Type: application/json' --data '{"volume":5}' \
+  http://127.0.0.1:13689/api/outputs/202481586338774
+api -X PUT -H 'Content-Type: application/json' \
+  --data '{"outputs":["202481586338774"]}' \
+  http://127.0.0.1:13689/api/outputs/set
+api -X PUT http://127.0.0.1:13689/api/player/play
+echo 'Lounge tone started; observing engine state'
+sleep 4
+api http://127.0.0.1:13689/api/player | python3 -c '
+import json, sys
+state = json.load(sys.stdin)
+print(json.dumps(state, indent=2))
+assert state["state"] == "play", "Engine did not remain playing"
+assert state["item_length_ms"] > 0, "Indexed fixture has no duration"
+'
+api -X PUT http://127.0.0.1:13689/api/player/pause
+api http://127.0.0.1:13689/api/player | python3 -c '
+import json, sys
+state = json.load(sys.stdin)
+print(json.dumps(state, indent=2))
+assert state["state"] == "pause"
+'
+api -X PUT 'http://127.0.0.1:13689/api/player/seek?position_ms=8000'
+api -X PUT http://127.0.0.1:13689/api/player/play
+sleep 7
+api http://127.0.0.1:13689/api/player | python3 -c '
+import json, sys
+state = json.load(sys.stdin)
+print(json.dumps(state, indent=2))
+assert state["state"] == "stop", "Fixture did not finish naturally"
+'
+echo 'PASS: Lounge engine play, pause, seek command, resume, and natural stop; audible confirmation required'

@@ -92,7 +92,7 @@ permanent identity bindings. All outputs remained unselected and the player
 remained stopped. Other LAN receivers were also discovered but not selected.
 After cleanup the container was absent, port 13689 was released, and existing
 Groovenet containers remained healthy. Discovery does not prove streaming or
-synchronization. Hardware audio tests await an available receiver/test window.
+synchronization. The first authorized single-receiver test is recorded below.
 
 ### Home Assistant inspection
 
@@ -111,6 +111,62 @@ were verified read-only from the installed integration code and entity registry:
 - A room playing vinyl may therefore need occupancy protection even when its
   AirPlay receiver is idle. The design should separate receiver availability
   from room listening activity; raw receiver state alone misses this case.
+
+## Lounge receiver test (2026-10-24)
+
+The user authorized a brief low-volume test on **Lounge Room Audio only**.
+Read-only SSH to `saegey@pi-cam.local` confirmed the AirPlay 2 Shairport and
+NQPTP units were active. Immediately before the test, native D-Bus `Active`
+was false and MPRIS `PlaybackStatus` was Stopped.
+
+The explicit opt-in command is:
+
+```sh
+# Check room occupancy and obtain a test window before running this mode.
+bash evaluations/691/discover.sh enp170s0 --play-lounge
+```
+
+This mode generates a 12-second 440 Hz WAV, approximately -44 dBFS peak, in the
+container's empty watched library. The receiver's managed configuration ignores
+AirPlay volume commands, so the audio itself is attenuated. The script also
+requests engine output volume 5, but that is not proof of receiver attenuation.
+No real library tracks or API credentials are used. Only output ID
+`202481586338774` is selected; the fresh engine has no other selected outputs.
+
+Observed results:
+
+- The generated file was indexed as `library:track:1`, with WAV stereo audio at
+  44.1 kHz and `length_ms: 12000`. This proves an indexed-file path; direct
+  unindexed-file loading remains unsupported by the tested endpoint.
+- OwnTone remained in play state with position 1790 ms after four wall-clock
+  seconds, consistent with startup buffering. This is one observation, not a
+  latency benchmark.
+- The Pi independently reported `Active: true` and MPRIS Playing during the
+  test, establishing receiver-side activity rather than engine status alone.
+- OwnTone reported pause at 1860 ms; an absolute seek to 8000 ms and resume
+  were accepted. Seven seconds later it reported stop with no current item.
+  Audible pause behavior and seek accuracy have not been confirmed.
+- Cleanup stopped the fixture, deselected its outputs, and removed the
+  container. Port 13689 was released. The Pi then reported `Active: false`
+  and MPRIS Stopped.
+- Receiver logs during the window included ALSA XRUN recovery and clock/latency
+  changes. Their effect on audible quality is unverified; do not mark audio
+  quality or synchronization as passed.
+
+Audible confirmation from the user is pending. This is not a completed
+Groovenet-authenticated audio, multi-room, concurrency, or interruption test.
+
+### Additional sender-observation opportunity
+
+The Pi exposes `org.gnome.ShairportSync.Active` and
+`org.gnome.ShairportSync.RemoteControl.Client` through the system bus at
+`/org/gnome/ShairportSync`, service `org.gnome.ShairportSync`. The latter reported
+`192.168.2.151` after this test; `ClientName` was empty. This may support sender
+correlation more directly than the current HA wrappers. The client address
+remains populated after Active becomes false, so it must be gated by active
+session state. Behavior during takeover, IPv6 address selection, and multiple
+OwnTone instances on the same host still needs validation: an address alone
+cannot distinguish those engine instances.
 
 ## Next: audio and hardware validation
 
@@ -140,8 +196,8 @@ were verified read-only from the installed integration code and entity registry:
    this experiment.
 
 Record hardware results here with engine/image versions, receiver software,
-network mode, commands, expected/actual behavior, and cleanup evidence. All
-hardware checks are currently pending.
+network mode, commands, expected/actual behavior, and cleanup evidence. Beyond
+the single Lounge test above, hardware checks remain pending.
 
 ## Upstream references
 
