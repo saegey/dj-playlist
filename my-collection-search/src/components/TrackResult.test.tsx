@@ -610,14 +610,19 @@ describe("TrackResult row layout (#685)", () => {
     expect(screen.getAllByText(/Abraxas/)).toHaveLength(1);
   });
 
-  it("shows the Camelot code on its own beside a wide key name that can shrink with a tooltip", () => {
+  it("shows only the Camelot code in the row, with the key name as a tooltip", () => {
     renderWithProviders(<TrackResult track={{ ...track, key: "Bb minor", key_confidence: 0.4 }} layout="row" />);
 
     const code = screen.getByText("3A");
     expect(getComputedStyle(code).flexShrink).toBe("0");
-    const name = screen.getByText("Bb minor");
-    expect(name.getAttribute("title")).toBe("Bb minor");
-    expect(getComputedStyle(name).textOverflow).toBe("ellipsis");
+    expect(screen.queryByText("Bb minor")).toBeNull();
+    expect(code.parentElement?.getAttribute("title")).toBe("Bb minor");
+  });
+
+  it("keeps the full key name on the card", () => {
+    renderWithProviders(<TrackResult track={{ ...track, key: "Bb minor" }} />);
+
+    expect(screen.getByText("Bb minor").getAttribute("title")).toBe("Bb minor");
   });
 
   it("gives a single long genre tag an ellipsis and a tooltip instead of cutting it mid-letter", () => {

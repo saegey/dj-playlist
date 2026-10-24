@@ -60,17 +60,17 @@ export const TRACK_ROW_EDGE_WIDTH = "44px";
  * Track, Release, Time, BPM, Key, Genre, Rating.
  */
 export const TRACK_ROW_GRID_TEMPLATE =
-  "minmax(200px, 2fr) minmax(112px, 0.8fr) 48px 56px 136px minmax(168px, 1.4fr) 76px";
+  "minmax(200px, 2fr) minmax(112px, 0.8fr) 48px 56px 96px minmax(168px, 1.4fr) 76px";
 const TRACK_ROW_GRID_BASE = "minmax(150px, 2fr) minmax(96px, 0.8fr) 48px 56px";
-const TRACK_ROW_GRID_WITH_KEY = `${TRACK_ROW_GRID_BASE} 136px`;
+const TRACK_ROW_GRID_WITH_KEY = `${TRACK_ROW_GRID_BASE} 96px`;
 /** Width of the list block at which Key, then Genre and Rating, have room to show. */
-const TRACK_ROW_KEY_MIN_WIDTH = "820px";
-const TRACK_ROW_FULL_MIN_WIDTH = "1080px";
+const TRACK_ROW_KEY_MIN_WIDTH = "780px";
+const TRACK_ROW_FULL_MIN_WIDTH = "1040px";
 
 /**
  * Styles for the grid in a row and in the header. Columns drop off the right as the
  * list block (a `container-type: inline-size` ancestor) narrows, rather than being
- * cut mid-cell: below 820px Key, Genre and Rating go, below 1080px Genre and Rating.
+ * cut mid-cell: below 780px Key, Genre and Rating go, below 1040px Genre and Rating.
  */
 export const trackRowGridCss = {
   gridTemplateColumns: TRACK_ROW_GRID_BASE,
@@ -158,10 +158,13 @@ function KeyChip({
   keyName,
   camelot,
   keyConfidence,
+  showName = true,
 }: {
   keyName?: string | null;
   camelot: string;
   keyConfidence?: number | null;
+  /** False in the dense row, where the Camelot code stands for the key and the name is a tooltip. */
+  showName?: boolean;
 }) {
   if (!keyName || !camelot || camelot === "-") {
     return (
@@ -187,14 +190,17 @@ function KeyChip({
       minW={0}
       maxW="100%"
       justifySelf="start"
+      title={showName ? undefined : keyName}
     >
       <Box aria-hidden="true" boxSize="8px" borderRadius="full" bg={`hsl(${hue}, 70%, 62%)`} flexShrink={0} />
       <Text as="span" fontSize="xs" fontWeight="bold" color="fg" fontVariantNumeric="tabular-nums" flexShrink={0}>
         {camelot}
       </Text>
-      <Text as="span" fontSize="xs" color="fg.muted" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" minW={0} title={keyName}>
-        {keyName}
-      </Text>
+      {showName && (
+        <Text as="span" fontSize="xs" color="fg.muted" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" minW={0} title={keyName}>
+          {keyName}
+        </Text>
+      )}
       {typeof keyConfidence === "number" && <KeyConfidenceIndicator keyConfidence={keyConfidence} />}
     </Flex>
   );
@@ -935,7 +941,7 @@ export default function TrackResult({
 
           {showDetails ? (
             <Flex data-col="key" minW={0}>
-              <KeyChip keyName={track.key} camelot={camelot} keyConfidence={track.key_confidence} />
+              <KeyChip keyName={track.key} camelot={camelot} keyConfidence={track.key_confidence} showName={false} />
             </Flex>
           ) : (
             <Box data-col="key" />
