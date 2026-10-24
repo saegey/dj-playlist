@@ -46,6 +46,8 @@ export default function MissingFilter<K extends string>({
         <Button
           size="sm"
           variant="outline"
+          // The outline variant draws 1px; the filter row's controls all carry the 2px outline.
+          borderWidth="outline"
           borderColor="border.ink"
           flexShrink={0}
           aria-label={count > 0 ? `Missing data filters, ${count} on` : "Missing data filters"}

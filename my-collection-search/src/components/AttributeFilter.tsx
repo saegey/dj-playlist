@@ -44,6 +44,8 @@ export default function AttributeFilter({ value, onChange }: AttributeFilterProp
         <Button
           size="sm"
           variant="outline"
+          // The outline variant draws 1px; the filter row's controls all carry the 2px outline.
+          borderWidth="outline"
           borderColor="border.ink"
           flexShrink={0}
           aria-label={count > 0 ? `BPM, key and rating filters, ${count} on` : "BPM, key and rating filters"}

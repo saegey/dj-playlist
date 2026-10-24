@@ -90,8 +90,9 @@ type GenreFilterProps = {
 };
 
 /**
- * The genre field with its "Include similar" toggle attached to it, one unit:
- * the toggle shares the field's outline and appears once a genre is selected.
+ * The genre field with its "Include similar" toggle beside it, one unit: the
+ * toggle gets its own outlined box, a field's width away, and appears once a
+ * genre is selected.
  */
 export function GenreFilterGroup({
   includeSimilar,
@@ -102,7 +103,7 @@ export function GenreFilterGroup({
   onIncludeSimilarChange: (checked: boolean) => void;
 }) {
   return (
-    <Flex alignItems="center" data-testid="genre-filter-group">
+    <Flex alignItems="center" gap={2} data-testid="genre-filter-group">
       <GenreFilter {...genre} />
       {genre.selected.length > 0 && (
         <Box
@@ -111,8 +112,6 @@ export function GenreFilterGroup({
           alignItems="center"
           h="36px"
           px={3}
-          // Overlaps the field's right border so the two share one outline.
-          ml="-2px"
           borderWidth="outline"
           borderColor="border.ink"
           bg="bg.panel"
