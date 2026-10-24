@@ -386,6 +386,29 @@ describe("AppearanceSettingsSection custom palette", () => {
     expect(styleEl()).not.toBeNull();
   });
 
+  it("closes the editor", async () => {
+    const { user } = renderWithProviders(<AppearanceSettingsSection />);
+    await user.click(await screen.findByText("Create custom palette"));
+    await user.click(screen.getByText("Close"));
+    expect(screen.queryByTestId("custom-palette-editor")).toBeNull();
+    expect(screen.getByText("Create custom palette")).toBeTruthy();
+  });
+
+  it("reports a non-Error failure by its text, on save and on delete", async () => {
+    api.fetchAppearanceSettings.mockResolvedValue({ palette: "sleeve", fonts: defaults, customPalette: custom });
+    api.updateAppearanceSettings.mockRejectedValue("offline");
+    const { user } = renderWithProviders(<AppearanceSettingsSection />);
+    await user.click(await screen.findByText("Edit custom palette"));
+    await user.click(screen.getByText("Save custom palette"));
+    await waitFor(() =>
+      expect(toast.create).toHaveBeenCalledWith(expect.objectContaining({ description: "offline", title: "Failed to save the custom palette" }))
+    );
+    await user.click(screen.getByText("Delete custom palette"));
+    await waitFor(() =>
+      expect(toast.create).toHaveBeenCalledWith(expect.objectContaining({ description: "offline", title: "Failed to delete the custom palette" }))
+    );
+  });
+
   it("reports a failed save", async () => {
     api.updateAppearanceSettings.mockRejectedValue(new Error("bad colours"));
     const { user } = renderWithProviders(<AppearanceSettingsSection />);

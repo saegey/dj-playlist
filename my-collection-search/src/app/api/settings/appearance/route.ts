@@ -32,12 +32,12 @@ export async function PUT(request: Request) {
   }
   const parsed = appearanceSettingsPutBodySchema.safeParse(body);
   if (!parsed.success) {
-    const path = parsed.error.issues[0]?.path.join(".") ?? "";
+    const path = parsed.error.issues[0]?.path.join(".");
     const role = fontRoleIds.find((id) => path === `fonts.${id}`);
     const error =
       path === "palette"
         ? `palette must be one of: ${[...paletteIds, "custom"].join(", ")} (custom needs a customPalette)`
-        : path.startsWith("customPalette")
+        : path?.startsWith("customPalette")
           ? `customPalette must be null or { base: a preset id, light and dark: { ${customColourKeys.join(", ")} } } with every colour as #rrggbb`
         : role
           ? `fonts.${role} must be one of: ${fontChoiceIdsFor(role).join(", ")}`

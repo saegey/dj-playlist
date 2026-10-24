@@ -63,10 +63,12 @@ const PAIR_NAMES: Record<string, string> = {
   "--gn-accent-border": "Accent border",
 };
 
+const STATUS_PARTS: Record<string, string> = { fg: "text", subtle: "tint", border: "border" };
+
 const pairName = (variable: string) => {
   const status = /^--gn-status-(\w+)-(fg|subtle|border)$/.exec(variable);
-  if (status) return `${status[2] === "subtle" ? "" : "Status "}${status[1]} ${status[2] === "fg" ? "text" : status[2] === "border" ? "border" : "tint"}`.trim();
-  return PAIR_NAMES[variable] ?? variable;
+  if (status) return `Status ${status[1]} ${STATUS_PARTS[status[2]]}`;
+  return PAIR_NAMES[variable];
 };
 
 const pairLabel = (check: ContrastCheck) =>
@@ -85,8 +87,7 @@ const tokenVars: Record<string, string> = Object.fromEntries(
         ["colors", "shadows"].includes(token.extensions.category) &&
         String(token.value).includes("var(--gn-"),
     )
-    .map((token) => [token.extensions.cssVar?.var ?? "", String(token.value)])
-    .filter(([name]) => name),
+    .map((token) => [(token.extensions.cssVar as { var: string }).var, String(token.value)]),
 );
 
 const cssVars = (values: PaletteValues) =>
@@ -262,7 +263,6 @@ export default function CustomPaletteEditor({
   };
 
   const chooseBase = (base: (typeof paletteIds)[number]) => {
-    if (base === draft.base) return;
     if (edited) setPendingBase(base);
     else setDraft(customFromPreset(base));
   };

@@ -52,6 +52,25 @@ describe("CustomPaletteEditor", () => {
     expect(field.textContent).toContain("Fail");
   });
 
+  it("names failing status pairs on a ground they cannot read on", () => {
+    setup();
+    type("Ground (light) hex", "#9b1c1c");
+    const text = screen.getByTestId("contrast-summary").textContent ?? "";
+    expect(text).toContain("Status missing text on ground");
+    expect(text).toContain("Status missing border on ground");
+  });
+
+  it("says 'pair' for a single failure and lists dark failures under Dark", async () => {
+    const { user } = setup();
+    type("Accent (light) hex", "#f0e8da");
+    expect(screen.getByTestId("contrast-summary").textContent).toMatch(/\b1 pair below AA in light/);
+    await user.click(screen.getByText("Dark"));
+    type("Ink (dark) hex", "#1c1713");
+    const text = screen.getByTestId("contrast-summary").textContent ?? "";
+    expect(text).toMatch(/pairs below AA in dark/);
+    expect(text).toContain("Dark");
+  });
+
   it("rejects a malformed hex as you type, keeping the last valid colour", () => {
     setup();
     type("Ink (light) hex", "red;}body{display:none");
