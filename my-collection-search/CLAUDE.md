@@ -110,15 +110,20 @@ an invalid value the browser drops, so it fails silently.
   `src/app/palettes/<id>.ts` exporting a `Palette`, register it in
   `palettes/index.ts`; `chakraTheme.ts` emits `[data-palette="<id>"]` and
   `[data-palette="<id>"].dark`, and `palettes.test.ts` checks completeness and
-  WCAG AA contrast (4.5:1 text, 3:1 borders, focus rings, icons) and that the
-  status colours differ in lightness. Nothing else to wire up: Settings →
+  WCAG contrast and that the status colours differ in lightness. The presets
+  are Sleeve (default), Riso (cream, fluorescent pink, teal), Midnight (navy,
+  cream, amber) and Mono (black and white). An optional `contrast: "AA" | "AAA"`
+  on a `Palette` (default AA) sets the bar: AA is 4.5:1 for text pairs, AAA is
+  7:1 (Mono declares it); borders, focus rings and icon-sized pairs stay at
+  3:1 either way. A failure names the palette, mode and pair. Nothing else to wire up: Settings →
   Appearance builds its picker from the registry (a card per palette, named
   from its id), and `PUT /api/settings/appearance` validates against it. The
   palette is a shared server setting (`appearance_settings`), read by the root
   layout; light/dark/system is per device in localStorage via
   `ColorModeProvider`. An unknown `data-palette` falls back to
-  the default palette (Sleeve), which is also declared on `:root`. Sleeve's
-  values are provisional until #664 is signed off; change them in `sleeve.ts` only.
+  the default palette (Sleeve), which is also declared on `:root`. Every
+  palette's values are provisional until #664 is signed off; change them in the
+  palette's own file only.
 - **Status** tokens `status.{missing,analysis,genre,success}.{fg,subtle,border}`
   carry the badge meanings below.
 - **House style (#667):** the whole look lives in `src/app/houseStyle.ts`
