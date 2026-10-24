@@ -8,6 +8,7 @@ import { playerTuiAction } from "./playerTuiKeys.js";
 import { formatPlayback, visibleWindow } from "./playerTuiView.js";
 
 export interface PlayerTuiOptions {
+  backend?: string;
   search?: string;
   playlist?: string;
   /** Overrides `player_artwork` for the daemon this TUI starts. */
@@ -41,7 +42,7 @@ export async function runPlayerTui(options: PlayerTuiOptions = {}, runtime: Play
       initialSnapshot = await control.request<PlaybackSnapshot>("status");
     } catch (error) {
       if (!(error instanceof PlayerProtocolError) || error.code !== "DAEMON_UNAVAILABLE") throw error;
-      daemon = runtime.createDaemon?.() ?? createPlayerDaemon({ artwork: options.artwork, logPlays: options.logPlays });
+      daemon = runtime.createDaemon?.() ?? createPlayerDaemon({ backend: options.backend, artwork: options.artwork, logPlays: options.logPlays });
       await daemon.start();
       await control.close();
       control = runtime.createControl?.() ?? new PlayerControlClient(PLAYER_DAEMON_PATHS.socketPath);

@@ -1,15 +1,35 @@
 import type { GroovenetClient, Track } from "@groovenet/client";
 import type { PlaybackSource } from "./types.js";
+import { posix } from "node:path";
+import { pathToFileURL } from "node:url";
+import { PlayerError } from "./types.js";
 
 export interface ResolverConfig {
   apiBase: string;
   apiKey?: string;
+  /** Engine-side read-only library root; selects indexed file delivery. */
+  audioLibraryRoot?: string;
 }
 
-/** Build the authenticated, range-capable app URL for a downloaded track. */
+/** Resolve downloaded audio through the app, or an explicit engine-side library. */
 export function audioSource(track: Track, config: ResolverConfig): PlaybackSource | null {
   const filename = track.local_audio_url?.trim();
   if (!filename) return null;
+  if (config.audioLibraryRoot !== undefined) {
+    if (!posix.isAbsolute(config.audioLibraryRoot)) throw new PlayerError("INVALID_ARGUMENT", "OwnTone library root must be an absolute Linux path");
+    let relative = filename;
+    if (/^https?:\/\//.test(relative)) {
+      try {
+        const legacy = new URL(relative);
+        relative = legacy.searchParams.get("filename") ?? posix.basename(decodeURIComponent(legacy.pathname));
+      } catch { return null; }
+    } else {
+      try { relative = decodeURIComponent(relative); } catch { return null; }
+    }
+    relative = relative.replace(/^\/+/, "").replace(/^(?:app\/)?audio\//, "");
+    if (!relative || relative.includes("\\") || relative.includes("\0") || relative.split("/").some((part) => !part || part === "." || part === "..")) return null;
+    return { url: pathToFileURL(posix.join(config.audioLibraryRoot, relative)).toString() };
+  }
   const base = config.apiBase.endsWith("/") ? config.apiBase : `${config.apiBase}/`;
   const url = new URL("audio", base);
   url.searchParams.set("filename", filename);

@@ -53,7 +53,15 @@ export type PlayerErrorCode =
   | "MPV_IPC"
   | "STREAM_FAILED"
   | "DEVICE_UNAVAILABLE"
-  | "INVALID_ARGUMENT";
+  | "INVALID_ARGUMENT"
+  | "ENGINE_UNAVAILABLE"
+  | "ENGINE_INCOMPATIBLE"
+  | "ENGINE_AUTH"
+  | "ENGINE_TIMEOUT"
+  | "ENGINE_API"
+  | "DEVICE_BUSY"
+  | "DEVICE_AUTH"
+  | "PLAYBACK_INTERRUPTED";
 
 export class PlayerError extends Error {
   constructor(

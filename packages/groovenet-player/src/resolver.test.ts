@@ -84,3 +84,22 @@ describe("TrackResolver", () => {
     expect((await resolver.playlist(1)).map(({ track_id }) => track_id)).toEqual(["available"]);
   });
 });
+
+describe("indexed OwnTone source delivery", () => {
+  const config = { apiBase: "http://app/api", apiKey: "private", audioLibraryRoot: "/srv/media" };
+  it.each([
+    ["album/song #1.m4a", "file:///srv/media/album/song%20%231.m4a"],
+    ["/app/audio/song.mp3", "file:///srv/media/song.mp3"],
+    ["/audio/song.mp3", "file:///srv/media/song.mp3"],
+    ["https://old/api/audio?filename=album%2Fsong.mp3", "file:///srv/media/album/song.mp3"],
+    ["https://old/audio/song%20one.mp3", "file:///srv/media/song%20one.mp3"],
+  ])("maps %s to an engine-side file without app credentials", (filename, url) => {
+    expect(audioSource(track("song", filename), config)).toEqual({ url });
+  });
+  it.each(["../escape.mp3", "a/../../escape.mp3", "a\\song.mp3", "a//song.mp3", "a/./song.mp3", "a%00.mp3", "%ZZ", "https://%", "https://old/audio/%ZZ", "audio/"])("rejects unsafe or ambiguous filename %s", (filename) => {
+    expect(audioSource(track("song", filename), config)).toBeNull();
+  });
+  it("requires an absolute engine-side path", () => {
+    expect(() => audioSource(track("song", "song.mp3"), { ...config, audioLibraryRoot: "relative" })).toThrow(/absolute/);
+  });
+});

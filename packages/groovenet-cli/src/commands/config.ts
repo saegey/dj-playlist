@@ -9,7 +9,12 @@ type ConfigKey =
   | "username"
   | "insecure_tls"
   | "player_artwork"
-  | "player_log_plays";
+  | "player_log_plays"
+  | "player_backend"
+  | "owntone_url"
+  | "owntone_password"
+  | "owntone_library"
+  | "owntone_output";
 
 const VALID_KEYS: ConfigKey[] = [
   "api_base",
@@ -19,6 +24,11 @@ const VALID_KEYS: ConfigKey[] = [
   "insecure_tls",
   "player_artwork",
   "player_log_plays",
+  "player_backend",
+  "owntone_url",
+  "owntone_password",
+  "owntone_library",
+  "owntone_output",
 ];
 
 export function addConfigCommands(program: Command): void {
@@ -50,10 +60,14 @@ export function addConfigCommands(program: Command): void {
         }
         update[key] = truthy.includes(v);
       } else {
+        if (key === "player_backend" && value !== "mpv" && value !== "owntone") {
+          printError("player_backend must be mpv or owntone");
+          process.exit(2);
+        }
         update[key] = value;
       }
       saveConfig(update);
-      printSuccess(`✓ Set ${key} = ${value}`);
+      printSuccess(`✓ Set ${key} = ${key === "owntone_password" ? "***" : value}`);
     });
 
   config
@@ -67,7 +81,7 @@ export function addConfigCommands(program: Command): void {
       } else {
         console.log("Current configuration:");
         for (const [k, v] of Object.entries(cfg)) {
-          const display = k === "api_key" && v ? "***" : v;
+          const display = (k === "api_key" || k === "owntone_password") && v ? "***" : v;
           console.log(`  ${k}: ${display}`);
         }
       }

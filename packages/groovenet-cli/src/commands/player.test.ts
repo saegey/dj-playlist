@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { spawn, type ChildProcess } from "node:child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GroovenetClient, loadConfig } from "@groovenet/client";
-import { MpvBackend, PlayLogger, PlayerControlClient } from "@groovenet/player";
+import { OwnToneBackend, MpvBackend, PlayLogger, PlayerControlClient } from "@groovenet/player";
 import { PlayerDaemon } from "@groovenet/player";
 import { runPlayerTui } from "./playerTui.js";
 import { addPlayerCommands, createPlayerDaemon } from "./player.js";
@@ -16,6 +16,7 @@ vi.mock("@groovenet/player", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@groovenet/player")>();
   return {
     ...actual,
+    OwnToneBackend: vi.fn(function (options: ConstructorParameters<typeof actual.OwnToneBackend>[0]) { return new actual.OwnToneBackend(options); }),
     MpvBackend: vi.fn(function (options: ConstructorParameters<typeof actual.MpvBackend>[0]) { return new actual.MpvBackend(options); }),
     PlayLogger: vi.fn(function (options: ConstructorParameters<typeof actual.PlayLogger>[0]) { return new actual.PlayLogger(options); }),
   };
@@ -449,5 +450,36 @@ describe("player CLI commands", () => {
         else Reflect.deleteProperty(process.stdout, "isTTY");
       }
     });
+  });
+});
+
+
+describe("OwnTone daemon selection", () => {
+  afterEach(() => vi.restoreAllMocks());
+  const config = { api_base: "http://app/api", default_friend_id: 1, player_backend: "owntone" as const, owntone_url: "http://engine/api", owntone_library: "/media", owntone_output: "lounge", owntone_password: "private" };
+  it("selects OwnTone explicitly through config, and allows an mpv override", () => {
+    vi.mocked(loadConfig).mockReturnValue(config);
+    createPlayerDaemon();
+    expect(OwnToneBackend).toHaveBeenLastCalledWith({ apiUrl: "http://engine/api", outputId: "lounge", password: "private" });
+    createPlayerDaemon({ backend: "mpv" });
+    expect(MpvBackend).toHaveBeenLastCalledWith({ insecureTls: undefined, artwork: undefined });
+  });
+  it("rejects invalid engines and missing delivery config", () => {
+    vi.mocked(loadConfig).mockReturnValue({ api_base: "http://app/api", default_friend_id: 1 });
+    expect(() => createPlayerDaemon({ backend: "vlc" })).toThrow(/must be mpv or owntone/);
+    expect(() => createPlayerDaemon({ backend: "owntone" })).toThrow(/requires owntone_url and owntone_library/);
+  });
+  it("propagates --backend into detached and internal daemons", async () => {
+    vi.mocked(loadConfig).mockReturnValue(config);
+    vi.spyOn(PlayerControlClient.prototype, "request").mockResolvedValue({ status: "stopped" });
+    vi.spyOn(PlayerControlClient.prototype, "close").mockResolvedValue();
+    vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    await makeProgram().parseAsync(["node", "test", "player", "start", "--detach", "--backend", "owntone"]);
+    expect(vi.mocked(spawn).mock.lastCall?.[1]).toEqual([process.argv[1], "player", "_daemon", "--backend", "owntone"]);
+    vi.spyOn(PlayerDaemon.prototype, "start").mockResolvedValue();
+    vi.spyOn(PlayerDaemon.prototype, "stop").mockResolvedValue();
+    await makeProgram().parseAsync(["node", "test", "player", "_daemon", "--backend", "owntone"]);
+    expect(OwnToneBackend).toHaveBeenCalled();
+    process.emit("SIGTERM");
   });
 });

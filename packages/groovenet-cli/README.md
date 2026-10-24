@@ -197,3 +197,10 @@ library you have downloaded can be fingerprinted. Exits 1 if any track failed.
 ## License
 
 MIT
+
+For server-side single-speaker AirPlay, the opt-in OwnTone adapter requires a
+dedicated patched engine and a read-only shared audio library. Set
+`player_backend owntone`, or use `player start --backend owntone`. Configure
+`owntone_url`, `owntone_library`, optionally `owntone_output` and
+`owntone_password`; restart an existing daemon to apply them. Full setup and
+verification limits: [OwnTone backend](../groovenet-player/OWNTONE.md).

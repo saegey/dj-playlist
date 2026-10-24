@@ -34,6 +34,8 @@
   "files": [
     "build/",
     "MPRIS.md",
+    "OWNTONE.md",
+    "owntone/",
     "scripts/mpris-smoke.mjs"
   ],
   "publishConfig": {

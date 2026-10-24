@@ -13,6 +13,13 @@ export interface GroovenetConfig {
   player_artwork?: boolean;
   /** Log a digital spin when the local player has played a track long enough. Default off. */
   player_log_plays?: boolean;
+  /** mpv remains the default. OwnTone requires a dedicated patched engine. */
+  player_backend?: "mpv" | "owntone";
+  owntone_url?: string;
+  owntone_password?: string;
+  /** Absolute library path as seen inside OwnTone, not the CLI filesystem. */
+  owntone_library?: string;
+  owntone_output?: string;
 }
 
 const CONFIG_DIR = join(homedir(), ".groovenet");
