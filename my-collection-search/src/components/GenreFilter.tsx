@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Combobox, Portal, Switch, Text, createListCollection } from "@chakra-ui/react";
+import { Box, Combobox, Flex, Portal, Switch, Text, createListCollection } from "@chakra-ui/react";
 import type { FilterChip } from "@/components/FilterChips";
 import { useGenreTaxonomyQuery } from "@/hooks/useGenreTaxonomyQuery";
 import type { GenreFilterRef } from "@/lib/trackFilterSpec";
@@ -90,9 +90,44 @@ type GenreFilterProps = {
 };
 
 /**
+ * The genre field with its "Include similar" toggle attached to it, one unit:
+ * the toggle shares the field's outline and appears once a genre is selected.
+ */
+export function GenreFilterGroup({
+  includeSimilar,
+  onIncludeSimilarChange,
+  ...genre
+}: GenreFilterProps & {
+  includeSimilar: boolean;
+  onIncludeSimilarChange: (checked: boolean) => void;
+}) {
+  return (
+    <Flex alignItems="center" data-testid="genre-filter-group">
+      <GenreFilter {...genre} />
+      {genre.selected.length > 0 && (
+        <Box
+          data-testid="include-similar"
+          display="flex"
+          alignItems="center"
+          h="36px"
+          px={3}
+          // Overlaps the field's right border so the two share one outline.
+          ml="-2px"
+          borderWidth="outline"
+          borderColor="border.ink"
+          bg="bg.panel"
+        >
+          <IncludeSimilarToggle checked={includeSimilar} onChange={onIncludeSimilarChange} />
+        </Box>
+      )}
+    </Flex>
+  );
+}
+
+/**
  * Type-ahead over the genre taxonomy for search filters (#375). A pick is
- * handed to `onAdd` and the box cleared; the chosen genres show as chips
- * beside it, which own removal.
+ * handed to `onAdd` and the box cleared; the field shows how many genres are
+ * selected, and the chips beside it own removal.
  */
 export default function GenreFilter({ selected, onAdd, counts, inSheet = false }: GenreFilterProps) {
   const { genres, isLoading, isError } = useGenreTaxonomyQuery();
@@ -125,7 +160,7 @@ export default function GenreFilter({ selected, onAdd, counts, inSheet = false }
       <Combobox.Control>
         <Combobox.Input
           aria-label="Filter by genre"
-          placeholder={isLoading ? "Loading…" : "Genre"}
+          placeholder={isLoading ? "Loading…" : selected.length > 0 ? `Genre · ${selected.length}` : "Genre"}
         />
         <Combobox.IndicatorGroup>
           <Combobox.Trigger />

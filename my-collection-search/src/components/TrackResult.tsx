@@ -55,10 +55,39 @@ const PLACEHOLDER_SRC =
 // That guarantees the "more actions" menu is never pushed off-screen by a narrow
 // container; the Rate/Genre/Key columns degrade instead.
 export const TRACK_ROW_EDGE_WIDTH = "44px";
-/** The grid every `layout="row"` track shares with `TrackListHeader`, so columns never drift apart. */
+/**
+ * The full grid every `layout="row"` track shares with `TrackListHeader`, so columns never drift apart.
+ * Track, Release, Time, BPM, Key, Genre, Rating.
+ */
 export const TRACK_ROW_GRID_TEMPLATE =
-  "minmax(180px, 2.2fr) minmax(130px, 1.6fr) 32px 44px 56px 108px minmax(150px, 1.5fr) 76px";
-export const TRACK_ROW_HEIGHT = 64;
+  "minmax(200px, 2fr) minmax(112px, 0.8fr) 48px 56px 136px minmax(168px, 1.4fr) 76px";
+const TRACK_ROW_GRID_BASE = "minmax(150px, 2fr) minmax(96px, 0.8fr) 48px 56px";
+const TRACK_ROW_GRID_WITH_KEY = `${TRACK_ROW_GRID_BASE} 136px`;
+/** Width of the list block at which Key, then Genre and Rating, have room to show. */
+const TRACK_ROW_KEY_MIN_WIDTH = "820px";
+const TRACK_ROW_FULL_MIN_WIDTH = "1080px";
+
+/**
+ * Styles for the grid in a row and in the header. Columns drop off the right as the
+ * list block (a `container-type: inline-size` ancestor) narrows, rather than being
+ * cut mid-cell: below 820px Key, Genre and Rating go, below 1080px Genre and Rating.
+ */
+export const trackRowGridCss = {
+  gridTemplateColumns: TRACK_ROW_GRID_BASE,
+  "& [data-col]": { display: "none" },
+  [`@container (min-width: ${TRACK_ROW_KEY_MIN_WIDTH})`]: {
+    gridTemplateColumns: TRACK_ROW_GRID_WITH_KEY,
+    "& [data-col=key]": { display: "flex" },
+  },
+  [`@container (min-width: ${TRACK_ROW_FULL_MIN_WIDTH})`]: {
+    gridTemplateColumns: TRACK_ROW_GRID_TEMPLATE,
+    "& [data-col=key]": { display: "flex" },
+    "& [data-col=genre]": { display: "block" },
+    "& [data-col=rating]": { display: "flex" },
+  },
+};
+/** Three lines (title, artist, album) plus padding; also the virtualiser's `estimateSize`. */
+export const TRACK_ROW_HEIGHT = 80;
 
 export type TrackResultProps = {
   track: Track | (Track & { camelot_key?: string });
@@ -106,15 +135,14 @@ export function TrackListHeader() {
       minW={0}
     >
       <Box aria-hidden="true" flexShrink={0} w={TRACK_ROW_EDGE_WIDTH} />
-      <Grid templateColumns={TRACK_ROW_GRID_TEMPLATE} columnGap={4} alignItems="center" flex="1" minW={0} overflow="hidden">
+      <Grid css={trackRowGridCss} columnGap={4} alignItems="center" flex="1" minW={0} overflow="hidden">
         <Text>Track</Text>
-        <Text>Album</Text>
-        <Text>Side</Text>
+        <Text>Release</Text>
         <Text textAlign="right">Time</Text>
         <Text textAlign="right">BPM</Text>
-        <Text>Key</Text>
-        <Text>Genre</Text>
-        <Text>Rating</Text>
+        <Text data-col="key">Key</Text>
+        <Text data-col="genre">Genre</Text>
+        <Text data-col="rating">Rating</Text>
       </Grid>
       <Box aria-hidden="true" flexShrink={0} minW="80px" />
     </Flex>
@@ -157,12 +185,14 @@ function KeyChip({
       borderColor="border"
       whiteSpace="nowrap"
       minW={0}
+      maxW="100%"
+      justifySelf="start"
     >
       <Box aria-hidden="true" boxSize="8px" borderRadius="full" bg={`hsl(${hue}, 70%, 62%)`} flexShrink={0} />
-      <Text as="span" fontSize="xs" fontWeight="bold" color="fg" fontVariantNumeric="tabular-nums">
+      <Text as="span" fontSize="xs" fontWeight="bold" color="fg" fontVariantNumeric="tabular-nums" flexShrink={0}>
         {camelot}
       </Text>
-      <Text as="span" fontSize="xs" color="fg.muted" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+      <Text as="span" fontSize="xs" color="fg.muted" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" minW={0} title={keyName}>
         {keyName}
       </Text>
       {typeof keyConfidence === "number" && <KeyConfidenceIndicator keyConfidence={keyConfidence} />}
@@ -274,19 +304,40 @@ function GenreList({
   items,
   kind,
   max = 2,
+  wrap = false,
 }: {
   items: GenreBadgeItem[];
   kind: GenreBadgeKind;
   max?: number;
+  /** Wrap onto more lines instead of shrinking a tag to an ellipsis (the card has the height). */
+  wrap?: boolean;
 }) {
   if (items.length === 0) return null;
   const shown = items.slice(0, max);
   const overflow = items.length - shown.length;
   return (
-    <Flex gap={1.5} alignItems="center" overflow="hidden" minW={0} data-testid="track-genres">
+    <Flex
+      gap={1.5}
+      alignItems="center"
+      overflow="hidden"
+      minW={0}
+      flexWrap={wrap ? "wrap" : "nowrap"}
+      data-testid="track-genres"
+      // A tag shrinks and ends in an ellipsis rather than being cut mid-letter.
+      css={{
+        "& > a, & > span:not([data-overflow])": {
+          display: "block",
+          minWidth: 0,
+          maxWidth: "100%",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        },
+      }}
+    >
       <GenreBadgeList items={shown} kind={kind} scope="tracks" colorPalette="status.genre" variant="subtle" />
       {overflow > 0 && (
-        <Badge size="sm" variant="subtle" colorPalette="neutral" flexShrink={0}>
+        <Badge data-overflow="" size="sm" variant="subtle" colorPalette="neutral" flexShrink={0}>
           +{overflow}
         </Badge>
       )}
@@ -528,6 +579,8 @@ export default function TrackResult({
   const camelot = keyToCamelot(track.key);
   const durationSeconds = getTrackDurationSeconds(track);
   const score = track._semanticScore !== undefined ? track._semanticScore * 100 : undefined;
+
+  const albumLine = [track.album, track.year].filter(Boolean).join(" · ");
 
   const metaExtras: React.ReactNode[] = [];
   if (track.library_identifier) {
@@ -792,19 +845,20 @@ export default function TrackResult({
         */}
         <Grid
           data-testid="track-row-grid"
-          templateColumns={TRACK_ROW_GRID_TEMPLATE}
+          css={trackRowGridCss}
           columnGap={4}
           alignItems="center"
           flex="1"
           minW={0}
           overflow="hidden"
         >
-          <Flex direction="column" gap={0.5} minW={0} overflow="hidden">
+          <Flex direction="column" gap={0} minW={0} overflow="hidden">
             <Flex alignItems="center" gap={1.5} minW={0}>
               <Link
                 as={NextLink}
                 href={trackHref}
                 title={track.title}
+                display="block"
                 fontSize="15px"
                 lineHeight="20px"
                 fontWeight="600"
@@ -837,25 +891,31 @@ export default function TrackResult({
                 {track.artist}
               </Text>
             </ArtistLink>
-          </Flex>
-
-          <Flex minW={0} fontSize="13px" color="fg.muted" alignItems="center" gap={1.5} overflow="hidden">
             <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
-              <Text as="span" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" title={track.album}>
-                {track.album}
-                {track.year && <Text as="span" color="fg.subtle"> · {track.year}</Text>}
+              <Text
+                data-testid="track-album-line"
+                fontSize="12px"
+                lineHeight="16px"
+                color="fg.subtle"
+                overflow="hidden"
+                textOverflow="ellipsis"
+                whiteSpace="nowrap"
+                title={albumLine}
+              >
+                {albumLine}
               </Text>
             </AlbumLink>
-            {metaExtras.length > 0 && (
-              <Flex gap={1} flexShrink={0} align="center">
-                {metaExtras}
-              </Flex>
-            )}
           </Flex>
 
-          <Text fontSize="xs" color="fg.subtle">
-            {track.position ?? ""}
-          </Text>
+          {/* Release: what must never clip, so it wraps instead of truncating. */}
+          <Flex data-testid="track-release" minW={0} fontSize="13px" color="fg.muted" alignItems="center" gap={1} flexWrap="wrap">
+            {track.position && (
+              <Text as="span" fontSize="xs" color="fg.subtle" fontFamily="label" flexShrink={0}>
+                {track.position}
+              </Text>
+            )}
+            {metaExtras}
+          </Flex>
 
           {showDetails ? (
             <Text fontSize="sm" color="fg.muted" textAlign="right" fontVariantNumeric="tabular-nums">
@@ -874,9 +934,11 @@ export default function TrackResult({
           )}
 
           {showDetails ? (
-            <KeyChip keyName={track.key} camelot={camelot} keyConfidence={track.key_confidence} />
+            <Flex data-col="key" minW={0}>
+              <KeyChip keyName={track.key} camelot={camelot} keyConfidence={track.key_confidence} />
+            </Flex>
           ) : (
-            <Box />
+            <Box data-col="key" />
           )}
 
           {/*
@@ -885,11 +947,11 @@ export default function TrackResult({
             one track in CSS Grid's auto-placement — this Box always renders so
             the genre cell keeps its slot in the template regardless.
           */}
-          <Box minW={0} overflow="hidden">
+          <Box data-col="genre" minW={0} overflow="hidden">
             {showGenres && <GenreList items={genreBadges.items} kind={genreBadges.kind} max={2} />}
           </Box>
 
-          <Flex gap={0.5} justifyContent="flex-start" minW={0}>
+          <Flex data-col="rating" gap={0.5} justifyContent="flex-start" minW={0}>
             {showRating && <RatingStars value={localRating} onChange={handleRatingChange} />}
           </Flex>
         </Grid>
@@ -971,9 +1033,9 @@ export default function TrackResult({
               {track.artist}
             </Text>
           </ArtistLink>
-          <Flex gap={1} fontSize="xs" color="fg.subtle" alignItems="center" minW={0} overflow="hidden">
+          <Flex gap={1} fontSize="xs" color="fg.subtle" alignItems="center" minW={0} overflow="hidden" css={{ "& > a": { minWidth: 0 } }}>
             <AlbumLink releaseId={track.release_id} friendId={track.friend_id}>
-              <Text as="span" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" title={track.album}>
+              <Text as="span" display="block" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap" title={track.album}>
                 {track.album}
                 {track.year && ` · ${track.year}`}
               </Text>
@@ -1000,7 +1062,7 @@ export default function TrackResult({
         )}
 
         <Flex alignItems="center" justifyContent="space-between" gap={2} minW={0}>
-          {showGenres && <GenreList items={genreBadges.items} kind={genreBadges.kind} max={2} />}
+          {showGenres && <GenreList items={genreBadges.items} kind={genreBadges.kind} max={2} wrap />}
           {showRating && (
             <Box flexShrink={0}>
               <RatingStars value={localRating} onChange={handleRatingChange} />

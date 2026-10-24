@@ -13,10 +13,11 @@ import { useSearchParams, useRouter } from "next/navigation";
 import AlbumSearchResults from "@/components/AlbumSearchResults";
 import PageContainer from "@/components/layout/PageContainer";
 import UnifiedSearchControls from "@/components/search/UnifiedSearchControls";
-import FilterChips from "@/components/FilterChips";
+import FilterChips, { FilterGroup } from "@/components/FilterChips";
 import GenreFilter, {
   addedGenreChips,
   genreFilterChips,
+  GenreFilterGroup,
   genreSlugFromChipKey,
   IncludeSimilarToggle,
   similarGenreIdFromChipKey,
@@ -258,18 +259,19 @@ function AlbumsPageContent() {
         <FilterChips
           leading={
             <>
-              <GenreFilter
+              <GenreFilterGroup
                 selected={genres}
                 onAdd={addGenre}
+                includeSimilar={includeSimilar}
+                onIncludeSimilarChange={setIncludeSimilar}
               />
-              {genres.length > 0 && (
-                <IncludeSimilarToggle checked={includeSimilar} onChange={setIncludeSimilar} />
-              )}
-              <MissingFilter
-                options={ALBUM_MISSING_OPTIONS}
-                active={missing}
-                onToggle={handleAlbumFilterToggle}
-              />
+              <FilterGroup>
+                <MissingFilter
+                  options={ALBUM_MISSING_OPTIONS}
+                  active={missing}
+                  onToggle={handleAlbumFilterToggle}
+                />
+              </FilterGroup>
             </>
           }
           chips={[...genreFilterChips(genres, taxonomy), ...addedGenreChips(addedGenres), ...missingChips]}

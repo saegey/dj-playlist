@@ -40,7 +40,7 @@ export default function GenreBadge({ item, kind, scope, size = "sm", colorPalett
         size={size}
         colorPalette={colorPalette}
         variant={variant ?? (kind === "track" ? "subtle" : VARIANTS[kind])}
-        title={kind === "track" ? "Not in the genre taxonomy yet" : undefined}
+        title={kind === "track" ? "Not in the genre taxonomy yet" : item.label}
       >
         {item.label}
       </Badge>
@@ -62,6 +62,7 @@ export default function GenreBadge({ item, kind, scope, size = "sm", colorPalett
         // Rows have their own click and selection handlers; a badge is its own target.
         onClick={(event) => event.stopPropagation()}
         aria-label={`Search ${scope} in ${item.label}`}
+        title={item.label}
       >
         {item.label}
       </NextLink>

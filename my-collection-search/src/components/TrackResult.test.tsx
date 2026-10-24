@@ -21,7 +21,7 @@ vi.mock("./TrackPlaylistUsage", () => ({
   default: ({ count }: { count: number }) => <span>{count} playlists</span>,
 }));
 
-import TrackResult from "./TrackResult";
+import TrackResult, { TrackListHeader, TRACK_ROW_GRID_TEMPLATE, TRACK_ROW_HEIGHT } from "./TrackResult";
 
 afterEach(() => vi.clearAllMocks());
 
@@ -114,13 +114,13 @@ describe("TrackResult layout", () => {
     expect(screen.getByRole("button", { name: "Play" })).toBeTruthy();
   });
 
-  it("keeps the row grid's 8 columns aligned for a track with no genres at all", () => {
+  it("keeps the row grid's 7 columns aligned for a track with no genres at all", () => {
     // A child that renders null (e.g. GenreList for a genre-less track) drops out of
     // the DOM, which shifts every later CSS Grid auto-placed column left by one —
     // regression coverage for that, not just a snapshot of the current markup.
     renderWithProviders(<TrackResult track={{ ...track, track_genres: [], local_tags: "", styles: [] }} layout="row" />);
 
-    expect(screen.getByTestId("track-row-grid").children.length).toBe(8);
+    expect(screen.getByTestId("track-row-grid").children.length).toBe(7);
   });
 
   it("never lets the 'more actions' menu shrink out of view: it sits outside the squeezable grid", () => {
@@ -548,5 +548,125 @@ describe("TrackResult state styling across layouts", () => {
       expect(screen.getAllByText(track.title).length).toBeGreaterThan(0);
       unmount();
     }
+  });
+});
+
+describe("TrackResult row layout (#685)", () => {
+  const longAlbum = "Cumbia Beat Vol. 1 (Experimental Guitar-Driven Tropical Sounds From Perú 1966 1976)";
+
+  it("puts title, artist and Album · Year on three lines of the first cell", () => {
+    renderWithProviders(<TrackResult track={{ ...track, album: "Abraxas", year: "1970", release_id: "1065960" }} layout="row" />);
+
+    const grid = screen.getByTestId("track-row-grid");
+    const first = grid.children[0] as HTMLElement;
+    const albumLine = within(first).getByTestId("track-album-line");
+    expect(albumLine.textContent).toBe("Abraxas · 1970");
+    expect(within(first).getByText(track.title)).toBeTruthy();
+    expect(within(first).getByText(track.artist)).toBeTruthy();
+    expect(albumLine.closest("a")?.getAttribute("href")).toBe(`/albums/1065960?friend_id=${track.friend_id}`);
+  });
+
+  it("truncates a long album title with an ellipsis and a tooltip", () => {
+    renderWithProviders(<TrackResult track={{ ...track, album: longAlbum, year: "1976" }} layout="row" />);
+
+    const albumLine = screen.getByTestId("track-album-line");
+    expect(albumLine.getAttribute("title")).toBe(`${longAlbum} · 1976`);
+    const style = getComputedStyle(albumLine);
+    expect(style.textOverflow).toBe("ellipsis");
+    expect(style.whiteSpace).toBe("nowrap");
+  });
+
+  it("leaves the year off the album line when the track has none", () => {
+    renderWithProviders(<TrackResult track={{ ...track, album: "Abraxas", year: "" }} layout="row" />);
+
+    expect(screen.getByTestId("track-album-line").textContent).toBe("Abraxas");
+  });
+
+  it("keeps a long library identifier, the position and the extras whole in the Release cell", () => {
+    renderWithProviders(
+      <TrackResult
+        track={{ ...track, position: "B2", library_identifier: "LP-349-DELUXE-BOX-SET", username: "saegey" }}
+        layout="row"
+        showUsername
+        playlistCount={3}
+        sortPositionChange={{ currentPosition: 3, previousPosition: 1 }}
+      />
+    );
+
+    const release = screen.getByTestId("track-release");
+    expect(within(release).getByText("LP-349-DELUXE-BOX-SET")).toBeTruthy();
+    expect(within(release).getByText("B2")).toBeTruthy();
+    expect(within(release).getByText(/#3 was #1/)).toBeTruthy();
+    expect(within(release).getByText("saegey")).toBeTruthy();
+    expect(within(release).getByText("3 playlists")).toBeTruthy();
+    // It wraps rather than clipping, and no badge is allowed to be squeezed.
+    expect(getComputedStyle(release).flexWrap).toBe("wrap");
+    expect(getComputedStyle(within(release).getByText("LP-349-DELUXE-BOX-SET")).flexShrink).toBe("0");
+  });
+
+  it("no longer carries the album or the side in separate columns", () => {
+    renderWithProviders(<TrackResult track={{ ...track, album: "Abraxas", position: "A1" }} layout="row" />);
+
+    expect(screen.getAllByText(/Abraxas/)).toHaveLength(1);
+  });
+
+  it("shows the Camelot code on its own beside a wide key name that can shrink with a tooltip", () => {
+    renderWithProviders(<TrackResult track={{ ...track, key: "Bb minor", key_confidence: 0.4 }} layout="row" />);
+
+    const code = screen.getByText("3A");
+    expect(getComputedStyle(code).flexShrink).toBe("0");
+    const name = screen.getByText("Bb minor");
+    expect(name.getAttribute("title")).toBe("Bb minor");
+    expect(getComputedStyle(name).textOverflow).toBe("ellipsis");
+  });
+
+  it("gives a single long genre tag an ellipsis and a tooltip instead of cutting it mid-letter", () => {
+    renderWithProviders(
+      <TrackResult
+        track={{
+          ...track,
+          track_genres: [{ id: "r", name: "Rock en Español", slug: "rock-en-espanol", parent_id: null, parent_name: null }],
+        }}
+        layout="row"
+      />
+    );
+
+    const tag = within(screen.getByTestId("track-genres")).getByText("Rock en Español");
+    expect(tag.getAttribute("title")).toBe("Rock en Español");
+  });
+
+  it("wraps genre tags on the card instead of shrinking them", () => {
+    renderWithProviders(<TrackResult track={track} />);
+
+    expect(getComputedStyle(screen.getByTestId("track-genres")).flexWrap).toBe("wrap");
+  });
+
+  it("is tall enough for three lines", () => {
+    expect(TRACK_ROW_HEIGHT).toBe(80);
+  });
+
+  it("shares one grid with the header so the columns cannot drift", () => {
+    renderWithProviders(
+      <>
+        <TrackListHeader />
+        <TrackResult track={track} layout="row" />
+      </>
+    );
+
+    const rowGrid = screen.getByTestId("track-row-grid");
+    const headerGrid = screen.getByText("Release").parentElement as HTMLElement;
+    expect(getComputedStyle(rowGrid).gridTemplateColumns).toContain("minmax(150px");
+    expect(getComputedStyle(headerGrid).gridTemplateColumns).toBe(getComputedStyle(rowGrid).gridTemplateColumns);
+    expect(TRACK_ROW_GRID_TEMPLATE.split(/\s(?![^()]*\))/)).toHaveLength(7);
+    // Same columns, same order, in the header and the row.
+    const labels = ["Track", "Release", "Time", "BPM", "Key", "Genre", "Rating"];
+    expect(Array.from(headerGrid.children).map((el) => el.textContent)).toEqual(labels);
+    expect(headerGrid.children).toHaveLength(rowGrid.children.length);
+    ["key", "genre", "rating"].forEach((col, i) => {
+      expect(headerGrid.querySelectorAll(`[data-col=${col}]`)).toHaveLength(1);
+      expect(rowGrid.querySelectorAll(`[data-col=${col}]`)).toHaveLength(1);
+      expect(headerGrid.children[4 + i].getAttribute("data-col")).toBe(col);
+      expect(rowGrid.children[4 + i].getAttribute("data-col")).toBe(col);
+    });
   });
 });
