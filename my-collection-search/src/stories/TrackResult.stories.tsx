@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Box } from '@chakra-ui/react';
-import TrackResult from '@/components/TrackResult';
+import TrackResult, { TrackListHeader } from '@/components/TrackResult';
 import {
   sampleTrack,
   trackWithAudio,
@@ -17,7 +17,7 @@ const meta: Meta<typeof TrackResult> = {
   },
   decorators: [
     (Story) => (
-      <Box maxW="1360px" mx="auto">
+      <Box maxW="1360px" mx="auto" css={{ containerType: "inline-size" }}>
         <Story />
       </Box>
     ),
@@ -55,11 +55,38 @@ export const RowLayout: Story = {
   },
   decorators: [
     (Story) => (
-      <Box maxW="1360px" mx="auto">
+      <Box maxW="1360px" mx="auto" css={{ containerType: "inline-size" }}>
         <Story />
       </Box>
     ),
   ],
+};
+
+export const RowLayoutLongValues: Story = {
+  name: 'Row layout — long identifier, album, key and genre (#685)',
+  args: {
+    layout: 'row',
+    track: {
+      ...trackWithAudio,
+      album: 'Cumbia Beat Vol. 1 (Experimental Guitar-Driven Tropical Sounds From Perú 1966 1976)',
+      year: '1976',
+      library_identifier: 'LP-349-DELUXE-BOX-SET',
+      position: 'B2',
+      key: 'Bb minor',
+      key_confidence: 0.4,
+      track_genres: [
+        { id: 'r', name: 'Rock en Español', slug: 'rock-en-espanol', parent_id: null, parent_name: null },
+        { id: 'p', name: 'Psychedelic Cumbia Instrumental Fusion', slug: 'psychedelic', parent_id: null, parent_name: null },
+        { id: 'e', name: 'Electronic', slug: 'electronic', parent_id: null, parent_name: null },
+      ],
+    },
+  },
+  render: (args) => (
+    <Box borderWidth="2px" borderColor="border.ink" overflow="hidden">
+      <TrackListHeader />
+      <TrackResult {...args} />
+    </Box>
+  ),
 };
 
 export const RowLayoutWithIssues: Story = {
@@ -70,7 +97,7 @@ export const RowLayoutWithIssues: Story = {
   },
   decorators: [
     (Story) => (
-      <Box maxW="1360px" mx="auto">
+      <Box maxW="1360px" mx="auto" css={{ containerType: "inline-size" }}>
         <Story />
       </Box>
     ),
@@ -157,7 +184,7 @@ export const MultipleRows: Story = {
   args: { layout: 'row' },
   decorators: [
     (Story) => (
-      <Box maxW="1360px" mx="auto">
+      <Box maxW="1360px" mx="auto" css={{ containerType: "inline-size" }}>
         <Story />
       </Box>
     ),

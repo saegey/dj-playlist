@@ -6,6 +6,8 @@ const service = vi.hoisted(() => ({
 }));
 vi.mock("@/server/services/settingsService", () => ({ settingsService: service }));
 
+import { customFromPreset } from "@/app/palettes/custom";
+import { AppearanceRequestError } from "@/server/appearanceRequestError";
 import { GET, PUT } from "../route";
 
 const put = (body: string) =>
@@ -14,6 +16,7 @@ const put = (body: string) =>
 const saved = {
   palette: "sleeve",
   fonts: { display: "default", body: "default", label: "default" },
+  customPalette: null,
 };
 
 beforeEach(() => {
@@ -91,5 +94,66 @@ describe("PUT /api/settings/appearance", () => {
   it("returns 500 when saving fails", async () => {
     service.updateAppearance.mockRejectedValue(new Error("db down"));
     expect((await put(JSON.stringify({ palette: "sleeve" }))).status).toBe(500);
+  });
+});
+
+describe("PUT /api/settings/appearance — custom palette", () => {
+  const custom = customFromPreset("midnight");
+
+  it("accepts a custom palette, normalising the hex to lowercase", async () => {
+    service.updateAppearance.mockResolvedValue({ ...saved, palette: "custom", customPalette: custom });
+    const upper = structuredClone(custom);
+    upper.light.ground = upper.light.ground.toUpperCase();
+    expect(upper.light.ground).not.toBe(custom.light.ground);
+    const res = await put(JSON.stringify({ palette: "custom", customPalette: upper }));
+
+    expect(res.status).toBe(200);
+    expect(service.updateAppearance).toHaveBeenCalledWith({ palette: "custom", customPalette: custom });
+    expect((await res.json()).customPalette).toEqual(custom);
+  });
+
+  it("accepts null to delete it", async () => {
+    service.updateAppearance.mockResolvedValue(saved);
+    const res = await put(JSON.stringify({ customPalette: null }));
+    expect(res.status).toBe(200);
+    expect(service.updateAppearance).toHaveBeenCalledWith({ customPalette: null });
+  });
+
+  it.each([
+    "red;}body{display:none",
+    "url(https://evil.example/a.png)",
+    "#fff",
+    "rgba(0,0,0,0.5)",
+    "#12345",
+    "#gggggg",
+  ])("rejects %j as a colour with a 400 and saves nothing", async (bad) => {
+    const body = structuredClone(custom) as Record<string, any>;
+    body.dark.accent = bad;
+    const res = await put(JSON.stringify({ customPalette: body }));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("#rrggbb");
+    expect(service.updateAppearance).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["an unknown base", { ...custom, base: "nope" }],
+    ["a missing mode", { base: "riso", light: custom.light }],
+    ["the reserved id as base", { ...custom, base: "custom" }],
+  ])("rejects %s", async (_name, body) => {
+    expect((await put(JSON.stringify({ customPalette: body }))).status).toBe(400);
+    expect(service.updateAppearance).not.toHaveBeenCalled();
+  });
+
+  it("rejects selecting custom while deleting it", async () => {
+    const res = await put(JSON.stringify({ palette: "custom", customPalette: null }));
+    expect(res.status).toBe(400);
+  });
+
+  it("answers 400 when custom is selected but none is saved", async () => {
+    service.updateAppearance.mockRejectedValue(new AppearanceRequestError("palette custom needs a saved custom palette"));
+    const res = await put(JSON.stringify({ palette: "custom" }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("saved custom palette");
   });
 });

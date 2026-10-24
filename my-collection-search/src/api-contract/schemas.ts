@@ -103,6 +103,7 @@ import {
 } from "@groovenet/contracts";
 import { fontChoiceIdsFor, fontRoleIds, type FontChoiceId, type FontRoleId } from "@/app/fontChoices";
 import { paletteIds } from "@/app/palettes";
+import { customPaletteId, customPaletteSchema } from "@/app/palettes/custom";
 import { RECOMMENDATION_SCOPES } from "@/types/recommendations";
 
 const toInt = (value: unknown): unknown => {
@@ -974,7 +975,9 @@ export const aiPromptSettingsPutResponseSchema = z.object({
   isDefault: z.boolean(),
 });
 
-export const appearancePaletteSchema = z.enum(paletteIds);
+// `custom` is the reserved id of the saved custom palette; the service accepts
+// it only while one is stored.
+export const appearancePaletteSchema = z.enum([...paletteIds, customPaletteId]);
 
 // Each role accepts only its own faces, so a slab can't be set as the body font.
 const appearanceFontsShape = Object.fromEntries(
@@ -987,12 +990,19 @@ export const appearanceSettingsPutBodySchema = z
   .object({
     palette: appearancePaletteSchema.optional(),
     fonts: z.object(appearanceFontsShape).partial().strict().optional(),
+    // Replaces the saved custom palette; null deletes it.
+    customPalette: customPaletteSchema.nullable().optional(),
   })
-  .strict();
+  .strict()
+  .refine((body) => !(body.palette === customPaletteId && body.customPalette === null), {
+    path: ["palette"],
+    message: "palette custom needs a custom palette",
+  });
 
 export const appearanceSettingsResponseSchema = z.object({
   palette: appearancePaletteSchema,
   fonts: z.object(appearanceFontsShape),
+  customPalette: customPaletteSchema.nullable(),
 });
 
 export const recommendationSettingsQuerySchema = z.object({

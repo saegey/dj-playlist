@@ -124,6 +124,51 @@ an invalid value the browser drops, so it fails silently.
   the default palette (Sleeve), which is also declared on `:root`. Every
   palette's values are provisional until #664 is signed off; change them in the
   palette's own file only.
+- **Custom palette (#671):** one saved palette, shared like the preset choice,
+  with the reserved id `custom` (`customPaletteId` in `src/app/palettes/custom.ts`;
+  never in the registry). `appearance_settings.palette` may be `custom` only while
+  a valid `custom_palette` is stored; otherwise every reader falls back to Sleeve.
+  - **Stored shape (`CustomPalette`, nullable `custom_palette jsonb`):** `base`
+    (a preset id, supplying the status colours) plus, for `light` and `dark`,
+    exactly five colours `ground`, `surface`, `ink`, `accent`, `shadow`. Inputs only;
+    everything else is derived at render time, so a better derivation reaches
+    palettes already saved. Never store or accept free-form CSS.
+  - **Validation:** every colour must match `^#[0-9a-fA-F]{6}$` (lowercased on the
+    way in). `customPaletteSchema` (zod, in `custom.ts`) is the one definition: the
+    PUT body, the response, `parseCustomPalette` on the DB value and the layout all
+    use it. Invalid input is a 400; an invalid stored row is "no custom palette"
+    (default palette), never an error. The values end up in a `<style>`, which is
+    why `customPaletteCss` throws on anything that isn't `#rrggbb`. The API accepts
+    `{ palette, fonts, customPalette }`, all optional; `customPalette: null`
+    deletes it (and resets `palette` to the default if it was in use).
+  - **Rendering:** when the saved palette is `custom`, `layout.tsx` renders
+    `<style id="gn-custom-palette">` in `<head>` with `:root[data-palette="custom"]{...}`
+    and `:root[data-palette="custom"].dark{...}`. The extra `:root` outranks the
+    default palette's `:root` block whatever the stylesheet order. On the client
+    `applyCustomPaletteStyle` (in `useAppearanceSettings`) injects or removes the
+    same element when a palette is chosen, saved or deleted, and the hook's
+    rollback restores it.
+  - **Derivation (`derivePalette`, pure, deterministic):** `ink-muted` and `border`
+    are ink mixed toward ground; accent tint/muted/emphasized are ground mixed toward
+    the accent; `accent-fg`, `focus-ring`, `accent-border` start at the accent;
+    `accent-contrast` is the first of ground, ink, white, black that reads on the
+    accent. Status colours are the base preset's, unchanged. Derived colours are
+    pulled toward ink (or, for the tint, ground) in 2% steps until their AA pair
+    passes. **Colours the user typed are never altered:** a failure caused by them
+    (ink near ground, an accent near the ground, status text on a new ground) is
+    reported by `checkContrast`/`contrastFailures`, which hold the same pairs as
+    `palettes.test.ts` at AA. Saving is never blocked: the editor lists failing
+    pairs per mode, asks to confirm, and stores nothing about the warning.
+  - **Changing the derivation safely:** it changes how saved palettes look, so
+    edit `deriveMode` in `custom.ts` only with `custom.test.ts` open: the pinned
+    Sleeve outputs there will move (update them deliberately), and "a custom palette
+    copied from each preset passes every AA pair the preset passes" must still
+    hold. Add a variable to `paletteVariableNames` and `deriveMode` must produce it
+    (the completeness test fails otherwise). Keep every output `#rrggbb`.
+  - **Editor:** `CustomPaletteEditor` (Settings → Appearance). The live preview
+    scopes the draft by setting `--gn-*` inline on its wrapper, so the page is
+    untouched until Save. Catppuccin/Nord presets (#689), Classic (#672),
+    import/export and several saved palettes are out of scope.
 - **Status** tokens `status.{missing,analysis,genre,success}.{fg,subtle,border}`
   carry the badge meanings below.
 - **House style (#667):** the whole look lives in `src/app/houseStyle.ts`
@@ -163,6 +208,22 @@ an invalid value the browser drops, so it fails silently.
   analysis (No BPM), `status.genre` genre/AI-derived, bold `accent` library ID,
   `status.success`/`status.analysis`/`status.missing` similarity score. Always
   text, never colour alone. Genre badges go through `GenreBadge`.
+- **Track rows** (`TrackResult layout="row"`, `TRACK_ROW_HEIGHT` = 80, also the
+  virtualiser's `estimateSize`): three-line first cell (title, artist,
+  `Album · Year`), then a Release cell that holds what must never clip (library
+  ID, side/position, extras) and wraps instead of truncating. Header and rows share
+  `trackRowGridCss`; Genre and Rating, then Key, drop off as the list block (a
+  `container-type: inline-size` ancestor) narrows. Anything that can overflow ends
+  in an ellipsis with a `title` tooltip; never cut a badge or tag mid-glyph.
+- **Search fields and controls:** text you type uses the body face (14px at `md`,
+  16px on phones), controls you click use the label face (13px). The search field,
+  mode toggle, icon buttons and filter controls are all `size="sm"` (36px) so the
+  toolbar shares a baseline.
+- **Filter row** (`FilterChips` with `FilterGroup`s as `leading`): Genre and its
+  "Include similar" toggle are one unit (`GenreFilterGroup`, the toggle shows once a
+  genre is selected and the field reads "Genre · N"); Missing and BPM / Key are a
+  second group, with a wider gap between groups. Active chips and "Clear all" sit on
+  their own line below, which holds its height empty so nothing jumps.
 - **Filter chips** (`FilterChips`): square, the active chip a solid ink fill.
   Give a chip `count` where the data already has one (genre chips take the
   facet counts); the label becomes "Genre · 41". Don't add a count query for it.

@@ -23,10 +23,11 @@ import type { TrackSearchMode } from "@/api-contract/schemas";
 import { useSearchResults } from "@/hooks/useSearchResults";
 import TrackActionsMenu from "@/components/TrackActionsMenu";
 import { useTrack } from "@/hooks/useTrack";
-import FilterChips from "@/components/FilterChips";
+import FilterChips, { FilterGroup } from "@/components/FilterChips";
 import GenreFilter, {
   addedGenreChips,
   genreFilterChips,
+  GenreFilterGroup,
   genreSlugFromChipKey,
   IncludeSimilarToggle,
   similarGenreIdFromChipKey,
@@ -497,16 +498,21 @@ const SearchResults: React.FC = () => {
         mt={3}
         leading={
           <>
-            <GenreFilter selected={genres} onAdd={addGenre} counts={genreCounts} />
-            {genres.length > 0 && (
-              <IncludeSimilarToggle checked={includeSimilar} onChange={setIncludeSimilar} />
-            )}
-            <MissingFilter
-              options={TRACK_MISSING_OPTIONS}
-              active={activeFilters}
-              onToggle={handleFilterToggle}
+            <GenreFilterGroup
+              selected={genres}
+              onAdd={addGenre}
+              counts={genreCounts}
+              includeSimilar={includeSimilar}
+              onIncludeSimilarChange={setIncludeSimilar}
             />
-            <AttributeFilter value={attributes} onChange={setAttributes} />
+            <FilterGroup>
+              <MissingFilter
+                options={TRACK_MISSING_OPTIONS}
+                active={activeFilters}
+                onToggle={handleFilterToggle}
+              />
+              <AttributeFilter value={attributes} onChange={setAttributes} />
+            </FilterGroup>
           </>
         }
         chips={[
@@ -543,7 +549,7 @@ const SearchResults: React.FC = () => {
           {effectiveLayout === "row" ? (
             // Rows view: dense, grid-aligned, virtualised (fixed row height).
             // One outlined block with one shadow for the whole stack; rows only rule.
-            <Box borderWidth="outline" borderColor="border.ink" boxShadow="md" overflow="hidden">
+            <Box borderWidth="outline" borderColor="border.ink" boxShadow="md" overflow="hidden" css={{ containerType: "inline-size" }}>
               <TrackListHeader />
               <Box ref={rowListRef} position="relative" height={`${rowVirtualizer.getTotalSize()}px`}>
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {

@@ -1,3 +1,5 @@
+import { customFromPreset } from "@/app/palettes/custom";
+import { AppearanceRequestError } from "@/server/appearanceRequestError";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockGetDefaultPrompt } = vi.hoisted(() => ({
@@ -47,6 +49,7 @@ describe("appearance", () => {
     font_display: null,
     font_body: null,
     font_label: null,
+    custom_palette: null,
     ...over,
   });
   const defaults = { display: "default", body: "default", label: "default" };
@@ -56,19 +59,20 @@ describe("appearance", () => {
     await expect(settingsService.getAppearance()).resolves.toEqual({
       palette: "riso",
       fonts: { ...defaults, body: "inter" },
+      customPalette: null,
     });
   });
 
   it("falls back to the defaults when nothing is saved", async () => {
     repo.findAppearance.mockResolvedValueOnce(null);
-    await expect(settingsService.getAppearance()).resolves.toEqual({ palette: "sleeve", fonts: defaults });
+    await expect(settingsService.getAppearance()).resolves.toEqual({ palette: "sleeve", fonts: defaults, customPalette: null });
   });
 
   it("falls back to the default for an id that is no longer registered, or belongs to another role", async () => {
     repo.findAppearance.mockResolvedValueOnce(
       row({ palette: "retired-palette", font_display: "retired-font", font_body: "zilla-slab" })
     );
-    await expect(settingsService.getAppearance()).resolves.toEqual({ palette: "sleeve", fonts: defaults });
+    await expect(settingsService.getAppearance()).resolves.toEqual({ palette: "sleeve", fonts: defaults, customPalette: null });
   });
 
   it("saves only the palette when only the palette is given", async () => {
@@ -76,6 +80,7 @@ describe("appearance", () => {
     await expect(settingsService.updateAppearance({ palette: "riso" })).resolves.toEqual({
       palette: "riso",
       fonts: defaults,
+      customPalette: null,
     });
     expect(repo.upsertAppearance).toHaveBeenCalledWith({ palette: "riso" }, "sleeve");
   });
@@ -84,6 +89,85 @@ describe("appearance", () => {
     repo.upsertAppearance.mockResolvedValueOnce(row({ font_body: "inter" }));
     await settingsService.updateAppearance({ fonts: { body: "inter", label: "default" } });
     expect(repo.upsertAppearance).toHaveBeenCalledWith({ font_body: "inter", font_label: null }, "sleeve");
+  });
+
+  describe("custom palette", () => {
+    const custom = customFromPreset("riso");
+
+    it("reads a stored custom palette and selects it", async () => {
+      repo.findAppearance.mockResolvedValueOnce(row({ palette: "custom", custom_palette: custom }));
+      await expect(settingsService.getAppearance()).resolves.toMatchObject({
+        palette: "custom",
+        customPalette: custom,
+      });
+    });
+
+    it.each([
+      ["corrupted JSON shape", { base: "riso" }],
+      ["injected CSS", { ...custom, light: { ...custom.light, ink: "red;}body{display:none" } }],
+      ["a string", "not json"],
+    ])("falls back to the default palette for %s", async (_name, stored) => {
+      repo.findAppearance.mockResolvedValueOnce(row({ palette: "custom", custom_palette: stored }));
+      await expect(settingsService.getAppearance()).resolves.toMatchObject({
+        palette: "sleeve",
+        customPalette: null,
+      });
+    });
+
+    it("stores the palette as JSON and selects it in the same update", async () => {
+      repo.upsertAppearance.mockResolvedValueOnce(row({ palette: "custom", custom_palette: custom }));
+      const saved = await settingsService.updateAppearance({ palette: "custom", customPalette: custom });
+      expect(repo.upsertAppearance).toHaveBeenCalledWith(
+        { palette: "custom", custom_palette: JSON.stringify(custom) },
+        "sleeve"
+      );
+      expect(saved).toMatchObject({ palette: "custom", customPalette: custom });
+    });
+
+    it("refuses to select custom when none is saved", async () => {
+      repo.findAppearance.mockResolvedValueOnce(row());
+      await expect(settingsService.updateAppearance({ palette: "custom" })).rejects.toBeInstanceOf(
+        AppearanceRequestError
+      );
+      expect(repo.upsertAppearance).not.toHaveBeenCalled();
+    });
+
+    it("refuses to select custom while deleting it", async () => {
+      repo.findAppearance.mockResolvedValueOnce(row({ custom_palette: custom }));
+      await expect(
+        settingsService.updateAppearance({ palette: "custom", customPalette: null })
+      ).rejects.toBeInstanceOf(AppearanceRequestError);
+    });
+
+    it("selects an already saved custom palette", async () => {
+      repo.findAppearance.mockResolvedValueOnce(row({ custom_palette: custom }));
+      repo.upsertAppearance.mockResolvedValueOnce(row({ palette: "custom", custom_palette: custom }));
+      await settingsService.updateAppearance({ palette: "custom" });
+      expect(repo.upsertAppearance).toHaveBeenCalledWith({ palette: "custom" }, "sleeve");
+    });
+
+    it("falls back to the default palette when the one in use is deleted", async () => {
+      repo.findAppearance.mockResolvedValueOnce(row({ palette: "custom", custom_palette: custom }));
+      repo.upsertAppearance.mockResolvedValueOnce(row());
+      await settingsService.updateAppearance({ customPalette: null });
+      expect(repo.upsertAppearance).toHaveBeenCalledWith(
+        { custom_palette: null, palette: "sleeve" },
+        "sleeve"
+      );
+    });
+
+    it("keeps a preset when the custom palette is deleted", async () => {
+      repo.findAppearance.mockResolvedValueOnce(row({ palette: "riso", custom_palette: custom }));
+      repo.upsertAppearance.mockResolvedValueOnce(row({ palette: "riso" }));
+      await settingsService.updateAppearance({ customPalette: null });
+      expect(repo.upsertAppearance).toHaveBeenCalledWith({ custom_palette: null }, "sleeve");
+    });
+
+    it("leaves the stored palette alone for a font-only update", async () => {
+      repo.upsertAppearance.mockResolvedValueOnce(row());
+      await settingsService.updateAppearance({ fonts: { body: "inter" } });
+      expect(repo.findAppearance).not.toHaveBeenCalled();
+    });
   });
 
   it("changes nothing for an empty update", async () => {

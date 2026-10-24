@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { fontChoiceIdsFor, fontRoleIds } from "@/app/fontChoices";
 import { paletteIds } from "@/app/palettes";
+import { customColourKeys, customPaletteId } from "@/app/palettes/custom";
 import { playlistDeleteResponseSchema } from "@groovenet/contracts";
 import {
   aiPromptSettingsGetResponseSchema,
@@ -231,10 +232,39 @@ const fontsProperties = Object.fromEntries(
   fontRoleIds.map((role) => [role, { type: "string", enum: fontChoiceIdsFor(role) }]),
 );
 
+const hexColourSchemaObject = { type: "string", pattern: "^#[0-9a-fA-F]{6}$", example: "#f4ede0" };
+
+const customColoursSchemaObject = {
+  type: "object",
+  additionalProperties: false,
+  properties: Object.fromEntries(customColourKeys.map((key) => [key, hexColourSchemaObject])),
+  required: [...customColourKeys],
+};
+
+const customPaletteSchemaObject = {
+  type: "object",
+  additionalProperties: false,
+  description:
+    "The inputs of the one saved custom palette: the preset it started from (it supplies the status colours) and five #rrggbb colours per mode. Everything else is derived when rendering.",
+  properties: {
+    base: { type: "string", enum: [...paletteIds] },
+    light: customColoursSchemaObject,
+    dark: customColoursSchemaObject,
+  },
+  required: ["base", "light", "dark"],
+};
+
+const paletteIdsWithCustom = [...paletteIds, customPaletteId];
+
 const appearanceSettingsSchemaObject: Record<string, unknown> = {
   type: "object",
   properties: {
-    palette: { type: "string", enum: [...paletteIds] },
+    palette: {
+      type: "string",
+      enum: paletteIdsWithCustom,
+      description: "`custom` only while a custom palette is saved.",
+    },
+    customPalette: { ...customPaletteSchemaObject, type: ["object", "null"] },
     fonts: {
       type: "object",
       description:
@@ -243,7 +273,7 @@ const appearanceSettingsSchemaObject: Record<string, unknown> = {
       required: [...fontRoleIds],
     },
   },
-  required: ["palette", "fonts"],
+  required: ["palette", "fonts", "customPalette"],
 };
 
 // Every field is optional on the way in; only those sent change.
@@ -251,7 +281,12 @@ const appearanceSettingsPutSchemaObject: Record<string, unknown> = {
   type: "object",
   additionalProperties: false,
   properties: {
-    palette: { type: "string", enum: [...paletteIds] },
+    palette: { type: "string", enum: paletteIdsWithCustom },
+    customPalette: {
+      ...customPaletteSchemaObject,
+      type: ["object", "null"],
+      description: "Replaces the saved custom palette; null deletes it (and falls back to the default palette if it was in use).",
+    },
     fonts: {
       type: "object",
       additionalProperties: false,
@@ -263,6 +298,7 @@ const appearanceSettingsPutSchemaObject: Record<string, unknown> = {
 const appearanceExample = {
   palette: "sleeve",
   fonts: { display: "default", body: "default", label: "default" },
+  customPalette: null,
 };
 
 const recommendationSettingsSchemaObject: Record<string, unknown> = {
@@ -6190,6 +6226,18 @@ export const apiContractRoutes: ApiContractRoute[] = [
             examples: {
               fontOnly: { summary: "Change one font; the rest stay", value: { fonts: { body: "inter" } } },
               paletteOnly: { summary: "Change the palette only", value: { palette: "riso" } },
+              custom: {
+                summary: "Save a custom palette and use it",
+                value: {
+                  palette: "custom",
+                  customPalette: {
+                    base: "sleeve",
+                    light: { ground: "#f4ede0", surface: "#fbf7ee", ink: "#1f1a17", accent: "#c8321a", shadow: "#4a3a2e" },
+                    dark: { ground: "#17130f", surface: "#221c17", ink: "#f2eadc", accent: "#e8573a", shadow: "#6e5f50" },
+                  },
+                },
+              },
+              deleteCustom: { summary: "Delete the custom palette", value: { customPalette: null } },
             },
           },
         },
@@ -6205,7 +6253,7 @@ export const apiContractRoutes: ApiContractRoute[] = [
           },
         },
         "400": {
-          description: "Unknown palette or font id",
+          description: "Unknown palette or font id, an invalid custom palette (colours must be #rrggbb), or `custom` with none saved",
           content: { "application/json": { schema: errorResponseSchemaObject } },
         },
         "500": {

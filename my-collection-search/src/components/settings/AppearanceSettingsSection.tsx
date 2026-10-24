@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Box, chakra, Flex, Heading, SegmentGroup, Spinner, Text } from "@chakra-ui/react";
+import { Box, Button, chakra, Flex, Heading, SegmentGroup, Spinner, Text } from "@chakra-ui/react";
 import {
   fontChoiceFamily,
   fontRoleIds,
@@ -10,7 +10,15 @@ import {
   type FontChoiceId,
   type FontRoleId,
 } from "@/app/fontChoices";
-import { palettes, paletteIds, resolvePaletteId, type PaletteId } from "@/app/palettes";
+import { palettes, paletteIds, defaultPaletteId } from "@/app/palettes";
+import {
+  customPaletteId,
+  derivePalette,
+  resolveAppearancePalette,
+  type AppearancePaletteId,
+  type CustomPalette,
+} from "@/app/palettes/custom";
+import CustomPaletteEditor from "./CustomPaletteEditor";
 import { toaster } from "@/components/ui/toaster";
 import { useColorMode, type ThemeSetting } from "@/components/ui/color-mode";
 import {
@@ -36,6 +44,10 @@ const SWATCHES = [
 /** A line of the kind of text each role sets, shown in the chosen face. */
 const PREVIEW = "Water No Get Enemy · 104 BPM · A minor (8A)";
 
+/** The preset a new custom palette starts from: the one in use, else the default. */
+const resolveBase = (selected: AppearancePaletteId) =>
+  selected === customPaletteId ? defaultPaletteId : selected;
+
 const paletteName = (id: string) => id.charAt(0).toUpperCase() + id.slice(1);
 
 /** The shared palette and this device's light/dark choice. */
@@ -46,7 +58,9 @@ export default function AppearanceSettingsSection(): React.JSX.Element {
 
   // The cached setting already holds a change that is still saving, so the
   // selection follows the click at once.
-  const selected: PaletteId = resolvePaletteId(settings.data?.palette);
+  const customPalette = settings.data?.customPalette ?? null;
+  const selected: AppearancePaletteId = resolveAppearancePalette(settings.data?.palette, customPalette);
+  const [editing, setEditing] = React.useState(false);
 
   const save = (patch: AppearancePatch, what: string) =>
     update.mutate(patch, {
@@ -58,9 +72,40 @@ export default function AppearanceSettingsSection(): React.JSX.Element {
         }),
     });
 
-  const choose = (palette: PaletteId) => {
+  const choose = (palette: AppearancePaletteId) => {
     if (palette !== selected) save({ palette }, "palette");
   };
+
+  const saveCustom = (palette: CustomPalette) =>
+    update.mutate(
+      { customPalette: palette, palette: customPaletteId },
+      {
+        onSuccess: () => toaster.create({ title: "Custom palette saved", type: "success" }),
+        onError: (err) =>
+          toaster.create({
+            title: "Failed to save the custom palette",
+            description: err instanceof Error ? err.message : String(err),
+            type: "error",
+          }),
+      }
+    );
+
+  const deleteCustom = () =>
+    update.mutate(
+      { customPalette: null },
+      {
+        onSuccess: () => {
+          setEditing(false);
+          toaster.create({ title: "Custom palette deleted", type: "success" });
+        },
+        onError: (err) =>
+          toaster.create({
+            title: "Failed to delete the custom palette",
+            description: err instanceof Error ? err.message : String(err),
+            type: "error",
+          }),
+      }
+    );
 
   const chooseFont = (role: FontRoleId, choice: FontChoiceId) => {
     if (choice !== resolveFontChoice(role, settings.data?.fonts[role])) {
@@ -119,7 +164,57 @@ export default function AppearanceSettingsSection(): React.JSX.Element {
             </chakra.button>
           );
         })}
+        {customPalette ? (
+          <Flex direction="column" gap={1} minW="180px">
+            <chakra.button
+              type="button"
+              role="radio"
+              aria-checked={selected === customPaletteId}
+              onClick={() => choose(customPaletteId)}
+              textAlign="left"
+              p={3}
+              flex="1"
+              borderWidth={selected === customPaletteId ? 2 : 1}
+              borderColor={selected === customPaletteId ? "accent.solid" : "border"}
+              borderRadius="md"
+              bg="bg.panel"
+              cursor="pointer"
+              _hover={{ bg: "bg.muted" }}
+            >
+              <Flex gap={1} mb={2} aria-hidden>
+                {SWATCHES.map(([label, variable]) => (
+                  <Box
+                    key={variable}
+                    title={label}
+                    w={8}
+                    h={8}
+                    borderRadius="md"
+                    borderWidth={1}
+                    borderColor="border"
+                    style={{ backgroundColor: derivePalette(customPalette)[colorMode][variable] }}
+                  />
+                ))}
+              </Flex>
+              <Text fontWeight="medium">Custom</Text>
+            </chakra.button>
+          </Flex>
+        ) : null}
       </Flex>
+      {!editing ? (
+        <Button size="sm" variant="outline" mb={3} onClick={() => setEditing(true)}>
+          {customPalette ? "Edit custom palette" : "Create custom palette"}
+        </Button>
+      ) : null}
+      {editing ? (
+        <CustomPaletteEditor
+          saved={customPalette}
+          initialBase={resolveBase(selected)}
+          saving={update.isPending}
+          onSave={saveCustom}
+          onDelete={deleteCustom}
+          onClose={() => setEditing(false)}
+        />
+      ) : null}
       <Flex gap={2} align="center" mb={6} minH={5}>
         {update.isPending || settings.isPending ? <Spinner size="sm" /> : null}
         {settings.error ? (

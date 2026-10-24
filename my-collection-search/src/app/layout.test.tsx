@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { palettes } from "./palettes";
 import { sleeve } from "./palettes/sleeve";
+import { customFromPreset } from "./palettes/custom";
 
 const service = vi.hoisted(() => ({ getAppearance: vi.fn() }));
 vi.mock("@/server/services/settingsService", () => ({ settingsService: service }));
@@ -19,6 +20,7 @@ import RootLayout from "./layout";
 const saved = (overrides: Record<string, unknown> = {}) => ({
   palette: "sleeve",
   fonts: { display: "default", body: "default", label: "default" },
+  customPalette: null,
   ...overrides,
 });
 
@@ -52,12 +54,13 @@ describe("root layout", () => {
   });
 
   it("renders any registered palette the setting names", async () => {
+    const original = palettes.riso;
     (palettes as Record<string, unknown>).riso = sleeve;
     try {
       service.getAppearance.mockResolvedValue(saved({ palette: "riso" }));
       expect(await render()).toMatch(/^<html [^>]*data-palette="riso"/);
     } finally {
-      delete (palettes as Record<string, unknown>).riso;
+      (palettes as Record<string, unknown>).riso = original;
     }
   });
 
@@ -77,5 +80,40 @@ describe("root layout", () => {
     const html = await render("x");
     expect(html).toMatch(/^<html [^>]*class="face-a face-b"/);
     expect(html).not.toMatch(/class="[^"]*\bdark\b/);
+  });
+
+  describe("custom palette", () => {
+    const custom = customFromPreset("riso");
+
+    it("server-renders its style block in <head> when it is the saved palette", async () => {
+      service.getAppearance.mockResolvedValue(saved({ palette: "custom", customPalette: custom }));
+      const html = await render();
+      expect(html).toMatch(/^<html [^>]*data-palette="custom"/);
+      expect(html).toMatch(/<head><style id="gn-custom-palette">:root\[data-palette="custom"\]\{/);
+      expect(html).toContain(':root[data-palette="custom"].dark{');
+      expect(html).toContain(`--gn-ground:${custom.light.ground};`);
+    });
+
+    it("renders no style when a preset is selected, even with a saved custom palette", async () => {
+      service.getAppearance.mockResolvedValue(saved({ palette: "riso", customPalette: custom }));
+      expect(await render()).not.toContain("<style");
+    });
+
+    it("renders no style when custom is named but no palette is stored", async () => {
+      service.getAppearance.mockResolvedValue(saved({ palette: "custom", customPalette: null }));
+      expect(await render()).not.toContain("<style");
+    });
+
+    it("emits nothing but validated hex, whatever the stored data said", async () => {
+      // The service has already dropped invalid input; a hostile value that
+      // somehow got through still cannot reach the style.
+      const hostile = structuredClone(custom);
+      hostile.light.ink = "red;}body{display:none";
+      service.getAppearance.mockResolvedValue(saved({ palette: "custom", customPalette: hostile }));
+      const html = await render();
+      expect(html).not.toContain("display:none");
+      expect(html).not.toContain("<style");
+      expect(html).toMatch(/^<html [^>]*data-palette="sleeve"/);
+    });
   });
 });

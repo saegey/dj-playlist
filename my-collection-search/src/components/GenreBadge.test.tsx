@@ -32,7 +32,8 @@ describe("GenreBadge", () => {
 
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText("Feminist Anthem").getAttribute("title")).toBe("Not in the genre taxonomy yet");
-    expect(screen.getByText("Odd Style").getAttribute("title")).toBeNull();
+    // Every tag names itself in a tooltip, since a narrow cell may truncate it.
+    expect(screen.getByText("Odd Style").getAttribute("title")).toBe("Odd Style");
   });
 
   it("doesn't trigger the row's own click", async () => {

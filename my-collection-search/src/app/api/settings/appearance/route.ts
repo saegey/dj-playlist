@@ -5,6 +5,8 @@ import {
 } from "@/api-contract/schemas";
 import { fontChoiceIdsFor, fontRoleIds } from "@/app/fontChoices";
 import { paletteIds } from "@/app/palettes";
+import { customColourKeys } from "@/app/palettes/custom";
+import { AppearanceRequestError } from "@/server/appearanceRequestError";
 import { settingsService } from "@/server/services/settingsService";
 
 /** The app-wide palette and fonts. Light/dark is per device and never reaches the server. */
@@ -34,10 +36,12 @@ export async function PUT(request: Request) {
     const role = fontRoleIds.find((id) => path === `fonts.${id}`);
     const error =
       path === "palette"
-        ? `palette must be one of: ${paletteIds.join(", ")}`
+        ? `palette must be one of: ${[...paletteIds, "custom"].join(", ")} (custom needs a customPalette)`
+        : path?.startsWith("customPalette")
+          ? `customPalette must be null or { base: a preset id, light and dark: { ${customColourKeys.join(", ")} } } with every colour as #rrggbb`
         : role
           ? `fonts.${role} must be one of: ${fontChoiceIdsFor(role).join(", ")}`
-          : `Body may only contain palette and fonts.{${fontRoleIds.join(",")}}`;
+          : `Body may only contain palette, customPalette and fonts.{${fontRoleIds.join(",")}}`;
     return NextResponse.json({ error }, { status: 400 });
   }
 
@@ -45,6 +49,9 @@ export async function PUT(request: Request) {
     const result = await settingsService.updateAppearance(parsed.data);
     return NextResponse.json(appearanceSettingsResponseSchema.parse(result));
   } catch (err) {
+    if (err instanceof AppearanceRequestError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     console.error("Failed to update appearance settings:", err);
     return NextResponse.json(
       { error: "Failed to update appearance settings" },

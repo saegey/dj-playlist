@@ -54,6 +54,18 @@ describe("appearance", () => {
     expect(sql).toContain("palette = EXCLUDED.palette, font_label = EXCLUDED.font_label");
     expect(params).toEqual(["riso", null]);
   });
+
+  it("writes and clears the custom palette column", async () => {
+    dbQuery.mockResolvedValue({ rows: [row] });
+
+    await makeRepo().upsertAppearance({ custom_palette: '{"base":"riso"}' }, "sleeve");
+    await makeRepo().upsertAppearance({ custom_palette: null }, "sleeve");
+    const [first, second] = dbQuery.mock.calls;
+    expect(first[0]).toContain("custom_palette = EXCLUDED.custom_palette");
+    expect(first[0]).toContain("RETURNING palette, font_display, font_body, font_label, custom_palette");
+    expect(first[1]).toEqual(["sleeve", '{"base":"riso"}']);
+    expect(second[1]).toEqual(["sleeve", null]);
+  });
 });
 
 describe("recommendation scope", () => {
