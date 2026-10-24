@@ -51,6 +51,20 @@ describe("PlayerTui", () => {
     expect(app.lastFrame()).toContain("mpv stream failed");
   });
 
+  it("scrolls a long list so the selection stays visible", async () => {
+    const queue = Array.from({ length: 30 }, (_, i) => ({ id: `q${i}`, track: { ...track, title: `Song ${i}` } }));
+    const props = makeProps(queue);
+    const app = render(<PlayerTui {...props} options={{}} />);
+    await act(async () => { await new Promise((resolve) => setImmediate(resolve)); });
+    expect(app.lastFrame()).toContain("Song 0");
+    expect(app.lastFrame()).not.toContain("Song 12");
+    for (let i = 0; i < 20; i++) await act(async () => { app.stdin.write("j"); });
+    const frame = app.lastFrame()!;
+    expect(frame).toContain("› John Coltrane — Song 20");
+    expect(frame).toContain("21/30");
+    expect(frame).not.toContain("Song 0\n");
+  });
+
   it("searches, renders results, and adds the selected track", async () => {
     const props = makeProps();
     const unavailableTrack = { ...track, local_audio_url: null } as Track;
