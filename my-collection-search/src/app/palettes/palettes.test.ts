@@ -58,6 +58,12 @@ describe.each(Object.entries(palettes))("palette %s", (_id, palette) => {
       expect(contrastRatio(c[fg], c[bg])).toBeGreaterThanOrEqual(min);
     });
 
+    // A hard shadow is drawn flat, so a translucent colour would wash out.
+    it("defines an opaque shadow colour that differs from the ground", () => {
+      expect(c["--gn-shadow"]).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(c["--gn-shadow"].toLowerCase()).not.toBe(c["--gn-ground"].toLowerCase());
+    });
+
     it.each(["fg", "subtle"] as const)("separates status %s colours by lightness, not only hue", (part) => {
       const colours = statusNames.map((s) => c[`--gn-status-${s}-${part}`]);
       for (let i = 0; i < colours.length; i++) {
