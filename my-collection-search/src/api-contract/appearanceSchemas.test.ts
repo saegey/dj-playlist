@@ -14,7 +14,8 @@ describe("appearance schemas", () => {
 
   it("round-trips a custom palette, lowercasing the hex", () => {
     const upper = structuredClone(custom);
-    upper.dark.shadow = upper.dark.shadow.toUpperCase().replace("#", "#");
+    upper.dark.shadow = upper.dark.shadow.toUpperCase();
+    expect(upper.dark.shadow).not.toBe(custom.dark.shadow);
     const parsed = appearanceSettingsPutBodySchema.parse({ palette: "custom", customPalette: upper });
     expect(parsed.customPalette).toEqual(custom);
   });

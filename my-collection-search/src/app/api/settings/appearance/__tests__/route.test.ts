@@ -103,7 +103,8 @@ describe("PUT /api/settings/appearance — custom palette", () => {
   it("accepts a custom palette, normalising the hex to lowercase", async () => {
     service.updateAppearance.mockResolvedValue({ ...saved, palette: "custom", customPalette: custom });
     const upper = structuredClone(custom);
-    upper.light.ground = upper.light.ground.toUpperCase().replace("#", "#");
+    upper.light.ground = upper.light.ground.toUpperCase();
+    expect(upper.light.ground).not.toBe(custom.light.ground);
     const res = await put(JSON.stringify({ palette: "custom", customPalette: upper }));
 
     expect(res.status).toBe(200);
