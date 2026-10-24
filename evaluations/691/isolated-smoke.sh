@@ -40,17 +40,13 @@ if [[ "$ready" != true ]]; then
 fi
 
 docker exec "$fixture_name" /usr/sbin/owntone -v
-api http://127.0.0.1:13689/api/player | node --input-type=module -e '
-  import assert from "node:assert/strict";
-  let text = "";
-  for await (const chunk of process.stdin) text += chunk;
-  assert.equal(JSON.parse(text).state, "stop");
+api http://127.0.0.1:13689/api/player | python3 -c '
+import json, sys
+assert json.load(sys.stdin)["state"] == "stop"
 '
-api http://127.0.0.1:13689/api/outputs | node --input-type=module -e '
-  import assert from "node:assert/strict";
-  let text = "";
-  for await (const chunk of process.stdin) text += chunk;
-  assert.deepEqual(JSON.parse(text).outputs, []);
+api http://127.0.0.1:13689/api/outputs | python3 -c '
+import json, sys
+assert json.load(sys.stdin)["outputs"] == []
 '
 
 docker exec "$fixture_name" ffmpeg -hide_banner -loglevel error \
@@ -65,20 +61,16 @@ file_status="$(docker exec "$fixture_name" curl --silent --show-error --max-time
 
 docker exec -d "$fixture_name" busybox httpd -f -p 127.0.0.1:18080 -h /tmp
 api -X POST --get --data-urlencode 'uris=http://127.0.0.1:18080/fixture.wav' \
-  http://127.0.0.1:13689/api/queue/items/add | node --input-type=module -e '
-  import assert from "node:assert/strict";
-  let text = "";
-  for await (const chunk of process.stdin) text += chunk;
-  const result = JSON.parse(text);
-  assert.equal(result.count, 1);
-  assert.equal(result.items[0].data_kind, "url");
+  http://127.0.0.1:13689/api/queue/items/add | python3 -c '
+import json, sys
+result = json.load(sys.stdin)
+assert result["count"] == 1
+assert result["items"][0]["data_kind"] == "url"
 '
 
 # Adding a URL must not implicitly start playback.
-api http://127.0.0.1:13689/api/player | node --input-type=module -e '
-  import assert from "node:assert/strict";
-  let text = "";
-  for await (const chunk of process.stdin) text += chunk;
-  assert.equal(JSON.parse(text).state, "stop");
+api http://127.0.0.1:13689/api/player | python3 -c '
+import json, sys
+assert json.load(sys.stdin)["state"] == "stop"
 '
 echo 'PASS: stopped state, no outputs, unindexed file rejection, HTTP queue add, no autoplay'

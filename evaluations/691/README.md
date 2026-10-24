@@ -5,7 +5,7 @@ Design review: [#688](https://github.com/Public-Vinyl-Radio/groovenet/pull/688).
 
 ## Isolated API experiment
 
-Run from a checkout on a machine with Docker, Bash, and Node 22 or newer:
+Run from a checkout on a machine with Docker, Bash, and Python 3:
 
 ```sh
 bash evaluations/691/isolated-smoke.sh
@@ -13,8 +13,8 @@ bash evaluations/691/isolated-smoke.sh
 
 The script uses the official OwnTone image pinned to the OCI index digest
 `sha256:6a88589edc4dd9c438da62a18a25374d3e6e01457745f241a22baf88c43c9582`.
-The selected linux/arm64 image reports **OwnTone 29.3**. The index also lists a
-linux/amd64 image; execution on Debian amd64 is pending. The image may need to
+The selected linux/arm64 image reports **OwnTone 29.3**. The linux/amd64 image
+also reports 29.3 on the Debian host. The image may need to
 be downloaded before the network-isolated container starts.
 
 Only the test configuration is mounted, read-only. The container has no
@@ -45,15 +45,74 @@ created. Run separate invocations to reproduce the experiment.
   this does not prove seek, duration, format support during playback, or
   reliable natural-completion events.
 
+The reproducible script passed on both local linux/arm64 and Debian
+linux/amd64. A first transfer from macOS included AppleDouble metadata files;
+the API assertions passed but the outer temporary-directory cleanup failed.
+Those two metadata files were explicitly removed. Repeating the transfer with
+`COPYFILE_DISABLE=1 tar --no-xattrs` passed with complete cleanup.
+
 Do not interpret API queue acceptance as successful audio decoding or AirPlay
 playback. The HTTP fixture is unauthenticated: authenticated/range-capable audio
 delivery remains a separate validation gate.
 
-## Next: Debian and hardware validation
+## Debian discovery (2026-10-24)
 
-The read-only SSH attempt to `beelink` as `saegey` failed authentication.
-No production deployment or receiver changes have been made. HA MCP was not
-available in the current tool set. Resume live checks when access is available.
+SSH access works using `saegey@192.168.2.151`. The host is Debian 13.7 amd64,
+Docker 29.9.1, Compose v5.6.0, with LAN interface `enp170s0`. Groovenet's audio
+mount is the Docker volume `teststack_music_data` at `/app/audio` in the app.
+Host Avahi and airptpd are inactive. No host packages were installed or
+production services restarted.
+
+Run discovery on the Debian host:
+
+```sh
+bash evaluations/691/discover.sh enp170s0
+```
+
+The disposable host-network container browses mDNS only on the supplied LAN
+interface, with service publishing disabled, no audio mounts, no local output,
+no autoplay, and a fresh database. It removes itself and its temporary
+configuration afterward. Its API permits trusted localhost requests and uses a
+random disposable admin password for other clients. The script verifies a LAN
+request without credentials receives HTTP 401 before reading discovery results.
+The downloaded image remains cached.
+
+The first scan returned no outputs because `bind_address = "127.0.0.1"` also
+restricts OwnTone's mDNS interface to loopback. Removing that restriction while
+protecting non-loopback API requests discovered the target receivers:
+
+| OwnTone output ID | Name | Reported type | HA receiver entity |
+| --- | --- | --- | --- |
+| `202481599519404` | aswitch | AirPlay 2 | `media_player.aswitch_streamer` |
+| `202481586338774` | Lounge Room Audio | AirPlay 2 | `media_player.lounge_streamer` |
+| `132116595608304` | Bedroom | AirPlay 2 | `media_player.bedroom_sonos` |
+
+These name-based mappings need hardware confirmation before being treated as
+permanent identity bindings. All outputs remained unselected and the player
+remained stopped. Other LAN receivers were also discovered but not selected.
+After cleanup the container was absent, port 13689 was released, and existing
+Groovenet containers remained healthy. Discovery does not prove streaming or
+synchronization. Hardware audio tests await an available receiver/test window.
+
+### Home Assistant inspection
+
+HA SSH access works; Core reports 2026.10.2. Its add-on supervisor token returns
+HTTP 401 for `/core/api/states`, so current live entity states have not been
+verified. HA MCP remains unavailable in the current tool set. The following
+were verified read-only from the installed integration code and entity registry:
+
+- `shairport_sync` 1.4.0 is installed for `aswitch/shairport` and
+  `pi-cam/shairport`. The Bedroom entity uses the Sonos integration.
+- Custom `living_room_audio` 1.0.2 and `lounge_audio` 1.0.0 combine Shairport
+  receiver state with vinyl-activity and Groovenet metadata sensors.
+- Their `source` property distinguishes **Shairport** from **Vinyl**, not one
+  AirPlay sending app from another. They prefer playing/buffering Shairport;
+  paused Shairport yields to active vinyl.
+- A room playing vinyl may therefore need occupancy protection even when its
+  AirPlay receiver is idle. The design should separate receiver availability
+  from room listening activity; raw receiver state alone misses this case.
+
+## Next: audio and hardware validation
 
 1. Inspect the Debian release, Docker architecture/version, existing services,
    occupied ports, audio mount paths, and mDNS/timing daemons. Do not dump
