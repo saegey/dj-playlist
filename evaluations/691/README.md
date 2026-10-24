@@ -153,8 +153,31 @@ Observed results:
   changes. Their effect on audible quality is unverified; do not mark audio
   quality or synchronization as passed.
 
-Audible confirmation from the user is pending. This is not a completed
-Groovenet-authenticated audio, multi-room, concurrency, or interruption test.
+The user did not hear the first faint replay. Subsequent diagnosis confirmed
+the live receiver configuration routes directly to `plughw:CARD=ZD3,DEV=0`,
+uses 44.1 kHz S32_LE, and ignores AirPlay volume control. With the user confirming
+the ZD3 and amp were powered and ready, an eight-second direct USB tone at
+approximately -30 dBFS peak was heard. This bypassed OwnTone and AirPlay and
+established that the hardware output path could produce audible sound.
+
+The AirPlay comparison then used the same generated level, a 20-second file,
+an eight-second initial observation, two seconds paused, a seek to 14 seconds,
+and resume. All engine assertions passed. During streaming the Pi reported:
+
+- DAC PCM state RUNNING, S32_LE, stereo, 44.1 kHz.
+- AirPlay client address `192.168.2.151`, matching the Debian host.
+- OwnTone play position 5810 ms after eight wall-clock seconds and pause at
+  5870 ms, followed by stop after seek/resume and completion.
+
+The user confirmed this AirPlay tone **sounded fine, quiet but audible**. This
+validates audible single-receiver playback at the generated test level; it
+does not establish audible seek accuracy or effective receiver volume control.
+The current opt-in script reproduces this longer -30 dBFS comparison; the
+12-second/-44 dBFS measurements above describe the earlier run.
+
+This is not a completed Groovenet-authenticated audio, multi-room, concurrency,
+or interruption test. Earlier receiver underrun/timing logs remain an observation
+to investigate if they recur or correlate with audible glitches.
 
 ### Additional sender-observation opportunity
 
@@ -169,6 +192,38 @@ OwnTone instances on the same host still needs validation: an address alone
 cannot distinguish those engine instances.
 
 ## Next: audio and hardware validation
+
+### Read-only real-file delivery check
+
+The no-playback experiment `indexed-file-smoke.sh` was run on Debian against
+one regular file, `1004089-A1.m4a`, from the existing `teststack_music_data`
+volume. Hidden macOS metadata files were excluded when selecting the sample.
+Only that file was bind-mounted read-only into a fresh, network-isolated
+OwnTone container; the full 4,116-file directory was not indexed or copied.
+
+```sh
+bash evaluations/691/indexed-file-smoke.sh teststack_music_data 1004089-A1.m4a
+```
+
+OwnTone indexed the file, returned `library:track:1`, duration 218197 ms, M4A,
+44.1 kHz stereo, and accepted it into the queue as `data_kind: file`. FFmpeg
+decoded the first five seconds to a null sink. The player stayed stopped and
+had no outputs. The fixture and temporary transfer files were removed.
+The first harness attempt used an unsupported GET route; the successful
+reproduction uses the documented track-search endpoint.
+
+This proves indexed read-only delivery for one real library file and avoids
+the `/api/audio` bearer-header problem entirely for that path. Prefer evaluating
+this option for the initial server deployment before building a token relay.
+It does not yet prove the full production library scan cost, all audio formats,
+filename/path safety, index refresh after downloads/deletes, stable mapping
+from Groovenet track references to engine track IDs, or real-track AirPlay
+playback. Keep OwnTone's metadata index an implementation detail; Groovenet
+remains the authority for library records and logical queues.
+
+The harness requires a pre-existing volume, validates a simple relative audio
+basename, mounts it read-only, and creates no persistent Docker volumes. It
+uses no Groovenet credentials, network, speaker selection, or audible output.
 
 1. Inspect the Debian release, Docker architecture/version, existing services,
    occupied ports, audio mount paths, and mDNS/timing daemons. Do not dump

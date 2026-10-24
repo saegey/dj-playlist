@@ -130,7 +130,7 @@ if [[ "$fixture_mode" != --play-lounge ]]; then
 fi
 
 # Operator must check room/session occupancy before opting into this mode.
-# Generate a 12-second 440 Hz tone, peak approximately -44 dBFS. Attenuate PCM
+# Generate a 20-second 440 Hz tone, peak approximately -30 dBFS. Attenuate PCM
 # itself because this receiver is configured to ignore AirPlay volume commands.
 api() {
   docker exec "$fixture_name" curl -fsS --max-time 10 "$@"
@@ -143,8 +143,9 @@ assert output["type"] == "AirPlay 2"
 assert not output["selected"]
 '
 docker exec "$fixture_name" ffmpeg -hide_banner -loglevel error \
-  -f lavfi -i sine=frequency=440:sample_rate=44100:duration=12 \
-  -af volume=0.05 -ac 2 -metadata title=Groovenet-691-test \
+  -f lavfi -i sine=frequency=440:sample_rate=44100:duration=20 \
+  -af 'volume=0.25,afade=t=in:d=0.2,afade=t=out:st=19.8:d=0.2' \
+  -ac 2 -metadata title=Groovenet-691-test \
   /tmp/media/groovenet-691-test.wav
 
 fixture_uri=''
@@ -167,7 +168,7 @@ api -X PUT -H 'Content-Type: application/json' \
   http://127.0.0.1:13689/api/outputs/set
 api -X PUT http://127.0.0.1:13689/api/player/play
 echo 'Lounge tone started; observing engine state'
-sleep 4
+sleep 8
 api http://127.0.0.1:13689/api/player | python3 -c '
 import json, sys
 state = json.load(sys.stdin)
@@ -182,9 +183,10 @@ state = json.load(sys.stdin)
 print(json.dumps(state, indent=2))
 assert state["state"] == "pause"
 '
-api -X PUT 'http://127.0.0.1:13689/api/player/seek?position_ms=8000'
+sleep 2
+api -X PUT 'http://127.0.0.1:13689/api/player/seek?position_ms=14000'
 api -X PUT http://127.0.0.1:13689/api/player/play
-sleep 7
+sleep 10
 api http://127.0.0.1:13689/api/player | python3 -c '
 import json, sys
 state = json.load(sys.stdin)
