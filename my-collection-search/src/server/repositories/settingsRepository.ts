@@ -17,7 +17,7 @@ const GAMDL_ALLOWED_FIELDS = [
 
 type GamdlField = (typeof GAMDL_ALLOWED_FIELDS)[number];
 
-const APPEARANCE_COLUMNS = ["palette", "font_display", "font_body", "font_label"] as const;
+const APPEARANCE_COLUMNS = ["palette", "font_display", "font_body", "font_label", "custom_palette"] as const;
 
 type AppearanceColumn = (typeof APPEARANCE_COLUMNS)[number];
 
@@ -26,9 +26,11 @@ export interface AppearanceRow {
   font_display: string | null;
   font_body: string | null;
   font_label: string | null;
+  /** Unvalidated JSON; the service parses it. */
+  custom_palette: unknown;
 }
 
-/** Columns to change; undefined leaves one alone, a null font resets it. */
+/** Columns to change; undefined leaves one alone, null resets it. `custom_palette` is JSON text. */
 export type AppearancePatch = Partial<Record<AppearanceColumn, string | null>>;
 
 export class SettingsRepository {

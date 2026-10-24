@@ -9,8 +9,16 @@ import {
   type FontRoleId,
   type FontSelection,
 } from "@/app/fontChoices";
-import { defaultPaletteId, resolvePaletteId, type PaletteId } from "@/app/palettes";
+import { defaultPaletteId } from "@/app/palettes";
+import {
+  customPaletteId,
+  parseCustomPalette,
+  resolveAppearancePalette,
+  type AppearancePaletteId,
+  type CustomPalette,
+} from "@/app/palettes/custom";
 import { getDefaultTrackMetadataPrompt } from "@/lib/serverPrompts";
+import { AppearanceRequestError } from "@/server/appearanceRequestError";
 import { friendRepository } from "@/server/repositories/friendRepository";
 import type { GamdlSettings, GamdlSettingsUpdate } from "@/types/gamdl";
 import {
@@ -24,14 +32,20 @@ import {
 } from "@/types/recommendations";
 
 export interface Appearance {
-  palette: PaletteId;
+  palette: AppearancePaletteId;
   fonts: FontSelection;
+  /** The saved custom palette's inputs, or null when none is saved or the stored JSON is invalid. */
+  customPalette: CustomPalette | null;
 }
 
 export interface AppearanceUpdate {
-  palette?: PaletteId;
+  palette?: AppearancePaletteId;
   fonts?: Partial<FontSelection>;
+  /** Replaces the saved custom palette; null deletes it. */
+  customPalette?: CustomPalette | null;
 }
+
+
 
 const FONT_COLUMNS = {
   display: "font_display",
@@ -40,8 +54,11 @@ const FONT_COLUMNS = {
 } as const satisfies Record<FontRoleId, keyof AppearanceRow>;
 
 function toAppearance(row: AppearanceRow | null): Appearance {
+  // A corrupted row is no custom palette, never a broken page.
+  const customPalette = parseCustomPalette(row?.custom_palette);
   return {
-    palette: resolvePaletteId(row?.palette),
+    palette: resolveAppearancePalette(row?.palette, customPalette),
+    customPalette,
     fonts: Object.fromEntries(
       fontRoleIds.map((role) => [role, resolveFontChoice(role, row?.[FONT_COLUMNS[role]])])
     ) as FontSelection,
@@ -79,6 +96,20 @@ export class SettingsService {
   async updateAppearance(update: AppearanceUpdate): Promise<Appearance> {
     const patch: AppearancePatch = {};
     if (update.palette !== undefined) patch.palette = update.palette;
+    if (update.customPalette !== undefined) {
+      patch.custom_palette = update.customPalette && JSON.stringify(update.customPalette);
+    }
+    if (update.palette === customPaletteId || update.customPalette === null) {
+      const current = await this.getAppearance();
+      const custom = update.customPalette === undefined ? current.customPalette : update.customPalette;
+      if (update.palette === customPaletteId && !custom) {
+        throw new AppearanceRequestError("palette custom needs a saved custom palette");
+      }
+      // Deleting the palette that is in use falls back to the default.
+      if (update.customPalette === null && update.palette === undefined && current.palette === customPaletteId) {
+        patch.palette = defaultPaletteId;
+      }
+    }
     for (const role of fontRoleIds) {
       const choice = update.fonts?.[role];
       if (choice !== undefined) {

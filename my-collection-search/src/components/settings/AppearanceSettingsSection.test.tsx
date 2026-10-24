@@ -5,6 +5,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "@/test/renderWithProviders";
 import { fontRoleIds, fontRoles } from "@/app/fontChoices";
 import { paletteIds } from "@/app/palettes";
+import { customFromPreset } from "@/app/palettes/custom";
 
 const api = vi.hoisted(() => ({
   fetchAppearanceSettings: vi.fn(),
@@ -295,5 +296,129 @@ describe("AppearanceSettingsSection typography", () => {
     renderWithProviders(<AppearanceSettingsSection />);
     await waitFor(() => expect(checked("Display", "ibm plex sans")).toBe("true"));
     expect(checked("Body", "ibm plex sans")).toBe("true");
+  });
+});
+
+describe("AppearanceSettingsSection custom palette", () => {
+  const custom = customFromPreset("riso");
+  const styleEl = () => document.getElementById("gn-custom-palette");
+
+  beforeEach(() => {
+    styleEl()?.remove();
+  });
+
+  it("offers to create one when none is saved, and has no Custom card", async () => {
+    renderWithProviders(<AppearanceSettingsSection />);
+    expect(await screen.findByText("Create custom palette")).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: /^custom$/i })).toBeNull();
+  });
+
+  it("creates, saves and applies a palette, with its style in the page", async () => {
+    const { user } = renderWithProviders(<AppearanceSettingsSection />);
+    await user.click(await screen.findByText("Create custom palette"));
+    expect(screen.getByTestId("custom-palette-editor")).toBeTruthy();
+
+    await user.click(screen.getByText("Save custom palette"));
+
+    await waitFor(() =>
+      expect(api.updateAppearanceSettings).toHaveBeenCalledWith({
+        palette: "custom",
+        customPalette: expect.objectContaining({ base: "sleeve" }),
+      })
+    );
+    expect(document.documentElement.dataset.palette).toBe("custom");
+    expect(styleEl()?.textContent).toContain(':root[data-palette="custom"]{');
+  });
+
+  it("shows the saved palette as a card with swatches, and selects it like a preset", async () => {
+    api.fetchAppearanceSettings.mockResolvedValue({ palette: "sleeve", fonts: defaults, customPalette: custom });
+    const { user } = renderWithProviders(<AppearanceSettingsSection />);
+
+    const card = await screen.findByRole("radio", { name: /^custom$/i });
+    expect(card.querySelectorAll("[title]")).toHaveLength(4);
+    expect(screen.getByText("Edit custom palette")).toBeTruthy();
+
+    await user.click(card);
+
+    expect(document.documentElement.dataset.palette).toBe("custom");
+    expect(styleEl()).not.toBeNull();
+    await waitFor(() => expect(api.updateAppearanceSettings).toHaveBeenCalledWith({ palette: "custom" }));
+  });
+
+  it("rolls back a failed selection of the custom card", async () => {
+    api.fetchAppearanceSettings.mockResolvedValue({ palette: "sleeve", fonts: defaults, customPalette: custom });
+    api.updateAppearanceSettings.mockRejectedValue(new Error("db down"));
+    const { user } = renderWithProviders(<AppearanceSettingsSection />);
+
+    await user.click(await screen.findByRole("radio", { name: /^custom$/i }));
+
+    await waitFor(() => expect(toast.create).toHaveBeenCalledWith(expect.objectContaining({ type: "error" })));
+    expect(document.documentElement.dataset.palette).toBe("sleeve");
+  });
+
+  it("deletes it, falling back to the default palette and removing the style", async () => {
+    api.fetchAppearanceSettings.mockResolvedValue({ palette: "custom", fonts: defaults, customPalette: custom });
+    api.updateAppearanceSettings.mockResolvedValue({ palette: "sleeve", fonts: defaults, customPalette: null });
+    document.documentElement.dataset.palette = "custom";
+    const { user } = renderWithProviders(<AppearanceSettingsSection />);
+
+    await user.click(await screen.findByText("Edit custom palette"));
+    await user.click(screen.getByText("Delete custom palette"));
+
+    await waitFor(() => expect(api.updateAppearanceSettings).toHaveBeenCalledWith({ customPalette: null }));
+    expect(document.documentElement.dataset.palette).toBe("sleeve");
+    expect(styleEl()).toBeNull();
+    await waitFor(() => expect(screen.queryByTestId("custom-palette-editor")).toBeNull());
+    expect(screen.queryByRole("radio", { name: /^custom$/i })).toBeNull();
+  });
+
+  it("restores the palette and the style when deleting fails", async () => {
+    api.fetchAppearanceSettings.mockResolvedValue({ palette: "custom", fonts: defaults, customPalette: custom });
+    api.updateAppearanceSettings.mockRejectedValue(new Error("nope"));
+    document.documentElement.dataset.palette = "custom";
+    const { user } = renderWithProviders(<AppearanceSettingsSection />);
+
+    await user.click(await screen.findByText("Edit custom palette"));
+    await user.click(screen.getByText("Delete custom palette"));
+
+    await waitFor(() => expect(toast.create).toHaveBeenCalledWith(expect.objectContaining({ type: "error" })));
+    expect(document.documentElement.dataset.palette).toBe("custom");
+    expect(styleEl()).not.toBeNull();
+  });
+
+  it("closes the editor", async () => {
+    const { user } = renderWithProviders(<AppearanceSettingsSection />);
+    await user.click(await screen.findByText("Create custom palette"));
+    await user.click(screen.getByText("Close"));
+    expect(screen.queryByTestId("custom-palette-editor")).toBeNull();
+    expect(screen.getByText("Create custom palette")).toBeTruthy();
+  });
+
+  it("reports a non-Error failure by its text, on save and on delete", async () => {
+    api.fetchAppearanceSettings.mockResolvedValue({ palette: "sleeve", fonts: defaults, customPalette: custom });
+    api.updateAppearanceSettings.mockRejectedValue("offline");
+    const { user } = renderWithProviders(<AppearanceSettingsSection />);
+    await user.click(await screen.findByText("Edit custom palette"));
+    await user.click(screen.getByText("Save custom palette"));
+    await waitFor(() =>
+      expect(toast.create).toHaveBeenCalledWith(expect.objectContaining({ description: "offline", title: "Failed to save the custom palette" }))
+    );
+    await user.click(screen.getByText("Delete custom palette"));
+    await waitFor(() =>
+      expect(toast.create).toHaveBeenCalledWith(expect.objectContaining({ description: "offline", title: "Failed to delete the custom palette" }))
+    );
+  });
+
+  it("reports a failed save", async () => {
+    api.updateAppearanceSettings.mockRejectedValue(new Error("bad colours"));
+    const { user } = renderWithProviders(<AppearanceSettingsSection />);
+    await user.click(await screen.findByText("Create custom palette"));
+    await user.click(screen.getByText("Save custom palette"));
+    await waitFor(() =>
+      expect(toast.create).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Failed to save the custom palette", description: "bad colours" })
+      )
+    );
+    expect(document.documentElement.dataset.palette).toBe("sleeve");
   });
 });
