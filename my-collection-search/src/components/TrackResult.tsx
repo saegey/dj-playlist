@@ -61,8 +61,8 @@ export const TRACK_ROW_EDGE_WIDTH = "44px";
  * Track, Release, Time, BPM, Key, Genre, Rating.
  */
 export const TRACK_ROW_GRID_TEMPLATE =
-  "minmax(200px, 2fr) minmax(112px, 0.8fr) 48px 56px 96px minmax(168px, 1.4fr) 76px";
-const TRACK_ROW_GRID_BASE = "minmax(150px, 2fr) minmax(96px, 0.8fr) 48px 56px";
+  "minmax(200px, 2fr) minmax(128px, 0.9fr) 48px 56px 96px minmax(168px, 1.4fr) 76px";
+const TRACK_ROW_GRID_BASE = "minmax(150px, 2fr) minmax(112px, 0.9fr) 48px 56px";
 const TRACK_ROW_GRID_WITH_KEY = `${TRACK_ROW_GRID_BASE} 96px`;
 /** Width of the list block at which Key, then Genre and Rating, have room to show. */
 const TRACK_ROW_KEY_MIN_WIDTH = "780px";
@@ -593,11 +593,17 @@ export default function TrackResult({
 
   const albumLine = [track.album, track.year].filter(Boolean).join(" · ");
 
+  // In the row the position joins the identifier as one tag ("LP-347-B1"); the card lists them apart.
+  const libraryLabel =
+    layout === "row" && track.position
+      ? `${track.library_identifier}-${track.position}`
+      : track.library_identifier;
+
   const metaExtras: React.ReactNode[] = [];
   if (track.library_identifier) {
     metaExtras.push(
-      <Badge key="lib" colorPalette="accent" size="sm" fontWeight="bold" flexShrink={0}>
-        {track.library_identifier}
+      <Badge key="lib" colorPalette="accent" size="sm" fontWeight="bold" flexShrink={0} whiteSpace="nowrap">
+        {libraryLabel}
       </Badge>
     );
   }
@@ -920,7 +926,7 @@ export default function TrackResult({
 
           {/* Release: what must never clip, so it wraps instead of truncating. */}
           <Flex data-testid="track-release" minW={0} fontSize="13px" color="fg.muted" alignItems="center" gap={1} flexWrap="wrap">
-            {track.position && (
+            {track.position && !track.library_identifier && (
               <Text as="span" fontSize="xs" color="fg.subtle" fontFamily="label" flexShrink={0}>
                 {track.position}
               </Text>

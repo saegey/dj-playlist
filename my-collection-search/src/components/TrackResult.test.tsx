@@ -594,14 +594,35 @@ describe("TrackResult row layout (#685)", () => {
     );
 
     const release = screen.getByTestId("track-release");
-    expect(within(release).getByText("LP-349-DELUXE-BOX-SET")).toBeTruthy();
-    expect(within(release).getByText("B2")).toBeTruthy();
+    expect(within(release).getByText("LP-349-DELUXE-BOX-SET-B2")).toBeTruthy();
     expect(within(release).getByText(/#3 was #1/)).toBeTruthy();
     expect(within(release).getByText("saegey")).toBeTruthy();
     expect(within(release).getByText("3 playlists")).toBeTruthy();
     // It wraps rather than clipping, and no badge is allowed to be squeezed.
     expect(getComputedStyle(release).flexWrap).toBe("wrap");
-    expect(getComputedStyle(within(release).getByText("LP-349-DELUXE-BOX-SET")).flexShrink).toBe("0");
+    expect(getComputedStyle(within(release).getByText("LP-349-DELUXE-BOX-SET-B2")).flexShrink).toBe("0");
+  });
+
+  it("joins the position to the library identifier as one tag, and shows it alone without one", () => {
+    const { rerender } = renderWithProviders(
+      <TrackResult track={{ ...track, position: "B1", library_identifier: "LP-123" }} layout="row" />
+    );
+    const release = screen.getByTestId("track-release");
+    expect(within(release).getByText("LP-123-B1")).toBeTruthy();
+    expect(within(release).queryByText("B1")).toBeNull();
+
+    rerender(<TrackResult track={{ ...track, position: "B1", library_identifier: null }} layout="row" />);
+    expect(within(screen.getByTestId("track-release")).getByText("B1")).toBeTruthy();
+
+    rerender(<TrackResult track={{ ...track, position: "", library_identifier: "LP-123" }} layout="row" />);
+    expect(within(screen.getByTestId("track-release")).getByText("LP-123")).toBeTruthy();
+  });
+
+  it("keeps the identifier and the position apart on the card", () => {
+    renderWithProviders(<TrackResult track={{ ...track, position: "B1", library_identifier: "LP-123" }} />);
+
+    expect(screen.getByText("LP-123")).toBeTruthy();
+    expect(screen.getByText("B1")).toBeTruthy();
   });
 
   it("no longer carries the album or the side in separate columns", () => {
