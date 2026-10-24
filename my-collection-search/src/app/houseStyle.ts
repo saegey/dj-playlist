@@ -13,6 +13,7 @@ import {
   nativeSelectAnatomy,
   popoverAnatomy,
   segmentGroupAnatomy,
+  switchAnatomy,
   selectAnatomy,
 } from "@chakra-ui/react/anatomy";
 
@@ -207,6 +208,30 @@ export const slotRecipes = {
         // Ringed inside the segment, so keyboard focus doesn't read as a
         // second, heavier selection box around the filled one.
         "&:has(input:focus-visible)": { "--focus-ring-offset": "-4px" },
+      },
+    },
+  }),
+  // A square toggle: an ink-outlined box with a square thumb. The outline is
+  // an inset shadow, not a border, so the thumb's travel keeps its sums.
+  switch: defineSlotRecipe({
+    slots: switchAnatomy.keys(),
+    base: { label: { fontFamily: "label", fontSize: "13px", fontWeight: "semibold" } },
+    variants: {
+      variant: {
+        solid: {
+          control: {
+            borderRadius: "0",
+            bg: "bg.panel",
+            boxShadow: "inset 0 0 0 2px var(--gn-ink)",
+            _checked: { bg: "colorPalette.solid" },
+          },
+          thumb: {
+            borderRadius: "0",
+            bg: "fg",
+            boxShadow: "none",
+            _checked: { bg: "colorPalette.contrast" },
+          },
+        },
       },
     },
   }),
