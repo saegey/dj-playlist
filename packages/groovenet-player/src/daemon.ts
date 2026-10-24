@@ -193,6 +193,7 @@ export class PlayerDaemon {
         else await player.play(typeof params.index === "number" ? params.index : undefined);
         return player.snapshot;
       case "pause": await player.pause(); return player.snapshot;
+      case "stop": await player.stop(); return player.snapshot;
       case "resume": await player.resume(); return player.snapshot;
       case "next": await player.next(); return player.snapshot;
       case "prev": await player.previous(); return player.snapshot;

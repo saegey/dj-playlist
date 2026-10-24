@@ -115,6 +115,8 @@ export class PlayerCore extends EventEmitter {
     this.emit("change", this.snapshot);
     try {
       await this.backend.load(source);
+      // mpv retains its pause property when a new file replaces a stopped track.
+      await this.backend.pause(false);
       this.status = "playing";
     } catch (error) {
       this.status = "error";
@@ -129,6 +131,15 @@ export class PlayerCore extends EventEmitter {
   async pause(): Promise<void> {
     await this.backend.pause(true);
     this.status = "paused";
+    this.emit("change", this.snapshot);
+  }
+
+  async stop(): Promise<void> {
+    if (this.current) await this.backend.pause(true);
+    this.status = "stopped";
+    this.position = 0;
+    this.duration = null;
+    this.current = null;
     this.emit("change", this.snapshot);
   }
 

@@ -174,6 +174,9 @@ describe("PlayerDaemon", () => {
       await new Promise((resolve) => setImmediate(resolve));
       expect(socket.responses.some((line) => line.includes('"event":"track-ended"'))).toBe(true);
       expect((await send(socket, request(7, "seek", { seconds: 12 }))).result).toMatchObject({ position: 12 });
+      expect((await send(socket, request(71, "stop"))).result).toMatchObject({ status: "stopped", current: null, position: 0 });
+      expect(backend.paused).toBe(true);
+      expect(backend.closed).toBe(false);
       expect((await send(socket, request(8, "volume", { volume: 41 }))).result).toMatchObject({ volume: 41 });
       expect((await send(socket, request(9, "devices"))).result).toEqual([{ id: "airplay", name: "Living room" }]);
       expect((await send(socket, request(91, "devices.select", { id: "airplay" }))).result).toEqual([{ id: "airplay", name: "Living room" }]);

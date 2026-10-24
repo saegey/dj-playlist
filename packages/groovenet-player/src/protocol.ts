@@ -89,6 +89,7 @@ export class PlayerControlClient extends EventEmitter {
         socket.on("close", () => {
           this.socket = null;
           this.rejectPending(new PlayerProtocolError("DAEMON_DISCONNECTED", "Player daemon disconnected."));
+          this.emit("disconnect");
         });
         resolve();
       });
