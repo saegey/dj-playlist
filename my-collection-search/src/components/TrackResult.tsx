@@ -16,6 +16,7 @@ import {
   Badge,
   Checkbox,
   Popover,
+  Portal,
 } from "@chakra-ui/react";
 import { Track } from "@/types/track";
 import { FaPlay } from "react-icons/fa";
@@ -240,17 +241,19 @@ function ConfidenceIndicator({
           </Text>
         </Box>
       </Popover.Trigger>
-      <Popover.Positioner>
-        <Popover.Content maxW="260px">
-          <Popover.Body>
-            <Text fontSize="sm">
-              {low
-                ? `Uncertain ${subject} — Essentia's estimate is only ${percent}% confident. Worth a listen before trusting it.`
-                : `${percent}% confident in this ${subject}.`}
-            </Text>
-          </Popover.Body>
-        </Popover.Content>
-      </Popover.Positioner>
+      <Portal>
+        <Popover.Positioner>
+          <Popover.Content maxW="260px">
+            <Popover.Body>
+              <Text fontSize="sm">
+                {low
+                  ? `Uncertain ${subject} — Essentia's estimate is only ${percent}% confident. Worth a listen before trusting it.`
+                  : `${percent}% confident in this ${subject}.`}
+              </Text>
+            </Popover.Body>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
     </Popover.Root>
   );
 }
@@ -487,15 +490,17 @@ function NotesIndicator({ notes }: { notes: string }) {
           <FiFileText size={13} />
         </Box>
       </Popover.Trigger>
-      <Popover.Positioner>
-        <Popover.Content maxW="320px">
-          <Popover.Body>
-            <Text fontSize="sm" whiteSpace="pre-wrap">
-              {notes}
-            </Text>
-          </Popover.Body>
-        </Popover.Content>
-      </Popover.Positioner>
+      <Portal>
+        <Popover.Positioner>
+          <Popover.Content maxW="320px">
+            <Popover.Body>
+              <Text fontSize="sm" whiteSpace="pre-wrap">
+                {notes}
+              </Text>
+            </Popover.Body>
+          </Popover.Content>
+        </Popover.Positioner>
+      </Portal>
     </Popover.Root>
   );
 }
