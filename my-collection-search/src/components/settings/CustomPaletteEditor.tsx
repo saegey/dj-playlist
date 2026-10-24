@@ -3,6 +3,7 @@
 import React from "react";
 import { Badge, Box, Button, chakra, Flex, Heading, Input, SegmentGroup, Text } from "@chakra-ui/react";
 import { LuCheck, LuTriangleAlert, LuX } from "react-icons/lu";
+import { system } from "@/app/chakraTheme";
 import { paletteIds, paletteVariableNames, statusNames, type PaletteValues, type PaletteVariable } from "@/app/palettes";
 import {
   checkContrast,
@@ -73,8 +74,26 @@ const pairLabel = (check: ContrastCheck) =>
 
 const ratioText = (ratio: number) => `${ratio.toFixed(2)}:1`;
 
+// Chakra turns `var(--gn-x)` token values into --chakra-* variables declared
+// on :root, where the reference is resolved once and descendants inherit the
+// result. The preview therefore declares them again on its own wrapper, so
+// every colour and shadow follows the draft, not the page's palette.
+const tokenVars: Record<string, string> = Object.fromEntries(
+  system.tokens.allTokens
+    .filter(
+      (token) =>
+        ["colors", "shadows"].includes(token.extensions.category) &&
+        String(token.value).includes("var(--gn-"),
+    )
+    .map((token) => [token.extensions.cssVar?.var ?? "", String(token.value)])
+    .filter(([name]) => name),
+);
+
 const cssVars = (values: PaletteValues) =>
-  Object.fromEntries(paletteVariableNames.map((name) => [name, values[name]])) as React.CSSProperties;
+  ({
+    ...Object.fromEntries(paletteVariableNames.map((name) => [name, values[name]])),
+    ...tokenVars,
+  }) as React.CSSProperties;
 
 function ColourField({
   mode,

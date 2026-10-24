@@ -125,6 +125,9 @@ describe("CustomPaletteEditor", () => {
     const preview = screen.getByTestId("palette-preview");
     expect(preview.style.getPropertyValue("--gn-ground")).toBe("#102030");
     expect(preview.style.getPropertyValue("--gn-status-missing-fg")).toBe(palettes.sleeve.light["--gn-status-missing-fg"]);
+    // The shadow variables are resolved on the wrapper, so the shadow follows the draft.
+    expect(preview.style.getPropertyValue("--chakra-shadows-md")).toBe("6px 6px 0 0 var(--gn-shadow)");
+    expect(preview.style.getPropertyValue("--chakra-colors-bg-panel")).toBe("var(--gn-surface)");
     expect(document.documentElement.style.getPropertyValue("--gn-ground")).toBe("");
     for (const status of ["missing", "analysis", "genre", "success"]) {
       expect(within(preview).getByText(status)).toBeTruthy();
